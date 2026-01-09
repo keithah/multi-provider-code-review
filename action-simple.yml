@@ -1,0 +1,13 @@
+name: Multi-Provider Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  issue_comment:
+    types: [created]
+
+jobs:
+  review:
+    uses: keithah/multi-provider-code-review@v1
+    with:
+      REVIEW_PROVIDERS: opencode/big-pickle,opencode/grok-code,opencode/minimax-m2.1-free,opencode/glm-4.7-free
