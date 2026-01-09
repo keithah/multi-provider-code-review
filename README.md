@@ -1,145 +1,109 @@
-import { execSync, existsSync, readFileSync } from "fs"
+# Multi-Provider Code Review GitHub Action
 
-type ReviewResult = {
-  provider: string
-  output: string
-}
+[![GitHub Action](https://img.shields.io/badge/GitHub%20Action-blue.svg)](https://github.com/keithah/multi-provider-code-review)[![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opencode.ai)[![Free](https://img.shields.io/badge/Free%20Providers-orange.svg)](https://anthropic.com/claude)[![Uses](https://img.shields.io/badge/Uses%20Claude%20Code-orange.svg)]
 
-const REVIEW_PROVIDERS = process.env.REVIEW_PROVIDERS?.split(",").map((p) => p.trim()).filter(Boolean) || []
-const PR_NUMBER = process.env.PR_NUMBER || ""
-const PR_TITLE = process.env.PR_TITLE || ""
+🤖 **Run comprehensive code reviews with 4 free AI providers in parallel and synthesize their results into one actionable review.**
 
-if (!REVIEW_PROVIDERS.length) {
-  console.error("REVIEW_PROVIDERS not set")
-  process.exit(1)
-}
+## ✨ Features
 
-async function buildPrompt(): Promise<string> {
-  const prBody = execSync("jq -r .body pr_data.json", { encoding: "utf8" })?.trim() || ""
-  
-  const hasAgents = existsSync("AGENTS.md")
-  
-  let agentsSection = ""
-  if (hasAgents) {
-    const agentsContent = readFileSync("AGENTS.md", "utf8").substring(0, 2000)
-    agentsSection = `\n\n## Project Guidelines (from AGENTS.md)\n${agentsContent}`
-  }
-  
-  return `REPO: ${process.env.GITHUB_REPOSITORY || ""}
-PR NUMBER: ${PR_NUMBER}
-PR TITLE: ${PR_TITLE}
-PR DESCRIPTION:
-${prBody}
+- **🔄 Parallel Processing**: Run reviews with 4 free AI providers simultaneously
+- **🧠 Intelligent Synthesis**: Combine overlapping feedback, highlight unique insights
+- **💰 100% Free**: Uses only free opencode providers (no API keys required)
+- **🚀 Fast**: Complete reviews in ~3 minutes
+- **📝 Smart Comments**: Automatic GitHub comments with line numbers and suggestions
+- **🎯 Flexible**: Multiple trigger options and customizable providers
 
-Please review this pull request and provide comprehensive code review focusing on:
+## 🚀 Quick Start
 
-## Code Quality & Best Practices
-- Clean code principles and readability
-- Proper error handling and edge cases
-- TypeScript/JavaScript best practices
-- Consistent naming conventions
+### Option 1: Add to your repo
 
-## Bug Detection
-- Logic errors and edge cases
-- Unhandled error scenarios
-- Race conditions and concurrency issues
-- Input validation and sanitization
+```bash
+# Clone your fork
+git clone https://github.com/YOUR_USERNAME/multi-provider-code-review.git
+cd multi-provider-code-review
 
-## Performance
-- Inefficient algorithms or operations
-- Memory leaks and unnecessary allocations
-- Large file handling
+# Install dependencies
+npm install
 
-## Security
-- SQL injection, XSS, CSRF vulnerabilities
-- Authentication/authorization issues
-- Sensitive data exposure
+# Create workflows directory
+mkdir -p .github/workflows
 
-## Testing
-- Test coverage gaps
-- Missing edge case handling
+# Download and update action
+curl -o .github/workflows/multi-provider-review.yml https://raw.githubusercontent.com/keithah/multi-provider-code-review/main/action.yml
 
-## Output Format
-- Use \`gh pr comment\` to leave review comments on specific files
-- Include specific line numbers and code suggestions
-- Provide actionable recommendations
-- Summarize key findings at the end
+# Commit and push
+git add .github/workflows/multi-provider-review.yml
+git commit -m "Add multi-provider code review action"
+git push origin main
+```
 
-IMPORTANT: Only create comments for actual issues. If the code follows all guidelines, respond with 'lgtm' only.${agentsSection}
+### Option 2: Use directly
 
-##  Available Free Providers
+```bash
+# In your existing repository
+mkdir -p .github/workflows
+curl -o .github/workflows/multi-provider-review.yml https://raw.githubusercontent.com/keithah/multi-provider-code-review/main/action.yml
 
-| Provider | Model | Description |
+# Commit and push
+git add .github/workflows/multi-provider-review.yml
+git commit -m "Update multi-provider code review action"
+git push origin main
+```
+
+## 📋 Configuration
+
+No configuration required! The action works out of the box with free providers.
+
+### Repository Variables
+
+| Variable | Default | Description |
+|------------|-------------|-----------|
+| `REVIEW_PROVIDERS` | List of providers, comma-separated | `opencode/big-pickle,opencode/grok-code,opencode/minimax-m2.1-free,opencode/glm-4.7-free` | Comma-separated providers |
+| `RUNNER` | `ubuntu-latest` | GitHub Actions runner |
+
+## 🎯 Usage
+
+### Manual Triggers
+
+Comment `/review` to trigger review
+Mention `@opencode` or `@claude` to trigger
+
+## 🤖 Available Providers
+
+| Provider | Description | Type | Description |
 |-----------|-------------|-----------|
 | `opencode/big-pickle` | Large reasoning model | Deep analysis, comprehensive reviews |
 | `opencode/grok-code` | Code-specialized model | Technical accuracy, code patterns |
 | `opencode/minimax-m2.1-free` | Free tier model | Quick insights, general reviews |
 | `opencode/glm-4.7-free` | Free GLM model | Balanced approach, good synthesis |
 
-Find available providers at: https://models.dev
-```
+### Premium Providers
 
-## Output Format
-
-### Example Output
-
-```markdown
-## Multi-Provider Code Review
-
-### 🔍 Key Findings
-- **Security**: Potential SQL injection in `user.ts:45`
-- **Performance**: Inefficient loop in `data.js:123`
-- **Style**: Inconsistent naming in `utils.ts:67`
-
-### 📝 Detailed Comments
-- [user.ts:45] - Consider using parameterized queries
-- [data.js:123] - Use map() instead of forEach() for better performance
-- [utils.ts:67] - Follow camelCase convention
-
-### ✅ Overall Assessment
-The code is well-structured but needs security and performance improvements before merging.
-
----
-
-## 🎯 Available Providers
-
-Current free providers available through opencode:
-- **Large reasoning**: `opencode/big-pickle` - For comprehensive analysis
-- **Technical**: `opencode/grok-code` - For code-specific reviews  
-- **General**: `opencode/minimax-m2.1-free` - For balanced insights
-- **Creative**: `opencode/glm-4.7-free` - For synthesis and balance
-
-### Custom Integration
-
-You can add custom providers via environment variables or by extending the provider configuration in the workflow.
-```
+Additional providers available with authentication:
+- Claude models (anthropic/claude-3.5-sonnet, etc.)
+- OpenAI models (gpt-4-turbo, etc.)
 
 ## 🔧 Advanced Configuration
 
-### Provider Configuration
+### Custom Prompts
 
-```typescript
-interface Provider {
-  name: string
-  model?: string
-  timeout?: number
-  customPrompt?: string
-}
+Override the default review prompt:
 
-const DEFAULT_PROVIDERS: Provider[] = [
-  { name: "opencode/big-pickle", timeout: 300000 },
-  { name: "opencode/grok-code", timeout: 180000 },
-  { name: "opencode/minimax-m2.1-free", timeout: 180000 },
-  { name: "opencode/glm-4.7-free", timeout: 180000 }
-]
+```yaml
+env:
+  CUSTOM_PROMPT: "Focus specifically on [YOUR_FEATURE] security and performance for this review."
+  CUSTOM_TIMEOUT: "300000"
 ```
 
-## 🤖 Monitoring
+## 📊 Monitoring
 
-Built-in logging and error tracking:
-- Review execution times
-- Provider success/failure rates
-- Synthesis performance metrics
+### GitHub Actions Logs
+
+Check the Actions tab in your repository for detailed execution logs and error information.
+
+## 🤝 Contributing
+
+Thank you for your interest in contributing! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ---
 
