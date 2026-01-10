@@ -1,5 +1,6 @@
 name: "Multi-Provider Code Review"
 description: "Run code reviews with multiple providers using OpenCode"
+
 inputs:
   GITHUB_TOKEN:
     description: "GitHub token"
@@ -200,4 +201,8 @@ runs:
 
         # Run opencode with Task tool to invoke all review subagents in parallel
         echo "Launching parallel reviews..."
-        opencode run "@big-pickle-reviewer @grok-code-reviewer @minimax-reviewer @glm-reviewer Review the code changes for this PR using the review criteria in /tmp/review-prompt.txt. After all reviews complete, synthesize the results into a comprehensive review and post as a PR comment using gh CLI."
+        opencode run "@big-pickle-reviewer @grok-code-reviewer @minimax-reviewer @glm-reviewer Review the code changes for this PR using the review criteria in /tmp/review-prompt.txt. After all reviews complete, synthesize the results into one comprehensive review and post as a PR comment using gh CLI."
+
+branding:
+  icon: "code-review"
+  color: "blue"
