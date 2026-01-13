@@ -152,16 +152,16 @@ runs:
             jq -r '.[] | "- " + .filename + " (+" + (.additions|tostring) + "/-" + (.deletions|tostring) + ")"' /tmp/pr-files.json >> /tmp/review-prompt.txt
           else
             python - <<'PYCODE' /tmp/pr-files.json >> /tmp/review-prompt.txt || true
-import json, sys
-try:
-    files = json.load(open(sys.argv[1]))
-    for f in files:
-        additions = f.get("additions", 0)
-        deletions = f.get("deletions", 0)
-        print(f"- {f.get('filename', 'unknown')} (+{additions}/-{deletions})")
-except Exception:
-    pass
-PYCODE
+            import json, sys
+            try:
+                files = json.load(open(sys.argv[1]))
+                for f in files:
+                    additions = f.get("additions", 0)
+                    deletions = f.get("deletions", 0)
+                    print(f"- {f.get('filename', 'unknown')} (+{additions}/-{deletions})")
+            except Exception:
+                pass
+            PYCODE
           fi
         fi
 
