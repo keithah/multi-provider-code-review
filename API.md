@@ -2,7 +2,7 @@
 
 ## Overview
 
-Multi-Provider Code Review GitHub Action provides comprehensive code reviews by running multiple AI providers in parallel and synthesizing their results.
+Multi-Provider Code Review GitHub Action provides comprehensive code reviews by running multiple AI providers and synthesizing their results into a single PR comment.
 
 ## Table of Contents
 
@@ -10,31 +10,20 @@ Multi-Provider Code Review GitHub Action provides comprehensive code reviews by 
 |------|-------------|
 | [README.md](README.md) | Main documentation and quick start guide |
 | [LICENSE](LICENSE) | MIT license |
-| [action.yml](action.yml) | GitHub Action workflow |
-| [multi-review-script.ts](multi-review-script.ts) | Main review execution script |
-| [types.ts](src/types.ts) | TypeScript type definitions |
-| [providers.ts](src/providers.ts) | Provider configurations |
-| [utils.ts](src/utils.ts) | Utility functions |
+| [action.yml](action.yml) | Composite GitHub Action |
+| [action-simple.yml](action-simple.yml) | Example workflow that wires inputs and installs OpenCode |
+| [multi-review-script.ts](multi-review-script.ts) | Legacy script (unused by the composite action) |
 | [API.md](API.md) | API documentation |
 
 ## 🚀 Quick Start
 
-### Installation
-
-#### Option 1: Repository Variables
-Add to any repository:
-```yaml
-env:
-  REVIEW_PROVIDERS: "opencode/big-pickle,opencode/grok-code,opencode/minimax-m2.1-free,opencode/glm-4.7-free"
-```
-
-#### Option 2: Download from Registry
-```bash
-curl -o .github/workflows/multi-provider-review.yml https://raw.githubusercontent.com/anomalyco/multi-provider-code-review/main/action.yml
-```
-
-### Option 3: Manual Workflow
-Copy `multi-provider-review.yml` to your `.github/workflows/` directory.
+1. Copy the workflow template into your repo:
+   ```bash
+   mkdir -p .github/workflows
+   curl -o .github/workflows/multi-provider-review.yml https://raw.githubusercontent.com/keithah/multi-provider-code-review/main/action-simple.yml
+   ```
+2. Commit and push the workflow.
+3. Ensure the runner can install OpenCode (`brew install opencode` is included in the template).
 
 ## 📋 Usage
 
@@ -51,26 +40,33 @@ on:
     types: [created]
 jobs:
   review:
-    if: startsWith(github.event.comment.body, '/review')
-      runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event.issue.pull_request &&
+        (startsWith(github.event.comment.body, '/review') ||
+         contains(github.event.comment.body, '@opencode') ||
+         contains(github.event.comment.body, '@claude')))
+    runs-on: ubuntu-latest
 ```
 
-### Environment Variables
+### Inputs / variables
 
-| Variable | Description | Default |
+| Name | Description | Default |
 |------------|-------------|----------|
 | `REVIEW_PROVIDERS` | List of providers, comma-separated | `opencode/big-pickle,opencode/grok-code,opencode/minimax-m2.1-free,opencode/glm-4.7-free` |
-| `CUSTOM_PROMPT` | Custom review prompt | Empty (uses default) |
-| `RUNNER` | GitHub Actions runner | `ubuntu-latest` |
-| `TIMEOUT` | Provider timeout in milliseconds | `180000` (3 minutes) |
+| `SYNTHESIS_MODEL` | Model used to combine provider outputs | `opencode/big-pickle` |
+| `DIFF_MAX_BYTES` | Max diff bytes included in prompt | `120000` |
+| `PR_TITLE` | PR title (passed by workflow) | n/a |
+| `PR_NUMBER` | PR number (passed by workflow) | n/a |
+| `PR_BODY` | PR body (passed by workflow) | n/a |
+| `HAS_AGENTS` | Whether `AGENTS.md` exists | `false` |
 
 ## 🎯 Features
 
-- **🔄 Parallel Reviews**: All providers run simultaneously using `Promise.all()`
+- **🔄 Multi-Provider Coverage**: Runs multiple providers (sequentially) via OpenCode CLI
 - **🧠 Synthesis**: Intelligent combination of overlapping feedback and unique insights
-- **📝 Smart Comments**: Automatic GitHub API comments with line numbers
+- **📝 Smart Comments**: Posts one synthesized PR comment with raw provider outputs in a collapsed section
 - **💰 100% Free**: Uses only free opencode providers
-- **🚀 Fast**: Complete reviews in ~3 minutes
 - **🎯 Flexible**: Multiple trigger options and customizable providers
 
 ## 📊 Output
@@ -96,12 +92,12 @@ The code is well-structured but needs security and performance improvements befo
 ## 🤖 Available Providers
 
 ### Free Providers (Current)
-| Provider | Model | Type | Description |
+| Provider | Description | Backing |
 |-----------|-------------|-----------|
-| `opencode/big-pickle` | Large reasoning | Deep analysis, comprehensive reviews |
-| `opencode/grok-code` | Code-specialized | Technical accuracy, code patterns |
-| `opencode/minimax-m2.1-free` | General | Quick insights, balanced reviews |
-| `opencode/glm-4.7-free` | Creative | Synthesis and balanced approach |
+| `opencode/big-pickle` | Large reasoning | Claude-based |
+| `opencode/grok-code` | Code-specialized | Grok-based |
+| `opencode/minimax-m2.1-free` | General | Minimax |
+| `opencode/glm-4.7-free` | Creative | Zhipu |
 
 ### Premium Providers (Available)
 Additional providers available with authentication:
@@ -120,19 +116,6 @@ env:
   REVIEW_PROVIDERS: "opencode/big-pickle,opencode/grok-code,opencode/minimax-m2.1-free,opencode/glm-4.7-free,opencode/my-custom-provider"
 ```
 
-### Custom Prompts
-
-Override the default review prompt:
-
-```yaml
-env:
-  CUSTOM_PROMPT: |
-    Focus specifically on [YOUR_FEATURE] security and performance.
-    Use the project's existing code patterns and conventions.
-    Follow [YOUR_LANGUAGE] best practices for naming and structure.
-    Consider [YOUR_LIBRARY] optimizations for better performance.
-```
-
 ## 🐛 Troubleshooting
 
 ### Common Issues
@@ -144,8 +127,11 @@ env:
 **Solution**: Check trigger conditions:
 ```yaml
 if: |
-  github.event_name == 'pull_request' && 
-  startsWith(github.event.comment.body, '/review')
+  github.event_name == 'pull_request' ||
+  (github.event.issue.pull_request &&
+    (startsWith(github.event.comment.body, '/review') ||
+     contains(github.event.comment.body, '@opencode') ||
+     contains(github.event.comment.body, '@claude')))
 ```
 
 #### 2. Permission Errors
@@ -161,13 +147,9 @@ permissions:
 
 #### 3. Provider Failures
 
-**Problem**: Some providers failing with timeout errors
+**Problem**: Some providers failing or timing out
 
-**Solution**: Check provider status and increase timeout:
-```bash
-# Check providers at https://models.dev
-gh api --method POST -H "Accept: application/vnd.github+json" /repos/OWNER/REPO/contents/.github/workflows/multi-provider-review.yml --method PUT --field message="Update providers" --field content="$(cat providers.json | base64)" --field encoding=base64
-```
+**Solution**: Check provider status, reduce the provider list temporarily, or trim large diffs via `DIFF_MAX_BYTES`.
 
 ## 📝 Monitoring
 

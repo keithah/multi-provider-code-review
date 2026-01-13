@@ -36,120 +36,81 @@ runs:
         PR_BODY: ${{ inputs.PR_BODY }}
         HAS_AGENTS: ${{ inputs.HAS_AGENTS }}
       run: |
-        # Copy agent configs
-        mkdir -p .opencode/agent
+        set -euo pipefail
 
-        cat > .opencode/agent/big-pickle-reviewer.md << 'EOF'
-        ---
-        description: Big Pickle code reviewer
-        mode: subagent
-        model: opencode/big-pickle
-        temperature: 0.1
-        tools:
-          write: false
-          edit: false
-        permission:
-          bash:
-            "gh pr comment*": allow
-            "gh api*": allow
-        ---
-        You are a code reviewer using Big Pickle model. Focus on:
-        - Code quality and best practices
-        - Security vulnerabilities and risks
-        - Performance issues and optimization opportunities
-        - Testing gaps and edge cases
-        - Architectural concerns
-
-        Provide constructive feedback with specific line numbers and actionable suggestions. Only comment on actual issues.
-        EOF
-
-        cat > .opencode/agent/grok-code-reviewer.md << 'EOF'
-        ---
-        description: Grok Code reviewer
-        mode: subagent
-        model: opencode/grok-code
-        temperature: 0.1
-        tools:
-          write: false
-          edit: false
-        permission:
-          bash:
-            "gh pr comment*": allow
-            "gh api*": allow
-        ---
-        You are a code reviewer using Grok Code model. Focus on:
-        - Code quality and best practices
-        - Security vulnerabilities and risks
-        - Performance issues and optimization opportunities
-        - Testing gaps and edge cases
-        - Architectural concerns
-
-        Provide constructive feedback with specific line numbers and actionable suggestions. Only comment on actual issues.
-        EOF
-
-        cat > .opencode/agent/minimax-reviewer.md << 'EOF'
-        ---
-        description: Minimax code reviewer
-        mode: subagent
-        model: opencode/minimax-m2.1-free
-        temperature: 0.1
-        tools:
-          write: false
-          edit: false
-        permission:
-          bash:
-            "gh pr comment*": allow
-            "gh api*": allow
-        ---
-        You are a code reviewer using Minimax model. Focus on:
-        - Code quality and best practices
-        - Security vulnerabilities and risks
-        - Performance issues and optimization opportunities
-        - Testing gaps and edge cases
-        - Architectural concerns
-
-        Provide constructive feedback with specific line numbers and actionable suggestions. Only comment on actual issues.
-        EOF
-
-        cat > .opencode/agent/glm-reviewer.md << 'EOF'
-        ---
-        description: GLM-4.7 code reviewer
-        mode: subagent
-        model: opencode/glm-4.7-free
-        temperature: 0.1
-        tools:
-          write: false
-          edit: false
-        permission:
-          bash:
-            "gh pr comment*": allow
-            "gh api*": allow
-        ---
-        You are a code reviewer using GLM-4.7 model. Focus on:
-        - Code quality and best practices
-        - Security vulnerabilities and risks
-        - Performance issues and optimization opportunities
-        - Testing gaps and edge cases
-        - Architectural concerns
-
-        Provide constructive feedback with specific line numbers and actionable suggestions. Only comment on actual issues.
-        EOF
-
-        # Build review prompt
-        AGENTS_CONTENT=""
-        if [ "$HAS_AGENTS" = "true" ] && [ -f "AGENTS.md" ]; then
-          AGENTS_CONTENT=$(head -c 2000 AGENTS.md)
-          AGENTS_SECTION=$'\n\n## Project Guidelines (from AGENTS.md)\n'"$AGENTS_CONTENT"
+        if ! command -v npm >/dev/null 2>&1; then
+          echo "npm is required but not found on PATH."
+          exit 1
         fi
 
-        cat > /tmp/review-prompt.txt << 'PROMPT_EOF'
-        REPO: ${{ github.repository }}
-        PR NUMBER: ${{ inputs.PR_NUMBER }}
-        PR TITLE: ${{ inputs.PR_TITLE }}
-        PR DESCRIPTION:
-        ${{ inputs.PR_BODY }}
+        if ! command -v opencode >/dev/null 2>&1; then
+          echo "opencode CLI not found; installing via npm (opencode-ai)..."
+          NPM_PREFIX="${NPM_PREFIX:-$HOME/.npm-global}"
+          mkdir -p "$NPM_PREFIX"
+          npm config set prefix "$NPM_PREFIX"
+          export PATH="$NPM_PREFIX/bin:$PATH"
+          npm install -g opencode-ai@latest
+        fi
 
-        Please review this pull request and provide comprehensive code review focusing on:
+        if ! command -v opencode >/dev/null 2>&1; then
+          echo "opencode CLI is required but not found in PATH. Please install it before running this action."
+          exit 1
+        fi
+
+        if ! command -v gh >/dev/null 2>&1; then
+          echo "GitHub CLI (gh) is required but not found in PATH."
+          exit 1
+        fi
+
+        export GH_TOKEN="${GITHUB_TOKEN}"
+
+        IFS=',' read -ra PROVIDERS <<< "$REVIEW_PROVIDERS"
+        if [ "${#PROVIDERS[@]}" -eq 0 ]; then
+          echo "No review providers found. REVIEW_PROVIDERS was empty."
+          exit 1
+        fi
+
+        REPO="${GITHUB_REPOSITORY:-}"
+        if [ -z "$REPO" ]; then
+          echo "GITHUB_REPOSITORY is not set; unable to determine repository."
+          exit 1
+        fi
+
+        SYNTHESIS_MODEL="${SYNTHESIS_MODEL:-opencode/big-pickle}"
+        DIFF_MAX_BYTES="${DIFF_MAX_BYTES:-120000}"
+
+        PR_TITLE_VALUE="${PR_TITLE}"
+        PR_BODY_VALUE="${PR_BODY}"
+
+        AGENTS_SECTION=""
+        if [ "${HAS_AGENTS}" = "true" ] && [ -f "AGENTS.md" ]; then
+          AGENTS_CONTENT=$(head -c 2000 AGENTS.md)
+          AGENTS_SECTION=$'\n\n## Project Guidelines (from AGENTS.md)\n'"${AGENTS_CONTENT}"
+        fi
+
+        gh api "/repos/${REPO}/pulls/${PR_NUMBER}/files" > /tmp/pr-files.json || true
+        DIFF_FILE="/tmp/pr.diff"
+        if gh api "/repos/${REPO}/pulls/${PR_NUMBER}" -H "Accept: application/vnd.github.v3.diff" > "$DIFF_FILE"; then
+          DIFF_SIZE=$(wc -c < "$DIFF_FILE")
+          if [ "$DIFF_SIZE" -gt "$DIFF_MAX_BYTES" ]; then
+            echo "Diff is ${DIFF_SIZE} bytes, truncating to ${DIFF_MAX_BYTES}."
+            head -c "$DIFF_MAX_BYTES" "$DIFF_FILE" > "${DIFF_FILE}.tmp"
+            echo $'\n\n[Diff truncated for length]' >> "${DIFF_FILE}.tmp"
+            mv "${DIFF_FILE}.tmp" "$DIFF_FILE"
+          fi
+        else
+          echo "Warning: Unable to fetch PR diff via gh api."
+          DIFF_FILE=""
+        fi
+
+        cat > /tmp/review-prompt.txt <<EOF
+        REPO: ${REPO}
+        PR NUMBER: ${PR_NUMBER}
+        PR TITLE: ${PR_TITLE_VALUE}
+        PR DESCRIPTION:
+        ${PR_BODY_VALUE}
+
+        Please review this pull request and provide a comprehensive code review focusing on:
 
         ## Code Quality & Best Practices
         - Clean code principles and readability
@@ -178,30 +139,136 @@ runs:
         - Missing edge case handling${AGENTS_SECTION}
 
         ## Output Format
-        - Use \`gh pr comment\` to leave review comments on specific files
-        - Include specific line numbers and code suggestions
-        - Provide actionable recommendations
-        - Summarize key findings at end
+        - Provide specific file and line numbers when possible
+        - Include code suggestions in fenced code blocks
+        - Summarize key findings and risks at the end
 
-        IMPORTANT: Only create comments for actual issues. If the code follows all guidelines, respond with 'lgtm' only.
-        PROMPT_EOF
+        IMPORTANT: Only flag actual issues. If everything looks good, respond with 'lgtm'.
+        EOF
 
-        # Read modified files
-        gh api /repos/${{ github.repository }}/pulls/${{ inputs.PR_NUMBER }}/files > /tmp/pr-files.json
+        if [ -s /tmp/pr-files.json ]; then
+          echo $'\n\n## Changed Files' >> /tmp/review-prompt.txt
+          if command -v jq >/dev/null 2>&1; then
+            jq -r '.[] | "- " + .filename + " (+" + (.additions|tostring) + "/-" + (.deletions|tostring) + ")"' /tmp/pr-files.json >> /tmp/review-prompt.txt
+          else
+            python - <<'PYCODE' /tmp/pr-files.json >> /tmp/review-prompt.txt || true
+import json, sys
+try:
+    files = json.load(open(sys.argv[1]))
+    for f in files:
+        additions = f.get("additions", 0)
+        deletions = f.get("deletions", 0)
+        print(f"- {f.get('filename', 'unknown')} (+{additions}/-{deletions})")
+except Exception:
+    pass
+PYCODE
+          fi
+        fi
 
-        # Get diff
-        git diff --name-status > /tmp/changed-files.txt
+        if [ -n "${DIFF_FILE}" ] && [ -f "${DIFF_FILE}" ]; then
+          echo $'\n\n## Diff' >> /tmp/review-prompt.txt
+          cat "${DIFF_FILE}" >> /tmp/review-prompt.txt
+        fi
+
+        PROMPT_CONTENT="$(cat /tmp/review-prompt.txt)"
 
         echo "========================================"
         echo "Running multi-provider code review"
         echo "========================================"
-        echo "Review prompt: $(wc -l < /tmp/review-prompt.txt)"
-        echo "Modified files: $(wc -l < /tmp/changed-files.txt)"
+        echo "Review prompt size: $(wc -c < /tmp/review-prompt.txt) bytes"
+        echo "Providers: ${PROVIDERS[*]}"
+        echo "Synthesis model: ${SYNTHESIS_MODEL}"
         echo ""
 
-        # Run opencode with Task tool to invoke all review subagents in parallel
-        echo "Launching parallel reviews..."
-        opencode run "@big-pickle-reviewer @grok-code-reviewer @minimax-reviewer @glm-reviewer Review the code changes for this PR using the review criteria in /tmp/review-prompt.txt. After all reviews complete, synthesize the results into one comprehensive review and post as a PR comment using gh CLI."
+        mkdir -p /tmp/reviews
+        PROVIDER_LIST=()
+        for raw_provider in "${PROVIDERS[@]}"; do
+          provider="$(echo "$raw_provider" | xargs)"
+          [ -z "$provider" ] && continue
+          PROVIDER_LIST+=("$provider")
+          outfile="/tmp/reviews/$(echo "$provider" | tr '/:' '__').txt"
+          echo "Running provider: ${provider}"
+          if opencode run -m "${provider}" -- "${PROMPT_CONTENT}" > "$outfile" 2> "${outfile}.log"; then
+            echo "✅ ${provider} completed"
+          else
+            echo "⚠️ ${provider} failed (see log), capturing partial output"
+            echo "Provider ${provider} failed. Log:" > "$outfile"
+            cat "${outfile}.log" >> "$outfile" || true
+          fi
+        done
+
+        if [ "${#PROVIDER_LIST[@]}" -eq 0 ]; then
+          echo "No valid providers ran successfully."
+          exit 1
+        fi
+
+        SYN_PROMPT=/tmp/synthesis-prompt.txt
+        echo "Synthesizing results with ${SYNTHESIS_MODEL}"
+        cat > "$SYN_PROMPT" <<'SYN_HEAD'
+        You are an expert code reviewer. Combine the provider reviews below into a single, concise GitHub PR review.
+
+        Requirements:
+        - Merge overlapping feedback; avoid duplicate points.
+        - Highlight unique insights from each provider.
+        - Include file and line references when present.
+        - Provide code suggestions in fenced blocks where applicable.
+        - Keep output under GitHub's comment limits.
+
+        Output structure:
+        1) Summary (bullet list)
+        2) Findings (grouped by severity: Critical, Major, Minor)
+        3) Recommendations / tests to run
+        4) Verdict (Approve, Approve with recommendations, or Request changes)
+
+        Provider reviews:
+SYN_HEAD
+
+        for provider in "${PROVIDER_LIST[@]}"; do
+          fname="/tmp/reviews/$(echo "$provider" | tr '/:' '__').txt"
+          {
+            echo ""
+            echo "### ${provider}"
+            echo ""
+            cat "$fname"
+            echo ""
+            echo "---"
+          } >> "$SYN_PROMPT"
+        done
+
+        SYNTHESIS_OUTPUT=/tmp/synthesis.txt
+        if opencode run -m "${SYNTHESIS_MODEL}" -- "$(cat "$SYN_PROMPT")" > "$SYNTHESIS_OUTPUT" 2> /tmp/synthesis.log; then
+          echo "✅ Synthesis complete"
+        else
+          echo "⚠️ Synthesis failed, using concatenated provider outputs"
+          cat "$SYN_PROMPT" > "$SYNTHESIS_OUTPUT"
+        fi
+
+        COMMENT_FILE=/tmp/final-review.md
+        {
+          echo "🤖 **Multi-Provider Code Review**"
+          echo ""
+          echo "**Providers:** ${PROVIDER_LIST[*]}"
+          echo "**Synthesis model:** ${SYNTHESIS_MODEL}"
+          echo ""
+          cat "$SYNTHESIS_OUTPUT"
+          echo ""
+          echo "<details><summary>Raw provider outputs</summary>"
+          echo ""
+          for provider in "${PROVIDER_LIST[@]}"; do
+            fname="/tmp/reviews/$(echo "$provider" | tr '/:' '__').txt"
+            echo ""
+            echo "#### ${provider}"
+            echo ""
+            cat "$fname"
+          done
+          echo ""
+          echo "</details>"
+        } > "$COMMENT_FILE"
+
+        gh api --method POST -H "Accept: application/vnd.github+json" "/repos/${REPO}/issues/${PR_NUMBER}/comments" -F body="@${COMMENT_FILE}"
+
+        echo ""
+        echo "✅ Review posted to PR #${PR_NUMBER}"
 
 branding:
   icon: "code-review"
