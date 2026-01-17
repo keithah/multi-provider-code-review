@@ -65,6 +65,8 @@ permissions:
 | `INLINE_MIN_AGREEMENT`| `1`                                                                                         | Minimum number of providers that must agree before posting inline suggestions                 |
 | `MIN_CHANGED_LINES`   | `0`                                                                                         | If >0, skip review when total line changes are below this threshold                           |
 | `MAX_CHANGED_FILES`   | `0`                                                                                         | If >0, skip review when changed files exceed this count                                       |
+| `SKIP_LABELS`         | `""`                                                                                        | Comma-separated labels that cause the review to skip                                          |
+| `PROVIDER_LIMIT`      | `0`                                                                                         | If >0, limit to this many providers (deterministic rotation)                                  |
 | `REPORT_BASENAME`     | `multi-provider-review`                                                                     | Base filename for exported JSON/SARIF reports                                                 |
 
 ### Inputs wired by the workflow template
@@ -254,9 +256,9 @@ inline_min_severity: major
 inline_min_agreement: 2   # require consensus across providers
 min_changed_lines: 0      # skip if total changes below this
 max_changed_files: 0      # skip if total files above this
+skip_labels: ["skip-review", "no-ai-review"] # labels that cause skipping
 provider_allowlist: []    # optional allowlist
 provider_blocklist: []    # optional blocklist
-skip_labels: []           # labels that cause the review to skip
 diff_max_bytes: 120000
 run_timeout_seconds: 600
 ```

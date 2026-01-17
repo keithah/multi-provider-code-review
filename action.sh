@@ -222,6 +222,19 @@ if [[ "$SYNTHESIS_MODEL" == openrouter/* ]] && [ -z "$OPENROUTER_API_KEY" ]; the
   SYNTHESIS_MODEL="opencode/big-pickle"
 fi
 
+# Limit providers if requested (deterministic rotation based on PR number)
+if [ "$PROVIDER_LIMIT" -gt 0 ] && [ "${#PROVIDERS[@]}" -gt "$PROVIDER_LIMIT" ]; then
+  pr_hash=${PR_NUMBER//[^0-9]/}
+  [ -z "$pr_hash" ] && pr_hash=0
+  start=$((pr_hash % ${#PROVIDERS[@]}))
+  selected=()
+  for i in $(seq 0 $((PROVIDER_LIMIT - 1))); do
+    idx=$(((start + i) % ${#PROVIDERS[@]}))
+    selected+=("${PROVIDERS[$idx]}")
+  done
+  PROVIDERS=("${selected[@]}")
+fi
+
 SYNTHESIS_MODEL="${SYNTHESIS_MODEL:-openrouter/google/gemini-2.0-flash-exp:free}"
 DIFF_MAX_BYTES="${DIFF_MAX_BYTES:-120000}"
 RUN_TIMEOUT_SECONDS="${RUN_TIMEOUT_SECONDS:-600}"
@@ -229,6 +242,7 @@ OPENROUTER_API_KEY="${OPENROUTER_API_KEY:-}"
 INLINE_MAX_COMMENTS="${INLINE_MAX_COMMENTS:-5}"
 INLINE_MIN_SEVERITY="${INLINE_MIN_SEVERITY:-major}"
 INLINE_MIN_AGREEMENT="${INLINE_MIN_AGREEMENT:-1}"
+PROVIDER_LIMIT="${PROVIDER_LIMIT:-0}"
 MIN_CHANGED_LINES="${MIN_CHANGED_LINES:-0}"
 MAX_CHANGED_FILES="${MAX_CHANGED_FILES:-0}"
 PROVIDER_ALLOWLIST_RAW="${PROVIDER_ALLOWLIST_RAW:-}"
@@ -243,8 +257,6 @@ FALLBACK_OPENCODE_PROVIDERS=("opencode/big-pickle" "opencode/grok-code" "opencod
 
 PROVIDER_ALLOWLIST=()
 PROVIDER_BLOCKLIST=()
-MIN_CHANGED_LINES=0
-MAX_CHANGED_FILES=0
 SKIP_LABELS=()
 
 run_with_timeout() {
@@ -518,6 +530,12 @@ fi
 
 if [ -n "$TEST_HINT" ]; then
   echo "$TEST_HINT" >> /tmp/review-prompt.txt
+fi
+if [ -s "$MISSING_TEST_FILES" ]; then
+  echo $'\n\n## Possible missing tests' >> /tmp/review-prompt.txt
+  while IFS= read -r line; do
+    echo "- $line" >> /tmp/review-prompt.txt
+  done < "$MISSING_TEST_FILES"
 fi
 
 PROMPT_CONTENT="$(cat /tmp/review-prompt.txt)"
@@ -1009,3 +1027,40 @@ PYCODE
 
 echo ""
 echo "✅ Review posted to PR #${PR_NUMBER}"
+MISSING_TEST_FILES="/tmp/missing-tests.txt"
+python - "$PR_META" /tmp/pr-files.json "$MISSING_TEST_FILES" <<'PYCODE' 2>/dev/null || true
+import json, sys, os, re
+meta_path, files_path, out_path = sys.argv[1:]
+try:
+    files = json.load(open(files_path, encoding="utf-8"))
+except Exception:
+    sys.exit(0)
+
+test_patterns = re.compile(r"(test|spec|__tests__|__snapshots__|\\.test\\.|\\.spec\\.|Tests/|Spec/)", re.IGNORECASE)
+missing = []
+for f in files:
+    name = f.get("filename") or ""
+    if not name:
+        continue
+    if test_patterns.search(name):
+        continue
+    # guess a sibling test path
+    base = os.path.basename(name)
+    root, ext = os.path.splitext(base)
+    candidates = [
+        name.replace(base, f"{root}.test{ext}"),
+        name.replace(base, f"{root}.spec{ext}"),
+    ]
+    has_match = False
+    for cand in candidates:
+        if os.path.exists(cand):
+            has_match = True
+            break
+    if not has_match:
+        missing.append(name)
+
+missing = missing[:5]
+if missing:
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write("\\n".join(missing))
+PYCODE

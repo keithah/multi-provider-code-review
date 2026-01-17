@@ -53,6 +53,22 @@ inputs:
     description: "Base filename for exported review reports (JSON/SARIF)"
     required: false
     default: "multi-provider-review"
+  MIN_CHANGED_LINES:
+    description: "Skip review if total changed lines are below this number (0 disables)"
+    required: false
+    default: "0"
+  MAX_CHANGED_FILES:
+    description: "Skip review if changed files exceed this number (0 disables)"
+    required: false
+    default: "0"
+  SKIP_LABELS:
+    description: "Comma-separated labels that cause the review to skip"
+    required: false
+    default: ""
+  PROVIDER_LIMIT:
+    description: "If >0, limit to this many providers (rotated deterministically)"
+    required: false
+    default: "0"
 
 runs:
   using: "composite"
@@ -73,6 +89,10 @@ runs:
         INLINE_MAX_COMMENTS: ${{ inputs.INLINE_MAX_COMMENTS }}
         INLINE_MIN_SEVERITY: ${{ inputs.INLINE_MIN_SEVERITY }}
         INLINE_MIN_AGREEMENT: ${{ inputs.INLINE_MIN_AGREEMENT }}
+        MIN_CHANGED_LINES: ${{ inputs.MIN_CHANGED_LINES }}
+        MAX_CHANGED_FILES: ${{ inputs.MAX_CHANGED_FILES }}
+        SKIP_LABELS: ${{ inputs.SKIP_LABELS }}
+        PROVIDER_LIMIT: ${{ inputs.PROVIDER_LIMIT }}
         REPORT_BASENAME: ${{ inputs.REPORT_BASENAME }}
       run: bash "${{ github.action_path }}/action.sh"
 
