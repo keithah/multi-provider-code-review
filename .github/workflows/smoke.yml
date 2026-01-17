@@ -1,7 +1,7 @@
 name: Smoke (Action)
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
 
 jobs:
   action-smoke-test:
