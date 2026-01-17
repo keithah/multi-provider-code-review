@@ -183,6 +183,9 @@ Please review this pull request and provide a comprehensive code review focusing
 - Test coverage gaps
 - Missing edge case handling${AGENTS_SECTION}
 
+## AI-Generated Code Likelihood
+- Estimate the likelihood (0-100%) that the changed code was AI-generated. Give a brief rationale.
+
 ## Output Format
 - Provide specific file and line numbers when possible
 - Include code suggestions in fenced code blocks
@@ -279,6 +282,7 @@ Requirements:
 - Include file and line references when present.
 - Provide code suggestions in fenced blocks where applicable.
 - Keep output under GitHub's comment limits.
+- Summarize per-provider estimates of AI-generated code likelihood (0-100%) and provide an overall estimate.
 
 Output structure:
 1) Summary (bullet list)
