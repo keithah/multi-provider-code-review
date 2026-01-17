@@ -152,19 +152,26 @@ Each provider is run directly via OpenCode CLI using the list from `REVIEW_PROVI
 ## 🤖 Available Providers
 
 **OpenCode free (no keys)**
-| Provider                     | Description            |
-| ---------------------------- | ---------------------- |
-| `opencode/big-pickle`        | Large reasoning model  |
-| `opencode/grok-code`         | Code-specialized model |
-| `opencode/minimax-m2.1-free` | Free tier model        |
-| `opencode/glm-4.7-free`      | Free GLM model         |
+| Provider                     | Style/Strength                | Notes                   |
+| ---------------------------- | ----------------------------- | ----------------------- |
+| `opencode/big-pickle`        | Large reasoning               | Default synthesis model |
+| `opencode/grok-code`         | Code-specialized              | Good code quality focus |
+| `opencode/minimax-m2.1-free` | General/free tier             | Lightweight             |
+| `opencode/glm-4.7-free`      | GLM-based, generalist         | Creative/expressive     |
 
-**OpenRouter free (needs `OPENROUTER_API_KEY`)**
-| Provider                                      | Notes                   |
-| --------------------------------------------- | ----------------------- |
-| `openrouter/google/gemini-2.0-flash-exp:free` | Fast/light Gemini       |
-| `openrouter/mistralai/devstral-2512:free`     | DevStral Mistral free   |
-| `openrouter/xiaomi/mimo-v2-flash:free`        | Xiaomi Mimo flash tier  |
+**Recommended OpenRouter free (needs `OPENROUTER_API_KEY`)**
+| Provider                                           | Role/Notes                                   |
+| -------------------------------------------------- | -------------------------------------------- |
+| `openrouter/google/gemini-2.0-flash-exp:free`      | Fast/light Gemini general reasoning          |
+| `openrouter/mistralai/devstral-2512:free`          | Solid code + reasoning (Mistral)             |
+| `openrouter/xiaomi/mimo-v2-flash:free`             | Fast passes, lightweight                     |
+| `openrouter/z-ai/glm-4.5-air:free`                 | Strong general/code                          |
+| `openrouter/qwen/qwen3-coder:free`                 | Code-focused                                 |
+| `openrouter/google/gemma-3-27b-it:free`            | Larger Gemma instruct                        |
+| `openrouter/meta-llama/llama-3.3-70b-instruct:free`| Strong but heavier/slower                    |
+| `openrouter/nousresearch/hermes-3-llama-3.1-405b:free` | Very heavy, high-quality reasoning       |
+| `openrouter/cognitivecomputations/dolphin-mistral-24b-venice-edition:free` | Good coding/reasoning balance |
+| `openrouter/tngtech/deepseek-r1t-chimera:free`     | CoT/analysis oriented (heavier)              |
 
 ### Adding Custom Providers
 
