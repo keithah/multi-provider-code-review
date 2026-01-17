@@ -69,6 +69,14 @@ inputs:
     description: "If >0, limit to this many providers (rotated deterministically)"
     required: false
     default: "0"
+  PROVIDER_RETRIES:
+    description: "Retries per provider on failure/timeout (>=1)"
+    required: false
+    default: "2"
+  BUDGET_MAX_USD:
+    description: "If >0, warn and skip posting results when estimated cost exceeds this amount"
+    required: false
+    default: "0"
 
 runs:
   using: "composite"
@@ -93,6 +101,8 @@ runs:
         MAX_CHANGED_FILES: ${{ inputs.MAX_CHANGED_FILES }}
         SKIP_LABELS: ${{ inputs.SKIP_LABELS }}
         PROVIDER_LIMIT: ${{ inputs.PROVIDER_LIMIT }}
+        PROVIDER_RETRIES: ${{ inputs.PROVIDER_RETRIES }}
+        BUDGET_MAX_USD: ${{ inputs.BUDGET_MAX_USD }}
         REPORT_BASENAME: ${{ inputs.REPORT_BASENAME }}
       run: bash "${{ github.action_path }}/action.sh"
 

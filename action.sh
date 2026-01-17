@@ -250,6 +250,7 @@ INLINE_MAX_COMMENTS="${INLINE_MAX_COMMENTS:-5}"
 INLINE_MIN_SEVERITY="${INLINE_MIN_SEVERITY:-major}"
 INLINE_MIN_AGREEMENT="${INLINE_MIN_AGREEMENT:-1}"
 PROVIDER_LIMIT="${PROVIDER_LIMIT:-0}"
+PROVIDER_RETRIES="${PROVIDER_RETRIES:-2}"
 MIN_CHANGED_LINES="${MIN_CHANGED_LINES:-0}"
 MAX_CHANGED_FILES="${MAX_CHANGED_FILES:-0}"
 PROVIDER_ALLOWLIST_RAW="${PROVIDER_ALLOWLIST_RAW:-}"
@@ -257,6 +258,10 @@ PROVIDER_BLOCKLIST_RAW="${PROVIDER_BLOCKLIST_RAW:-}"
 SKIP_LABELS_RAW="${SKIP_LABELS_RAW:-}"
 ESTIMATED_COST_TOTAL="unknown"
 ESTIMATED_COST_DETAILS=()
+TOTAL_PROMPT_TOKENS=0
+TOTAL_COMPLETION_TOKENS=0
+TOTAL_TOKENS=0
+BUDGET_MAX_USD="${BUDGET_MAX_USD:-0}"
 REPORT_BASENAME="${REPORT_BASENAME:-multi-provider-review}"
 REPORT_DIR="${GITHUB_WORKSPACE:-$PWD}/multi-provider-report"
 mkdir -p "$REPORT_DIR"
@@ -587,11 +592,21 @@ for raw_provider in "${PROVIDERS[@]}"; do
   log_file="${outfile}.log"
   usage_file="${outfile}.usage.json"
   echo "Running provider: ${provider}"
-   provider_start=$(date +%s)
-   status_label="success"
-  if [[ "$provider" == openrouter/* ]]; then
-    if run_openrouter "${provider}" "${PROMPT_CONTENT}" "${outfile}" "${usage_file}" > "${log_file}" 2>&1; then
-      echo "✅ ${provider} completed"
+  provider_start=$(date +%s)
+  status_label="failed"
+  attempt=1
+  while [ $attempt -le "$PROVIDER_RETRIES" ]; do
+    if [[ "$provider" == openrouter/* ]]; then
+      if run_openrouter "${provider}" "${PROMPT_CONTENT}" "${outfile}" "${usage_file}" > "${log_file}" 2>&1; then
+        status_label="success"
+      fi
+    else
+      if run_with_timeout opencode run -m "${provider}" -- "${PROMPT_CONTENT}" > "$outfile" 2> "${log_file}"; then
+        status_label="success"
+      fi
+    fi
+    if [ "$status_label" = "success" ]; then
+      echo "✅ ${provider} completed (attempt ${attempt}/${PROVIDER_RETRIES})"
       if [ -f "$usage_file" ]; then
         pt=$(jq -r '.prompt_tokens // 0' "$usage_file" 2>/dev/null || echo 0)
         ct=$(jq -r '.completion_tokens // 0' "$usage_file" 2>/dev/null || echo 0)
@@ -600,33 +615,24 @@ for raw_provider in "${PROVIDERS[@]}"; do
         TOTAL_COMPLETION_TOKENS=$((TOTAL_COMPLETION_TOKENS + ct))
         TOTAL_TOKENS=$((TOTAL_TOKENS + tt))
       fi
+      break
     else
-      status=$?
-      status_label="failed"
-      if [ "$status" -eq 124 ]; then
-        echo "⚠️ ${provider} timed out after ${RUN_TIMEOUT_SECONDS}s"
-        status_label="timeout"
-      else
-        echo "⚠️ ${provider} failed (see log), capturing partial output"
+      if [ $attempt -lt "$PROVIDER_RETRIES" ]; then
+        echo "Retrying ${provider} (attempt ${attempt}/${PROVIDER_RETRIES})..."
+        sleep $((attempt))
       fi
-      echo "Provider ${provider} failed. Log:" > "$outfile"
-      cat "${log_file}" >> "$outfile" || true
     fi
-  else
-    if run_with_timeout opencode run -m "${provider}" -- "${PROMPT_CONTENT}" > "$outfile" 2> "${log_file}"; then
-      echo "✅ ${provider} completed"
+    attempt=$((attempt + 1))
+  done
+  if [ "$status_label" != "success" ]; then
+    # capture log in output
+    if [[ "$provider" == openrouter/* ]]; then
+      echo "⚠️ ${provider} failed after ${PROVIDER_RETRIES} attempt(s) (see log), capturing partial output"
     else
-      status=$?
-      status_label="failed"
-      if [ "$status" -eq 124 ]; then
-        echo "⚠️ ${provider} timed out after ${RUN_TIMEOUT_SECONDS}s"
-        status_label="timeout"
-      else
-        echo "⚠️ ${provider} failed (see log), capturing partial output"
-      fi
-      echo "Provider ${provider} failed. Log:" > "$outfile"
-      cat "${log_file}" >> "$outfile" || true
+      echo "⚠️ ${provider} failed after ${PROVIDER_RETRIES} attempt(s) (see log), capturing partial output"
     fi
+    echo "Provider ${provider} failed. Log:" > "$outfile"
+    cat "${log_file}" >> "$outfile" || true
   fi
   provider_end=$(date +%s)
   duration=$((provider_end - provider_start))
@@ -670,6 +676,24 @@ if [ -f "$PRICING_CACHE" ]; then
     TOTAL_PROMPT_TOKENS="$(jq -r '.prompt_tokens // 0' "$COST_INFO" 2>/dev/null || echo 0)"
     TOTAL_COMPLETION_TOKENS="$(jq -r '.completion_tokens // 0' "$COST_INFO" 2>/dev/null || echo 0)"
     TOTAL_TOKENS="$(jq -r '.total_tokens // 0' "$COST_INFO" 2>/dev/null || echo 0)"
+  fi
+fi
+
+if [ "$BUDGET_MAX_USD" -gt 0 ] && [ "$ESTIMATED_COST_TOTAL" != "unknown" ]; then
+  over_budget=$(python - "$ESTIMATED_COST_TOTAL" "$BUDGET_MAX_USD" <<'PYCODE' || echo "0"
+import sys, decimal
+total, budget = decimal.Decimal(sys.argv[1]), decimal.Decimal(sys.argv[2])
+print("1" if total > budget else "0")
+PYCODE
+)
+  if [ "$over_budget" = "1" ]; then
+    echo "Estimated cost ${ESTIMATED_COST_TOTAL} exceeds budget ${BUDGET_MAX_USD}; skipping review posting."
+    cat > /tmp/budget-skip.md <<EOF
+Skipping review: estimated cost \$${ESTIMATED_COST_TOTAL} exceeds budget cap \$${BUDGET_MAX_USD}.
+Token usage (OpenRouter): total=${TOTAL_TOKENS} (prompt=${TOTAL_PROMPT_TOKENS}, completion=${TOTAL_COMPLETION_TOKENS})
+EOF
+    gh api --method POST -H "Accept: application/vnd.github+json" "/repos/${REPO}/issues/${PR_NUMBER}/comments" -F body="@/tmp/budget-skip.md"
+    exit 0
   fi
 fi
 
@@ -875,14 +899,24 @@ PYCODE
 )"
 
 INLINE_POSTED="false"
-INLINE_PAYLOAD=$(python - "$PROVIDER_FINDINGS_FILE" "$STRUCT_LINE" "$INLINE_MAX_COMMENTS" "$INLINE_MIN_SEVERITY" "$INLINE_MIN_AGREEMENT" "$SYNTHESIS_MODEL" "${PROVIDER_LIST[*]}" || true
+INLINE_PAYLOAD=$(python - "$PROVIDER_FINDINGS_FILE" "$STRUCT_LINE" "$INLINE_MAX_COMMENTS" "$INLINE_MIN_SEVERITY" "$INLINE_MIN_AGREEMENT" "$SYNTHESIS_MODEL" "/tmp/pr-files.json" "${PROVIDER_LIST[*]}" || true
 import json, sys
-prov_path, struct_line, max_comments, min_sev, min_agree, synth_model, providers = sys.argv[1:]
+prov_path, struct_line, max_comments, min_sev, min_agree, synth_model, files_path, providers = sys.argv[1:]
 providers_list = providers.split()
 severity_order = {"critical": 3, "major": 2, "minor": 1}
 min_rank = severity_order.get(min_sev.lower(), 1)
 min_agree = max(1, int(min_agree))
 max_comments = int(max_comments)
+
+changed_files = set()
+try:
+    files = json.load(open(files_path, encoding="utf-8"))
+    for f in files:
+        name = f.get("filename")
+        if name:
+            changed_files.add(name)
+except Exception:
+    pass
 
 def load_provider_findings():
     try:
@@ -920,6 +954,8 @@ by_key = {}
 for f in all_findings:
     file, line, msg = key_for(f)
     if not file or line <= 0 or not msg:
+        continue
+    if changed_files and file not in changed_files:
         continue
     severity = (f.get("severity") or "").lower()
     if severity_order.get(severity, 0) < min_rank:

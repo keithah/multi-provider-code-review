@@ -67,6 +67,8 @@ permissions:
 | `MAX_CHANGED_FILES`   | `0`                                                                                         | If >0, skip review when changed files exceed this count                                       |
 | `SKIP_LABELS`         | `""`                                                                                        | Comma-separated labels that cause the review to skip                                          |
 | `PROVIDER_LIMIT`      | `0`                                                                                         | If >0, limit to this many providers (deterministic rotation)                                  |
+| `PROVIDER_RETRIES`    | `2`                                                                                         | Retries per provider on failure/timeout                                                       |
+| `BUDGET_MAX_USD`      | `0`                                                                                         | If >0, skip posting results when estimated cost exceeds this amount                           |
 | `REPORT_BASENAME`     | `multi-provider-review`                                                                     | Base filename for exported JSON/SARIF reports                                                 |
 
 ### Inputs wired by the workflow template
@@ -259,6 +261,8 @@ max_changed_files: 0      # skip if total files above this
 skip_labels: ["skip-review", "no-ai-review"] # labels that cause skipping
 provider_allowlist: []    # optional allowlist
 provider_blocklist: []    # optional blocklist
+provider_retries: 2       # retries per provider
+budget_max_usd: 0         # if >0, skip posting when cost exceeds this
 diff_max_bytes: 120000
 run_timeout_seconds: 600
 ```
