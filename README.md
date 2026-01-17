@@ -52,6 +52,8 @@ permissions:
 | Variable           | Default                                                                                   | Description                       |
 | ------------------ | ----------------------------------------------------------------------------------------- | --------------------------------- |
 | `REVIEW_PROVIDERS` | `opencode/big-pickle,opencode/grok-code,opencode/minimax-m2.1-free,opencode/glm-4.7-free` | Comma-separated list of providers |
+| `SYNTHESIS_MODEL`  | `opencode/big-pickle`                                                                     | Model used to synthesize outputs  |
+| `DIFF_MAX_BYTES`   | `120000`                                                                                  | Max diff bytes to include         |
 
 ### Inputs wired by the workflow template
 
@@ -64,6 +66,8 @@ The provided workflow (`action-simple.yml`) resolves and passes these to the com
 | `PR_NUMBER`    | PR metadata            | Pull request number               |
 | `PR_BODY`      | PR metadata            | Pull request description          |
 | `HAS_AGENTS`   | Local check            | Whether `AGENTS.md` exists        |
+| `SYNTHESIS_MODEL` | Optional input      | Override synthesis model          |
+| `DIFF_MAX_BYTES`  | Optional input      | Override diff truncation limit    |
 
 ## 🎯 Usage
 

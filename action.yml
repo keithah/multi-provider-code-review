@@ -22,6 +22,14 @@ inputs:
     description: "Whether AGENTS.md exists"
     required: false
     default: "false"
+  SYNTHESIS_MODEL:
+    description: "Model used to synthesize provider outputs"
+    required: false
+    default: "opencode/big-pickle"
+  DIFF_MAX_BYTES:
+    description: "Maximum diff bytes to include in prompt"
+    required: false
+    default: "120000"
 
 runs:
   using: "composite"
@@ -35,6 +43,8 @@ runs:
         PR_NUMBER: ${{ inputs.PR_NUMBER }}
         PR_BODY: ${{ inputs.PR_BODY }}
         HAS_AGENTS: ${{ inputs.HAS_AGENTS }}
+        SYNTHESIS_MODEL: ${{ inputs.SYNTHESIS_MODEL }}
+        DIFF_MAX_BYTES: ${{ inputs.DIFF_MAX_BYTES }}
       run: bash "${{ github.action_path }}/action.sh"
 
 branding:

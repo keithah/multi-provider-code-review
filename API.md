@@ -23,7 +23,7 @@ Multi-Provider Code Review GitHub Action provides comprehensive code reviews by 
    curl -o .github/workflows/multi-provider-review.yml https://raw.githubusercontent.com/keithah/multi-provider-code-review/main/action-simple.yml
    ```
 2. Commit and push the workflow.
-3. Ensure the runner can install OpenCode (`brew install opencode` is included in the template).
+3. Ensure the runner can install OpenCode (template installs via `npm install -g opencode-ai` if missing).
 
 ## 📋 Usage
 
