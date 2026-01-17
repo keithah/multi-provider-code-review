@@ -11,4 +11,105 @@ jobs:
   action-smoke-test:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "ci smoke"
+      - uses: actions/checkout@v4
+
+      - name: Ensure python
+        run: |
+          if ! command -v python >/dev/null 2>&1; then
+            sudo apt-get update -y
+            sudo apt-get install -y python-is-python3
+          fi
+
+      - name: Create stubs for gh and opencode
+        run: |
+          mkdir -p /tmp/fakebin
+          cat > /tmp/fakebin/gh <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          if [[ "$1" == "api" ]]; then
+            shift
+            if [[ "$1" == "/repos/test/repo/pulls/123/files" ]]; then
+              echo '[{"filename":"src/app.ts","additions":5,"deletions":2}]'
+              exit 0
+            fi
+            if [[ "$1" == "/repos/test/repo/pulls/123" ]]; then
+              if [[ "$*" == *"Accept: application/vnd.github.v3.diff"* ]]; then
+                echo 'diff --git a/src/app.ts b/src/app.ts'
+                echo '@@ -1 +1 @@'
+                echo '-old'
+                echo '+new'
+                exit 0
+              fi
+            fi
+          fi
+          echo "gh stub: $*" >&2
+          exit 0
+          EOF
+          cat > /tmp/fakebin/opencode <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          echo "OPENCODE STUB"
+          echo "ARGS:"
+          for arg in "$@"; do
+            echo "  [$arg]"
+          done
+          EOF
+          chmod +x /tmp/fakebin/gh /tmp/fakebin/opencode
+
+      - name: Run action.sh with stubs
+        env:
+          GITHUB_TOKEN: test
+          REVIEW_PROVIDERS: "opencode/big-pickle,opencode/grok-code"
+          PR_TITLE: "Test PR"
+          PR_NUMBER: 123
+          PR_BODY: "Test body"
+          HAS_AGENTS: "false"
+          GITHUB_REPOSITORY: "test/repo"
+          SYNTHESIS_MODEL: "opencode/grok-code"
+          DIFF_MAX_BYTES: 20
+          RUN_TIMEOUT_SECONDS: 30
+        run: |
+          set -euo pipefail
+          export PATH="/tmp/fakebin:$PATH"
+          bash action.sh
+
+      - name: Create OpenRouter stubs
+        run: |
+          mkdir -p /tmp/fakebin
+          cat > /tmp/fakebin/opencode <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          echo "OPENCODE STUB" >&2
+          exit 0
+          EOF
+          cat > /tmp/fakebin/curl <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          if [[ "$1" == "-sS" && "$3" == "-X" && "$4" == "POST" && "$5" == "https://openrouter.ai/api/v1/chat/completions" ]]; then
+            cat <<'JSON'
+{"choices":[{"message":{"content":"stub-openrouter-response"}}]}
+JSON
+            exit 0
+          fi
+          echo "curl stub unexpected args: $*" >&2
+          exit 1
+          EOF
+          chmod +x /tmp/fakebin/opencode /tmp/fakebin/curl
+
+      - name: Run action.sh with OpenRouter provider stub
+        env:
+          GITHUB_TOKEN: test
+          OPENROUTER_API_KEY: test
+          REVIEW_PROVIDERS: "openrouter/mistral-test"
+          PR_TITLE: "Test PR"
+          PR_NUMBER: 456
+          PR_BODY: "Test body"
+          HAS_AGENTS: "false"
+          GITHUB_REPOSITORY: "test/repo"
+          SYNTHESIS_MODEL: "openrouter/mistral-test"
+          DIFF_MAX_BYTES: 10
+          RUN_TIMEOUT_SECONDS: 15
+        run: |
+          set -euo pipefail
+          export PATH="/tmp/fakebin:$PATH"
+          bash action.sh
