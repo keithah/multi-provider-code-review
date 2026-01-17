@@ -218,27 +218,11 @@ if [ "${#PROVIDERS[@]}" -eq 0 ]; then
 fi
 
 # Estimate costs (simple: free if name contains :free, unknown otherwise)
-paid_count=0
-free_count=0
 ESTIMATED_COST_DETAILS=()
 export ESTIMATED_COST_TOTAL ESTIMATED_COST_DETAILS
 TOTAL_PROMPT_TOKENS=0
 TOTAL_COMPLETION_TOKENS=0
 TOTAL_TOKENS=0
-for p in "${PROVIDERS[@]}"; do
-  if [[ "$p" == *":free"* ]]; then
-    ESTIMATED_COST_DETAILS+=("$p: $0 (tagged free)")
-    free_count=$((free_count + 1))
-  else
-    ESTIMATED_COST_DETAILS+=("$p: unknown (not tagged free)")
-    paid_count=$((paid_count + 1))
-  fi
-done
-if [ "$paid_count" -eq 0 ]; then
-  ESTIMATED_COST_TOTAL="$0 (all providers tagged :free)"
-else
-  ESTIMATED_COST_TOTAL="Unknown (paid/untagged providers present; depends on model pricing and tokens)"
-fi
 
 if [[ "$SYNTHESIS_MODEL" == openrouter/* ]] && [ -z "$OPENROUTER_API_KEY" ]; then
   echo "OpenRouter synthesis model requested but OPENROUTER_API_KEY is not set; falling back to opencode/big-pickle."
@@ -407,6 +391,11 @@ print(f"{adds} {dels} {files} {','.join(labels)}")
 PYCODE
     read -r TOTAL_ADDITIONS TOTAL_DELETIONS CHANGED_FILES LABELS_CSV < /tmp/pr-meta-fields || true
   fi
+fi
+
+PRICING_CACHE="/tmp/openrouter-models.json"
+if [ -n "$OPENROUTER_API_KEY" ]; then
+  curl -sS -H "Authorization: Bearer ${OPENROUTER_API_KEY}" https://openrouter.ai/api/v1/models > "$PRICING_CACHE" || true
 fi
 
 if gh api "/repos/${REPO}/pulls/${PR_NUMBER}" -H "Accept: application/vnd.github.v3.diff" > "$DIFF_FILE"; then
@@ -670,6 +659,18 @@ done
 if [ "${#PROVIDER_LIST[@]}" -eq 0 ]; then
   echo "No valid providers ran successfully."
   exit 1
+fi
+
+if [ -f "$PRICING_CACHE" ]; then
+  COST_INFO="/tmp/cost-info.json"
+  python /tmp/calc_cost.py "$PROVIDER_REPORT_JL" "$PRICING_CACHE" "$COST_INFO" || true
+  if [ -f "$COST_INFO" ]; then
+    ESTIMATED_COST_TOTAL="$(jq -r '.total // "unknown"' "$COST_INFO" 2>/dev/null || echo "unknown")"
+    mapfile -t ESTIMATED_COST_DETAILS < <(jq -r '.details[]' "$COST_INFO" 2>/dev/null || true)
+    TOTAL_PROMPT_TOKENS="$(jq -r '.prompt_tokens // 0' "$COST_INFO" 2>/dev/null || echo 0)"
+    TOTAL_COMPLETION_TOKENS="$(jq -r '.completion_tokens // 0' "$COST_INFO" 2>/dev/null || echo 0)"
+    TOTAL_TOKENS="$(jq -r '.total_tokens // 0' "$COST_INFO" 2>/dev/null || echo 0)"
+  fi
 fi
 
 PROVIDER_FINDINGS_FILE=/tmp/provider-findings.json
