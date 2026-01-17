@@ -217,6 +217,26 @@ if [ "${#PROVIDERS[@]}" -eq 0 ]; then
   exit 1
 fi
 
+# Estimate costs (simple: free if name contains :free, unknown otherwise)
+paid_count=0
+free_count=0
+ESTIMATED_COST_DETAILS=()
+export ESTIMATED_COST_TOTAL ESTIMATED_COST_DETAILS
+for p in "${PROVIDERS[@]}"; do
+  if [[ "$p" == *":free"* ]]; then
+    ESTIMATED_COST_DETAILS+=("$p: $0 (tagged free)")
+    free_count=$((free_count + 1))
+  else
+    ESTIMATED_COST_DETAILS+=("$p: unknown (not tagged free)")
+    paid_count=$((paid_count + 1))
+  fi
+done
+if [ "$paid_count" -eq 0 ]; then
+  ESTIMATED_COST_TOTAL="$0 (all providers tagged :free)"
+else
+  ESTIMATED_COST_TOTAL="Unknown (paid/untagged providers present; depends on model pricing and tokens)"
+fi
+
 if [[ "$SYNTHESIS_MODEL" == openrouter/* ]] && [ -z "$OPENROUTER_API_KEY" ]; then
   echo "OpenRouter synthesis model requested but OPENROUTER_API_KEY is not set; falling back to opencode/big-pickle."
   SYNTHESIS_MODEL="opencode/big-pickle"
@@ -248,6 +268,8 @@ MAX_CHANGED_FILES="${MAX_CHANGED_FILES:-0}"
 PROVIDER_ALLOWLIST_RAW="${PROVIDER_ALLOWLIST_RAW:-}"
 PROVIDER_BLOCKLIST_RAW="${PROVIDER_BLOCKLIST_RAW:-}"
 SKIP_LABELS_RAW="${SKIP_LABELS_RAW:-}"
+ESTIMATED_COST_TOTAL="unknown"
+ESTIMATED_COST_DETAILS=()
 REPORT_BASENAME="${REPORT_BASENAME:-multi-provider-review}"
 REPORT_DIR="${GITHUB_WORKSPACE:-$PWD}/multi-provider-report"
 mkdir -p "$REPORT_DIR"
@@ -734,6 +756,14 @@ COMMENT_FILE=/tmp/final-review.md
 {
   echo "**Multi-Provider Code Review**"
   echo ""
+  echo "**Estimated cost:** ${ESTIMATED_COST_TOTAL}"
+  if [ "${#ESTIMATED_COST_DETAILS[@]}" -gt 0 ]; then
+    echo "<details><summary>Per-provider cost notes</summary>"
+    for c in "${ESTIMATED_COST_DETAILS[@]}"; do
+      echo "- $c"
+    done
+    echo "</details>"
+  fi
   echo "**Providers:** ${PROVIDER_LIST[*]}"
   echo "**Synthesis model:** ${SYNTHESIS_MODEL}"
   echo ""
@@ -969,6 +999,10 @@ report = {
     },
     "only_binary": os.getenv("ONLY_BINARY", "false").lower() == "true",
     "test_hint_added": os.getenv("TEST_HINT_FLAG", "false").lower() == "true",
+    "cost": {
+        "estimated_total": os.getenv("ESTIMATED_COST_TOTAL", "unknown"),
+        "details": os.getenv("ESTIMATED_COST_DETAILS", "").split("||") if os.getenv("ESTIMATED_COST_DETAILS") else [],
+    },
 }
 os.makedirs(os.path.dirname(out_path), exist_ok=True)
 with open(out_path, "w", encoding="utf-8") as f:
