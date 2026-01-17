@@ -1,0 +1,10 @@
+name: Verify Actions
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  echo:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "actions ok"
