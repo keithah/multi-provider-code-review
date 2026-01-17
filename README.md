@@ -91,6 +91,12 @@ Trigger a review manually:
 @opencode or @claude
 ```
 
+### Choose your trigger mode
+
+- **Auto + manual (default)**: Keep both `pull_request` and `issue_comment` blocks.
+- **Manual only**: Remove the `pull_request` block.
+- **Auto only**: Remove the `issue_comment` block or narrow the `if` filter.
+
 ## 🏗️ How It Works
 
 ### Architecture

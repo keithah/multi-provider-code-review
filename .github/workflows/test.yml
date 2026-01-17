@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  action-smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create stubs for gh and opencode
+        run: |
+          mkdir -p /tmp/fakebin
+          cat > /tmp/fakebin/gh <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          if [[ "$1" == "api" ]]; then
+            shift
+            if [[ "$1" == "/repos/test/repo/pulls/123/files" ]]; then
+              echo '[{"filename":"src/app.ts","additions":5,"deletions":2}]'
+              exit 0
+            fi
+            if [[ "$1" == "/repos/test/repo/pulls/123" ]]; then
+              if [[ "$*" == *"Accept: application/vnd.github.v3.diff"* ]]; then
+                echo 'diff --git a/src/app.ts b/src/app.ts'
+                echo '@@ -1 +1 @@'
+                echo '-old'
+                echo '+new'
+                exit 0
+              fi
+            fi
+          fi
+          echo "gh stub: $*" >&2
+          exit 0
+          EOF
+          cat > /tmp/fakebin/opencode <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          echo "OPENCODE STUB"
+          echo "ARGS:"
+          for arg in "$@"; do
+            echo "  [$arg]"
+          done
+          EOF
+          chmod +x /tmp/fakebin/gh /tmp/fakebin/opencode
+
+      - name: Run action.sh with stubs
+        env:
+          GITHUB_TOKEN: test
+          REVIEW_PROVIDERS: "opencode/big-pickle,opencode/grok-code"
+          PR_TITLE: "Test PR"
+          PR_NUMBER: 123
+          PR_BODY: "Test body"
+          HAS_AGENTS: "false"
+          GITHUB_REPOSITORY: "test/repo"
+          SYNTHESIS_MODEL: "opencode/grok-code"
+          DIFF_MAX_BYTES: 20
+        run: |
+          set -euo pipefail
+          export PATH="/tmp/fakebin:$PATH"
+          bash action.sh
