@@ -90,6 +90,7 @@ jobs:
           SYNTHESIS_MODEL: ${{ vars.SYNTHESIS_MODEL || '' }}
           DIFF_MAX_BYTES: ${{ vars.DIFF_MAX_BYTES || '' }}
           RUN_TIMEOUT_SECONDS: ${{ vars.RUN_TIMEOUT_SECONDS || '' }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY || '' }}
 
 # To disable auto-run on every PR change, remove the pull_request block.
 # To disable manual triggers, remove the issue_comment block or the IF filter.

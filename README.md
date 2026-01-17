@@ -55,6 +55,8 @@ permissions:
 | `SYNTHESIS_MODEL`  | `opencode/big-pickle`                                                                     | Model used to synthesize outputs  |
 | `DIFF_MAX_BYTES`   | `120000`                                                                                  | Max diff bytes to include         |
 | `RUN_TIMEOUT_SECONDS` | `600`                                                                                  | Per-model timeout in seconds      |
+| `OPENROUTER_API_KEY` | _unset_                                                                                 | Optional key for OpenRouter models |
+| `RUN_TIMEOUT_SECONDS` | `600`                                                                                  | Per-model timeout in seconds      |
 
 ### Inputs wired by the workflow template
 
@@ -181,6 +183,20 @@ env:
   SYNTHESIS_MODEL: "opencode/big-pickle"   # optional override
   DIFF_MAX_BYTES: "120000"                 # optional diff truncation size
   RUN_TIMEOUT_SECONDS: "600"               # optional per-model timeout
+  OPENROUTER_API_KEY: "${{ secrets.OPENROUTER_API_KEY }}" # optional, required for openrouter/* entries
+
+### Using OpenRouter providers (optional)
+
+You can mix OpenRouter-hosted models with the existing OpenCode providers:
+
+1. Create a repo/org secret `OPENROUTER_API_KEY`.
+2. Add OpenRouter models to `REVIEW_PROVIDERS`, prefixed with `openrouter/`, e.g.:
+   ```yaml
+   env:
+     REVIEW_PROVIDERS: "opencode/big-pickle,openrouter/mistralai/mistral-7b-instruct"
+     SYNTHESIS_MODEL: "openrouter/google/gemini-flash-1.5" # optional
+   ```
+3. The action will route `openrouter/*` entries via the OpenRouter Chat Completions API.
 ```
 
 ### Project Guidelines Integration

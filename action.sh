@@ -43,6 +43,7 @@ fi
 SYNTHESIS_MODEL="${SYNTHESIS_MODEL:-opencode/big-pickle}"
 DIFF_MAX_BYTES="${DIFF_MAX_BYTES:-120000}"
 RUN_TIMEOUT_SECONDS="${RUN_TIMEOUT_SECONDS:-600}"
+OPENROUTER_API_KEY="${OPENROUTER_API_KEY:-}"
 
 run_with_timeout() {
   if command -v timeout >/dev/null 2>&1; then
@@ -52,6 +53,71 @@ run_with_timeout() {
   fi
 }
 
+run_openrouter() {
+  local provider="$1"
+  local prompt="$2"
+  local outfile="$3"
+
+  if [ -z "$OPENROUTER_API_KEY" ]; then
+    echo "OpenRouter provider ${provider} requested but OPENROUTER_API_KEY is not set."
+    return 1
+  fi
+
+  local model="${provider#openrouter/}"
+  local payload_file
+  local response_file
+  payload_file=$(mktemp) || return 1
+  response_file=$(mktemp) || return 1
+
+  python - "$prompt" "$model" "$payload_file" >/dev/null <<'PYCODE'
+import json, sys
+prompt, model, path = sys.argv[1], sys.argv[2], sys.argv[3]
+payload = {
+    "model": model,
+    "messages": [{"role": "user", "content": prompt}],
+    "temperature": 0.1,
+    "max_tokens": 1200,
+}
+with open(path, "w", encoding="utf-8") as f:
+    json.dump(payload, f)
+PYCODE
+  if [ $? -ne 0 ]; then
+    return 1
+  fi
+
+  if run_with_timeout curl -sS -X POST "https://openrouter.ai/api/v1/chat/completions" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer ${OPENROUTER_API_KEY}" \
+    -H "HTTP-Referer: https://github.com/keithah/multi-provider-code-review" \
+    -H "X-Title: Multi-Provider Code Review" \
+    -d @"${payload_file}" > "${response_file}"; then
+    :
+  else
+    status=$?
+    echo "curl failed for OpenRouter provider ${provider}" >&2
+    cat "${response_file}" >&2 || true
+    return "$status"
+  fi
+
+  python - "$response_file" "$outfile" >/dev/null <<'PYCODE'
+import json, sys
+resp_path, out_path = sys.argv[1], sys.argv[2]
+data = json.load(open(resp_path, encoding="utf-8"))
+choices = data.get("choices") or []
+if not choices:
+    raise SystemExit("No choices in response")
+content = choices[0].get("message", {}).get("content", "")
+with open(out_path, "w", encoding="utf-8") as f:
+    f.write(content)
+PYCODE
+  if [ $? -ne 0 ]; then
+    echo "Failed to parse OpenRouter response for ${provider}" >&2
+    cat "${response_file}" >&2 || true
+    return 1
+  fi
+
+  return 0
+}
 PR_TITLE_VALUE="${PR_TITLE}"
 PR_BODY_VALUE="${PR_BODY}"
 
@@ -160,18 +226,34 @@ for raw_provider in "${PROVIDERS[@]}"; do
   [ -z "$provider" ] && continue
   PROVIDER_LIST+=("$provider")
   outfile="/tmp/reviews/$(echo "$provider" | tr '/:' '__').txt"
+  log_file="${outfile}.log"
   echo "Running provider: ${provider}"
-  if run_with_timeout opencode run -m "${provider}" -- "${PROMPT_CONTENT}" > "$outfile" 2> "${outfile}.log"; then
-    echo "✅ ${provider} completed"
-  else
-    status=$?
-    if [ "$status" -eq 124 ]; then
-      echo "⚠️ ${provider} timed out after ${RUN_TIMEOUT_SECONDS}s"
+  if [[ "$provider" == openrouter/* ]]; then
+    if run_openrouter "${provider}" "${PROMPT_CONTENT}" "${outfile}" > "${log_file}" 2>&1; then
+      echo "✅ ${provider} completed"
     else
-      echo "⚠️ ${provider} failed (see log), capturing partial output"
+      status=$?
+      if [ "$status" -eq 124 ]; then
+        echo "⚠️ ${provider} timed out after ${RUN_TIMEOUT_SECONDS}s"
+      else
+        echo "⚠️ ${provider} failed (see log), capturing partial output"
+      fi
+      echo "Provider ${provider} failed. Log:" > "$outfile"
+      cat "${log_file}" >> "$outfile" || true
     fi
-    echo "Provider ${provider} failed. Log:" > "$outfile"
-    cat "${outfile}.log" >> "$outfile" || true
+  else
+    if run_with_timeout opencode run -m "${provider}" -- "${PROMPT_CONTENT}" > "$outfile" 2> "${log_file}"; then
+      echo "✅ ${provider} completed"
+    else
+      status=$?
+      if [ "$status" -eq 124 ]; then
+        echo "⚠️ ${provider} timed out after ${RUN_TIMEOUT_SECONDS}s"
+      else
+        echo "⚠️ ${provider} failed (see log), capturing partial output"
+      fi
+      echo "Provider ${provider} failed. Log:" > "$outfile"
+      cat "${log_file}" >> "$outfile" || true
+    fi
   fi
 done
 
@@ -214,16 +296,31 @@ for provider in "${PROVIDER_LIST[@]}"; do
 done
 
 SYNTHESIS_OUTPUT=/tmp/synthesis.txt
-if run_with_timeout opencode run -m "${SYNTHESIS_MODEL}" -- "$(cat "$SYN_PROMPT")" > "$SYNTHESIS_OUTPUT" 2> /tmp/synthesis.log; then
-  echo "✅ Synthesis complete"
-else
-  status=$?
-  if [ "$status" -eq 124 ]; then
-    echo "⚠️ Synthesis timed out after ${RUN_TIMEOUT_SECONDS}s, using concatenated provider outputs"
+synthesis_log=/tmp/synthesis.log
+if [[ "${SYNTHESIS_MODEL}" == openrouter/* ]]; then
+  if run_openrouter "${SYNTHESIS_MODEL}" "$(cat "$SYN_PROMPT")" "$SYNTHESIS_OUTPUT" > "$synthesis_log" 2>&1; then
+    echo "✅ Synthesis complete"
   else
-    echo "⚠️ Synthesis failed, using concatenated provider outputs"
+    status=$?
+    if [ "$status" -eq 124 ]; then
+      echo "⚠️ Synthesis timed out after ${RUN_TIMEOUT_SECONDS}s, using concatenated provider outputs"
+    else
+      echo "⚠️ Synthesis failed, using concatenated provider outputs"
+    fi
+    cat "$SYN_PROMPT" > "$SYNTHESIS_OUTPUT"
   fi
-  cat "$SYN_PROMPT" > "$SYNTHESIS_OUTPUT"
+else
+  if run_with_timeout opencode run -m "${SYNTHESIS_MODEL}" -- "$(cat "$SYN_PROMPT")" > "$SYNTHESIS_OUTPUT" 2> "$synthesis_log"; then
+    echo "✅ Synthesis complete"
+  else
+    status=$?
+    if [ "$status" -eq 124 ]; then
+      echo "⚠️ Synthesis timed out after ${RUN_TIMEOUT_SECONDS}s, using concatenated provider outputs"
+    else
+      echo "⚠️ Synthesis failed, using concatenated provider outputs"
+    fi
+    cat "$SYN_PROMPT" > "$SYNTHESIS_OUTPUT"
+  fi
 fi
 
 COMMENT_FILE=/tmp/final-review.md
