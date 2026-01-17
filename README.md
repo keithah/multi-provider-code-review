@@ -151,12 +151,20 @@ Each provider is run directly via OpenCode CLI using the list from `REVIEW_PROVI
 
 ## 🤖 Available Providers
 
-| Provider                     | Description            | Backing      |
-| ---------------------------- | ---------------------- | ------------ |
-| `opencode/big-pickle`        | Large reasoning model  | Claude-based |
-| `opencode/grok-code`         | Code-specialized model | Grok-based   |
-| `opencode/minimax-m2.1-free` | Free tier model        | Minimax      |
-| `opencode/glm-4.7-free`      | Free GLM model         | Zhipu AI     |
+**OpenCode free (no keys)**
+| Provider                     | Description            |
+| ---------------------------- | ---------------------- |
+| `opencode/big-pickle`        | Large reasoning model  |
+| `opencode/grok-code`         | Code-specialized model |
+| `opencode/minimax-m2.1-free` | Free tier model        |
+| `opencode/glm-4.7-free`      | Free GLM model         |
+
+**OpenRouter free (needs `OPENROUTER_API_KEY`)**
+| Provider                                      | Notes                   |
+| --------------------------------------------- | ----------------------- |
+| `openrouter/google/gemini-2.0-flash-exp:free` | Fast/light Gemini       |
+| `openrouter/mistralai/devstral-2512:free`     | DevStral Mistral free   |
+| `openrouter/xiaomi/mimo-v2-flash:free`        | Xiaomi Mimo flash tier  |
 
 ### Adding Custom Providers
 
@@ -194,8 +202,8 @@ You can mix OpenRouter-hosted models with the existing OpenCode providers:
 2. Add OpenRouter models to `REVIEW_PROVIDERS`, prefixed with `openrouter/`, e.g.:
    ```yaml
    env:
-     REVIEW_PROVIDERS: "opencode/big-pickle,openrouter/mistralai/mistral-7b-instruct"
-     SYNTHESIS_MODEL: "openrouter/google/gemini-flash-1.5" # optional
+     REVIEW_PROVIDERS: "opencode/big-pickle,openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free"
+     SYNTHESIS_MODEL: "openrouter/google/gemini-2.0-flash-exp:free" # optional
    ```
 3. The action will route `openrouter/*` entries via the OpenRouter Chat Completions API.
 ```

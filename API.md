@@ -101,6 +101,9 @@ The code is well-structured but needs security and performance improvements befo
 | `opencode/grok-code` | Code-specialized | Grok-based |
 | `opencode/minimax-m2.1-free` | General | Minimax |
 | `opencode/glm-4.7-free` | Creative | Zhipu |
+| `openrouter/google/gemini-2.0-flash-exp:free` | Fast/light | Gemini (OpenRouter) |
+| `openrouter/mistralai/devstral-2512:free` | Mistral devstral | Mistral (OpenRouter) |
+| `openrouter/xiaomi/mimo-v2-flash:free` | Flash tier | Xiaomi (OpenRouter) |
 
 ### Premium Providers (Available)
 Additional providers available with authentication:
