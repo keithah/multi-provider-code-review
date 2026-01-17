@@ -30,6 +30,10 @@ inputs:
     description: "Maximum diff bytes to include in prompt"
     required: false
     default: "120000"
+  RUN_TIMEOUT_SECONDS:
+    description: "Seconds to allow each model run before timing out"
+    required: false
+    default: "600"
 
 runs:
   using: "composite"
@@ -45,6 +49,7 @@ runs:
         HAS_AGENTS: ${{ inputs.HAS_AGENTS }}
         SYNTHESIS_MODEL: ${{ inputs.SYNTHESIS_MODEL }}
         DIFF_MAX_BYTES: ${{ inputs.DIFF_MAX_BYTES }}
+        RUN_TIMEOUT_SECONDS: ${{ inputs.RUN_TIMEOUT_SECONDS }}
       run: bash "${{ github.action_path }}/action.sh"
 
 branding:

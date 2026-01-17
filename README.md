@@ -54,6 +54,7 @@ permissions:
 | `REVIEW_PROVIDERS` | `opencode/big-pickle,opencode/grok-code,opencode/minimax-m2.1-free,opencode/glm-4.7-free` | Comma-separated list of providers |
 | `SYNTHESIS_MODEL`  | `opencode/big-pickle`                                                                     | Model used to synthesize outputs  |
 | `DIFF_MAX_BYTES`   | `120000`                                                                                  | Max diff bytes to include         |
+| `RUN_TIMEOUT_SECONDS` | `600`                                                                                  | Per-model timeout in seconds      |
 
 ### Inputs wired by the workflow template
 
@@ -179,6 +180,7 @@ env:
   REVIEW_PROVIDERS: "opencode/big-pickle,opencode/grok-code,opencode/minimax-m2.1-free,opencode/glm-4.7-free"
   SYNTHESIS_MODEL: "opencode/big-pickle"   # optional override
   DIFF_MAX_BYTES: "120000"                 # optional diff truncation size
+  RUN_TIMEOUT_SECONDS: "600"               # optional per-model timeout
 ```
 
 ### Project Guidelines Integration

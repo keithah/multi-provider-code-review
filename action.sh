@@ -42,6 +42,15 @@ fi
 
 SYNTHESIS_MODEL="${SYNTHESIS_MODEL:-opencode/big-pickle}"
 DIFF_MAX_BYTES="${DIFF_MAX_BYTES:-120000}"
+RUN_TIMEOUT_SECONDS="${RUN_TIMEOUT_SECONDS:-600}"
+
+run_with_timeout() {
+  if command -v timeout >/dev/null 2>&1; then
+    timeout "${RUN_TIMEOUT_SECONDS}s" "$@"
+  else
+    "$@"
+  fi
+}
 
 PR_TITLE_VALUE="${PR_TITLE}"
 PR_BODY_VALUE="${PR_BODY}"
@@ -152,10 +161,15 @@ for raw_provider in "${PROVIDERS[@]}"; do
   PROVIDER_LIST+=("$provider")
   outfile="/tmp/reviews/$(echo "$provider" | tr '/:' '__').txt"
   echo "Running provider: ${provider}"
-  if opencode run -m "${provider}" -- "${PROMPT_CONTENT}" > "$outfile" 2> "${outfile}.log"; then
+  if run_with_timeout opencode run -m "${provider}" -- "${PROMPT_CONTENT}" > "$outfile" 2> "${outfile}.log"; then
     echo "✅ ${provider} completed"
   else
-    echo "⚠️ ${provider} failed (see log), capturing partial output"
+    status=$?
+    if [ "$status" -eq 124 ]; then
+      echo "⚠️ ${provider} timed out after ${RUN_TIMEOUT_SECONDS}s"
+    else
+      echo "⚠️ ${provider} failed (see log), capturing partial output"
+    fi
     echo "Provider ${provider} failed. Log:" > "$outfile"
     cat "${outfile}.log" >> "$outfile" || true
   fi
@@ -200,10 +214,15 @@ for provider in "${PROVIDER_LIST[@]}"; do
 done
 
 SYNTHESIS_OUTPUT=/tmp/synthesis.txt
-if opencode run -m "${SYNTHESIS_MODEL}" -- "$(cat "$SYN_PROMPT")" > "$SYNTHESIS_OUTPUT" 2> /tmp/synthesis.log; then
+if run_with_timeout opencode run -m "${SYNTHESIS_MODEL}" -- "$(cat "$SYN_PROMPT")" > "$SYNTHESIS_OUTPUT" 2> /tmp/synthesis.log; then
   echo "✅ Synthesis complete"
 else
-  echo "⚠️ Synthesis failed, using concatenated provider outputs"
+  status=$?
+  if [ "$status" -eq 124 ]; then
+    echo "⚠️ Synthesis timed out after ${RUN_TIMEOUT_SECONDS}s, using concatenated provider outputs"
+  else
+    echo "⚠️ Synthesis failed, using concatenated provider outputs"
+  fi
   cat "$SYN_PROMPT" > "$SYNTHESIS_OUTPUT"
 fi
 

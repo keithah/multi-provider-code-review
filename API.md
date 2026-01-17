@@ -56,6 +56,7 @@ jobs:
 | `REVIEW_PROVIDERS` | List of providers, comma-separated | `opencode/big-pickle,opencode/grok-code,opencode/minimax-m2.1-free,opencode/glm-4.7-free` |
 | `SYNTHESIS_MODEL` | Model used to combine provider outputs | `opencode/big-pickle` |
 | `DIFF_MAX_BYTES` | Max diff bytes included in prompt | `120000` |
+| `RUN_TIMEOUT_SECONDS` | Per-model timeout in seconds | `600` |
 | `PR_TITLE` | PR title (passed by workflow) | n/a |
 | `PR_NUMBER` | PR number (passed by workflow) | n/a |
 | `PR_BODY` | PR body (passed by workflow) | n/a |

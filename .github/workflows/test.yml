@@ -59,6 +59,7 @@ jobs:
           GITHUB_REPOSITORY: "test/repo"
           SYNTHESIS_MODEL: "opencode/grok-code"
           DIFF_MAX_BYTES: 20
+          RUN_TIMEOUT_SECONDS: 30
         run: |
           set -euo pipefail
           export PATH="/tmp/fakebin:$PATH"
