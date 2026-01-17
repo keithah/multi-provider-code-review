@@ -7,6 +7,11 @@ if ! command -v npm >/dev/null 2>&1; then
   exit 1
 fi
 
+if ! command -v python >/dev/null 2>&1; then
+  echo "python is required but not found on PATH. Please ensure Python is installed on the runner."
+  exit 1
+fi
+
 if ! command -v opencode >/dev/null 2>&1; then
   echo "opencode CLI not found; installing via npm (opencode-ai)..."
   NPM_PREFIX="${NPM_PREFIX:-$HOME/.npm-global}"

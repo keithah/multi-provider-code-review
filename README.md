@@ -21,6 +21,7 @@
 - GitHub-hosted runners (or self-hosted with Node.js/npm available)
 - OpenCode CLI (installed automatically via npm in the workflow template if missing)
 - GitHub CLI is already available on `ubuntu-latest` runners
+- Python on the runner (used to build/parse JSON for OpenRouter; `python` must be on PATH)
 
 ### Add to your repo
 

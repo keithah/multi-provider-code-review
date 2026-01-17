@@ -24,6 +24,7 @@ Multi-Provider Code Review GitHub Action provides comprehensive code reviews by 
    ```
 2. Commit and push the workflow.
 3. Ensure the runner can install OpenCode (template installs via `npm install -g opencode-ai` if missing).
+4. Ensure `python` is available on the runner (required for OpenRouter JSON handling).
 
 ## 📋 Usage
 

@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Ensure python
+        run: sudo ln -s /usr/bin/python3 /usr/local/bin/python
 
       - name: Create stubs for gh and opencode
         run: |
@@ -60,6 +62,48 @@ jobs:
           SYNTHESIS_MODEL: "opencode/grok-code"
           DIFF_MAX_BYTES: 20
           RUN_TIMEOUT_SECONDS: 30
+        run: |
+          set -euo pipefail
+          export PATH="/tmp/fakebin:$PATH"
+          bash action.sh
+
+      - name: Create OpenRouter stubs
+        run: |
+          mkdir -p /tmp/fakebin
+          cat > /tmp/fakebin/opencode <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          echo "OPENCODE STUB" >&2
+          exit 0
+          EOF
+          cat > /tmp/fakebin/curl <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          if [[ "$1" == "-sS" && "$3" == "-X" && "$4" == "POST" && "$5" == "https://openrouter.ai/api/v1/chat/completions" ]]; then
+            # Emit a minimal OpenRouter-like response
+            cat <<'JSON'
+{"choices":[{"message":{"content":"stub-openrouter-response"}}]}
+JSON
+            exit 0
+          fi
+          echo "curl stub unexpected args: $*" >&2
+          exit 1
+          EOF
+          chmod +x /tmp/fakebin/opencode /tmp/fakebin/curl
+
+      - name: Run action.sh with OpenRouter provider stub
+        env:
+          GITHUB_TOKEN: test
+          OPENROUTER_API_KEY: test
+          REVIEW_PROVIDERS: "openrouter/mistral-test"
+          PR_TITLE: "Test PR"
+          PR_NUMBER: 456
+          PR_BODY: "Test body"
+          HAS_AGENTS: "false"
+          GITHUB_REPOSITORY: "test/repo"
+          SYNTHESIS_MODEL: "openrouter/mistral-test"
+          DIFF_MAX_BYTES: 10
+          RUN_TIMEOUT_SECONDS: 15
         run: |
           set -euo pipefail
           export PATH="/tmp/fakebin:$PATH"
