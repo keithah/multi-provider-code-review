@@ -56,6 +56,8 @@ permissions:
 | `DIFF_MAX_BYTES`   | `120000`                                                                                  | Max diff bytes to include         |
 | `RUN_TIMEOUT_SECONDS` | `600`                                                                                  | Per-model timeout in seconds      |
 | `OPENROUTER_API_KEY` | _unset_                                                                                 | Optional key for OpenRouter models |
+| `COPILOT_TOKEN`    | _unset_ (defaults to `GITHUB_TOKEN` when provided)                                        | Optional token for Copilot models |
+| `COPILOT_BASE_URL` | `https://models.inference.ai.azure.com`                                                   | Override Copilot API base URL     |
 | `RUN_TIMEOUT_SECONDS` | `600`                                                                                  | Per-model timeout in seconds      |
 
 ### Inputs wired by the workflow template
@@ -184,6 +186,7 @@ env:
   DIFF_MAX_BYTES: "120000"                 # optional diff truncation size
   RUN_TIMEOUT_SECONDS: "600"               # optional per-model timeout
   OPENROUTER_API_KEY: "${{ secrets.OPENROUTER_API_KEY }}" # optional, required for openrouter/* entries
+  COPILOT_TOKEN: "${{ secrets.COPILOT_TOKEN }}"          # optional, required for copilot/* entries
 
 ### Using OpenRouter providers (optional)
 
@@ -197,6 +200,19 @@ You can mix OpenRouter-hosted models with the existing OpenCode providers:
      SYNTHESIS_MODEL: "openrouter/google/gemini-flash-1.5" # optional
    ```
 3. The action will route `openrouter/*` entries via the OpenRouter Chat Completions API.
+
+### Using GitHub Copilot models (optional)
+
+You can also mix GitHub Copilot-hosted models:
+
+1. Add a repo/org secret `COPILOT_TOKEN` (or rely on `GITHUB_TOKEN` if it has model access).
+2. Add Copilot models to `REVIEW_PROVIDERS`, prefixed with `copilot/`, e.g.:
+   ```yaml
+   env:
+     REVIEW_PROVIDERS: "opencode/big-pickle,copilot/gpt-4o-mini"
+     SYNTHESIS_MODEL: "copilot/gpt-4o-mini" # optional
+   ```
+3. The action calls the Copilot chat completions API at `https://models.inference.ai.azure.com`. Override via `COPILOT_BASE_URL` if needed.
 ```
 
 ### Project Guidelines Integration

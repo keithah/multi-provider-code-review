@@ -44,6 +44,8 @@ SYNTHESIS_MODEL="${SYNTHESIS_MODEL:-opencode/big-pickle}"
 DIFF_MAX_BYTES="${DIFF_MAX_BYTES:-120000}"
 RUN_TIMEOUT_SECONDS="${RUN_TIMEOUT_SECONDS:-600}"
 OPENROUTER_API_KEY="${OPENROUTER_API_KEY:-}"
+COPILOT_TOKEN="${COPILOT_TOKEN:-${GITHUB_TOKEN:-}}"
+COPILOT_BASE_URL="${COPILOT_BASE_URL:-https://models.inference.ai.azure.com}"
 
 run_with_timeout() {
   if command -v timeout >/dev/null 2>&1; then
@@ -118,6 +120,72 @@ PYCODE
 
   return 0
 }
+
+run_copilot() {
+  local provider="$1"
+  local prompt="$2"
+  local outfile="$3"
+
+  if [ -z "$COPILOT_TOKEN" ]; then
+    echo "Copilot provider ${provider} requested but COPILOT_TOKEN is not set."
+    return 1
+  fi
+
+  local model="${provider#copilot/}"
+  local payload_file
+  local response_file
+  payload_file=$(mktemp) || return 1
+  response_file=$(mktemp) || return 1
+
+  python - "$prompt" "$model" "$payload_file" >/dev/null <<'PYCODE'
+import json, sys
+prompt, model, path = sys.argv[1], sys.argv[2], sys.argv[3]
+payload = {
+    "model": model,
+    "messages": [{"role": "user", "content": prompt}],
+    "temperature": 0.1,
+    "max_tokens": 1200,
+}
+with open(path, "w", encoding="utf-8") as f:
+    json.dump(payload, f)
+PYCODE
+  if [ $? -ne 0 ]; then
+    return 1
+  fi
+
+  if run_with_timeout curl -sS -X POST "${COPILOT_BASE_URL}/chat/completions" \
+    -H "Content-Type: application/json" \
+    -H "Accept: application/json" \
+    -H "Authorization: Bearer ${COPILOT_TOKEN}" \
+    -d @"${payload_file}" > "${response_file}"; then
+    :
+  else
+    status=$?
+    echo "curl failed for Copilot provider ${provider}" >&2
+    cat "${response_file}" >&2 || true
+    return "$status"
+  fi
+
+  python - "$response_file" "$outfile" >/dev/null <<'PYCODE'
+import json, sys
+resp_path, out_path = sys.argv[1], sys.argv[2]
+data = json.load(open(resp_path, encoding="utf-8"))
+choices = data.get("choices") or []
+if not choices:
+    raise SystemExit("No choices in response")
+content = choices[0].get("message", {}).get("content", "")
+with open(out_path, "w", encoding="utf-8") as f:
+    f.write(content)
+PYCODE
+  if [ $? -ne 0 ]; then
+    echo "Failed to parse Copilot response for ${provider}" >&2
+    cat "${response_file}" >&2 || true
+    return 1
+  fi
+
+  return 0
+}
+
 PR_TITLE_VALUE="${PR_TITLE}"
 PR_BODY_VALUE="${PR_BODY}"
 
@@ -241,6 +309,19 @@ for raw_provider in "${PROVIDERS[@]}"; do
       echo "Provider ${provider} failed. Log:" > "$outfile"
       cat "${log_file}" >> "$outfile" || true
     fi
+  elif [[ "$provider" == copilot/* ]]; then
+    if run_copilot "${provider}" "${PROMPT_CONTENT}" "${outfile}" > "${log_file}" 2>&1; then
+      echo "✅ ${provider} completed"
+    else
+      status=$?
+      if [ "$status" -eq 124 ]; then
+        echo "⚠️ ${provider} timed out after ${RUN_TIMEOUT_SECONDS}s"
+      else
+        echo "⚠️ ${provider} failed (see log), capturing partial output"
+      fi
+      echo "Provider ${provider} failed. Log:" > "$outfile"
+      cat "${log_file}" >> "$outfile" || true
+    fi
   else
     if run_with_timeout opencode run -m "${provider}" -- "${PROMPT_CONTENT}" > "$outfile" 2> "${log_file}"; then
       echo "✅ ${provider} completed"
@@ -299,6 +380,18 @@ SYNTHESIS_OUTPUT=/tmp/synthesis.txt
 synthesis_log=/tmp/synthesis.log
 if [[ "${SYNTHESIS_MODEL}" == openrouter/* ]]; then
   if run_openrouter "${SYNTHESIS_MODEL}" "$(cat "$SYN_PROMPT")" "$SYNTHESIS_OUTPUT" > "$synthesis_log" 2>&1; then
+    echo "✅ Synthesis complete"
+  else
+    status=$?
+    if [ "$status" -eq 124 ]; then
+      echo "⚠️ Synthesis timed out after ${RUN_TIMEOUT_SECONDS}s, using concatenated provider outputs"
+    else
+      echo "⚠️ Synthesis failed, using concatenated provider outputs"
+    fi
+    cat "$SYN_PROMPT" > "$SYNTHESIS_OUTPUT"
+  fi
+elif [[ "${SYNTHESIS_MODEL}" == copilot/* ]]; then
+  if run_copilot "${SYNTHESIS_MODEL}" "$(cat "$SYN_PROMPT")" "$SYNTHESIS_OUTPUT" > "$synthesis_log" 2>&1; then
     echo "✅ Synthesis complete"
   else
     status=$?
