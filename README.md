@@ -14,6 +14,7 @@ Run comprehensive code reviews with multiple providers (OpenRouter-first) and sy
 - Clean integration: single composite action that builds prompts, runs providers, synthesizes, and posts results
 - Inline and consensus: inline suggestions post only when severity meets thresholds, multiple providers agree (configurable), and a suggestion/hunk is present
 - Resilient posting: summary comments are chunked if large and API calls retry with backoff; JSON/SARIF reports capture timings and truncation status
+- Smart filters: optional skip on small diffs, large file counts, or specific labels; binary-only PRs are skipped; adds a test-coverage hint when no tests change
 
 ## Quick Start
 
@@ -62,6 +63,8 @@ permissions:
 | `INLINE_MAX_COMMENTS` | `5`                                                                                         | Max inline review comments from structured findings                                           |
 | `INLINE_MIN_SEVERITY` | `major`                                                                                     | Minimum severity to post inline (`critical`, `major`, `minor`)                                |
 | `INLINE_MIN_AGREEMENT`| `1`                                                                                         | Minimum number of providers that must agree before posting inline suggestions                 |
+| `MIN_CHANGED_LINES`   | `0`                                                                                         | If >0, skip review when total line changes are below this threshold                           |
+| `MAX_CHANGED_FILES`   | `0`                                                                                         | If >0, skip review when changed files exceed this count                                       |
 | `REPORT_BASENAME`     | `multi-provider-review`                                                                     | Base filename for exported JSON/SARIF reports                                                 |
 
 ### Inputs wired by the workflow template
@@ -249,6 +252,11 @@ synthesis_model: openrouter/google/gemini-2.0-flash-exp:free
 inline_max_comments: 5
 inline_min_severity: major
 inline_min_agreement: 2   # require consensus across providers
+min_changed_lines: 0      # skip if total changes below this
+max_changed_files: 0      # skip if total files above this
+provider_allowlist: []    # optional allowlist
+provider_blocklist: []    # optional blocklist
+skip_labels: []           # labels that cause the review to skip
 diff_max_bytes: 120000
 run_timeout_seconds: 600
 ```

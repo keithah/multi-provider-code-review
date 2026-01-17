@@ -98,6 +98,26 @@ set_if("inline_min_severity", "INLINE_MIN_SEVERITY", str)
 set_if("inline_min_agreement", "INLINE_MIN_AGREEMENT", int)
 set_if("diff_max_bytes", "DIFF_MAX_BYTES", int)
 set_if("run_timeout_seconds", "RUN_TIMEOUT_SECONDS", int)
+set_if("min_changed_lines", "MIN_CHANGED_LINES", int)
+set_if("max_changed_files", "MAX_CHANGED_FILES", int)
+if "provider_allowlist" in data:
+    val = data["provider_allowlist"]
+    if isinstance(val, list):
+        exports["PROVIDER_ALLOWLIST"] = ",".join(str(x) for x in val)
+    elif isinstance(val, str):
+        exports["PROVIDER_ALLOWLIST"] = val
+if "provider_blocklist" in data:
+    val = data["provider_blocklist"]
+    if isinstance(val, list):
+        exports["PROVIDER_BLOCKLIST"] = ",".join(str(x) for x in val)
+    elif isinstance(val, str):
+        exports["PROVIDER_BLOCKLIST"] = val
+if "skip_labels" in data:
+    val = data["skip_labels"]
+    if isinstance(val, list):
+        exports["SKIP_LABELS"] = ",".join(str(x) for x in val)
+    elif isinstance(val, str):
+        exports["SKIP_LABELS"] = val
 
 print(json.dumps(exports))
 PYCODE
@@ -112,16 +132,21 @@ PYCODE
       INLINE_MIN_AGREEMENT="$(echo "$CONFIG_EXPORTS" | jq -r '.INLINE_MIN_AGREEMENT // "'$INLINE_MIN_AGREEMENT'"')"
       DIFF_MAX_BYTES="$(echo "$CONFIG_EXPORTS" | jq -r '.DIFF_MAX_BYTES // "'$DIFF_MAX_BYTES'"')"
       RUN_TIMEOUT_SECONDS="$(echo "$CONFIG_EXPORTS" | jq -r '.RUN_TIMEOUT_SECONDS // "'$RUN_TIMEOUT_SECONDS'"')"
+      MIN_CHANGED_LINES="$(echo "$CONFIG_EXPORTS" | jq -r '.MIN_CHANGED_LINES // "'$MIN_CHANGED_LINES'"')"
+      MAX_CHANGED_FILES="$(echo "$CONFIG_EXPORTS" | jq -r '.MAX_CHANGED_FILES // "'$MAX_CHANGED_FILES'"')"
+      PROVIDER_ALLOWLIST_RAW="$(echo "$CONFIG_EXPORTS" | jq -r '.PROVIDER_ALLOWLIST // ""')"
+      PROVIDER_BLOCKLIST_RAW="$(echo "$CONFIG_EXPORTS" | jq -r '.PROVIDER_BLOCKLIST // ""')"
+      SKIP_LABELS_RAW="$(echo "$CONFIG_EXPORTS" | jq -r '.SKIP_LABELS // ""')"
     else
-      read -r REVIEW_PROVIDERS SYNTHESIS_MODEL INLINE_MAX_COMMENTS INLINE_MIN_SEVERITY INLINE_MIN_AGREEMENT DIFF_MAX_BYTES RUN_TIMEOUT_SECONDS <<EOF
-$(python - "$CONFIG_EXPORTS" "$REVIEW_PROVIDERS" "$SYNTHESIS_MODEL" "$INLINE_MAX_COMMENTS" "$INLINE_MIN_SEVERITY" "$INLINE_MIN_AGREEMENT" "$DIFF_MAX_BYTES" "$RUN_TIMEOUT_SECONDS" <<'PYCODE'
+      read -r REVIEW_PROVIDERS SYNTHESIS_MODEL INLINE_MAX_COMMENTS INLINE_MIN_SEVERITY INLINE_MIN_AGREEMENT DIFF_MAX_BYTES RUN_TIMEOUT_SECONDS MIN_CHANGED_LINES MAX_CHANGED_FILES PROVIDER_ALLOWLIST_RAW PROVIDER_BLOCKLIST_RAW SKIP_LABELS_RAW <<EOF
+$(python - "$CONFIG_EXPORTS" "$REVIEW_PROVIDERS" "$SYNTHESIS_MODEL" "$INLINE_MAX_COMMENTS" "$INLINE_MIN_SEVERITY" "$INLINE_MIN_AGREEMENT" "$DIFF_MAX_BYTES" "$RUN_TIMEOUT_SECONDS" "$MIN_CHANGED_LINES" "$MAX_CHANGED_FILES" "" "" "" <<'PYCODE'
 import json, sys
 data = json.loads(sys.argv[1])
 defaults = sys.argv[2:]
-keys = ["REVIEW_PROVIDERS","SYNTHESIS_MODEL","INLINE_MAX_COMMENTS","INLINE_MIN_SEVERITY","INLINE_MIN_AGREEMENT","DIFF_MAX_BYTES","RUN_TIMEOUT_SECONDS"]
+keys = ["REVIEW_PROVIDERS","SYNTHESIS_MODEL","INLINE_MAX_COMMENTS","INLINE_MIN_SEVERITY","INLINE_MIN_AGREEMENT","DIFF_MAX_BYTES","RUN_TIMEOUT_SECONDS","MIN_CHANGED_LINES","MAX_CHANGED_FILES","PROVIDER_ALLOWLIST","PROVIDER_BLOCKLIST","SKIP_LABELS"]
 out = []
 for i,k in enumerate(keys):
-    out.append(str(data.get(k, defaults[i])))
+    out.append(str(data.get(k, defaults[i] if i < len(defaults) else "")))
 print(" ".join(out))
 PYCODE
 )
@@ -151,6 +176,42 @@ if [ "${#PROVIDERS[@]}" -eq 0 ]; then
   fi
 fi
 
+if [ -n "${PROVIDER_ALLOWLIST_RAW:-}" ]; then
+  IFS=',' read -ra AL <<< "$PROVIDER_ALLOWLIST_RAW"
+  tmp=()
+  for p in "${PROVIDERS[@]}"; do
+    for a in "${AL[@]}"; do
+      a_trim="$(echo "$a" | xargs)"
+      [ -z "$a_trim" ] && continue
+      if [ "$p" = "$a_trim" ]; then
+        tmp+=("$p")
+        break
+      fi
+    done
+  done
+  PROVIDERS=("${tmp[@]}")
+fi
+
+if [ -n "${PROVIDER_BLOCKLIST_RAW:-}" ]; then
+  IFS=',' read -ra BL <<< "$PROVIDER_BLOCKLIST_RAW"
+  tmp=()
+  for p in "${PROVIDERS[@]}"; do
+    skip=false
+    for b in "${BL[@]}"; do
+      b_trim="$(echo "$b" | xargs)"
+      [ -z "$b_trim" ] && continue
+      if [ "$p" = "$b_trim" ]; then
+        skip=true
+        break
+      fi
+    done
+    if ! $skip; then
+      tmp+=("$p")
+    fi
+  done
+  PROVIDERS=("${tmp[@]}")
+fi
+
 if [ "${#PROVIDERS[@]}" -eq 0 ]; then
   echo "No review providers available after processing configuration."
   exit 1
@@ -168,12 +229,23 @@ OPENROUTER_API_KEY="${OPENROUTER_API_KEY:-}"
 INLINE_MAX_COMMENTS="${INLINE_MAX_COMMENTS:-5}"
 INLINE_MIN_SEVERITY="${INLINE_MIN_SEVERITY:-major}"
 INLINE_MIN_AGREEMENT="${INLINE_MIN_AGREEMENT:-1}"
+MIN_CHANGED_LINES="${MIN_CHANGED_LINES:-0}"
+MAX_CHANGED_FILES="${MAX_CHANGED_FILES:-0}"
+PROVIDER_ALLOWLIST_RAW="${PROVIDER_ALLOWLIST_RAW:-}"
+PROVIDER_BLOCKLIST_RAW="${PROVIDER_BLOCKLIST_RAW:-}"
+SKIP_LABELS_RAW="${SKIP_LABELS_RAW:-}"
 REPORT_BASENAME="${REPORT_BASENAME:-multi-provider-review}"
 REPORT_DIR="${GITHUB_WORKSPACE:-$PWD}/multi-provider-report"
 mkdir -p "$REPORT_DIR"
 
 DEFAULT_OPENROUTER_PROVIDERS=("openrouter/google/gemini-2.0-flash-exp:free" "openrouter/mistralai/devstral-2512:free" "openrouter/xiaomi/mimo-v2-flash:free")
 FALLBACK_OPENCODE_PROVIDERS=("opencode/big-pickle" "opencode/grok-code" "opencode/minimax-m2.1-free" "opencode/glm-4.7-free")
+
+PROVIDER_ALLOWLIST=()
+PROVIDER_BLOCKLIST=()
+MIN_CHANGED_LINES=0
+MAX_CHANGED_FILES=0
+SKIP_LABELS=()
 
 run_with_timeout() {
   if command -v timeout >/dev/null 2>&1; then
@@ -261,6 +333,33 @@ fi
 gh api "/repos/${REPO}/pulls/${PR_NUMBER}/files" > /tmp/pr-files.json || true
 DIFF_FILE="/tmp/pr.diff"
 DIFF_TRUNCATED="false"
+PR_META="/tmp/pr-meta.json"
+TOTAL_ADDITIONS=0
+TOTAL_DELETIONS=0
+CHANGED_FILES=0
+LABELS_CSV=""
+SKIP_REASON=""
+
+if gh api "/repos/${REPO}/pulls/${PR_NUMBER}" > "$PR_META"; then
+  if command -v jq >/dev/null 2>&1; then
+    TOTAL_ADDITIONS=$(jq -r '.additions // 0' "$PR_META")
+    TOTAL_DELETIONS=$(jq -r '.deletions // 0' "$PR_META")
+    CHANGED_FILES=$(jq -r '.changed_files // 0' "$PR_META")
+    LABELS_CSV=$(jq -r '[.labels[]?.name] | join(",")' "$PR_META")
+  else
+    python - "$PR_META" <<'PYCODE' >/tmp/pr-meta-fields 2>/dev/null || true
+import json, sys
+data = json.load(open(sys.argv[1]))
+adds = data.get("additions", 0)
+dels = data.get("deletions", 0)
+files = data.get("changed_files", 0)
+labels = [l.get("name","") for l in data.get("labels", []) if l.get("name")]
+print(f"{adds} {dels} {files} {','.join(labels)}")
+PYCODE
+    read -r TOTAL_ADDITIONS TOTAL_DELETIONS CHANGED_FILES LABELS_CSV < /tmp/pr-meta-fields || true
+  fi
+fi
+
 if gh api "/repos/${REPO}/pulls/${PR_NUMBER}" -H "Accept: application/vnd.github.v3.diff" > "$DIFF_FILE"; then
   DIFF_SIZE=$(wc -c < "$DIFF_FILE")
   if [ "$DIFF_SIZE" -gt "$DIFF_MAX_BYTES" ]; then
@@ -358,9 +457,67 @@ PYCODE
   fi
 fi
 
+ONLY_BINARY="false"
+TEST_HINT=""
+TEST_HINT_FLAG="false"
+if [ -s /tmp/pr-files.json ]; then
+  if command -v jq >/dev/null 2>&1; then
+    PATCH_COUNT=$(jq '[.[] | has("patch")] | map(select(.==true)) | length' /tmp/pr-files.json)
+    FILE_COUNT=$(jq 'length' /tmp/pr-files.json)
+    if [ "$FILE_COUNT" -gt 0 ] && [ "$PATCH_COUNT" -eq 0 ]; then
+      ONLY_BINARY="true"
+    fi
+    TEST_COUNT=$(jq '[.[] | select(.filename|test("test|spec|__tests__|__snapshots__|\\.test\\.|\\.spec\\.|Tests/|Spec/"))] | length' /tmp/pr-files.json)
+    SOURCE_COUNT=$(jq 'length' /tmp/pr-files.json)
+  else
+    PATCH_COUNT=0; FILE_COUNT=0; TEST_COUNT=0; SOURCE_COUNT=0
+  fi
+
+  if [ "$SOURCE_COUNT" -gt 0 ] && [ "$TEST_COUNT" -eq 0 ]; then
+    TEST_HINT=$'\n\n## Test Coverage Hints\nNo tests were changed in this PR; consider adding coverage for the touched files.'
+    TEST_HINT_FLAG="true"
+  fi
+fi
+
+if [ "$ONLY_BINARY" = "true" ]; then
+  SKIP_REASON="Skipping review: only binary changes detected."
+fi
+
+TOTAL_CHANGES=$((TOTAL_ADDITIONS + TOTAL_DELETIONS))
+if [ "$MIN_CHANGED_LINES" -gt 0 ] && [ "$TOTAL_CHANGES" -lt "$MIN_CHANGED_LINES" ]; then
+  SKIP_REASON="Skipping review: changes ($TOTAL_CHANGES lines) below min_changed_lines=$MIN_CHANGED_LINES."
+fi
+if [ "$MAX_CHANGED_FILES" -gt 0 ] && [ "$CHANGED_FILES" -gt "$MAX_CHANGED_FILES" ]; then
+  SKIP_REASON="Skipping review: changed_files ($CHANGED_FILES) exceeds max_changed_files=$MAX_CHANGED_FILES."
+fi
+
+if [ -n "$SKIP_LABELS_RAW" ] && [ -n "$LABELS_CSV" ]; then
+  IFS=',' read -ra SKIP_L <<< "$SKIP_LABELS_RAW"
+  for lbl in "${SKIP_L[@]}"; do
+    ltrim="$(echo "$lbl" | xargs)"
+    [ -z "$ltrim" ] && continue
+    case ",$LABELS_CSV," in
+      *",$ltrim,"*) SKIP_REASON="Skipping review: label '$ltrim' is in skip_labels."; break;;
+    esac
+  done
+fi
+
+if [ -n "$SKIP_REASON" ]; then
+  echo "$SKIP_REASON"
+  echo "$SKIP_REASON" > /tmp/skip-comment.md
+  gh api --method POST -H "Accept: application/vnd.github+json" "/repos/${REPO}/issues/${PR_NUMBER}/comments" -F body="@/tmp/skip-comment.md"
+  exit 0
+fi
+
+export TOTAL_ADDITIONS TOTAL_DELETIONS CHANGED_FILES ONLY_BINARY TEST_HINT_FLAG
+
 if [ -n "${DIFF_FILE}" ] && [ -f "${DIFF_FILE}" ]; then
   echo $'\n\n## Diff' >> /tmp/review-prompt.txt
   cat "${DIFF_FILE}" >> /tmp/review-prompt.txt
+fi
+
+if [ -n "$TEST_HINT" ]; then
+  echo "$TEST_HINT" >> /tmp/review-prompt.txt
 fi
 
 PROMPT_CONTENT="$(cat /tmp/review-prompt.txt)"
@@ -787,6 +944,13 @@ report = {
     "inline_min_severity": min_sev,
     "inline_max_comments": int(max_comments),
     "provider_structured_findings": prov_findings_count,
+    "totals": {
+        "additions": int(os.getenv("TOTAL_ADDITIONS", 0)),
+        "deletions": int(os.getenv("TOTAL_DELETIONS", 0)),
+        "changed_files": int(os.getenv("CHANGED_FILES", 0)),
+    },
+    "only_binary": os.getenv("ONLY_BINARY", "false").lower() == "true",
+    "test_hint_added": os.getenv("TEST_HINT_FLAG", "false").lower() == "true",
 }
 os.makedirs(os.path.dirname(out_path), exist_ok=True)
 with open(out_path, "w", encoding="utf-8") as f:
