@@ -222,6 +222,9 @@ paid_count=0
 free_count=0
 ESTIMATED_COST_DETAILS=()
 export ESTIMATED_COST_TOTAL ESTIMATED_COST_DETAILS
+TOTAL_PROMPT_TOKENS=0
+TOTAL_COMPLETION_TOKENS=0
+TOTAL_TOKENS=0
 for p in "${PROVIDERS[@]}"; do
   if [[ "$p" == *":free"* ]]; then
     ESTIMATED_COST_DETAILS+=("$p: $0 (tagged free)")
@@ -293,6 +296,7 @@ run_openrouter() {
   local provider="$1"
   local prompt="$2"
   local outfile="$3"
+  local usagefile="${4:-}"
 
   if [ -z "$OPENROUTER_API_KEY" ]; then
     echo "OpenRouter provider ${provider} requested but OPENROUTER_API_KEY is not set."
@@ -335,9 +339,9 @@ PYCODE
     return "$status"
   fi
 
-  python - "$response_file" "$outfile" >/dev/null <<'PYCODE'
-import json, sys
-resp_path, out_path = sys.argv[1], sys.argv[2]
+  python - "$response_file" "$outfile" "$usagefile" >/dev/null <<'PYCODE'
+import json, sys, os
+resp_path, out_path, usage_path = sys.argv[1], sys.argv[2], sys.argv[3]
 data = json.load(open(resp_path, encoding="utf-8"))
 choices = data.get("choices") or []
 if not choices:
@@ -345,6 +349,17 @@ if not choices:
 content = choices[0].get("message", {}).get("content", "")
 with open(out_path, "w", encoding="utf-8") as f:
     f.write(content)
+usage = data.get("usage") or {}
+if usage_path:
+    try:
+        with open(usage_path, "w", encoding="utf-8") as uf:
+            json.dump({
+                "prompt_tokens": usage.get("prompt_tokens"),
+                "completion_tokens": usage.get("completion_tokens"),
+                "total_tokens": usage.get("total_tokens")
+            }, uf)
+    except Exception:
+        pass
 PYCODE
   if [ $? -ne 0 ]; then
     echo "Failed to parse OpenRouter response for ${provider}" >&2
@@ -581,12 +596,21 @@ for raw_provider in "${PROVIDERS[@]}"; do
   PROVIDER_LIST+=("$provider")
   outfile="/tmp/reviews/$(echo "$provider" | tr '/:' '__').txt"
   log_file="${outfile}.log"
+  usage_file="${outfile}.usage.json"
   echo "Running provider: ${provider}"
    provider_start=$(date +%s)
    status_label="success"
   if [[ "$provider" == openrouter/* ]]; then
-    if run_openrouter "${provider}" "${PROMPT_CONTENT}" "${outfile}" > "${log_file}" 2>&1; then
+    if run_openrouter "${provider}" "${PROMPT_CONTENT}" "${outfile}" "${usage_file}" > "${log_file}" 2>&1; then
       echo "✅ ${provider} completed"
+      if [ -f "$usage_file" ]; then
+        pt=$(jq -r '.prompt_tokens // 0' "$usage_file" 2>/dev/null || echo 0)
+        ct=$(jq -r '.completion_tokens // 0' "$usage_file" 2>/dev/null || echo 0)
+        tt=$(jq -r '.total_tokens // 0' "$usage_file" 2>/dev/null || echo 0)
+        TOTAL_PROMPT_TOKENS=$((TOTAL_PROMPT_TOKENS + pt))
+        TOTAL_COMPLETION_TOKENS=$((TOTAL_COMPLETION_TOKENS + ct))
+        TOTAL_TOKENS=$((TOTAL_TOKENS + tt))
+      fi
     else
       status=$?
       status_label="failed"
@@ -624,13 +648,21 @@ try:
     duration = float(duration_s)
 except Exception:
     duration = None
+usage = {}
+usage_path = f"{out_path}.usage.json"
+if os.path.exists(usage_path):
+    try:
+        usage = json.load(open(usage_path, encoding="utf-8"))
+    except Exception:
+        usage = {}
 print(json.dumps({
     "name": name,
     "status": status,
     "duration_seconds": duration,
     "output_path": out_path,
     "log_path": log_path,
-    "kind": "openrouter" if name.startswith("openrouter/") else "opencode"
+    "kind": "openrouter" if name.startswith("openrouter/") else "opencode",
+    "usage": usage
 }))
 PYCODE
 done
@@ -757,6 +789,7 @@ COMMENT_FILE=/tmp/final-review.md
   echo "**Multi-Provider Code Review**"
   echo ""
   echo "**Estimated cost:** ${ESTIMATED_COST_TOTAL}"
+  echo "**Token usage (OpenRouter where available):** total=${TOTAL_TOKENS} (prompt=${TOTAL_PROMPT_TOKENS}, completion=${TOTAL_COMPLETION_TOKENS})"
   if [ "${#ESTIMATED_COST_DETAILS[@]}" -gt 0 ]; then
     echo "<details><summary>Per-provider cost notes</summary>"
     for c in "${ESTIMATED_COST_DETAILS[@]}"; do
@@ -769,7 +802,7 @@ COMMENT_FILE=/tmp/final-review.md
   echo ""
   cat "$SYNTHESIS_OUTPUT"
   echo ""
-  echo "<details><summary>Raw provider outputs</summary>"
+    echo "<details><summary>Raw provider outputs</summary>"
   echo ""
   for provider in "${PROVIDER_LIST[@]}"; do
     fname="/tmp/reviews/$(echo "$provider" | tr '/:' '__').txt"
@@ -1002,6 +1035,11 @@ report = {
     "cost": {
         "estimated_total": os.getenv("ESTIMATED_COST_TOTAL", "unknown"),
         "details": os.getenv("ESTIMATED_COST_DETAILS", "").split("||") if os.getenv("ESTIMATED_COST_DETAILS") else [],
+    },
+    "usage_tokens": {
+        "prompt": int(os.getenv("TOTAL_PROMPT_TOKENS", 0)),
+        "completion": int(os.getenv("TOTAL_COMPLETION_TOKENS", 0)),
+        "total": int(os.getenv("TOTAL_TOKENS", 0)),
     },
 }
 os.makedirs(os.path.dirname(out_path), exist_ok=True)
