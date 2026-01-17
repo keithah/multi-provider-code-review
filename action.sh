@@ -33,22 +33,56 @@ fi
 
 export GH_TOKEN="${GITHUB_TOKEN}"
 
-IFS=',' read -ra PROVIDERS <<< "$REVIEW_PROVIDERS"
-if [ "${#PROVIDERS[@]}" -eq 0 ]; then
-  echo "No review providers found. REVIEW_PROVIDERS was empty."
-  exit 1
-fi
-
 REPO="${GITHUB_REPOSITORY:-}"
 if [ -z "$REPO" ]; then
   echo "GITHUB_REPOSITORY is not set; unable to determine repository."
   exit 1
 fi
 
-SYNTHESIS_MODEL="${SYNTHESIS_MODEL:-opencode/big-pickle}"
+IFS=',' read -ra RAW_PROVIDERS <<< "$REVIEW_PROVIDERS"
+PROVIDERS=()
+for raw_provider in "${RAW_PROVIDERS[@]}"; do
+  provider="$(echo "$raw_provider" | xargs)"
+  [ -z "$provider" ] && continue
+  if [[ "$provider" == openrouter/* ]] && [ -z "$OPENROUTER_API_KEY" ]; then
+    echo "Skipping ${provider} because OPENROUTER_API_KEY is not set (will fall back if none remain)."
+    continue
+  fi
+  PROVIDERS+=("$provider")
+done
+
+if [ "${#PROVIDERS[@]}" -eq 0 ]; then
+  if [ -z "$OPENROUTER_API_KEY" ]; then
+    echo "OPENROUTER_API_KEY is not set; using OpenCode fallback providers."
+    PROVIDERS=("${FALLBACK_OPENCODE_PROVIDERS[@]}")
+  else
+    echo "No providers specified; using default OpenRouter providers."
+    PROVIDERS=("${DEFAULT_OPENROUTER_PROVIDERS[@]}")
+  fi
+fi
+
+if [ "${#PROVIDERS[@]}" -eq 0 ]; then
+  echo "No review providers available after processing configuration."
+  exit 1
+fi
+
+if [[ "$SYNTHESIS_MODEL" == openrouter/* ]] && [ -z "$OPENROUTER_API_KEY" ]; then
+  echo "OpenRouter synthesis model requested but OPENROUTER_API_KEY is not set; falling back to opencode/big-pickle."
+  SYNTHESIS_MODEL="opencode/big-pickle"
+fi
+
+SYNTHESIS_MODEL="${SYNTHESIS_MODEL:-openrouter/google/gemini-2.0-flash-exp:free}"
 DIFF_MAX_BYTES="${DIFF_MAX_BYTES:-120000}"
 RUN_TIMEOUT_SECONDS="${RUN_TIMEOUT_SECONDS:-600}"
 OPENROUTER_API_KEY="${OPENROUTER_API_KEY:-}"
+INLINE_MAX_COMMENTS="${INLINE_MAX_COMMENTS:-5}"
+INLINE_MIN_SEVERITY="${INLINE_MIN_SEVERITY:-major}"
+REPORT_BASENAME="${REPORT_BASENAME:-multi-provider-review}"
+REPORT_DIR="${GITHUB_WORKSPACE:-$PWD}/multi-provider-report"
+mkdir -p "$REPORT_DIR"
+
+DEFAULT_OPENROUTER_PROVIDERS=("openrouter/google/gemini-2.0-flash-exp:free" "openrouter/mistralai/devstral-2512:free" "openrouter/xiaomi/mimo-v2-flash:free")
+FALLBACK_OPENCODE_PROVIDERS=("opencode/big-pickle" "opencode/grok-code" "opencode/minimax-m2.1-free" "opencode/glm-4.7-free")
 
 run_with_timeout() {
   if command -v timeout >/dev/null 2>&1; then
@@ -247,6 +281,8 @@ echo "Synthesis model: ${SYNTHESIS_MODEL}"
 echo ""
 
 mkdir -p /tmp/reviews
+PROVIDER_REPORT_JL=/tmp/provider-report.jsonl
+: > "$PROVIDER_REPORT_JL"
 PROVIDER_LIST=()
 for raw_provider in "${PROVIDERS[@]}"; do
   provider="$(echo "$raw_provider" | xargs)"
@@ -255,13 +291,17 @@ for raw_provider in "${PROVIDERS[@]}"; do
   outfile="/tmp/reviews/$(echo "$provider" | tr '/:' '__').txt"
   log_file="${outfile}.log"
   echo "Running provider: ${provider}"
+   provider_start=$(date +%s)
+   status_label="success"
   if [[ "$provider" == openrouter/* ]]; then
     if run_openrouter "${provider}" "${PROMPT_CONTENT}" "${outfile}" > "${log_file}" 2>&1; then
       echo "✅ ${provider} completed"
     else
       status=$?
+      status_label="failed"
       if [ "$status" -eq 124 ]; then
         echo "⚠️ ${provider} timed out after ${RUN_TIMEOUT_SECONDS}s"
+        status_label="timeout"
       else
         echo "⚠️ ${provider} failed (see log), capturing partial output"
       fi
@@ -273,8 +313,10 @@ for raw_provider in "${PROVIDERS[@]}"; do
       echo "✅ ${provider} completed"
     else
       status=$?
+      status_label="failed"
       if [ "$status" -eq 124 ]; then
         echo "⚠️ ${provider} timed out after ${RUN_TIMEOUT_SECONDS}s"
+        status_label="timeout"
       else
         echo "⚠️ ${provider} failed (see log), capturing partial output"
       fi
@@ -282,6 +324,24 @@ for raw_provider in "${PROVIDERS[@]}"; do
       cat "${log_file}" >> "$outfile" || true
     fi
   fi
+  provider_end=$(date +%s)
+  duration=$((provider_end - provider_start))
+  python - "$provider" "$status_label" "$duration" "$outfile" "$log_file" >> "$PROVIDER_REPORT_JL" <<'PYCODE'
+import json, sys, os
+name, status, duration_s, out_path, log_path = sys.argv[1:]
+try:
+    duration = float(duration_s)
+except Exception:
+    duration = None
+print(json.dumps({
+    "name": name,
+    "status": status,
+    "duration_seconds": duration,
+    "output_path": out_path,
+    "log_path": log_path,
+    "kind": "openrouter" if name.startswith("openrouter/") else "opencode"
+}))
+PYCODE
 done
 
 if [ "${#PROVIDER_LIST[@]}" -eq 0 ]; then
@@ -390,18 +450,23 @@ sys.exit(1)
 PYCODE
 )"
 
+INLINE_POSTED="false"
 if [ -n "$STRUCT_LINE" ]; then
-  INLINE_PAYLOAD=$(python - <<'PYCODE' "$STRUCT_LINE" "$REPO" "$PR_NUMBER" "${SYNTHESIS_MODEL}" "${PROVIDER_LIST[*]}" || true
+  INLINE_PAYLOAD=$(python - <<'PYCODE' "$STRUCT_LINE" "$INLINE_MAX_COMMENTS" "$INLINE_MIN_SEVERITY" "$SYNTHESIS_MODEL" "${PROVIDER_LIST[*]}" || true
 import json, sys
-struct_line, repo, pr_number, synth_model, providers = sys.argv[1:]
+struct_line, max_comments, min_severity, synth_model, providers = sys.argv[1:]
 try:
     data = json.loads(struct_line)
     findings = data.get("findings") or []
 except Exception:
     sys.exit(1)
 
+severity_order = {"critical": 3, "major": 2, "minor": 1}
+min_rank = severity_order.get(min_severity.lower(), 1)
+
 comments = []
-for f in findings[:5]:
+seen = set()
+for f in findings:
     try:
         file = f.get("file") or ""
         line = int(f.get("line", 0))
@@ -411,6 +476,12 @@ for f in findings[:5]:
         severity = (f.get("severity") or "").lower()
         if not file or line <= 0 or not msg:
             continue
+        if severity_order.get(severity, 0) < min_rank:
+            continue
+        key = (file, line, msg.strip())
+        if key in seen:
+            continue
+        seen.add(key)
         body_lines = [f"**{severity or 'issue'}**: {msg}"]
         if detail and detail != msg:
             body_lines.append(detail)
@@ -424,6 +495,8 @@ for f in findings[:5]:
             "side": "RIGHT",
             "body": "\n".join(body_lines)
         })
+        if len(comments) >= int(max_comments):
+            break
     except Exception:
         continue
 
@@ -442,8 +515,97 @@ PYCODE
   if [ -n "$INLINE_PAYLOAD" ]; then
     echo "Posting inline review comments from structured findings"
     printf "%s" "$INLINE_PAYLOAD" | gh api --method POST -H "Accept: application/vnd.github+json" "/repos/${REPO}/pulls/${PR_NUMBER}/reviews" --input -
+    INLINE_POSTED="true"
   fi
 fi
+
+REPORT_JSON="${REPORT_DIR}/${REPORT_BASENAME}.json"
+REPORT_SARIF="${REPORT_DIR}/${REPORT_BASENAME}.sarif"
+
+python - "$PROVIDER_REPORT_JL" "$STRUCT_LINE" "$SYNTHESIS_MODEL" "$COMMENT_FILE" "$INLINE_POSTED" "$REPORT_JSON" "$SYNTHESIS_OUTPUT" <<'PYCODE'
+import json, sys, time, os
+prov_path, struct_line, synth_model, comment_path, inline_posted, out_path, synth_output_path = sys.argv[1:]
+providers = []
+try:
+    with open(prov_path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            providers.append(json.loads(line))
+except Exception:
+    providers = []
+
+findings = []
+if struct_line:
+    try:
+        findings = json.loads(struct_line).get("findings") or []
+    except Exception:
+        findings = []
+
+report = {
+    "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    "synthesis_model": synth_model,
+    "providers": providers,
+    "findings": findings,
+    "inline_comments_posted": inline_posted.lower() == "true",
+    "summary_comment_path": comment_path,
+    "synthesis_output_path": synth_output_path,
+}
+os.makedirs(os.path.dirname(out_path), exist_ok=True)
+with open(out_path, "w", encoding="utf-8") as f:
+    json.dump(report, f, indent=2)
+print(f"Wrote JSON report to {out_path}")
+PYCODE
+
+python - "$REPORT_JSON" "$REPORT_SARIF" <<'PYCODE'
+import json, sys, os, time
+json_path, sarif_path = sys.argv[1:]
+try:
+    data = json.load(open(json_path, encoding="utf-8"))
+    findings = data.get("findings") or []
+except Exception:
+    findings = []
+
+def sev_to_level(sev: str) -> str:
+    sev = (sev or "").lower()
+    if sev == "critical":
+        return "error"
+    if sev == "major":
+        return "warning"
+    return "note"
+
+results = []
+for f in findings:
+    file = f.get("file")
+    line = f.get("line")
+    msg = f.get("message") or f.get("title") or "Finding"
+    if not file or not isinstance(line, int) or line <= 0:
+        continue
+    results.append({
+        "ruleId": f.get("title") or "code-review",
+        "level": sev_to_level(f.get("severity")),
+        "message": {"text": msg},
+        "locations": [{
+            "physicalLocation": {
+                "artifactLocation": {"uri": file},
+                "region": {"startLine": line}
+            }
+        }]
+    })
+
+sarif = {
+    "version": "2.1.0",
+    "runs": [{
+        "tool": {"driver": {"name": "multi-provider-review", "rules": []}},
+        "results": results
+    }]
+}
+os.makedirs(os.path.dirname(sarif_path), exist_ok=True)
+with open(sarif_path, "w", encoding="utf-8") as f:
+    json.dump(sarif, f, indent=2)
+print(f"Wrote SARIF report to {sarif_path} with {len(results)} result(s)")
+PYCODE
 
 echo ""
 echo "✅ Review posted to PR #${PR_NUMBER}"

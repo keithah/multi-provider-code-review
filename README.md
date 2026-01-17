@@ -1,18 +1,17 @@
 # Multi-Provider Code Review GitHub Action
 
-[![GitHub Action](https://img.shields.io/badge/GitHub%20Action-blue.svg)](https://github.com/keithah/multi-provider-code-review)[![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opencode.ai)[![Free](https://img.shields.io/badge/Free%20Providers-orange.svg)](https://anthropic.com/claude)[![Uses](https://img.shields.io/badge/Uses%20OpenCode-orange.svg)]
+[![GitHub Action](https://img.shields.io/badge/GitHub%20Action-blue.svg)](https://github.com/keithah/multi-provider-code-review) [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opencode.ai)
 
-Run comprehensive code reviews with multiple free providers and synthesize their results into one actionable review.
+Run comprehensive code reviews with multiple providers (OpenRouter-first) and synthesize the results into one actionable review. If no OpenRouter key is available, the action automatically falls back to bundled free models.
 
 ## Features
 
-- Multi-provider coverage: run reviews with multiple free OpenCode providers
-- Intelligent synthesis: combine overlapping feedback, highlight unique insights from all providers
-- Free defaults: OpenCode providers work without extra keys; OpenRouter is optional with a key
-- Simple setup: composite action builds prompts, runs providers, synthesizes, and posts the comment
-- Clear output: single synthesized PR comment plus raw provider outputs (collapsed)
-- Flexible: multiple trigger options and customizable provider lists, AGENTS.md awareness
-- Clean integration: single composite action, no local scripts needed
+- Multi-provider coverage: OpenRouter-first providers with automatic fallback to bundled free models when no key is present
+- Intelligent synthesis: combines overlapping feedback, highlights unique insights, and posts a single review
+- Inline commenting: structured findings are posted inline (severity-gated) plus a summary comment
+- Exports: writes JSON and SARIF reports for downstream tooling or code scanning upload
+- Triggers: supports auto-on-PR changes plus manual `/review`, `@opencode`, or `@claude`
+- Clean integration: single composite action that builds prompts, runs providers, synthesizes, and posts results
 
 ## Quick Start
 
@@ -22,6 +21,7 @@ Run comprehensive code reviews with multiple free providers and synthesize their
 - OpenCode CLI (installed automatically via npm in the workflow template if missing)
 - GitHub CLI is already available on `ubuntu-latest` runners
 - Python on the runner (used to build/parse JSON for OpenRouter; `python` must be on PATH)
+- Optional: `OPENROUTER_API_KEY` if you want to run OpenRouter-hosted models (recommended default)
 
 ### Add to your repo
 
@@ -50,14 +50,16 @@ permissions:
 
 ### Repository Variables
 
-| Variable           | Default                                                                                   | Description                       |
-| ------------------ | ----------------------------------------------------------------------------------------- | --------------------------------- |
-| `REVIEW_PROVIDERS` | `opencode/big-pickle,opencode/grok-code,opencode/minimax-m2.1-free,opencode/glm-4.7-free` | Comma-separated list of providers |
-| `SYNTHESIS_MODEL`  | `opencode/big-pickle`                                                                     | Model used to synthesize outputs  |
-| `DIFF_MAX_BYTES`   | `120000`                                                                                  | Max diff bytes to include         |
-| `RUN_TIMEOUT_SECONDS` | `600`                                                                                  | Per-model timeout in seconds      |
-| `OPENROUTER_API_KEY` | _unset_                                                                                 | Optional key for OpenRouter models |
-| `RUN_TIMEOUT_SECONDS` | `600`                                                                                  | Per-model timeout in seconds      |
+| Variable              | Default                                                                                     | Description                                                                                   |
+| --------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `REVIEW_PROVIDERS`    | `openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free,openrouter/xiaomi/mimo-v2-flash:free` | Comma-separated list of providers (OpenRouter-first). If no `OPENROUTER_API_KEY`, the action automatically falls back to bundled free models. |
+| `SYNTHESIS_MODEL`     | `openrouter/google/gemini-2.0-flash-exp:free`                                               | Model used to synthesize outputs; falls back to `opencode/big-pickle` when OpenRouter key is absent. |
+| `DIFF_MAX_BYTES`      | `120000`                                                                                    | Max diff bytes to include                                                                     |
+| `RUN_TIMEOUT_SECONDS` | `600`                                                                                       | Per-model timeout in seconds                                                                  |
+| `OPENROUTER_API_KEY`  | _unset_                                                                                     | Optional key for OpenRouter models                                                            |
+| `INLINE_MAX_COMMENTS` | `5`                                                                                         | Max inline review comments from structured findings                                           |
+| `INLINE_MIN_SEVERITY` | `major`                                                                                     | Minimum severity to post inline (`critical`, `major`, `minor`)                                |
+| `REPORT_BASENAME`     | `multi-provider-review`                                                                     | Base filename for exported JSON/SARIF reports                                                 |
 
 ### Inputs wired by the workflow template
 
@@ -106,58 +108,71 @@ Trigger a review manually:
 ### Architecture
 
 ```
-┌─────────────────────────────────────────────────┐
-│  GitHub Action Trigger                          │
-└─────────────┬───────────────────────────────┘
+┌─────────────────────────────────────┐
+│  GitHub Action Trigger              │
+└─────────────┬──────────────────┘
               │
               ▼
-┌─────────────────────────────────────────────┐
-│  Multi-Provider Composite Action             │
-└─────────────┬──────────────────────────┘
+┌─────────────────────────────────────┐
+│  Multi-Provider Composite Action    │
+└─────────────┬──────────────────┘
               │
               ▼
-┌──────────────────────────────────────────────┐
-│  OpenCode CLI                                 │
-│                                               │
-│  ┌──────────┬──────────┬─────────┬────────┐ │
-│  │ Big      │ Grok     │ Minimax │ GLM    │ │
-│  │ Pickle   │ Code     │ M2.1    │ 4.7    │ │
-│  └──────────┴──────────┴─────────┴────────┘ │
-│   Sequential provider runs                    │
-│                                               │
-│  ┌───────────────────────────────────────┐    │
-│  │  Synthesize Results (Big Pickle)      │    │
-│  │  → Comprehensive Review               │    │
-│  └───────────────────────────────────────┘    │
-└───────────────────────────────────────────────┘
+┌─────────────────────────────────────┐
+│  Provider Runs                      │
+│  - OpenRouter models (if keyed)     │
+│  - Bundled fallback models          │
+└─────────────┬──────────────────┘
               │
               ▼
-┌─────────────────────────────────────────────┐
-│  Post Review as PR Comment                   │
-└─────────────────────────────────────────────┘
+┌─────────────────────────────────────┐
+│  Synthesis                          │
+│  - Merge findings                   │
+│  - Apply severity gating            │
+└─────────────┬──────────────────┘
+              │
+              ▼
+┌─────────────────────────────────────┐
+│  Output                             │
+│  - PR summary comment               │
+│  - Inline comments (structured)     │
+│  - JSON + SARIF reports             │
+└─────────────────────────────────────┘
 ```
 
 ### Process Flow
 
 1. **Setup**: Action receives PR details (title, number, body)
 2. **Prompt Building**: Assembles PR title/body, optional `AGENTS.md`, changed file summary, and PR diff (truncated if huge)
-3. **Provider Runs**: Calls `opencode run -m <provider>` for each provider in `REVIEW_PROVIDERS`
-4. **Synthesis**: Uses Big Pickle (configurable) to combine provider outputs into one review
+3. **Provider Runs**: Calls the configured providers in `REVIEW_PROVIDERS`
+4. **Synthesis**: Uses the configured synthesis model to combine provider outputs into one review
 5. **GitHub Comment**: Posts the synthesized review to the PR and attaches raw provider outputs in a collapsed section
+
+### Reports and artifacts
+
+- The action writes reports to `multi-provider-report/` (relative to the workspace):
+  - `${REPORT_BASENAME}.json` — normalized providers, findings, and metadata
+  - `${REPORT_BASENAME}.sarif` — SARIF v2.1.0 generated from structured findings
+- To persist them as workflow artifacts, add a step after the action:
+  ```yaml
+  - uses: actions/upload-artifact@v4
+    with:
+      name: code-review-reports
+      path: multi-provider-report/*
+  ```
+- To publish SARIF to code scanning, grant `security-events: write` and upload:
+  ```yaml
+  - name: Upload SARIF to code scanning
+    uses: github/codeql-action/upload-sarif@v3
+    with:
+      sarif_file: multi-provider-report/multi-provider-review.sarif
+  ```
 
 ### Providers
 
 Each provider is run directly via OpenCode CLI using the list from `REVIEW_PROVIDERS`.
 
 ## Available Providers
-
-**OpenCode (no keys)**
-| Provider                     | Style/Strength                | Notes                   |
-| ---------------------------- | ----------------------------- | ----------------------- |
-| `opencode/big-pickle`        | Large reasoning               | Default synthesis model |
-| `opencode/grok-code`         | Code-specialized              | Good code quality focus |
-| `opencode/minimax-m2.1-free` | General/free tier             | Lightweight             |
-| `opencode/glm-4.7-free`      | GLM-based, generalist         | Creative/expressive     |
 
 **Recommended OpenRouter free (needs `OPENROUTER_API_KEY`)**
 | Provider                                           | Role/Notes                                   |
@@ -172,6 +187,14 @@ Each provider is run directly via OpenCode CLI using the list from `REVIEW_PROVI
 | `openrouter/nousresearch/hermes-3-llama-3.1-405b:free` | Very heavy, high-quality reasoning       |
 | `openrouter/cognitivecomputations/dolphin-mistral-24b-venice-edition:free` | Good coding/reasoning balance |
 | `openrouter/tngtech/deepseek-r1t-chimera:free`     | CoT/analysis oriented (heavier)              |
+
+**Bundled fallback (no key required; auto-used when `OPENROUTER_API_KEY` is missing)**
+| Provider                     | Style/Strength          | Notes                  |
+| ---------------------------- | ----------------------- | ---------------------- |
+| `opencode/big-pickle`        | Large reasoning         | Fallback synthesis model |
+| `opencode/grok-code`         | Code-specialized        | Quality-focused        |
+| `opencode/minimax-m2.1-free` | General/free tier       | Lightweight            |
+| `opencode/glm-4.7-free`      | GLM-based, generalist   | Creative/expressive    |
 
 ### Adding Custom Providers
 
@@ -195,24 +218,19 @@ env:
 
 ```yaml
 env:
-  REVIEW_PROVIDERS: "opencode/big-pickle,opencode/grok-code,opencode/minimax-m2.1-free,opencode/glm-4.7-free"
-  SYNTHESIS_MODEL: "opencode/big-pickle"   # optional override
-  DIFF_MAX_BYTES: "120000"                 # optional diff truncation size
-  RUN_TIMEOUT_SECONDS: "600"               # optional per-model timeout
-  OPENROUTER_API_KEY: "${{ secrets.OPENROUTER_API_KEY }}" # optional, required for openrouter/* entries
+  REVIEW_PROVIDERS: "openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free,openrouter/xiaomi/mimo-v2-flash:free"
+  SYNTHESIS_MODEL: "openrouter/google/gemini-2.0-flash-exp:free"   # optional override
+  DIFF_MAX_BYTES: "120000"                                        # optional diff truncation size
+  RUN_TIMEOUT_SECONDS: "600"                                      # optional per-model timeout
+  OPENROUTER_API_KEY: "${{ secrets.OPENROUTER_API_KEY }}"         # recommended for openrouter/*
 
-### Using OpenRouter providers (optional)
+If `OPENROUTER_API_KEY` is unset, the action automatically swaps in the fallback bundled models above.
 
-You can mix OpenRouter-hosted models with the existing OpenCode providers:
+### Using OpenRouter providers
 
 1. Create a repo/org secret `OPENROUTER_API_KEY`.
-2. Add OpenRouter models to `REVIEW_PROVIDERS`, prefixed with `openrouter/`, e.g.:
-   ```yaml
-   env:
-     REVIEW_PROVIDERS: "opencode/big-pickle,openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free"
-     SYNTHESIS_MODEL: "openrouter/google/gemini-2.0-flash-exp:free" # optional
-   ```
-3. The action will route `openrouter/*` entries via the OpenRouter Chat Completions API.
+2. Set `REVIEW_PROVIDERS` and (optionally) `SYNTHESIS_MODEL` to your preferred OpenRouter models, prefixed with `openrouter/`.
+3. The action routes `openrouter/*` entries via the OpenRouter Chat Completions API; when the key is missing, it silently falls back to the bundled free models so runs still succeed.
 ```
 
 ### Project Guidelines Integration

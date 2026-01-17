@@ -6,9 +6,9 @@ inputs:
     description: "GitHub token"
     required: true
   REVIEW_PROVIDERS:
-    description: "Comma-separated list of review providers"
+    description: "Comma-separated list of review providers (OpenRouter first by default)"
     required: false
-    default: "opencode/big-pickle,opencode/grok-code,opencode/minimax-m2.1-free,opencode/glm-4.7-free"
+    default: "openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free,openrouter/xiaomi/mimo-v2-flash:free"
   PR_TITLE:
     description: "PR title"
     required: true
@@ -25,7 +25,7 @@ inputs:
   SYNTHESIS_MODEL:
     description: "Model used to synthesize provider outputs"
     required: false
-    default: "opencode/big-pickle"
+    default: "openrouter/google/gemini-2.0-flash-exp:free"
   DIFF_MAX_BYTES:
     description: "Maximum diff bytes to include in prompt"
     required: false
@@ -37,6 +37,18 @@ inputs:
   OPENROUTER_API_KEY:
     description: "API key for OpenRouter providers (optional)"
     required: false
+  INLINE_MAX_COMMENTS:
+    description: "Maximum inline review comments to post from structured findings"
+    required: false
+    default: "5"
+  INLINE_MIN_SEVERITY:
+    description: "Minimum severity for inline comments (critical, major, or minor)"
+    required: false
+    default: "major"
+  REPORT_BASENAME:
+    description: "Base filename for exported review reports (JSON/SARIF)"
+    required: false
+    default: "multi-provider-review"
 
 runs:
   using: "composite"
@@ -54,6 +66,9 @@ runs:
         DIFF_MAX_BYTES: ${{ inputs.DIFF_MAX_BYTES }}
         RUN_TIMEOUT_SECONDS: ${{ inputs.RUN_TIMEOUT_SECONDS }}
         OPENROUTER_API_KEY: ${{ inputs.OPENROUTER_API_KEY }}
+        INLINE_MAX_COMMENTS: ${{ inputs.INLINE_MAX_COMMENTS }}
+        INLINE_MIN_SEVERITY: ${{ inputs.INLINE_MIN_SEVERITY }}
+        REPORT_BASENAME: ${{ inputs.REPORT_BASENAME }}
       run: bash "${{ github.action_path }}/action.sh"
 
 branding:
