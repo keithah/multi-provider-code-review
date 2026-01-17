@@ -2,19 +2,19 @@
 
 [![GitHub Action](https://img.shields.io/badge/GitHub%20Action-blue.svg)](https://github.com/keithah/multi-provider-code-review)[![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opencode.ai)[![Free](https://img.shields.io/badge/Free%20Providers-orange.svg)](https://anthropic.com/claude)[![Uses](https://img.shields.io/badge/Uses%20OpenCode-orange.svg)]
 
-🤖 **Run comprehensive code reviews with multiple free OpenCode providers and synthesize their results into one actionable review.**
+Run comprehensive code reviews with multiple free providers and synthesize their results into one actionable review.
 
-## ✨ Features
+## Features
 
-- **🔄 Multi-Provider Coverage**: Run reviews with multiple free OpenCode providers
-- **🧠 Intelligent Synthesis**: Combine overlapping feedback, highlight unique insights from all providers
-- **💰 100% Free**: Uses only free opencode providers (no API keys required)
-- **🚀 Simple**: Composite action builds prompts, runs providers, synthesizes, and posts the comment
-- **📝 Smart Comments**: Single synthesized PR comment plus raw provider outputs (collapsed)
-- **🎯 Flexible**: Multiple trigger options and customizable provider lists, AGENTS.md awareness
-- **🧩 Clean Integration**: Single composite action, no local scripts needed
+- Multi-provider coverage: run reviews with multiple free OpenCode providers
+- Intelligent synthesis: combine overlapping feedback, highlight unique insights from all providers
+- Free defaults: OpenCode providers work without extra keys; OpenRouter is optional with a key
+- Simple setup: composite action builds prompts, runs providers, synthesizes, and posts the comment
+- Clear output: single synthesized PR comment plus raw provider outputs (collapsed)
+- Flexible: multiple trigger options and customizable provider lists, AGENTS.md awareness
+- Clean integration: single composite action, no local scripts needed
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -46,7 +46,7 @@ permissions:
   pull-requests: write
 ```
 
-## 📋 Configuration
+## Configuration
 
 ### Repository Variables
 
@@ -73,7 +73,7 @@ The provided workflow (`action-simple.yml`) resolves and passes these to the com
 | `SYNTHESIS_MODEL` | Optional input      | Override synthesis model          |
 | `DIFF_MAX_BYTES`  | Optional input      | Override diff truncation limit    |
 
-## 🎯 Usage
+## Usage
 
 ### Automatic Triggers
 
@@ -101,7 +101,7 @@ Trigger a review manually:
 - **Manual only**: Remove the `pull_request` block.
 - **Auto only**: Remove the `issue_comment` block or narrow the `if` filter.
 
-## 🏗️ How It Works
+## How It Works
 
 ### Architecture
 
@@ -149,9 +149,9 @@ Trigger a review manually:
 
 Each provider is run directly via OpenCode CLI using the list from `REVIEW_PROVIDERS`.
 
-## 🤖 Available Providers
+## Available Providers
 
-**OpenCode free (no keys)**
+**OpenCode (no keys)**
 | Provider                     | Style/Strength                | Notes                   |
 | ---------------------------- | ----------------------------- | ----------------------- |
 | `opencode/big-pickle`        | Large reasoning               | Default synthesis model |
@@ -189,7 +189,7 @@ env:
   REVIEW_PROVIDERS: "anthropic/claude-3.5-sonnet,openai/gpt-4-turbo"
 ```
 
-## 🔧 Advanced Configuration
+## Advanced Configuration
 
 ### Provider and synthesis models
 
