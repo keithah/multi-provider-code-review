@@ -37,13 +37,6 @@ inputs:
   OPENROUTER_API_KEY:
     description: "API key for OpenRouter providers (optional)"
     required: false
-  COPILOT_TOKEN:
-    description: "Token for GitHub Copilot-hosted models (optional, defaults to GITHUB_TOKEN)"
-    required: false
-  COPILOT_BASE_URL:
-    description: "Base URL for Copilot chat completions API"
-    required: false
-    default: "https://models.inference.ai.azure.com"
 
 runs:
   using: "composite"
@@ -61,8 +54,6 @@ runs:
         DIFF_MAX_BYTES: ${{ inputs.DIFF_MAX_BYTES }}
         RUN_TIMEOUT_SECONDS: ${{ inputs.RUN_TIMEOUT_SECONDS }}
         OPENROUTER_API_KEY: ${{ inputs.OPENROUTER_API_KEY }}
-        COPILOT_TOKEN: ${{ inputs.COPILOT_TOKEN }}
-        COPILOT_BASE_URL: ${{ inputs.COPILOT_BASE_URL }}
       run: bash "${{ github.action_path }}/action.sh"
 
 branding:
