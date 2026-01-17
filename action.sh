@@ -671,7 +671,7 @@ if [ -f "$PRICING_CACHE" ]; then
   COST_INFO="/tmp/cost-info.json"
   python /tmp/calc_cost.py "$PROVIDER_REPORT_JL" "$PRICING_CACHE" "$COST_INFO" || true
   if [ -f "$COST_INFO" ]; then
-    ESTIMATED_COST_TOTAL="$(jq -r '.total // "unknown"' "$COST_INFO" 2>/dev/null || echo "unknown")"
+    ESTIMATED_COST_TOTAL="$(jq -r '.total // ""' "$COST_INFO" 2>/dev/null || echo "")"
     mapfile -t ESTIMATED_COST_DETAILS < <(jq -r '.details[]' "$COST_INFO" 2>/dev/null || true)
     TOTAL_PROMPT_TOKENS="$(jq -r '.prompt_tokens // 0' "$COST_INFO" 2>/dev/null || echo 0)"
     TOTAL_COMPLETION_TOKENS="$(jq -r '.completion_tokens // 0' "$COST_INFO" 2>/dev/null || echo 0)"
@@ -813,8 +813,10 @@ COMMENT_FILE=/tmp/final-review.md
 {
   echo "**Multi-Provider Code Review**"
   echo ""
-  echo "**Estimated cost:** ${ESTIMATED_COST_TOTAL}"
-  echo "**Token usage (OpenRouter where available):** total=${TOTAL_TOKENS} (prompt=${TOTAL_PROMPT_TOKENS}, completion=${TOTAL_COMPLETION_TOKENS})"
+  if [ -n "${ESTIMATED_COST_TOTAL}" ]; then
+    echo "**Estimated cost:** ${ESTIMATED_COST_TOTAL}"
+  fi
+  echo "**Token usage (where available):** total=${TOTAL_TOKENS} (prompt=${TOTAL_PROMPT_TOKENS}, completion=${TOTAL_COMPLETION_TOKENS})"
   if [ "${#ESTIMATED_COST_DETAILS[@]}" -gt 0 ]; then
     echo "<details><summary>Per-provider cost notes</summary>"
     for c in "${ESTIMATED_COST_DETAILS[@]}"; do
@@ -1070,7 +1072,7 @@ report = {
     "only_binary": os.getenv("ONLY_BINARY", "false").lower() == "true",
     "test_hint_added": os.getenv("TEST_HINT_FLAG", "false").lower() == "true",
     "cost": {
-        "estimated_total": os.getenv("ESTIMATED_COST_TOTAL", "unknown"),
+        "estimated_total": os.getenv("ESTIMATED_COST_TOTAL") or None,
         "details": os.getenv("ESTIMATED_COST_DETAILS", "").split("||") if os.getenv("ESTIMATED_COST_DETAILS") else [],
     },
     "usage_tokens": {
