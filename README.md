@@ -12,6 +12,8 @@ Run comprehensive code reviews with multiple providers (OpenRouter-first) and sy
 - Exports: writes JSON and SARIF reports for downstream tooling or code scanning upload
 - Triggers: supports auto-on-PR changes plus manual `/review`, `@opencode`, or `@claude`
 - Clean integration: single composite action that builds prompts, runs providers, synthesizes, and posts results
+- Inline and consensus: inline suggestions post only when severity meets thresholds, multiple providers agree (configurable), and a suggestion/hunk is present
+- Resilient posting: summary comments are chunked if large and API calls retry with backoff; JSON/SARIF reports capture timings and truncation status
 
 ## Quick Start
 
@@ -59,6 +61,7 @@ permissions:
 | `OPENROUTER_API_KEY`  | _unset_                                                                                     | Optional key for OpenRouter models                                                            |
 | `INLINE_MAX_COMMENTS` | `5`                                                                                         | Max inline review comments from structured findings                                           |
 | `INLINE_MIN_SEVERITY` | `major`                                                                                     | Minimum severity to post inline (`critical`, `major`, `minor`)                                |
+| `INLINE_MIN_AGREEMENT`| `1`                                                                                         | Minimum number of providers that must agree before posting inline suggestions                 |
 | `REPORT_BASENAME`     | `multi-provider-review`                                                                     | Base filename for exported JSON/SARIF reports                                                 |
 
 ### Inputs wired by the workflow template
@@ -147,6 +150,7 @@ Trigger a review manually:
 3. **Provider Runs**: Calls the configured providers in `REVIEW_PROVIDERS`
 4. **Synthesis**: Uses the configured synthesis model to combine provider outputs into one review
 5. **GitHub Comment**: Posts the synthesized review to the PR and attaches raw provider outputs in a collapsed section
+6. **Inline Suggestions**: Posts inline suggestions when findings meet severity, agreement, and evidence thresholds
 
 ### Reports and artifacts
 
@@ -231,6 +235,25 @@ If `OPENROUTER_API_KEY` is unset, the action automatically swaps in the fallback
 1. Create a repo/org secret `OPENROUTER_API_KEY`.
 2. Set `REVIEW_PROVIDERS` and (optionally) `SYNTHESIS_MODEL` to your preferred OpenRouter models, prefixed with `openrouter/`.
 3. The action routes `openrouter/*` entries via the OpenRouter Chat Completions API; when the key is missing, it silently falls back to the bundled free models so runs still succeed.
+
+### Optional repo config file
+
+You can set defaults in `.github/multi-review.yml` (YAML or JSON). Fields:
+
+```yaml
+providers:
+  - openrouter/google/gemini-2.0-flash-exp:free
+  - openrouter/mistralai/devstral-2512:free
+  - openrouter/xiaomi/mimo-v2-flash:free
+synthesis_model: openrouter/google/gemini-2.0-flash-exp:free
+inline_max_comments: 5
+inline_min_severity: major
+inline_min_agreement: 2   # require consensus across providers
+diff_max_bytes: 120000
+run_timeout_seconds: 600
+```
+
+Values in the config file override action inputs/vars at runtime.
 ```
 
 ### Project Guidelines Integration

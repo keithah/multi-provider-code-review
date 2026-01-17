@@ -45,6 +45,10 @@ inputs:
     description: "Minimum severity for inline comments (critical, major, or minor)"
     required: false
     default: "major"
+  INLINE_MIN_AGREEMENT:
+    description: "Minimum number of providers that must agree before posting inline"
+    required: false
+    default: "1"
   REPORT_BASENAME:
     description: "Base filename for exported review reports (JSON/SARIF)"
     required: false
@@ -68,6 +72,7 @@ runs:
         OPENROUTER_API_KEY: ${{ inputs.OPENROUTER_API_KEY }}
         INLINE_MAX_COMMENTS: ${{ inputs.INLINE_MAX_COMMENTS }}
         INLINE_MIN_SEVERITY: ${{ inputs.INLINE_MIN_SEVERITY }}
+        INLINE_MIN_AGREEMENT: ${{ inputs.INLINE_MIN_AGREEMENT }}
         REPORT_BASENAME: ${{ inputs.REPORT_BASENAME }}
       run: bash "${{ github.action_path }}/action.sh"
 

@@ -39,6 +39,96 @@ if [ -z "$REPO" ]; then
   exit 1
 fi
 
+CONFIG_FILE=".github/multi-review.yml"
+CONFIG_SOURCE="defaults"
+if [ -f "$CONFIG_FILE" ]; then
+  echo "Loading config from ${CONFIG_FILE}"
+  CONFIG_EXPORTS=$(python - "$CONFIG_FILE" <<'PYCODE' || true
+import os, sys, json, subprocess, tempfile
+path = sys.argv[1]
+def load_yaml(p):
+    try:
+        import yaml  # type: ignore
+    except Exception:
+        try:
+            subprocess.run([sys.executable, "-m", "pip", "install", "pyyaml", "--quiet"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            import yaml  # type: ignore
+        except Exception:
+            return None
+    try:
+        with open(p, "r", encoding="utf-8") as f:
+            return yaml.safe_load(f)
+    except Exception:
+        return None
+
+def load_json(p):
+    try:
+        with open(p, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+data = load_yaml(path)
+if data is None:
+    data = load_json(path)
+
+if not isinstance(data, dict):
+    sys.exit(0)
+
+exports = {}
+def set_if(key, env_key, cast=None):
+    if key in data and data[key] is not None:
+        val = data[key]
+        if cast:
+            try:
+                val = cast(val)
+            except Exception:
+                return
+        exports[env_key] = val
+
+providers = data.get("providers")
+if isinstance(providers, list):
+    exports["REVIEW_PROVIDERS"] = ",".join(str(p) for p in providers if p)
+elif isinstance(providers, str) and providers.strip():
+    exports["REVIEW_PROVIDERS"] = providers
+
+set_if("synthesis_model", "SYNTHESIS_MODEL", str)
+set_if("inline_max_comments", "INLINE_MAX_COMMENTS", int)
+set_if("inline_min_severity", "INLINE_MIN_SEVERITY", str)
+set_if("inline_min_agreement", "INLINE_MIN_AGREEMENT", int)
+set_if("diff_max_bytes", "DIFF_MAX_BYTES", int)
+set_if("run_timeout_seconds", "RUN_TIMEOUT_SECONDS", int)
+
+print(json.dumps(exports))
+PYCODE
+  )
+  if [ -n "$CONFIG_EXPORTS" ]; then
+    CONFIG_SOURCE="$CONFIG_FILE"
+    if command -v jq >/dev/null 2>&1; then
+      REVIEW_PROVIDERS="$(echo "$CONFIG_EXPORTS" | jq -r '.REVIEW_PROVIDERS // "'$REVIEW_PROVIDERS'"')"
+      SYNTHESIS_MODEL="$(echo "$CONFIG_EXPORTS" | jq -r '.SYNTHESIS_MODEL // "'$SYNTHESIS_MODEL'"')"
+      INLINE_MAX_COMMENTS="$(echo "$CONFIG_EXPORTS" | jq -r '.INLINE_MAX_COMMENTS // "'$INLINE_MAX_COMMENTS'"')"
+      INLINE_MIN_SEVERITY="$(echo "$CONFIG_EXPORTS" | jq -r '.INLINE_MIN_SEVERITY // "'$INLINE_MIN_SEVERITY'"')"
+      INLINE_MIN_AGREEMENT="$(echo "$CONFIG_EXPORTS" | jq -r '.INLINE_MIN_AGREEMENT // "'$INLINE_MIN_AGREEMENT'"')"
+      DIFF_MAX_BYTES="$(echo "$CONFIG_EXPORTS" | jq -r '.DIFF_MAX_BYTES // "'$DIFF_MAX_BYTES'"')"
+      RUN_TIMEOUT_SECONDS="$(echo "$CONFIG_EXPORTS" | jq -r '.RUN_TIMEOUT_SECONDS // "'$RUN_TIMEOUT_SECONDS'"')"
+    else
+      read -r REVIEW_PROVIDERS SYNTHESIS_MODEL INLINE_MAX_COMMENTS INLINE_MIN_SEVERITY INLINE_MIN_AGREEMENT DIFF_MAX_BYTES RUN_TIMEOUT_SECONDS <<EOF
+$(python - "$CONFIG_EXPORTS" "$REVIEW_PROVIDERS" "$SYNTHESIS_MODEL" "$INLINE_MAX_COMMENTS" "$INLINE_MIN_SEVERITY" "$INLINE_MIN_AGREEMENT" "$DIFF_MAX_BYTES" "$RUN_TIMEOUT_SECONDS" <<'PYCODE'
+import json, sys
+data = json.loads(sys.argv[1])
+defaults = sys.argv[2:]
+keys = ["REVIEW_PROVIDERS","SYNTHESIS_MODEL","INLINE_MAX_COMMENTS","INLINE_MIN_SEVERITY","INLINE_MIN_AGREEMENT","DIFF_MAX_BYTES","RUN_TIMEOUT_SECONDS"]
+out = []
+for i,k in enumerate(keys):
+    out.append(str(data.get(k, defaults[i])))
+print(" ".join(out))
+PYCODE
+)
+EOF
+    fi
+  fi
+fi
 IFS=',' read -ra RAW_PROVIDERS <<< "$REVIEW_PROVIDERS"
 PROVIDERS=()
 for raw_provider in "${RAW_PROVIDERS[@]}"; do
@@ -77,6 +167,7 @@ RUN_TIMEOUT_SECONDS="${RUN_TIMEOUT_SECONDS:-600}"
 OPENROUTER_API_KEY="${OPENROUTER_API_KEY:-}"
 INLINE_MAX_COMMENTS="${INLINE_MAX_COMMENTS:-5}"
 INLINE_MIN_SEVERITY="${INLINE_MIN_SEVERITY:-major}"
+INLINE_MIN_AGREEMENT="${INLINE_MIN_AGREEMENT:-1}"
 REPORT_BASENAME="${REPORT_BASENAME:-multi-provider-review}"
 REPORT_DIR="${GITHUB_WORKSPACE:-$PWD}/multi-provider-report"
 mkdir -p "$REPORT_DIR"
@@ -169,6 +260,7 @@ fi
 
 gh api "/repos/${REPO}/pulls/${PR_NUMBER}/files" > /tmp/pr-files.json || true
 DIFF_FILE="/tmp/pr.diff"
+DIFF_TRUNCATED="false"
 if gh api "/repos/${REPO}/pulls/${PR_NUMBER}" -H "Accept: application/vnd.github.v3.diff" > "$DIFF_FILE"; then
   DIFF_SIZE=$(wc -c < "$DIFF_FILE")
   if [ "$DIFF_SIZE" -gt "$DIFF_MAX_BYTES" ]; then
@@ -176,6 +268,7 @@ if gh api "/repos/${REPO}/pulls/${PR_NUMBER}" -H "Accept: application/vnd.github
     head -c "$DIFF_MAX_BYTES" "$DIFF_FILE" > "${DIFF_FILE}.tmp"
     echo $'\n\n[Diff truncated for length]' >> "${DIFF_FILE}.tmp"
     mv "${DIFF_FILE}.tmp" "$DIFF_FILE"
+    DIFF_TRUNCATED="true"
   fi
 else
   echo "Warning: Unable to fetch PR diff via gh api."
@@ -271,6 +364,7 @@ if [ -n "${DIFF_FILE}" ] && [ -f "${DIFF_FILE}" ]; then
 fi
 
 PROMPT_CONTENT="$(cat /tmp/review-prompt.txt)"
+PROMPT_SIZE="$(wc -c < /tmp/review-prompt.txt)"
 
 echo "========================================"
 echo "Running multi-provider code review"
@@ -349,6 +443,53 @@ if [ "${#PROVIDER_LIST[@]}" -eq 0 ]; then
   exit 1
 fi
 
+PROVIDER_FINDINGS_FILE=/tmp/provider-findings.json
+python - "$PROVIDER_REPORT_JL" "$PROVIDER_FINDINGS_FILE" <<'PYCODE'
+import json, sys, re
+report_path, out_path = sys.argv[1:]
+providers = []
+try:
+    with open(report_path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            providers.append(json.loads(line))
+except Exception:
+    providers = []
+
+all_findings = []
+def extract_findings(text, provider):
+    try:
+        for line in text.splitlines():
+            s = line.strip()
+            if not s.startswith("{") or '"findings"' not in s:
+                continue
+            data = json.loads(s)
+            for f in data.get("findings") or []:
+                f["provider"] = provider
+                yield f
+    except Exception:
+        return
+
+for p in providers:
+    path = p.get("output_path")
+    name = p.get("name")
+    if not path or not name:
+        continue
+    try:
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+        for f in extract_findings(text, name):
+            all_findings.append(f)
+    except Exception:
+        continue
+
+with open(out_path, "w", encoding="utf-8") as f:
+    json.dump(all_findings, f)
+print(f"Extracted {len(all_findings)} findings from providers to {out_path}")
+PYCODE
+
 SYN_PROMPT=/tmp/synthesis-prompt.txt
 echo "Synthesizing results with ${SYNTHESIS_MODEL}"
 cat > "$SYN_PROMPT" <<'SYN_HEAD'
@@ -385,6 +526,7 @@ done
 
 SYNTHESIS_OUTPUT=/tmp/synthesis.txt
 synthesis_log=/tmp/synthesis.log
+synth_start=$(date +%s)
 if [[ "${SYNTHESIS_MODEL}" == openrouter/* ]]; then
   if run_openrouter "${SYNTHESIS_MODEL}" "$(cat "$SYN_PROMPT")" "$SYNTHESIS_OUTPUT" > "$synthesis_log" 2>&1; then
     echo "✅ Synthesis complete"
@@ -410,6 +552,8 @@ else
     cat "$SYN_PROMPT" > "$SYNTHESIS_OUTPUT"
   fi
 fi
+synth_end=$(date +%s)
+synth_duration=$((synth_end - synth_start))
 
 COMMENT_FILE=/tmp/final-review.md
 {
@@ -434,9 +578,50 @@ COMMENT_FILE=/tmp/final-review.md
 } > "$COMMENT_FILE"
 
 # Post summary comment
-gh api --method POST -H "Accept: application/vnd.github+json" "/repos/${REPO}/issues/${PR_NUMBER}/comments" -F body="@${COMMENT_FILE}"
+post_comment_with_retry() {
+  local body_file="$1"
+  local max_attempts=3
+  local attempt=1
+  while [ $attempt -le $max_attempts ]; do
+    if gh api --method POST -H "Accept: application/vnd.github+json" "/repos/${REPO}/issues/${PR_NUMBER}/comments" -F "body=@${body_file}"; then
+      return 0
+    fi
+    sleep $((2 ** attempt))
+    attempt=$((attempt + 1))
+  done
+  return 1
+}
 
-# Attempt inline review comments from structured JSON in synthesis output
+comment_size_limit=60000
+COMMENT_CHUNKS_POSTED=0
+if [ "$(wc -c < "$COMMENT_FILE")" -gt "$comment_size_limit" ]; then
+  echo "Summary comment exceeds ${comment_size_limit} bytes; chunking output."
+  chunk_count=$(python - "$COMMENT_FILE" "$comment_size_limit" "/tmp/comment-chunk" <<'PYCODE'
+import sys, os
+path, limit, prefix = sys.argv[1], int(sys.argv[2]), sys.argv[3]
+text = open(path, encoding="utf-8").read()
+chunks = [text[i:i+limit] for i in range(0, len(text), limit)]
+for idx, chunk in enumerate(chunks, 1):
+    out_path = f"{prefix}-{idx}.md"
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write(f"(Part {idx}/{len(chunks)})\n\n")
+        f.write(chunk)
+print(len(chunks))
+PYCODE
+)
+  for file in /tmp/comment-chunk-*.md; do
+    [ -f "$file" ] || continue
+    if post_comment_with_retry "$file"; then
+      COMMENT_CHUNKS_POSTED=$((COMMENT_CHUNKS_POSTED + 1))
+    fi
+  done
+else
+  if post_comment_with_retry "$COMMENT_FILE"; then
+    COMMENT_CHUNKS_POSTED=1
+  fi
+fi
+
+# Attempt inline review comments from structured JSON with consensus and suggestions
 REVIEW_BODY="$(cat "$SYNTHESIS_OUTPUT")"
 STRUCT_LINE="$(printf "%s\n" "$REVIEW_BODY" | python - <<'PYCODE' || true
 import sys, json
@@ -451,80 +636,117 @@ PYCODE
 )"
 
 INLINE_POSTED="false"
-if [ -n "$STRUCT_LINE" ]; then
-  INLINE_PAYLOAD=$(python - <<'PYCODE' "$STRUCT_LINE" "$INLINE_MAX_COMMENTS" "$INLINE_MIN_SEVERITY" "$SYNTHESIS_MODEL" "${PROVIDER_LIST[*]}" || true
+INLINE_PAYLOAD=$(python - "$PROVIDER_FINDINGS_FILE" "$STRUCT_LINE" "$INLINE_MAX_COMMENTS" "$INLINE_MIN_SEVERITY" "$INLINE_MIN_AGREEMENT" "$SYNTHESIS_MODEL" "${PROVIDER_LIST[*]}" || true
 import json, sys
-struct_line, max_comments, min_severity, synth_model, providers = sys.argv[1:]
-try:
-    data = json.loads(struct_line)
-    findings = data.get("findings") or []
-except Exception:
-    sys.exit(1)
-
+prov_path, struct_line, max_comments, min_sev, min_agree, synth_model, providers = sys.argv[1:]
+providers_list = providers.split()
 severity_order = {"critical": 3, "major": 2, "minor": 1}
-min_rank = severity_order.get(min_severity.lower(), 1)
+min_rank = severity_order.get(min_sev.lower(), 1)
+min_agree = max(1, int(min_agree))
+max_comments = int(max_comments)
+
+def load_provider_findings():
+    try:
+        with open(prov_path, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+def load_struct_findings():
+    if not struct_line:
+        return []
+    try:
+        data = json.loads(struct_line)
+        return data.get("findings") or []
+    except Exception:
+        return []
+
+def key_for(f):
+    file = (f.get("file") or "").strip()
+    try:
+        line = int(f.get("line", 0))
+    except Exception:
+        line = 0
+    msg = (f.get("title") or f.get("message") or "").strip()
+    return file, line, msg.lower()
+
+provider_findings = load_provider_findings()
+struct_findings = load_struct_findings()
+if struct_findings:
+    for f in struct_findings:
+        f["provider"] = f.get("provider") or "synthesis"
+
+all_findings = provider_findings + struct_findings
+by_key = {}
+for f in all_findings:
+    file, line, msg = key_for(f)
+    if not file or line <= 0 or not msg:
+        continue
+    severity = (f.get("severity") or "").lower()
+    if severity_order.get(severity, 0) < min_rank:
+        continue
+    suggestion = f.get("suggestion") or ""
+    if not suggestion.strip():
+        continue  # require suggestion to post inline
+    key = (file, line, msg)
+    entry = by_key.setdefault(key, {"providers": set(), "finding": f, "max_sev": severity})
+    if severity_order.get(severity, 0) > severity_order.get(entry["max_sev"], 0):
+        entry["max_sev"] = severity
+        entry["finding"] = f
+    if f.get("provider"):
+        entry["providers"].add(f["provider"])
 
 comments = []
-seen = set()
-for f in findings:
-    try:
-        file = f.get("file") or ""
-        line = int(f.get("line", 0))
-        msg = f.get("title") or f.get("message") or ""
-        detail = f.get("message") or ""
-        suggestion = f.get("suggestion") or ""
-        severity = (f.get("severity") or "").lower()
-        if not file or line <= 0 or not msg:
-            continue
-        if severity_order.get(severity, 0) < min_rank:
-            continue
-        key = (file, line, msg.strip())
-        if key in seen:
-            continue
-        seen.add(key)
-        body_lines = [f"**{severity or 'issue'}**: {msg}"]
-        if detail and detail != msg:
-            body_lines.append(detail)
-        if suggestion:
-            body_lines.append("```suggestion")
-            body_lines.append(suggestion)
-            body_lines.append("```")
-        comments.append({
-            "path": file,
-            "line": line,
-            "side": "RIGHT",
-            "body": "\n".join(body_lines)
-        })
-        if len(comments) >= int(max_comments):
-            break
-    except Exception:
+for (file, line, msg), entry in by_key.items():
+    if len(entry["providers"]) < min_agree:
         continue
+    f = entry["finding"]
+    severity = entry["max_sev"] or f.get("severity") or "issue"
+    body_lines = [f"**{severity}**: {f.get('title') or f.get('message') or msg}"]
+    detail = f.get("message") or ""
+    if detail and detail != msg:
+        body_lines.append(detail)
+    suggestion = f.get("suggestion") or ""
+    body_lines.append("```suggestion")
+    body_lines.append(suggestion)
+    body_lines.append("```")
+    comments.append({
+        "path": file,
+        "line": line,
+        "side": "RIGHT",
+        "body": "\n".join(body_lines)
+    })
+comments = comments[:max_comments]
 
 if not comments:
-    sys.exit(1)
+    sys.exit(0)
 
 payload = {
     "event": "COMMENT",
-    "body": f"Inline findings from synthesis model {synth_model} (providers: {providers})",
+    "body": f"Inline suggestions (consensus >= {min_agree}) from {synth_model} synthesis; providers: {providers_list}",
     "comments": comments
 }
 print(json.dumps(payload))
 PYCODE
-  )
+)
 
-  if [ -n "$INLINE_PAYLOAD" ]; then
-    echo "Posting inline review comments from structured findings"
-    printf "%s" "$INLINE_PAYLOAD" | gh api --method POST -H "Accept: application/vnd.github+json" "/repos/${REPO}/pulls/${PR_NUMBER}/reviews" --input -
-    INLINE_POSTED="true"
-  fi
+if [ -n "$INLINE_PAYLOAD" ]; then
+  echo "Posting inline review comments from structured findings"
+  for attempt in 1 2 3; do
+    if printf "%s" "$INLINE_PAYLOAD" | gh api --method POST -H "Accept: application/vnd.github+json" "/repos/${REPO}/pulls/${PR_NUMBER}/reviews" --input -; then
+      INLINE_POSTED="true"
+      break
+    fi
+    sleep $((2 ** attempt))
+  done
 fi
 
 REPORT_JSON="${REPORT_DIR}/${REPORT_BASENAME}.json"
 REPORT_SARIF="${REPORT_DIR}/${REPORT_BASENAME}.sarif"
 
-python - "$PROVIDER_REPORT_JL" "$STRUCT_LINE" "$SYNTHESIS_MODEL" "$COMMENT_FILE" "$INLINE_POSTED" "$REPORT_JSON" "$SYNTHESIS_OUTPUT" <<'PYCODE'
+python - "$PROVIDER_REPORT_JL" "$STRUCT_LINE" "$SYNTHESIS_MODEL" "$COMMENT_FILE" "$INLINE_POSTED" "$REPORT_JSON" "$SYNTHESIS_OUTPUT" "$CONFIG_SOURCE" "$PROMPT_SIZE" "$DIFF_TRUNCATED" "$synth_duration" "$COMMENT_CHUNKS_POSTED" "$INLINE_MIN_AGREEMENT" "$INLINE_MAX_COMMENTS" "$INLINE_MIN_SEVERITY" "$PROVIDER_FINDINGS_FILE" <<'PYCODE'
 import json, sys, time, os
-prov_path, struct_line, synth_model, comment_path, inline_posted, out_path, synth_output_path = sys.argv[1:]
+prov_path, struct_line, synth_model, comment_path, inline_posted, out_path, synth_output_path, config_source, prompt_size, diff_truncated, synth_duration, chunk_count, min_agree, max_comments, min_sev, prov_findings_path = sys.argv[1:]
 providers = []
 try:
     with open(prov_path, encoding="utf-8") as f:
@@ -543,6 +765,11 @@ if struct_line:
     except Exception:
         findings = []
 
+try:
+    prov_findings_count = len(json.load(open(prov_findings_path, encoding="utf-8")))
+except Exception:
+    prov_findings_count = 0
+
 report = {
     "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     "synthesis_model": synth_model,
@@ -551,6 +778,15 @@ report = {
     "inline_comments_posted": inline_posted.lower() == "true",
     "summary_comment_path": comment_path,
     "synthesis_output_path": synth_output_path,
+    "config_source": config_source,
+    "prompt_size_bytes": int(prompt_size),
+    "diff_truncated": diff_truncated.lower() == "true",
+    "synthesis_duration_seconds": int(synth_duration),
+    "summary_comment_chunks": int(chunk_count),
+    "inline_min_agreement": int(min_agree),
+    "inline_min_severity": min_sev,
+    "inline_max_comments": int(max_comments),
+    "provider_structured_findings": prov_findings_count,
 }
 os.makedirs(os.path.dirname(out_path), exist_ok=True)
 with open(out_path, "w", encoding="utf-8") as f:
