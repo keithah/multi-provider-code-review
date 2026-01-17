@@ -188,7 +188,25 @@ Please review this pull request and provide a comprehensive code review focusing
 
 ## Output Format
 - Provide specific file and line numbers when possible
-- Include code suggestions in fenced code blocks
+- Include code suggestions in fenced code blocks using the GitHub suggestion format when appropriate:
+  ```suggestion
+  // code change
+  ```
+- Return a structured JSON block at the end, on its own line, containing findings. Use this shape exactly:
+  ```json
+  {
+    "findings": [
+      {
+        "file": "path/to/file.ext",
+        "line": 123,
+        "severity": "critical|major|minor",
+        "title": "short title",
+        "message": "concise description",
+        "suggestion": "optional code snippet or empty string"
+      }
+    ]
+  }
+  ```
 - Summarize key findings and risks at the end
 
 IMPORTANT: Only flag actual issues. If everything looks good, respond with 'lgtm'.
@@ -335,7 +353,7 @@ fi
 
 COMMENT_FILE=/tmp/final-review.md
 {
-  echo "🤖 **Multi-Provider Code Review**"
+  echo "**Multi-Provider Code Review**"
   echo ""
   echo "**Providers:** ${PROVIDER_LIST[*]}"
   echo "**Synthesis model:** ${SYNTHESIS_MODEL}"
@@ -355,7 +373,77 @@ COMMENT_FILE=/tmp/final-review.md
   echo "</details>"
 } > "$COMMENT_FILE"
 
+# Post summary comment
 gh api --method POST -H "Accept: application/vnd.github+json" "/repos/${REPO}/issues/${PR_NUMBER}/comments" -F body="@${COMMENT_FILE}"
+
+# Attempt inline review comments from structured JSON in synthesis output
+REVIEW_BODY="$(cat "$SYNTHESIS_OUTPUT")"
+STRUCT_LINE="$(printf "%s\n" "$REVIEW_BODY" | python - <<'PYCODE' || true
+import sys, json
+lines = sys.stdin.read().splitlines()
+for line in lines:
+    s = line.strip()
+    if s.startswith('{') and '"findings"' in s:
+        print(s)
+        sys.exit(0)
+sys.exit(1)
+PYCODE
+)"
+
+if [ -n "$STRUCT_LINE" ]; then
+  INLINE_PAYLOAD=$(python - <<'PYCODE' "$STRUCT_LINE" "$REPO" "$PR_NUMBER" "${SYNTHESIS_MODEL}" "${PROVIDER_LIST[*]}" || true
+import json, sys
+struct_line, repo, pr_number, synth_model, providers = sys.argv[1:]
+try:
+    data = json.loads(struct_line)
+    findings = data.get("findings") or []
+except Exception:
+    sys.exit(1)
+
+comments = []
+for f in findings[:5]:
+    try:
+        file = f.get("file") or ""
+        line = int(f.get("line", 0))
+        msg = f.get("title") or f.get("message") or ""
+        detail = f.get("message") or ""
+        suggestion = f.get("suggestion") or ""
+        severity = (f.get("severity") or "").lower()
+        if not file or line <= 0 or not msg:
+            continue
+        body_lines = [f"**{severity or 'issue'}**: {msg}"]
+        if detail and detail != msg:
+            body_lines.append(detail)
+        if suggestion:
+            body_lines.append("```suggestion")
+            body_lines.append(suggestion)
+            body_lines.append("```")
+        comments.append({
+            "path": file,
+            "line": line,
+            "side": "RIGHT",
+            "body": "\n".join(body_lines)
+        })
+    except Exception:
+        continue
+
+if not comments:
+    sys.exit(1)
+
+payload = {
+    "event": "COMMENT",
+    "body": f"Inline findings from synthesis model {synth_model} (providers: {providers})",
+    "comments": comments
+}
+print(json.dumps(payload))
+PYCODE
+  )
+
+  if [ -n "$INLINE_PAYLOAD" ]; then
+    echo "Posting inline review comments from structured findings"
+    printf "%s" "$INLINE_PAYLOAD" | gh api --method POST -H "Accept: application/vnd.github+json" "/repos/${REPO}/pulls/${PR_NUMBER}/reviews" --input -
+  fi
+fi
 
 echo ""
 echo "✅ Review posted to PR #${PR_NUMBER}"
