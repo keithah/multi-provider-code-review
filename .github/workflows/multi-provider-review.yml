@@ -15,10 +15,16 @@ jobs:
         (github.event.issue.pull_request &&
           (startsWith(github.event.comment.body, '/review') ||
            contains(github.event.comment.body, '@opencode') ||
-           contains(github.event.comment.body, '@claude')))
+           contains(github.event.comment.body, '@claude'))) ||
+        github.event_name == 'workflow_dispatch'
       )
-      && (github.event.pull_request.changed_files <= (vars.MAX_CHANGED_FILES || 9999))
-      && ((github.event.pull_request.additions + github.event.pull_request.deletions) >= (vars.MIN_CHANGED_LINES || 0))
+      && (
+        !github.event.pull_request ||
+        (
+          github.event.pull_request.changed_files <= (vars.MAX_CHANGED_FILES || 9999) &&
+          (github.event.pull_request.additions + github.event.pull_request.deletions) >= (vars.MIN_CHANGED_LINES || 0)
+        )
+      )
     runs-on: ubuntu-latest
     permissions:
       contents: read
