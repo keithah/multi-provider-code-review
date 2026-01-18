@@ -119,8 +119,8 @@ jobs:
           name: code-review-reports
           path: multi-provider-report/*
 
-  - name: Upload SARIF to code scanning
-    if: always() && hashFiles('multi-provider-report/*.sarif') != ''
-    uses: github/codeql-action/upload-sarif@v4
-    with:
-      sarif_file: multi-provider-report/${{ vars.REPORT_BASENAME || 'multi-provider-review' }}.sarif
+      - name: Upload SARIF to code scanning
+        if: always() && hashFiles('multi-provider-report/*.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: multi-provider-report/${{ vars.REPORT_BASENAME || 'multi-provider-review' }}.sarif
