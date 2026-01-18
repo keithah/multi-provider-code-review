@@ -997,32 +997,32 @@ COMMENT_FILE=/tmp/final-review.md
 {
   echo "**Multi-Provider Code Review**"
   echo ""
-  echo "**Token usage (where available):** total=${TOTAL_TOKENS} (prompt=${TOTAL_PROMPT_TOKENS}, completion=${TOTAL_COMPLETION_TOKENS})"
+  echo "**Review**"
+  echo ""
+  cat "$SYNTHESIS_OUTPUT"
+  echo ""
+  echo "<details><summary>Run details (usage, cost, providers, status)</summary>"
+  echo ""
+  echo "- Token usage: total=${TOTAL_TOKENS} (prompt=${TOTAL_PROMPT_TOKENS}, completion=${TOTAL_COMPLETION_TOKENS})"
   if [ -n "${ESTIMATED_COST_TOTAL}" ]; then
-    echo "**Estimated cost:** ${ESTIMATED_COST_TOTAL}"
+    echo "- Estimated cost: ${ESTIMATED_COST_TOTAL}"
   fi
   if [ "${#ESTIMATED_COST_DETAILS[@]}" -gt 0 ]; then
-    echo "<details><summary>Per-provider cost notes</summary>"
     for c in "${ESTIMATED_COST_DETAILS[@]}"; do
-      echo "- $c"
+      echo "  - ${c}"
     done
-    echo "</details>"
   fi
-  echo "**Providers:** ${PROVIDER_LIST[*]}"
-  echo "**Synthesis model:** ${SYNTHESIS_MODEL}"
+  echo "- Providers: ${PROVIDER_LIST[*]}"
+  echo "- Synthesis model: ${SYNTHESIS_MODEL}"
   echo ""
-  echo "<details><summary>Provider status, usage, cost</summary>"
+  echo "Provider status, usage, cost:"
   if [ -n "$PROVIDER_STATUS_SUMMARY" ]; then
     printf "%s\n" "$PROVIDER_STATUS_SUMMARY"
   else
     echo "- not available"
   fi
+  echo ""
   echo "</details>"
-  echo ""
-  echo "**Review**"
-  echo ""
-  cat "$SYNTHESIS_OUTPUT"
-  echo ""
   echo "<details><summary>Raw provider outputs</summary>"
   echo ""
   for provider in "${PROVIDER_LIST[@]}"; do
