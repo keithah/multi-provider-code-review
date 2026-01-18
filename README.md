@@ -235,6 +235,8 @@ env:
   RUN_TIMEOUT_SECONDS: "600"                                      # optional per-model timeout
   OPENROUTER_API_KEY: "${{ secrets.OPENROUTER_API_KEY }}"         # recommended for openrouter/*
 
+```
+
 If `OPENROUTER_API_KEY` is unset, the action automatically swaps in the fallback bundled models above.
 
 ### Using OpenRouter providers
