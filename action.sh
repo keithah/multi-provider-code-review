@@ -978,13 +978,16 @@ PYCODE
 )"
 
 INLINE_POSTED="false"
-INLINE_PAYLOAD=$(python - "$PROVIDER_FINDINGS_FILE" "$STRUCT_LINE" "$INLINE_MAX_COMMENTS" "$INLINE_MIN_SEVERITY" "$INLINE_MIN_AGREEMENT" "$SYNTHESIS_MODEL" "/tmp/pr-files.json" "${PROVIDER_LIST[*]}"
+INLINE_PAYLOAD=$(python - "$PROVIDER_FINDINGS_FILE" "$STRUCT_LINE" "$INLINE_MAX_COMMENTS" "$INLINE_MIN_SEVERITY" "$INLINE_MIN_AGREEMENT" "$SYNTHESIS_MODEL" "/tmp/pr-files.json" "${PROVIDER_LIST[*]}" <<'PYCODE'
 import json, sys
 prov_path, struct_line, max_comments, min_sev, min_agree, synth_model, files_path, providers = sys.argv[1:]
 providers_list = providers.split()
 severity_order = {"critical": 3, "major": 2, "minor": 1}
 min_rank = severity_order.get(min_sev.lower(), 1)
-min_agree = max(1, int(min_agree))
+try:
+    min_agree = max(1, int(min_agree))
+except Exception:
+    min_agree = 1
 max_comments = int(max_comments)
 
 changed_files = set()
