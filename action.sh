@@ -869,7 +869,20 @@ if [ "$(wc -c < "$COMMENT_FILE")" -gt "$comment_size_limit" ]; then
 import sys, os
 path, limit, prefix = sys.argv[1], int(sys.argv[2]), sys.argv[3]
 text = open(path, encoding="utf-8").read()
-chunks = [text[i:i+limit] for i in range(0, len(text), limit)]
+chunks = []
+current = []
+current_bytes = 0
+for line in text.splitlines(keepends=True):
+    b = line.encode("utf-8")
+    if current_bytes + len(b) > limit and current:
+        chunks.append("".join(current))
+        current = []
+        current_bytes = 0
+    current.append(line)
+    current_bytes += len(b)
+if current:
+    chunks.append("".join(current))
+
 for idx, chunk in enumerate(chunks, 1):
     out_path = f"{prefix}-{idx}.md"
     with open(out_path, "w", encoding="utf-8") as f:
