@@ -510,7 +510,7 @@ if [ -s /tmp/pr-files.json ]; then
     if [ "$FILE_COUNT" -gt 0 ] && [ "$PATCH_COUNT" -eq 0 ]; then
       ONLY_BINARY="true"
     fi
-    TEST_COUNT=$(jq '[.[] | select(.filename|test("test|spec|__tests__|__snapshots__|\\.test\\.|\\.spec\\.|Tests/|Spec/"))] | length' /tmp/pr-files.json)
+    TEST_COUNT=$(jq '[.[] | select(.filename|test("test|spec|__tests__|__snapshots__|\\\\.test\\\\.|\\\\.spec\\\\.|Tests/|Spec/"))] | length' /tmp/pr-files.json)
     SOURCE_COUNT=$(jq 'length' /tmp/pr-files.json)
   else
     PATCH_COUNT=0; FILE_COUNT=0; TEST_COUNT=0; SOURCE_COUNT=0
@@ -565,7 +565,7 @@ fi
 if [ -s "$MISSING_TEST_FILES" ]; then
   echo $'\n\n## Possible missing tests' >> /tmp/review-prompt.txt
   while IFS= read -r line; do
-    echo "- $line" >> /tmp/review-prompt.txt
+    printf -- "- %s\n" "$line" >> /tmp/review-prompt.txt
   done < "$MISSING_TEST_FILES"
 fi
 
@@ -626,11 +626,7 @@ for raw_provider in "${PROVIDERS[@]}"; do
   done
   if [ "$status_label" != "success" ]; then
     # capture log in output
-    if [[ "$provider" == openrouter/* ]]; then
-      echo "⚠️ ${provider} failed after ${PROVIDER_RETRIES} attempt(s) (see log), capturing partial output"
-    else
-      echo "⚠️ ${provider} failed after ${PROVIDER_RETRIES} attempt(s) (see log), capturing partial output"
-    fi
+    echo "⚠️ ${provider} failed after ${PROVIDER_RETRIES} attempt(s) (see log), capturing partial output"
     echo "Provider ${provider} failed. Log:" > "$outfile"
     cat "${log_file}" >> "$outfile" || true
   fi
