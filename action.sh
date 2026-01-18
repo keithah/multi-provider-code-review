@@ -846,31 +846,63 @@ SYNTHESIS_OUTPUT=/tmp/synthesis.txt
 synthesis_log=/tmp/synthesis.log
 SYNTHESIS_SUCCESS="false"
 synth_start=$(date +%s)
-if [[ "${SYNTHESIS_MODEL}" == openrouter/* ]]; then
-  if run_openrouter "${SYNTHESIS_MODEL}" "$(cat "$SYN_PROMPT")" "$SYNTHESIS_OUTPUT" > "$synthesis_log" 2>&1; then
-    echo "✅ Synthesis complete"
+
+run_synthesis_model() {
+  local model="$1"
+  local prompt_file="$2"
+  local out_file="$3"
+  local log_file="$4"
+  if [[ "$model" == openrouter/* ]]; then
+    if run_openrouter "$model" "$(cat "$prompt_file")" "$out_file" > "$log_file" 2>&1; then
+      return 0
+    fi
+  else
+    if run_with_timeout opencode run -m "$model" -- "$(cat "$prompt_file")" > "$out_file" 2> "$log_file"; then
+      return 0
+    fi
+  fi
+  return 1
+}
+
+fallback_synth_models=()
+# prefer configured synthesis model first, then other successful providers, then defaults
+fallback_synth_models+=("$SYNTHESIS_MODEL")
+for p in "${PROVIDER_LIST[@]}"; do
+  [[ "$p" == "$SYNTHESIS_MODEL" ]] && continue
+  fallback_synth_models+=("$p")
+done
+fallback_synth_models+=("openrouter/mistralai/devstral-2512:free" "openrouter/xiaomi/mimo-v2-flash:free" "opencode/grok-code")
+# dedupe
+deduped=()
+for m in "${fallback_synth_models[@]}"; do
+  skip="false"
+  for d in "${deduped[@]}"; do
+    if [ "$d" = "$m" ]; then
+      skip="true"
+      break
+    fi
+  done
+  [ "$skip" = "true" ] && continue
+  deduped+=("$m")
+done
+fallback_synth_models=("${deduped[@]}")
+
+for synth_model in "${fallback_synth_models[@]}"; do
+  if run_synthesis_model "$synth_model" "$SYN_PROMPT" "$SYNTHESIS_OUTPUT" "$synthesis_log"; then
+    echo "✅ Synthesis complete using ${synth_model}"
     SYNTHESIS_SUCCESS="true"
+    SYNTHESIS_MODEL="$synth_model"
+    break
   else
     status=$?
     if [ "$status" -eq 124 ]; then
-      echo "⚠️ Synthesis timed out after ${RUN_TIMEOUT_SECONDS}s, using fallback summary"
+      echo "⚠️ Synthesis timed out with ${synth_model}; trying next fallback"
     else
-      echo "⚠️ Synthesis failed, using fallback summary"
+      echo "⚠️ Synthesis failed with ${synth_model}; trying next fallback"
     fi
   fi
-else
-  if run_with_timeout opencode run -m "${SYNTHESIS_MODEL}" -- "$(cat "$SYN_PROMPT")" > "$SYNTHESIS_OUTPUT" 2> "$synthesis_log"; then
-    echo "✅ Synthesis complete"
-    SYNTHESIS_SUCCESS="true"
-  else
-    status=$?
-    if [ "$status" -eq 124 ]; then
-      echo "⚠️ Synthesis timed out after ${RUN_TIMEOUT_SECONDS}s, using fallback summary"
-    else
-      echo "⚠️ Synthesis failed, using fallback summary"
-    fi
-  fi
-fi
+done
+
 synth_end=$(date +%s)
 synth_duration=$((synth_end - synth_start))
 
@@ -921,9 +953,9 @@ with open(out_path, "w", encoding="utf-8") as f:
 PYCODE
 fi
 
-PROVIDER_STATUS_SUMMARY="$(python - "$PROVIDER_REPORT_JL" <<'PYCODE'
+PROVIDER_STATUS_SUMMARY="$(python - "$PROVIDER_REPORT_JL" "$COST_INFO" <<'PYCODE'
 import json, sys
-prov_path = sys.argv[1]
+prov_path, cost_path = sys.argv[1:]
 providers = []
 try:
     with open(prov_path, encoding="utf-8") as f:
@@ -934,13 +966,29 @@ try:
             providers.append(json.loads(line))
 except Exception:
     providers = []
+cost_map = {}
+try:
+    data = json.load(open(cost_path, encoding="utf-8"))
+    for entry in data.get("details", []):
+        if isinstance(entry, str) and ":" in entry:
+            name, val = entry.split(":", 1)
+            cost_map[name.strip()] = val.strip()
+except Exception:
+    cost_map = {}
+
 lines = []
 for p in providers:
     name = p.get("name") or "provider"
     status = p.get("status") or "unknown"
     dur = p.get("duration_seconds")
     dur_txt = f"{dur:.1f}s" if isinstance(dur, (int, float)) else "n/a"
-    lines.append(f"- {name}: {status} ({dur_txt})")
+    usage = p.get("usage") or {}
+    pt = usage.get("prompt_tokens") or 0
+    ct = usage.get("completion_tokens") or 0
+    tt = usage.get("total_tokens") or (pt + ct)
+    cost = cost_map.get(name, "")
+    cost_txt = f", cost {cost}" if cost else ""
+    lines.append(f"- {name}: {status} ({dur_txt}); tokens p={pt}, c={ct}, t={tt}{cost_txt}")
 print("\n".join(lines))
 PYCODE
 )"
@@ -963,17 +1011,29 @@ COMMENT_FILE=/tmp/final-review.md
   echo "**Providers:** ${PROVIDER_LIST[*]}"
   echo "**Synthesis model:** ${SYNTHESIS_MODEL}"
   echo ""
-  echo "**Provider status**"
+  echo "<details><summary>Provider status, usage, cost</summary>"
   if [ -n "$PROVIDER_STATUS_SUMMARY" ]; then
     printf "%s\n" "$PROVIDER_STATUS_SUMMARY"
   else
     echo "- not available"
   fi
+  echo "</details>"
   echo ""
   echo "**Review**"
   echo ""
   cat "$SYNTHESIS_OUTPUT"
   echo ""
+  echo "<details><summary>Raw provider outputs</summary>"
+  echo ""
+  for provider in "${PROVIDER_LIST[@]}"; do
+    fname="/tmp/reviews/$(echo "$provider" | tr '/:' '__').txt"
+    echo ""
+    echo "#### ${provider}"
+    echo ""
+    cat "$fname"
+  done
+  echo ""
+  echo "</details>"
 } > "$COMMENT_FILE"
 
 # Post summary comment
