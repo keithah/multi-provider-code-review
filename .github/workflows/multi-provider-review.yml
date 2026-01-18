@@ -25,11 +25,14 @@ jobs:
       && (
         !github.event.pull_request ||
         (
-          github.event.pull_request.changed_files <= (
-            (vars.MAX_CHANGED_FILES != '' && vars.MAX_CHANGED_FILES != null) ? vars.MAX_CHANGED_FILES : 9999
-          ) &&
-          (github.event.pull_request.additions + github.event.pull_request.deletions) >= (
-            (vars.MIN_CHANGED_LINES != '' && vars.MIN_CHANGED_LINES != null) ? vars.MIN_CHANGED_LINES : 0
+          (
+            (vars.MAX_CHANGED_FILES != '' && vars.MAX_CHANGED_FILES != null && github.event.pull_request.changed_files <= fromJSON(vars.MAX_CHANGED_FILES))
+            || ((vars.MAX_CHANGED_FILES == '' || vars.MAX_CHANGED_FILES == null) && github.event.pull_request.changed_files <= 9999)
+          )
+          &&
+          (
+            (vars.MIN_CHANGED_LINES != '' && vars.MIN_CHANGED_LINES != null && (github.event.pull_request.additions + github.event.pull_request.deletions) >= fromJSON(vars.MIN_CHANGED_LINES))
+            || ((vars.MIN_CHANGED_LINES == '' || vars.MIN_CHANGED_LINES == null) && (github.event.pull_request.additions + github.event.pull_request.deletions) >= 0)
           )
         )
       )
