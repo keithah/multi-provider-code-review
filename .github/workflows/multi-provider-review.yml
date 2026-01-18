@@ -1,0 +1,97 @@
+name: Multi-Provider Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+
+jobs:
+  review:
+    if: |
+      (
+        github.event_name == 'pull_request' ||
+        (github.event.issue.pull_request &&
+          (startsWith(github.event.comment.body, '/review') ||
+           contains(github.event.comment.body, '@opencode') ||
+           contains(github.event.comment.body, '@claude')))
+      )
+      && (github.event.pull_request.changed_files <= (vars.MAX_CHANGED_FILES || 9999))
+      && ((github.event.pull_request.additions + github.event.pull_request.deletions) >= (vars.MIN_CHANGED_LINES || 0))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Detect AGENTS.md
+        id: agents
+        run: |
+          if [ -f AGENTS.md ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Collect PR metadata
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prPayload = context.payload.pull_request ?? context.payload.issue?.pull_request;
+            const issueNumber = context.payload.issue?.number;
+            const number = prPayload?.number ?? issueNumber;
+            if (!number) {
+              core.setFailed('No pull request context available');
+              return;
+            }
+            const { data } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: number,
+            });
+            core.setOutput('number', data.number);
+            core.setOutput('title', data.title || '');
+            core.setOutput('body', data.body || '');
+
+      - name: Run Multi-Provider Review
+        uses: keithah/multi-provider-code-review@dev
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REVIEW_PROVIDERS: ${{ vars.REVIEW_PROVIDERS || 'openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free,openrouter/xiaomi/mimo-v2-flash:free' }}
+          SYNTHESIS_MODEL: ${{ vars.SYNTHESIS_MODEL || 'openrouter/google/gemini-2.0-flash-exp:free' }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          MIN_CHANGED_LINES: ${{ vars.MIN_CHANGED_LINES || 0 }}
+          MAX_CHANGED_FILES: ${{ vars.MAX_CHANGED_FILES || 0 }}
+          SKIP_LABELS: ${{ vars.SKIP_LABELS || 'skip-review,no-ai-review' }}
+          PROVIDER_LIMIT: ${{ vars.PROVIDER_LIMIT || 0 }}
+          PROVIDER_RETRIES: ${{ vars.PROVIDER_RETRIES || 2 }}
+          BUDGET_MAX_USD: ${{ vars.BUDGET_MAX_USD || 0 }}
+          PR_TITLE: ${{ steps.pr.outputs.title }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          PR_BODY: ${{ steps.pr.outputs.body }}
+          HAS_AGENTS: ${{ steps.agents.outputs.exists }}
+
+      - name: Upload review artifacts
+        if: always() && hashFiles('multi-provider-report/*') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-review-reports
+          path: multi-provider-report/*
+
+      - name: Upload SARIF to code scanning
+        if: always() && hashFiles('multi-provider-report/*.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: multi-provider-report/multi-provider-review.sarif
