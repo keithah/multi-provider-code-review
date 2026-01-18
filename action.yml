@@ -8,7 +8,7 @@ inputs:
   REVIEW_PROVIDERS:
     description: "Comma-separated list of review providers (OpenRouter first by default)"
     required: false
-    default: "openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free,openrouter/xiaomi/mimo-v2-flash:free"
+    default: "openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free,openrouter/xiaomi/mimo-v2-flash:free,opencode/big-pickle,opencode/grok-code,opencode/minimax-m2.1-free,opencode/glm-4.7-free"
   PR_TITLE:
     description: "PR title"
     required: true

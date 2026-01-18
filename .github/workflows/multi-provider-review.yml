@@ -100,7 +100,7 @@ jobs:
         uses: keithah/multi-provider-code-review@dev
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REVIEW_PROVIDERS: ${{ vars.REVIEW_PROVIDERS || 'openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free,openrouter/xiaomi/mimo-v2-flash:free' }}
+          REVIEW_PROVIDERS: ${{ vars.REVIEW_PROVIDERS || 'openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free,openrouter/xiaomi/mimo-v2-flash:free,opencode/big-pickle,opencode/grok-code,opencode/minimax-m2.1-free,opencode/glm-4.7-free' }}
           SYNTHESIS_MODEL: ${{ vars.SYNTHESIS_MODEL || 'openrouter/google/gemini-2.0-flash-exp:free' }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           MIN_CHANGED_LINES: ${{ vars.MIN_CHANGED_LINES || 0 }}
