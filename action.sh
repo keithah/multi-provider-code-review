@@ -262,6 +262,7 @@ TOTAL_PROMPT_TOKENS=0
 TOTAL_COMPLETION_TOKENS=0
 TOTAL_TOKENS=0
 BUDGET_MAX_USD="${BUDGET_MAX_USD:-0}"
+MISSING_TEST_FILES="/tmp/missing-tests.txt"
 REPORT_BASENAME="${REPORT_BASENAME:-multi-provider-review}"
 REPORT_DIR="${GITHUB_WORKSPACE:-$PWD}/multi-provider-report"
 mkdir -p "$REPORT_DIR"
@@ -1186,5 +1187,5 @@ for f in files:
 missing = missing[:5]
 if missing:
     with open(out_path, "w", encoding="utf-8") as f:
-        f.write("\\n".join(missing))
+        f.write("\n".join(missing))
 PYCODE
