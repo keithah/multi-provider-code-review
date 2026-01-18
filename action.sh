@@ -262,7 +262,6 @@ TOTAL_PROMPT_TOKENS=0
 TOTAL_COMPLETION_TOKENS=0
 TOTAL_TOKENS=0
 BUDGET_MAX_USD="${BUDGET_MAX_USD:-0}"
-MISSING_TEST_FILES="/tmp/missing-tests.txt"
 REPORT_BASENAME="${REPORT_BASENAME:-multi-provider-review}"
 REPORT_DIR="${GITHUB_WORKSPACE:-$PWD}/multi-provider-report"
 mkdir -p "$REPORT_DIR"
@@ -273,6 +272,27 @@ FALLBACK_OPENCODE_PROVIDERS=("opencode/big-pickle" "opencode/grok-code" "opencod
 PROVIDER_ALLOWLIST=()
 PROVIDER_BLOCKLIST=()
 SKIP_LABELS=()
+
+TMP_DIR="$(mktemp -d -t mpr-XXXXXX)"
+PR_FILES="${TMP_DIR}/pr-files.json"
+DIFF_FILE="${TMP_DIR}/pr.diff"
+PR_META="${TMP_DIR}/pr-meta.json"
+PR_META_FIELDS="${TMP_DIR}/pr-meta-fields"
+PRICING_CACHE="${TMP_DIR}/openrouter-models.json"
+PROMPT_FILE="${TMP_DIR}/review-prompt.txt"
+SKIP_COMMENT="${TMP_DIR}/skip-comment.md"
+BUDGET_SKIP="${TMP_DIR}/budget-skip.md"
+REVIEWS_DIR="${TMP_DIR}/reviews"
+mkdir -p "$REVIEWS_DIR"
+PROVIDER_REPORT_JL="${TMP_DIR}/provider-report.jsonl"
+COST_INFO="${TMP_DIR}/cost-info.json"
+PROVIDER_FINDINGS_FILE="${TMP_DIR}/provider-findings.json"
+SYN_PROMPT="${TMP_DIR}/synthesis-prompt.txt"
+SYNTHESIS_OUTPUT="${TMP_DIR}/synthesis.txt"
+SYNTHESIS_LOG="${TMP_DIR}/synthesis.log"
+COMMENT_FILE="${TMP_DIR}/final-review.md"
+COMMENT_CHUNK_PREFIX="${TMP_DIR}/comment-chunk"
+MISSING_TEST_FILES="${TMP_DIR}/missing-tests.txt"
 
 run_with_timeout() {
   if command -v timeout >/dev/null 2>&1; then
@@ -369,10 +389,8 @@ if [ "${HAS_AGENTS}" = "true" ] && [ -f "AGENTS.md" ]; then
   AGENTS_SECTION=$'\n\n## Project Guidelines (from AGENTS.md)\n'"${AGENTS_CONTENT}"
 fi
 
-gh api "/repos/${REPO}/pulls/${PR_NUMBER}/files" > /tmp/pr-files.json || true
-DIFF_FILE="/tmp/pr.diff"
+gh api "/repos/${REPO}/pulls/${PR_NUMBER}/files" > "$PR_FILES" || true
 DIFF_TRUNCATED="false"
-PR_META="/tmp/pr-meta.json"
 TOTAL_ADDITIONS=0
 TOTAL_DELETIONS=0
 CHANGED_FILES=0
@@ -386,7 +404,7 @@ if gh api "/repos/${REPO}/pulls/${PR_NUMBER}" > "$PR_META"; then
     CHANGED_FILES=$(jq -r '.changed_files // 0' "$PR_META")
     LABELS_CSV=$(jq -r '[.labels[]?.name] | join(",")' "$PR_META")
   else
-    python - "$PR_META" <<'PYCODE' >/tmp/pr-meta-fields 2>/dev/null || true
+    python - "$PR_META" <<'PYCODE' >"$PR_META_FIELDS" 2>/dev/null || true
 import json, sys
 data = json.load(open(sys.argv[1]))
 adds = data.get("additions", 0)
@@ -395,11 +413,10 @@ files = data.get("changed_files", 0)
 labels = [l.get("name","") for l in data.get("labels", []) if l.get("name")]
 print(f"{adds} {dels} {files} {','.join(labels)}")
 PYCODE
-    read -r TOTAL_ADDITIONS TOTAL_DELETIONS CHANGED_FILES LABELS_CSV < /tmp/pr-meta-fields || true
+    read -r TOTAL_ADDITIONS TOTAL_DELETIONS CHANGED_FILES LABELS_CSV < "$PR_META_FIELDS" || true
   fi
 fi
 
-PRICING_CACHE="/tmp/openrouter-models.json"
 if [ -n "$OPENROUTER_API_KEY" ]; then
   curl -sS -H "Authorization: Bearer ${OPENROUTER_API_KEY}" https://openrouter.ai/api/v1/models > "$PRICING_CACHE" || true
 fi
@@ -418,7 +435,7 @@ else
   DIFF_FILE=""
 fi
 
-cat > /tmp/review-prompt.txt <<'EOF'
+cat > "$PROMPT_FILE" <<'EOF'
 REPO: ${REPO}
 PR NUMBER: ${PR_NUMBER}
 PR TITLE: ${PR_TITLE_VALUE}
@@ -482,12 +499,12 @@ Please review this pull request and provide a comprehensive code review focusing
 IMPORTANT: Only flag actual issues. If everything looks good, respond with 'lgtm'.
 EOF
 
-if [ -s /tmp/pr-files.json ]; then
-  echo $'\n\n## Changed Files' >> /tmp/review-prompt.txt
+if [ -s "$PR_FILES" ]; then
+  echo $'\n\n## Changed Files' >> "$PROMPT_FILE"
   if command -v jq >/dev/null 2>&1; then
-    jq -r '.[] | "- " + .filename + " (+" + (.additions|tostring) + "/-" + (.deletions|tostring) + ")"' /tmp/pr-files.json >> /tmp/review-prompt.txt
+    jq -r '.[] | "- " + .filename + " (+" + (.additions|tostring) + "/-" + (.deletions|tostring) + ")"' "$PR_FILES" >> "$PROMPT_FILE"
   else
-    python - <<'PYCODE' /tmp/pr-files.json >> /tmp/review-prompt.txt || true
+    python - <<'PYCODE' "$PR_FILES" >> "$PROMPT_FILE" || true
 import json, sys
 try:
     files = json.load(open(sys.argv[1]))
@@ -504,15 +521,15 @@ fi
 ONLY_BINARY="false"
 TEST_HINT=""
 TEST_HINT_FLAG="false"
-if [ -s /tmp/pr-files.json ]; then
+if [ -s "$PR_FILES" ]; then
   if command -v jq >/dev/null 2>&1; then
-    PATCH_COUNT=$(jq '[.[] | has("patch")] | map(select(.==true)) | length' /tmp/pr-files.json)
-    FILE_COUNT=$(jq 'length' /tmp/pr-files.json)
+    PATCH_COUNT=$(jq '[.[] | has("patch")] | map(select(.==true)) | length' "$PR_FILES")
+    FILE_COUNT=$(jq 'length' "$PR_FILES")
     if [ "$FILE_COUNT" -gt 0 ] && [ "$PATCH_COUNT" -eq 0 ]; then
       ONLY_BINARY="true"
     fi
-    TEST_COUNT=$(jq '[.[] | select(.filename|test("test|spec|__tests__|__snapshots__|\\\\.test\\\\.|\\\\.spec\\\\.|Tests/|Spec/"))] | length' /tmp/pr-files.json)
-    SOURCE_COUNT=$(jq 'length' /tmp/pr-files.json)
+    TEST_COUNT=$(jq '[.[] | select(.filename|test("test|spec|__tests__|__snapshots__|\\.test\\.|\\.spec\\.|Tests/|Spec/"))] | length' "$PR_FILES")
+    SOURCE_COUNT=$(jq 'length' "$PR_FILES")
   else
     PATCH_COUNT=0; FILE_COUNT=0; TEST_COUNT=0; SOURCE_COUNT=0
   fi
@@ -548,48 +565,47 @@ fi
 
 if [ -n "$SKIP_REASON" ]; then
   echo "$SKIP_REASON"
-  echo "$SKIP_REASON" > /tmp/skip-comment.md
-  gh api --method POST -H "Accept: application/vnd.github+json" "/repos/${REPO}/issues/${PR_NUMBER}/comments" -F body="@/tmp/skip-comment.md"
+  echo "$SKIP_REASON" > "$SKIP_COMMENT"
+  gh api --method POST -H "Accept: application/vnd.github+json" "/repos/${REPO}/issues/${PR_NUMBER}/comments" -F body=@"$SKIP_COMMENT"
   exit 0
 fi
 
 export TOTAL_ADDITIONS TOTAL_DELETIONS CHANGED_FILES ONLY_BINARY TEST_HINT_FLAG
 
 if [ -n "${DIFF_FILE}" ] && [ -f "${DIFF_FILE}" ]; then
-  echo $'\n\n## Diff' >> /tmp/review-prompt.txt
-  cat "${DIFF_FILE}" >> /tmp/review-prompt.txt
+  echo $'\n\n## Diff' >> "$PROMPT_FILE"
+  cat "${DIFF_FILE}" >> "$PROMPT_FILE"
 fi
 
 if [ -n "$TEST_HINT" ]; then
-  echo "$TEST_HINT" >> /tmp/review-prompt.txt
+  echo "$TEST_HINT" >> "$PROMPT_FILE"
 fi
 if [ -s "$MISSING_TEST_FILES" ]; then
-  echo $'\n\n## Possible missing tests' >> /tmp/review-prompt.txt
+  echo $'\n\n## Possible missing tests' >> "$PROMPT_FILE"
   while IFS= read -r line; do
-    printf -- "- %s\n" "$line" >> /tmp/review-prompt.txt
+    printf -- "- %s\n" "$line" >> "$PROMPT_FILE"
   done < "$MISSING_TEST_FILES"
 fi
 
-PROMPT_CONTENT="$(cat /tmp/review-prompt.txt)"
-PROMPT_SIZE="$(wc -c < /tmp/review-prompt.txt)"
+PROMPT_CONTENT="$(cat "$PROMPT_FILE")"
+PROMPT_SIZE="$(wc -c < "$PROMPT_FILE")"
 
 echo "========================================"
 echo "Running multi-provider code review"
 echo "========================================"
-echo "Review prompt size: $(wc -c < /tmp/review-prompt.txt) bytes"
+echo "Review prompt size: $(wc -c < "$PROMPT_FILE") bytes"
 echo "Providers: ${PROVIDERS[*]}"
 echo "Synthesis model: ${SYNTHESIS_MODEL}"
 echo ""
 
-mkdir -p /tmp/reviews
-PROVIDER_REPORT_JL=/tmp/provider-report.jsonl
+mkdir -p "$REVIEWS_DIR"
 : > "$PROVIDER_REPORT_JL"
 PROVIDER_LIST=()
 for raw_provider in "${PROVIDERS[@]}"; do
   provider="$(echo "$raw_provider" | xargs)"
   [ -z "$provider" ] && continue
   PROVIDER_LIST+=("$provider")
-  outfile="/tmp/reviews/$(echo "$provider" | tr '/:' '__').txt"
+  outfile="${REVIEWS_DIR}/$(echo "$provider" | tr '/:' '__').txt"
   log_file="${outfile}.log"
   usage_file="${outfile}.usage.json"
   echo "Running provider: ${provider}"
@@ -665,7 +681,6 @@ if [ "${#PROVIDER_LIST[@]}" -eq 0 ]; then
 fi
 
 if [ -f "$PRICING_CACHE" ]; then
-  COST_INFO="/tmp/cost-info.json"
   python - "$PROVIDER_REPORT_JL" "$PRICING_CACHE" "$COST_INFO" <<'PYCODE' || true
 import json, sys
 from decimal import Decimal
@@ -752,16 +767,15 @@ PYCODE
 )
   if [ "$over_budget" = "1" ]; then
     echo "Estimated cost ${ESTIMATED_COST_TOTAL} exceeds budget ${BUDGET_MAX_USD}; skipping review posting."
-    cat > /tmp/budget-skip.md <<EOF
+    cat > "$BUDGET_SKIP" <<EOF
 Skipping review: estimated cost \$${ESTIMATED_COST_TOTAL} exceeds budget cap \$${BUDGET_MAX_USD}.
 Token usage (OpenRouter): total=${TOTAL_TOKENS} (prompt=${TOTAL_PROMPT_TOKENS}, completion=${TOTAL_COMPLETION_TOKENS})
 EOF
-    gh api --method POST -H "Accept: application/vnd.github+json" "/repos/${REPO}/issues/${PR_NUMBER}/comments" -F body="@/tmp/budget-skip.md"
+    gh api --method POST -H "Accept: application/vnd.github+json" "/repos/${REPO}/issues/${PR_NUMBER}/comments" -F body=@"$BUDGET_SKIP"
     exit 0
   fi
 fi
 
-PROVIDER_FINDINGS_FILE=/tmp/provider-findings.json
 python - "$PROVIDER_REPORT_JL" "$PROVIDER_FINDINGS_FILE" <<'PYCODE'
 import json, sys, re
 report_path, out_path = sys.argv[1:]
@@ -808,7 +822,6 @@ with open(out_path, "w", encoding="utf-8") as f:
 print(f"Extracted {len(all_findings)} findings from providers to {out_path}")
 PYCODE
 
-SYN_PROMPT=/tmp/synthesis-prompt.txt
 echo "Synthesizing results with ${SYNTHESIS_MODEL}"
 cat > "$SYN_PROMPT" <<'SYN_HEAD'
 You are an expert code reviewer. Combine the provider reviews below into a single, concise GitHub PR review.
@@ -831,7 +844,7 @@ Provider reviews:
 SYN_HEAD
 
 for provider in "${PROVIDER_LIST[@]}"; do
-  fname="/tmp/reviews/$(echo "$provider" | tr '/:' '__').txt"
+  fname="${REVIEWS_DIR}/$(echo "$provider" | tr '/:' '__').txt"
   {
     echo ""
     echo "### ${provider}"
@@ -842,8 +855,7 @@ for provider in "${PROVIDER_LIST[@]}"; do
   } >> "$SYN_PROMPT"
 done
 
-SYNTHESIS_OUTPUT=/tmp/synthesis.txt
-synthesis_log=/tmp/synthesis.log
+synthesis_log="$SYNTHESIS_LOG"
 SYNTHESIS_SUCCESS="false"
 synth_start=$(date +%s)
 
@@ -907,7 +919,7 @@ synth_end=$(date +%s)
 synth_duration=$((synth_end - synth_start))
 
 if [ "$SYNTHESIS_SUCCESS" != "true" ]; then
-  python - "$PROVIDER_REPORT_JL" "/tmp/reviews" "$SYNTHESIS_OUTPUT" <<'PYCODE'
+  python - "$PROVIDER_REPORT_JL" "$REVIEWS_DIR" "$SYNTHESIS_OUTPUT" <<'PYCODE'
 import json, sys, os
 prov_path, reviews_dir, out_path = sys.argv[1:]
 providers = []
@@ -993,7 +1005,6 @@ print("\n".join(lines))
 PYCODE
 )"
 
-COMMENT_FILE=/tmp/final-review.md
 {
   echo "**Multi-Provider Code Review**"
   echo ""
@@ -1026,7 +1037,7 @@ COMMENT_FILE=/tmp/final-review.md
   echo "<details><summary>Raw provider outputs</summary>"
   echo ""
   for provider in "${PROVIDER_LIST[@]}"; do
-    fname="/tmp/reviews/$(echo "$provider" | tr '/:' '__').txt"
+    fname="${REVIEWS_DIR}/$(echo "$provider" | tr '/:' '__').txt"
     echo ""
     echo "#### ${provider}"
     echo ""
@@ -1055,7 +1066,7 @@ comment_size_limit=60000
 COMMENT_CHUNKS_POSTED=0
 if [ "$(wc -c < "$COMMENT_FILE")" -gt "$comment_size_limit" ]; then
   echo "Summary comment exceeds ${comment_size_limit} bytes; chunking output."
-  chunk_count=$(python - "$COMMENT_FILE" "$comment_size_limit" "/tmp/comment-chunk" <<'PYCODE'
+  chunk_count=$(python - "$COMMENT_FILE" "$comment_size_limit" "$COMMENT_CHUNK_PREFIX" <<'PYCODE'
 import sys, os
 path, limit, prefix = sys.argv[1], int(sys.argv[2]), sys.argv[3]
 text = open(path, encoding="utf-8").read()
@@ -1081,7 +1092,7 @@ for idx, chunk in enumerate(chunks, 1):
 print(len(chunks))
 PYCODE
 )
-  for file in /tmp/comment-chunk-*.md; do
+  for file in "${COMMENT_CHUNK_PREFIX}"-*.md; do
     [ -f "$file" ] || continue
     if post_comment_with_retry "$file"; then
       COMMENT_CHUNKS_POSTED=$((COMMENT_CHUNKS_POSTED + 1))
@@ -1109,7 +1120,7 @@ PYCODE
 )" || true
 
 INLINE_POSTED="false"
-INLINE_PAYLOAD=$(python - "$PROVIDER_FINDINGS_FILE" "$STRUCT_LINE" "$INLINE_MAX_COMMENTS" "$INLINE_MIN_SEVERITY" "$INLINE_MIN_AGREEMENT" "$SYNTHESIS_MODEL" "/tmp/pr-files.json" "${PROVIDER_LIST[*]}" <<'PYCODE'
+INLINE_PAYLOAD=$(python - "$PROVIDER_FINDINGS_FILE" "$STRUCT_LINE" "$INLINE_MAX_COMMENTS" "$INLINE_MIN_SEVERITY" "$INLINE_MIN_AGREEMENT" "$SYNTHESIS_MODEL" "$PR_FILES" "${PROVIDER_LIST[*]}" <<'PYCODE'
 import json, sys
 prov_path, struct_line, max_comments, min_sev, min_agree, synth_model, files_path, providers = sys.argv[1:]
 providers_list = providers.split()
@@ -1349,8 +1360,7 @@ PYCODE
 
 echo ""
 echo "✅ Review posted to PR #${PR_NUMBER}"
-MISSING_TEST_FILES="/tmp/missing-tests.txt"
-python - "$PR_META" /tmp/pr-files.json "$MISSING_TEST_FILES" <<'PYCODE' 2>/dev/null || true
+python - "$PR_META" "$PR_FILES" "$MISSING_TEST_FILES" <<'PYCODE' 2>/dev/null || true
 import json, sys, os, re
 meta_path, files_path, out_path = sys.argv[1:]
 try:
