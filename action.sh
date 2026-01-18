@@ -844,34 +844,91 @@ done
 
 SYNTHESIS_OUTPUT=/tmp/synthesis.txt
 synthesis_log=/tmp/synthesis.log
+SYNTHESIS_SUCCESS="false"
 synth_start=$(date +%s)
 if [[ "${SYNTHESIS_MODEL}" == openrouter/* ]]; then
   if run_openrouter "${SYNTHESIS_MODEL}" "$(cat "$SYN_PROMPT")" "$SYNTHESIS_OUTPUT" > "$synthesis_log" 2>&1; then
     echo "✅ Synthesis complete"
+    SYNTHESIS_SUCCESS="true"
   else
     status=$?
     if [ "$status" -eq 124 ]; then
-      echo "⚠️ Synthesis timed out after ${RUN_TIMEOUT_SECONDS}s, using concatenated provider outputs"
+      echo "⚠️ Synthesis timed out after ${RUN_TIMEOUT_SECONDS}s, using fallback summary"
     else
-      echo "⚠️ Synthesis failed, using concatenated provider outputs"
+      echo "⚠️ Synthesis failed, using fallback summary"
     fi
-    cat "$SYN_PROMPT" > "$SYNTHESIS_OUTPUT"
   fi
 else
   if run_with_timeout opencode run -m "${SYNTHESIS_MODEL}" -- "$(cat "$SYN_PROMPT")" > "$SYNTHESIS_OUTPUT" 2> "$synthesis_log"; then
     echo "✅ Synthesis complete"
+    SYNTHESIS_SUCCESS="true"
   else
     status=$?
     if [ "$status" -eq 124 ]; then
-      echo "⚠️ Synthesis timed out after ${RUN_TIMEOUT_SECONDS}s, using concatenated provider outputs"
+      echo "⚠️ Synthesis timed out after ${RUN_TIMEOUT_SECONDS}s, using fallback summary"
     else
-      echo "⚠️ Synthesis failed, using concatenated provider outputs"
+      echo "⚠️ Synthesis failed, using fallback summary"
     fi
-    cat "$SYN_PROMPT" > "$SYNTHESIS_OUTPUT"
   fi
 fi
 synth_end=$(date +%s)
 synth_duration=$((synth_end - synth_start))
+
+if [ "$SYNTHESIS_SUCCESS" != "true" ]; then
+  python - "$PROVIDER_REPORT_JL" "$SYNTHESIS_OUTPUT" <<'PYCODE'
+import json, sys
+prov_path, out_path = sys.argv[1:]
+providers = []
+try:
+    with open(prov_path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            providers.append(json.loads(line))
+except Exception:
+    providers = []
+
+lines = ["Review synthesis failed; showing provider status summary instead.", ""]
+if providers:
+    lines.append("Provider status:")
+    for p in providers:
+        name = p.get("name") or "unknown"
+        status = p.get("status") or "unknown"
+        dur = p.get("duration_seconds")
+        dur_txt = f"{dur:.1f}s" if isinstance(dur, (int, float)) else "n/a"
+        lines.append(f"- {name}: {status} ({dur_txt})")
+else:
+    lines.append("No provider reports available.")
+
+with open(out_path, "w", encoding="utf-8") as f:
+    f.write("\n".join(lines))
+PYCODE
+fi
+
+PROVIDER_STATUS_SUMMARY="$(python - "$PROVIDER_REPORT_JL" <<'PYCODE'
+import json, sys
+prov_path = sys.argv[1]
+providers = []
+try:
+    with open(prov_path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            providers.append(json.loads(line))
+except Exception:
+    providers = []
+lines = []
+for p in providers:
+    name = p.get("name") or "provider"
+    status = p.get("status") or "unknown"
+    dur = p.get("duration_seconds")
+    dur_txt = f"{dur:.1f}s" if isinstance(dur, (int, float)) else "n/a"
+    lines.append(f"- {name}: {status} ({dur_txt})")
+print("\n".join(lines))
+PYCODE
+)"
 
 COMMENT_FILE=/tmp/final-review.md
 {
@@ -891,19 +948,17 @@ COMMENT_FILE=/tmp/final-review.md
   echo "**Providers:** ${PROVIDER_LIST[*]}"
   echo "**Synthesis model:** ${SYNTHESIS_MODEL}"
   echo ""
+  echo "**Provider status**"
+  if [ -n "$PROVIDER_STATUS_SUMMARY" ]; then
+    printf "%s\n" "$PROVIDER_STATUS_SUMMARY"
+  else
+    echo "- not available"
+  fi
+  echo ""
+  echo "**Review**"
+  echo ""
   cat "$SYNTHESIS_OUTPUT"
   echo ""
-    echo "<details><summary>Raw provider outputs</summary>"
-  echo ""
-  for provider in "${PROVIDER_LIST[@]}"; do
-    fname="/tmp/reviews/$(echo "$provider" | tr '/:' '__').txt"
-    echo ""
-    echo "#### ${provider}"
-    echo ""
-    cat "$fname"
-  done
-  echo ""
-  echo "</details>"
 } > "$COMMENT_FILE"
 
 # Post summary comment
