@@ -6,6 +6,10 @@ on:
   issue_comment:
     types: [created]
   workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Pull request number to review"
+        required: true
 
 jobs:
   review:
@@ -55,9 +59,13 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const prPayload = context.payload.pull_request ?? context.payload.issue?.pull_request;
-            const issueNumber = context.payload.issue?.number;
-            const number = prPayload?.number ?? issueNumber;
+            let number = context.payload.pull_request?.number;
+            if (!number && context.payload.issue?.pull_request) {
+              number = context.payload.issue.number;
+            }
+            if (!number && context.payload.inputs?.pr_number) {
+              number = Number(context.payload.inputs.pr_number);
+            }
             if (!number) {
               core.setFailed('No pull request context available');
               return;

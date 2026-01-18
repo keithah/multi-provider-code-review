@@ -679,11 +679,15 @@ if [ -f "$PRICING_CACHE" ]; then
   fi
 fi
 
-if [ "$BUDGET_MAX_USD" -gt 0 ] && [ "$ESTIMATED_COST_TOTAL" != "unknown" ]; then
+if [ "$BUDGET_MAX_USD" -gt 0 ] && [ -n "$ESTIMATED_COST_TOTAL" ]; then
   over_budget=$(python - "$ESTIMATED_COST_TOTAL" "$BUDGET_MAX_USD" <<'PYCODE' || echo "0"
 import sys, decimal
-total, budget = decimal.Decimal(sys.argv[1]), decimal.Decimal(sys.argv[2])
-print("1" if total > budget else "0")
+try:
+    total = decimal.Decimal(sys.argv[1])
+    budget = decimal.Decimal(sys.argv[2])
+    print("1" if total > budget else "0")
+except Exception:
+    print("0")
 PYCODE
 )
   if [ "$over_budget" = "1" ]; then
@@ -813,10 +817,10 @@ COMMENT_FILE=/tmp/final-review.md
 {
   echo "**Multi-Provider Code Review**"
   echo ""
+  echo "**Token usage (where available):** total=${TOTAL_TOKENS} (prompt=${TOTAL_PROMPT_TOKENS}, completion=${TOTAL_COMPLETION_TOKENS})"
   if [ -n "${ESTIMATED_COST_TOTAL}" ]; then
     echo "**Estimated cost:** ${ESTIMATED_COST_TOTAL}"
   fi
-  echo "**Token usage (where available):** total=${TOTAL_TOKENS} (prompt=${TOTAL_PROMPT_TOKENS}, completion=${TOTAL_COMPLETION_TOKENS})"
   if [ "${#ESTIMATED_COST_DETAILS[@]}" -gt 0 ]; then
     echo "<details><summary>Per-provider cost notes</summary>"
     for c in "${ESTIMATED_COST_DETAILS[@]}"; do
