@@ -965,7 +965,8 @@ fi
 
 # Attempt inline review comments from structured JSON with consensus and suggestions
 REVIEW_BODY="$(cat "$SYNTHESIS_OUTPUT")"
-STRUCT_LINE="$(printf "%s\n" "$REVIEW_BODY" | python - <<'PYCODE' || true
+STRUCT_LINE="$(
+printf "%s\n" "$REVIEW_BODY" | python - <<'PYCODE'
 import sys, json
 lines = sys.stdin.read().splitlines()
 for line in lines:
@@ -975,7 +976,7 @@ for line in lines:
         sys.exit(0)
 sys.exit(1)
 PYCODE
-)"
+)" || true
 
 INLINE_POSTED="false"
 INLINE_PAYLOAD=$(python - "$PROVIDER_FINDINGS_FILE" "$STRUCT_LINE" "$INLINE_MAX_COMMENTS" "$INLINE_MIN_SEVERITY" "$INLINE_MIN_AGREEMENT" "$SYNTHESIS_MODEL" "/tmp/pr-files.json" "${PROVIDER_LIST[*]}" <<'PYCODE'
