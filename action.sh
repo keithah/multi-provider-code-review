@@ -875,9 +875,9 @@ synth_end=$(date +%s)
 synth_duration=$((synth_end - synth_start))
 
 if [ "$SYNTHESIS_SUCCESS" != "true" ]; then
-  python - "$PROVIDER_REPORT_JL" "$SYNTHESIS_OUTPUT" <<'PYCODE'
-import json, sys
-prov_path, out_path = sys.argv[1:]
+  python - "$PROVIDER_REPORT_JL" "/tmp/reviews" "$SYNTHESIS_OUTPUT" <<'PYCODE'
+import json, sys, os
+prov_path, reviews_dir, out_path = sys.argv[1:]
 providers = []
 try:
     with open(prov_path, encoding="utf-8") as f:
@@ -889,7 +889,7 @@ try:
 except Exception:
     providers = []
 
-lines = ["Review synthesis failed; showing provider status summary instead.", ""]
+lines = ["Review synthesis failed; showing provider outputs instead.", ""]
 if providers:
     lines.append("Provider status:")
     for p in providers:
@@ -898,6 +898,21 @@ if providers:
         dur = p.get("duration_seconds")
         dur_txt = f"{dur:.1f}s" if isinstance(dur, (int, float)) else "n/a"
         lines.append(f"- {name}: {status} ({dur_txt})")
+    lines.append("")
+    for p in providers:
+        name = p.get("name") or "provider"
+        path = p.get("output_path")
+        if not path or not os.path.exists(path):
+            continue
+        lines.append(f"### {name}")
+        try:
+            text = open(path, encoding="utf-8").read()
+        except Exception:
+            text = ""
+        if text:
+            lines.append("")
+            lines.append(text)
+            lines.append("")
 else:
     lines.append("No provider reports available.")
 
