@@ -418,7 +418,7 @@ else
   DIFF_FILE=""
 fi
 
-cat > /tmp/review-prompt.txt <<EOF
+cat > /tmp/review-prompt.txt <<'EOF'
 REPO: ${REPO}
 PR NUMBER: ${PR_NUMBER}
 PR TITLE: ${PR_TITLE_VALUE}
@@ -666,7 +666,70 @@ fi
 
 if [ -f "$PRICING_CACHE" ]; then
   COST_INFO="/tmp/cost-info.json"
-  python /tmp/calc_cost.py "$PROVIDER_REPORT_JL" "$PRICING_CACHE" "$COST_INFO" || true
+  python - "$PROVIDER_REPORT_JL" "$PRICING_CACHE" "$COST_INFO" <<'PYCODE' || true
+import json, sys
+from decimal import Decimal
+prov_path, models_path, out_path = sys.argv[1:]
+models = {}
+try:
+    data = json.load(open(models_path, encoding="utf-8"))
+    for m in data.get("data", []):
+        mid = m.get("id")
+        pricing = m.get("pricing") or {}
+        if mid:
+            models[mid] = {
+                "prompt": Decimal(str(pricing.get("prompt", "0") or "0")),
+                "completion": Decimal(str(pricing.get("completion", "0") or "0")),
+            }
+except Exception:
+    pass
+
+reports = []
+try:
+    with open(prov_path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            reports.append(json.loads(line))
+except Exception:
+    pass
+
+total = Decimal("0")
+details = []
+total_prompt = 0
+total_completion = 0
+total_tokens = 0
+for r in reports:
+    name = r.get("name") or ""
+    usage = r.get("usage") or {}
+    pt = int(usage.get("prompt_tokens") or 0)
+    ct = int(usage.get("completion_tokens") or 0)
+    tt = int(usage.get("total_tokens") or (pt + ct))
+    total_prompt += pt
+    total_completion += ct
+    total_tokens += tt
+    if not name.startswith("openrouter/"):
+        continue
+    model_id = name.split("/", 1)[1]
+    rates = models.get(model_id)
+    if not rates:
+        details.append(f"{name}: unknown (no pricing)")
+        continue
+    cost = rates["prompt"] * pt + rates["completion"] * ct
+    total += cost
+    details.append(f"{name}: ${cost} (prompt={pt}, completion={ct})")
+
+out = {
+    "total": str(total) if total else "",
+    "details": details,
+    "prompt_tokens": total_prompt,
+    "completion_tokens": total_completion,
+    "total_tokens": total_tokens,
+}
+with open(out_path, "w", encoding="utf-8") as f:
+    json.dump(out, f)
+PYCODE
   if [ -f "$COST_INFO" ]; then
     ESTIMATED_COST_TOTAL="$(jq -r '.total // ""' "$COST_INFO" 2>/dev/null || echo "")"
     mapfile -t ESTIMATED_COST_DETAILS < <(jq -r '.details[]' "$COST_INFO" 2>/dev/null || true)

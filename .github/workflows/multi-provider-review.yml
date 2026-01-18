@@ -39,6 +39,12 @@ jobs:
         with:
           fetch-depth: 2
 
+      - name: Cache npm global
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm-global/_cacache
+          key: opencode-cache-${{ runner.os }}
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
