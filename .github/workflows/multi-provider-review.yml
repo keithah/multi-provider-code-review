@@ -1,6 +1,9 @@
 name: Multi-Provider Code Review
 
 on:
+  push:
+    branches:
+      - '**'
   pull_request:
     types: [opened, synchronize, reopened]
   issue_comment:
