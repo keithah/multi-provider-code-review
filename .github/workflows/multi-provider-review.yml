@@ -28,8 +28,14 @@ jobs:
       && (
         !github.event.pull_request ||
         (
-          (vars.MAX_CHANGED_FILES != '' && vars.MAX_CHANGED_FILES != null && github.event.pull_request.changed_files <= fromJSON(vars.MAX_CHANGED_FILES))
-          || ((vars.MAX_CHANGED_FILES == '' || vars.MAX_CHANGED_FILES == null) && github.event.pull_request.changed_files <= 9999)
+          (
+            (vars.MAX_CHANGED_FILES != '' && vars.MAX_CHANGED_FILES != null && github.event.pull_request.changed_files <= fromJSON(vars.MAX_CHANGED_FILES))
+            || ((vars.MAX_CHANGED_FILES == '' || vars.MAX_CHANGED_FILES == null) && github.event.pull_request.changed_files <= 9999)
+          )
+          && (
+            (vars.MIN_CHANGED_LINES != '' && vars.MIN_CHANGED_LINES != null && (github.event.pull_request.additions + github.event.pull_request.deletions) >= fromJSON(vars.MIN_CHANGED_LINES))
+            || ((vars.MIN_CHANGED_LINES == '' || vars.MIN_CHANGED_LINES == null) && (github.event.pull_request.additions + github.event.pull_request.deletions) >= 0)
+          )
         )
       )
     runs-on: ubuntu-latest
