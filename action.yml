@@ -6,9 +6,9 @@ inputs:
     description: "GitHub token"
     required: true
   REVIEW_PROVIDERS:
-    description: "Comma-separated list of review providers"
+    description: "Comma-separated list of review providers (OpenRouter first by default)"
     required: false
-    default: "opencode/big-pickle,opencode/grok-code,opencode/minimax-m2.1-free,opencode/glm-4.7-free"
+    default: "openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free,openrouter/xiaomi/mimo-v2-flash:free,opencode/big-pickle,opencode/grok-code,opencode/minimax-m2.1-free,opencode/glm-4.7-free"
   PR_TITLE:
     description: "PR title"
     required: true
@@ -25,7 +25,7 @@ inputs:
   SYNTHESIS_MODEL:
     description: "Model used to synthesize provider outputs"
     required: false
-    default: "opencode/big-pickle"
+    default: "openrouter/google/gemini-2.0-flash-exp:free"
   DIFF_MAX_BYTES:
     description: "Maximum diff bytes to include in prompt"
     required: false
@@ -37,6 +37,46 @@ inputs:
   OPENROUTER_API_KEY:
     description: "API key for OpenRouter providers (optional)"
     required: false
+  INLINE_MAX_COMMENTS:
+    description: "Maximum inline review comments to post from structured findings"
+    required: false
+    default: "5"
+  INLINE_MIN_SEVERITY:
+    description: "Minimum severity for inline comments (critical, major, or minor)"
+    required: false
+    default: "major"
+  INLINE_MIN_AGREEMENT:
+    description: "Minimum number of providers that must agree before posting inline"
+    required: false
+    default: "1"
+  REPORT_BASENAME:
+    description: "Base filename for exported review reports (JSON/SARIF)"
+    required: false
+    default: "multi-provider-review"
+  MIN_CHANGED_LINES:
+    description: "Skip review if total changed lines are below this number (0 disables)"
+    required: false
+    default: "0"
+  MAX_CHANGED_FILES:
+    description: "Skip review if changed files exceed this number (0 disables)"
+    required: false
+    default: "0"
+  SKIP_LABELS:
+    description: "Comma-separated labels that cause the review to skip"
+    required: false
+    default: ""
+  PROVIDER_LIMIT:
+    description: "If >0, limit to this many providers (rotated deterministically)"
+    required: false
+    default: "0"
+  PROVIDER_RETRIES:
+    description: "Retries per provider on failure/timeout (>=1)"
+    required: false
+    default: "2"
+  BUDGET_MAX_USD:
+    description: "If >0, warn and skip posting results when estimated cost exceeds this amount"
+    required: false
+    default: "0"
 
 runs:
   using: "composite"
@@ -54,6 +94,16 @@ runs:
         DIFF_MAX_BYTES: ${{ inputs.DIFF_MAX_BYTES }}
         RUN_TIMEOUT_SECONDS: ${{ inputs.RUN_TIMEOUT_SECONDS }}
         OPENROUTER_API_KEY: ${{ inputs.OPENROUTER_API_KEY }}
+        INLINE_MAX_COMMENTS: ${{ inputs.INLINE_MAX_COMMENTS }}
+        INLINE_MIN_SEVERITY: ${{ inputs.INLINE_MIN_SEVERITY }}
+        INLINE_MIN_AGREEMENT: ${{ inputs.INLINE_MIN_AGREEMENT }}
+        MIN_CHANGED_LINES: ${{ inputs.MIN_CHANGED_LINES }}
+        MAX_CHANGED_FILES: ${{ inputs.MAX_CHANGED_FILES }}
+        SKIP_LABELS: ${{ inputs.SKIP_LABELS }}
+        PROVIDER_LIMIT: ${{ inputs.PROVIDER_LIMIT }}
+        PROVIDER_RETRIES: ${{ inputs.PROVIDER_RETRIES }}
+        BUDGET_MAX_USD: ${{ inputs.BUDGET_MAX_USD }}
+        REPORT_BASENAME: ${{ inputs.REPORT_BASENAME }}
       run: bash "${{ github.action_path }}/action.sh"
 
 branding:
