@@ -433,6 +433,57 @@ else
   DIFF_FILE=""
 fi
 
+# Detect likely missing tests (repo-aware) before building the prompt
+python - "$PR_FILES" "$MISSING_TEST_FILES" "${GITHUB_WORKSPACE:-}" <<'PYCODE' 2>/dev/null || true
+import json, sys, os, re
+files_path, out_path, repo_root = sys.argv[1:]
+repo_root = repo_root or "."
+try:
+    files = json.load(open(files_path, encoding="utf-8"))
+except Exception:
+    files = []
+
+changed = set()
+for f in files:
+    if isinstance(f, dict):
+        name = f.get("filename") or ""
+        if name:
+            changed.add(name)
+
+test_patterns = re.compile(r"(test|spec|__tests__|__snapshots__|\.test\.|\.spec\.|Tests/|Spec/)", re.IGNORECASE)
+missing = []
+for f in files:
+    if not isinstance(f, dict):
+        continue
+    name = f.get("filename") or ""
+    if not name or test_patterns.search(name):
+        continue
+    base = os.path.basename(name)
+    root, ext = os.path.splitext(base)
+    candidates = [
+        name.replace(base, f"{root}.test{ext}"),
+        name.replace(base, f"{root}.spec{ext}"),
+    ]
+    has_match = False
+    for cand in candidates:
+        ws_path = os.path.join(repo_root, cand)
+        if cand in changed or os.path.exists(ws_path):
+            has_match = True
+            break
+    if not has_match:
+        missing.append(name)
+
+missing = missing[:5]
+if missing:
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(missing))
+else:
+    try:
+        os.remove(out_path)
+    except OSError:
+        pass
+PYCODE
+
 cat > "$PROMPT_FILE" <<'EOF'
 REPO: ${REPO}
 PR NUMBER: ${PR_NUMBER}
