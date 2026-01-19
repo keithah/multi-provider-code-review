@@ -217,13 +217,6 @@ if [ "${#PROVIDERS[@]}" -eq 0 ]; then
   exit 1
 fi
 
-# Estimate costs (simple: free if name contains :free, unknown otherwise)
-ESTIMATED_COST_DETAILS=()
-export ESTIMATED_COST_TOTAL ESTIMATED_COST_DETAILS
-TOTAL_PROMPT_TOKENS=0
-TOTAL_COMPLETION_TOKENS=0
-TOTAL_TOKENS=0
-
 if [[ "$SYNTHESIS_MODEL" == openrouter/* ]] && [ -z "$OPENROUTER_API_KEY" ]; then
   echo "OpenRouter synthesis model requested but OPENROUTER_API_KEY is not set; falling back to opencode/big-pickle."
   SYNTHESIS_MODEL="opencode/big-pickle"
@@ -232,7 +225,7 @@ fi
 # Limit providers if requested (deterministic rotation based on PR number)
 if [ "$PROVIDER_LIMIT" -gt 0 ] && [ "${#PROVIDERS[@]}" -gt "$PROVIDER_LIMIT" ]; then
   pr_hash=${PR_NUMBER//[^0-9]/}
-  [ -z "$pr_hash" ] && pr_hash=0
+  [ -z "$pr_hash" ] && pr_hash=1
   start=$((pr_hash % ${#PROVIDERS[@]}))
   selected=()
   for i in $(seq 0 $((PROVIDER_LIMIT - 1))); do
@@ -333,18 +326,19 @@ PYCODE
     return 1
   fi
 
-  if run_with_timeout curl -sS -X POST "https://openrouter.ai/api/v1/chat/completions" \
+  http_status=$(run_with_timeout curl -sS -w "%{http_code}" -o "${response_file}" -X POST "https://openrouter.ai/api/v1/chat/completions" \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer ${OPENROUTER_API_KEY}" \
     -H "HTTP-Referer: https://github.com/keithah/multi-provider-code-review" \
     -H "X-Title: Multi-Provider Code Review" \
-    -d @"${payload_file}" > "${response_file}"; then
-    :
-  else
-    status=$?
+    -d @"${payload_file}" || echo "curl_error")
+  if [ "$http_status" = "curl_error" ]; then
     echo "curl failed for OpenRouter provider ${provider}" >&2
-    cat "${response_file}" >&2 || true
-    return "$status"
+    return 1
+  fi
+  if ! [[ "$http_status" =~ ^2[0-9][0-9]$ ]]; then
+    echo "OpenRouter provider ${provider} returned HTTP ${http_status}" >&2
+    return 1
   fi
 
   python - "$response_file" "$outfile" "$usagefile" >/dev/null <<'PYCODE'
@@ -1295,6 +1289,9 @@ if [ -n "$INLINE_PAYLOAD" ]; then
     fi
     sleep $((2 ** attempt))
   done
+  if [ "$INLINE_POSTED" != "true" ]; then
+    echo "⚠️ Inline comments failed after retries; proceeding without inline posts." >&2
+  fi
 fi
 
 REPORT_JSON="${REPORT_DIR}/${REPORT_BASENAME}.json"
@@ -1352,7 +1349,7 @@ report = {
     "test_hint_added": os.getenv("TEST_HINT_FLAG", "false").lower() == "true",
     "cost": {
         "estimated_total": os.getenv("ESTIMATED_COST_TOTAL") or None,
-        "details": os.getenv("ESTIMATED_COST_DETAILS", "").split("||") if os.getenv("ESTIMATED_COST_DETAILS") else [],
+        "details": os.getenv("ESTIMATED_COST_DETAILS", "").splitlines() if os.getenv("ESTIMATED_COST_DETAILS") else [],
     },
     "usage_tokens": {
         "prompt": int(os.getenv("TOTAL_PROMPT_TOKENS", 0)),
