@@ -262,18 +262,16 @@ TOTAL_PROMPT_TOKENS=0
 TOTAL_COMPLETION_TOKENS=0
 TOTAL_TOKENS=0
 BUDGET_MAX_USD="${BUDGET_MAX_USD:-0}"
+DEFAULT_OPENROUTER_PROVIDERS=("openrouter/google/gemini-2.0-flash-exp:free" "openrouter/mistralai/devstral-2512:free" "openrouter/xiaomi/mimo-v2-flash:free")
+FALLBACK_OPENCODE_PROVIDERS=("opencode/big-pickle" "opencode/grok-code" "opencode/minimax-m2.1-free" "opencode/glm-4.7-free")
+PROVIDER_ALLOWLIST=()
+PROVIDER_BLOCKLIST=()
+SKIP_LABELS=()
 REPORT_BASENAME="${REPORT_BASENAME:-multi-provider-review}"
 REPORT_DIR="${GITHUB_WORKSPACE:-$PWD}/multi-provider-report"
 mkdir -p "$REPORT_DIR"
 
-DEFAULT_OPENROUTER_PROVIDERS=("openrouter/google/gemini-2.0-flash-exp:free" "openrouter/mistralai/devstral-2512:free" "openrouter/xiaomi/mimo-v2-flash:free")
-FALLBACK_OPENCODE_PROVIDERS=("opencode/big-pickle" "opencode/grok-code" "opencode/minimax-m2.1-free" "opencode/glm-4.7-free")
-
-PROVIDER_ALLOWLIST=()
-PROVIDER_BLOCKLIST=()
-SKIP_LABELS=()
-
-TMP_DIR="$(mktemp -d -t mpr-XXXXXX)"
+TMP_DIR="$(mktemp -d -t mpr.XXXXXX)"
 PR_FILES="${TMP_DIR}/pr-files.json"
 DIFF_FILE="${TMP_DIR}/pr.diff"
 PR_META="${TMP_DIR}/pr-meta.json"
@@ -601,6 +599,7 @@ echo ""
 mkdir -p "$REVIEWS_DIR"
 : > "$PROVIDER_REPORT_JL"
 PROVIDER_LIST=()
+PROVIDER_SUCCESS_COUNT=0
 for raw_provider in "${PROVIDERS[@]}"; do
   provider="$(echo "$raw_provider" | xargs)"
   [ -z "$provider" ] && continue
@@ -632,6 +631,7 @@ for raw_provider in "${PROVIDERS[@]}"; do
         TOTAL_COMPLETION_TOKENS=$((TOTAL_COMPLETION_TOKENS + ct))
         TOTAL_TOKENS=$((TOTAL_TOKENS + tt))
       fi
+      PROVIDER_SUCCESS_COUNT=$((PROVIDER_SUCCESS_COUNT + 1))
       break
     else
       if [ $attempt -lt "$PROVIDER_RETRIES" ]; then
@@ -677,6 +677,11 @@ done
 
 if [ "${#PROVIDER_LIST[@]}" -eq 0 ]; then
   echo "No valid providers ran successfully."
+  exit 1
+fi
+
+if [ "$PROVIDER_SUCCESS_COUNT" -eq 0 ]; then
+  echo "All providers failed after retries."
   exit 1
 fi
 
@@ -1025,6 +1030,7 @@ PYCODE
   fi
   echo "- Providers: ${PROVIDER_LIST[*]}"
   echo "- Synthesis model: ${SYNTHESIS_MODEL}"
+  echo "- AI-generated code likelihood: see Review section"
   echo ""
   echo "Provider status, usage, cost:"
   if [ -n "$PROVIDER_STATUS_SUMMARY" ]; then
