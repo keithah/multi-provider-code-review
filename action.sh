@@ -645,56 +645,58 @@ mkdir -p "$REVIEWS_DIR"
 : > "$PROVIDER_REPORT_JL"
 PROVIDER_LIST=()
 PROVIDER_SUCCESS_COUNT=0
+PIDS=()
 for raw_provider in "${PROVIDERS[@]}"; do
-  provider="$(echo "$raw_provider" | xargs)"
-  [ -z "$provider" ] && continue
-  PROVIDER_LIST+=("$provider")
-  outfile="${REVIEWS_DIR}/$(echo "$provider" | tr '/:' '__').txt"
-  log_file="${outfile}.log"
-  usage_file="${outfile}.usage.json"
-  echo "Running provider: ${provider}"
-  provider_start=$(date +%s)
-  status_label="failed"
-  attempt=1
-  while [ $attempt -le "$PROVIDER_RETRIES" ]; do
-    if [[ "$provider" == openrouter/* ]]; then
-      if run_openrouter "${provider}" "${PROMPT_CONTENT}" "${outfile}" "${usage_file}" > "${log_file}" 2>&1; then
-        status_label="success"
+  (
+    provider="$(echo "$raw_provider" | xargs)"
+    [ -z "$provider" ] && exit 0
+    PROVIDER_LIST+=("$provider")
+    outfile="${REVIEWS_DIR}/$(echo "$provider" | tr '/:' '__').txt"
+    log_file="${outfile}.log"
+    usage_file="${outfile}.usage.json"
+    echo "Running provider: ${provider}"
+    provider_start=$(date +%s)
+    status_label="failed"
+    attempt=1
+    while [ $attempt -le "$PROVIDER_RETRIES" ]; do
+      if [[ "$provider" == openrouter/* ]]; then
+        if run_openrouter "${provider}" "${PROMPT_CONTENT}" "${outfile}" "${usage_file}" > "${log_file}" 2>&1; then
+          status_label="success"
+        fi
+      else
+        if run_with_timeout opencode run -m "${provider}" -- "${PROMPT_CONTENT}" > "$outfile" 2> "${log_file}"; then
+          status_label="success"
+        fi
       fi
-    else
-      if run_with_timeout opencode run -m "${provider}" -- "${PROMPT_CONTENT}" > "$outfile" 2> "${log_file}"; then
-        status_label="success"
+      if [ "$status_label" = "success" ]; then
+        echo "✅ ${provider} completed (attempt ${attempt}/${PROVIDER_RETRIES})"
+        if [ -f "$usage_file" ]; then
+          pt=$(jq -r '.prompt_tokens // 0' "$usage_file" 2>/dev/null || echo 0)
+          ct=$(jq -r '.completion_tokens // 0' "$usage_file" 2>/dev/null || echo 0)
+          tt=$(jq -r '.total_tokens // 0' "$usage_file" 2>/dev/null || echo 0)
+          TOTAL_PROMPT_TOKENS=$((TOTAL_PROMPT_TOKENS + pt))
+          TOTAL_COMPLETION_TOKENS=$((TOTAL_COMPLETION_TOKENS + ct))
+          TOTAL_TOKENS=$((TOTAL_TOKENS + tt))
+        fi
+        PROVIDER_SUCCESS_COUNT=$((PROVIDER_SUCCESS_COUNT + 1))
+        break
+      else
+        if [ $attempt -lt "$PROVIDER_RETRIES" ]; then
+          echo "Retrying ${provider} (attempt ${attempt}/${PROVIDER_RETRIES})..."
+          sleep $((attempt))
+        fi
       fi
+      attempt=$((attempt + 1))
+    done
+    if [ "$status_label" != "success" ]; then
+      # capture log in output
+      echo "⚠️ ${provider} failed after ${PROVIDER_RETRIES} attempt(s) (see log), capturing partial output"
+      echo "Provider ${provider} failed. Log:" > "$outfile"
+      cat "${log_file}" >> "$outfile" || true
     fi
-    if [ "$status_label" = "success" ]; then
-      echo "✅ ${provider} completed (attempt ${attempt}/${PROVIDER_RETRIES})"
-      if [ -f "$usage_file" ]; then
-        pt=$(jq -r '.prompt_tokens // 0' "$usage_file" 2>/dev/null || echo 0)
-        ct=$(jq -r '.completion_tokens // 0' "$usage_file" 2>/dev/null || echo 0)
-        tt=$(jq -r '.total_tokens // 0' "$usage_file" 2>/dev/null || echo 0)
-        TOTAL_PROMPT_TOKENS=$((TOTAL_PROMPT_TOKENS + pt))
-        TOTAL_COMPLETION_TOKENS=$((TOTAL_COMPLETION_TOKENS + ct))
-        TOTAL_TOKENS=$((TOTAL_TOKENS + tt))
-      fi
-      PROVIDER_SUCCESS_COUNT=$((PROVIDER_SUCCESS_COUNT + 1))
-      break
-    else
-      if [ $attempt -lt "$PROVIDER_RETRIES" ]; then
-        echo "Retrying ${provider} (attempt ${attempt}/${PROVIDER_RETRIES})..."
-        sleep $((attempt))
-      fi
-    fi
-    attempt=$((attempt + 1))
-  done
-  if [ "$status_label" != "success" ]; then
-    # capture log in output
-    echo "⚠️ ${provider} failed after ${PROVIDER_RETRIES} attempt(s) (see log), capturing partial output"
-    echo "Provider ${provider} failed. Log:" > "$outfile"
-    cat "${log_file}" >> "$outfile" || true
-  fi
-  provider_end=$(date +%s)
-  duration=$((provider_end - provider_start))
-  python - "$provider" "$status_label" "$duration" "$outfile" "$log_file" >> "$PROVIDER_REPORT_JL" <<'PYCODE'
+    provider_end=$(date +%s)
+    duration=$((provider_end - provider_start))
+    python - "$provider" "$status_label" "$duration" "$outfile" "$log_file" >> "$PROVIDER_REPORT_JL" <<'PYCODE'
 import json, sys, os
 name, status, duration_s, out_path, log_path = sys.argv[1:]
 try:
@@ -718,7 +720,11 @@ print(json.dumps({
     "usage": usage
 }))
 PYCODE
+  ) &
+  PIDS+=($!)
 done
+
+wait "${PIDS[@]}"
 
 if [ "${#PROVIDER_LIST[@]}" -eq 0 ]; then
   echo "No valid providers ran successfully."
