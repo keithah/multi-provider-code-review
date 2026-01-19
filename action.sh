@@ -51,7 +51,7 @@ def load_yaml(p):
         import yaml  # type: ignore
     except Exception:
         try:
-            subprocess.run([sys.executable, "-m", "pip", "install", "pyyaml", "--quiet"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run([sys.executable, "-m", "pip", "install", "pyyaml==6.0.2", "--quiet"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             import yaml  # type: ignore
         except Exception:
             return None
@@ -644,16 +644,16 @@ echo ""
 mkdir -p "$REVIEWS_DIR"
 : > "$PROVIDER_REPORT_JL"
 PROVIDER_LIST=()
-PROVIDER_SUCCESS_COUNT=0
 PIDS=()
 for raw_provider in "${PROVIDERS[@]}"; do
+  provider="$(echo "$raw_provider" | xargs)"
+  [ -z "$provider" ] && continue
+  PROVIDER_LIST+=("$provider")
+  outfile="${REVIEWS_DIR}/$(echo "$provider" | tr '/:' '__').txt"
+  log_file="${outfile}.log"
+  usage_file="${outfile}.usage.json"
+  report_line="${outfile}.report"
   (
-    provider="$(echo "$raw_provider" | xargs)"
-    [ -z "$provider" ] && exit 0
-    PROVIDER_LIST+=("$provider")
-    outfile="${REVIEWS_DIR}/$(echo "$provider" | tr '/:' '__').txt"
-    log_file="${outfile}.log"
-    usage_file="${outfile}.usage.json"
     echo "Running provider: ${provider}"
     provider_start=$(date +%s)
     status_label="failed"
@@ -670,15 +670,6 @@ for raw_provider in "${PROVIDERS[@]}"; do
       fi
       if [ "$status_label" = "success" ]; then
         echo "✅ ${provider} completed (attempt ${attempt}/${PROVIDER_RETRIES})"
-        if [ -f "$usage_file" ]; then
-          pt=$(jq -r '.prompt_tokens // 0' "$usage_file" 2>/dev/null || echo 0)
-          ct=$(jq -r '.completion_tokens // 0' "$usage_file" 2>/dev/null || echo 0)
-          tt=$(jq -r '.total_tokens // 0' "$usage_file" 2>/dev/null || echo 0)
-          TOTAL_PROMPT_TOKENS=$((TOTAL_PROMPT_TOKENS + pt))
-          TOTAL_COMPLETION_TOKENS=$((TOTAL_COMPLETION_TOKENS + ct))
-          TOTAL_TOKENS=$((TOTAL_TOKENS + tt))
-        fi
-        PROVIDER_SUCCESS_COUNT=$((PROVIDER_SUCCESS_COUNT + 1))
         break
       else
         if [ $attempt -lt "$PROVIDER_RETRIES" ]; then
@@ -689,14 +680,13 @@ for raw_provider in "${PROVIDERS[@]}"; do
       attempt=$((attempt + 1))
     done
     if [ "$status_label" != "success" ]; then
-      # capture log in output
       echo "⚠️ ${provider} failed after ${PROVIDER_RETRIES} attempt(s) (see log), capturing partial output"
       echo "Provider ${provider} failed. Log:" > "$outfile"
       cat "${log_file}" >> "$outfile" || true
     fi
     provider_end=$(date +%s)
     duration=$((provider_end - provider_start))
-    python - "$provider" "$status_label" "$duration" "$outfile" "$log_file" >> "$PROVIDER_REPORT_JL" <<'PYCODE'
+    python - "$provider" "$status_label" "$duration" "$outfile" "$log_file" > "$report_line" <<'PYCODE'
 import json, sys, os
 name, status, duration_s, out_path, log_path = sys.argv[1:]
 try:
@@ -724,7 +714,47 @@ PYCODE
   PIDS+=($!)
 done
 
-wait "${PIDS[@]}"
+if [ "${#PIDS[@]}" -gt 0 ]; then
+  wait "${PIDS[@]}"
+fi
+
+cat "${REVIEWS_DIR}"/*.report > "$PROVIDER_REPORT_JL" 2>/dev/null || true
+
+# Recompute totals and success count from provider reports
+python - "$PROVIDER_REPORT_JL" <<'PYCODE'
+import json, sys
+path = sys.argv[1]
+total_prompt = total_completion = total_tokens = 0
+success = 0
+try:
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            r = json.loads(line)
+            if r.get("status") == "success":
+                success += 1
+            usage = r.get("usage") or {}
+            pt = int(usage.get("prompt_tokens") or 0)
+            ct = int(usage.get("completion_tokens") or 0)
+            tt = int(usage.get("total_tokens") or (pt + ct))
+            total_prompt += pt
+            total_completion += ct
+            total_tokens += tt
+except Exception:
+    pass
+print(total_prompt)
+print(total_completion)
+print(total_tokens)
+print(success)
+PYCODE
+read -r TOTAL_PROMPT_TOKENS TOTAL_COMPLETION_TOKENS TOTAL_TOKENS PROVIDER_SUCCESS_COUNT < <(tail -n 4 "$PROVIDER_REPORT_JL".tmp 2>/dev/null || true)
+
+if [ "$PROVIDER_SUCCESS_COUNT" -eq 0 ]; then
+  echo "All providers failed after retries."
+  exit 1
+fi
 
 if [ "${#PROVIDER_LIST[@]}" -eq 0 ]; then
   echo "No valid providers ran successfully."
