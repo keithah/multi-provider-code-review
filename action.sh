@@ -39,6 +39,7 @@ fi
 
 CONFIG_FILE=".github/multi-review.yml"
 CONFIG_SOURCE="defaults"
+CONFIG_LOADER="${GITHUB_ACTION_PATH:-$PWD}/scripts/config_loader.py"
 # default provider pools (defined early to avoid unset use during fallback)
 DEFAULT_OPENROUTER_PROVIDERS=("openrouter/google/gemini-2.0-flash-exp:free" "openrouter/mistralai/devstral-2512:free" "openrouter/xiaomi/mimo-v2-flash:free")
 FALLBACK_OPENCODE_PROVIDERS=("opencode/big-pickle" "opencode/grok-code" "opencode/minimax-m2.1-free" "opencode/glm-4.7-free")
@@ -70,86 +71,11 @@ PROVIDER_BLOCKLIST_RAW="${PROVIDER_BLOCKLIST_RAW:-}"
 SKIP_LABELS_RAW="${SKIP_LABELS_RAW:-}"
 if [ -f "$CONFIG_FILE" ]; then
   echo "Loading config from ${CONFIG_FILE}"
-  CONFIG_EXPORTS=$(python - "$CONFIG_FILE" <<'PYCODE' || true
-import os, sys, json, subprocess, tempfile
-path = sys.argv[1]
-def load_yaml(p):
-    try:
-        import yaml  # type: ignore
-    except Exception:
-        try:
-            subprocess.run([sys.executable, "-m", "pip", "install", "pyyaml>=6.0.0,<7", "--quiet", "--disable-pip-version-check"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            import yaml  # type: ignore
-        except Exception:
-            sys.stderr.write("Failed to import/install pyyaml >=6,<7; YAML config will be skipped.\n")
-            return None
-    try:
-        with open(p, "r", encoding="utf-8") as f:
-            return yaml.safe_load(f)
-    except Exception:
-        return None
-
-def load_json(p):
-    try:
-        with open(p, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return None
-
-data = load_yaml(path)
-if data is None:
-    data = load_json(path)
-
-if not isinstance(data, dict):
-    sys.exit(0)
-
-exports = {}
-def set_if(key, env_key, cast=None):
-    if key in data and data[key] is not None:
-        val = data[key]
-        if cast:
-            try:
-                val = cast(val)
-            except Exception:
-                return
-        exports[env_key] = val
-
-providers = data.get("providers")
-if isinstance(providers, list):
-    exports["REVIEW_PROVIDERS"] = ",".join(str(p) for p in providers if p)
-elif isinstance(providers, str) and providers.strip():
-    exports["REVIEW_PROVIDERS"] = providers
-
-set_if("synthesis_model", "SYNTHESIS_MODEL", str)
-set_if("inline_max_comments", "INLINE_MAX_COMMENTS", int)
-set_if("inline_min_severity", "INLINE_MIN_SEVERITY", str)
-set_if("inline_min_agreement", "INLINE_MIN_AGREEMENT", int)
-set_if("diff_max_bytes", "DIFF_MAX_BYTES", int)
-set_if("run_timeout_seconds", "RUN_TIMEOUT_SECONDS", int)
-set_if("min_changed_lines", "MIN_CHANGED_LINES", int)
-set_if("max_changed_files", "MAX_CHANGED_FILES", int)
-if "provider_allowlist" in data:
-    val = data["provider_allowlist"]
-    if isinstance(val, list):
-        exports["PROVIDER_ALLOWLIST"] = ",".join(str(x) for x in val)
-    elif isinstance(val, str):
-        exports["PROVIDER_ALLOWLIST"] = val
-if "provider_blocklist" in data:
-    val = data["provider_blocklist"]
-    if isinstance(val, list):
-        exports["PROVIDER_BLOCKLIST"] = ",".join(str(x) for x in val)
-    elif isinstance(val, str):
-        exports["PROVIDER_BLOCKLIST"] = val
-if "skip_labels" in data:
-    val = data["skip_labels"]
-    if isinstance(val, list):
-        exports["SKIP_LABELS"] = ",".join(str(x) for x in val)
-    elif isinstance(val, str):
-        exports["SKIP_LABELS"] = val
-
-print(json.dumps(exports))
-PYCODE
-  )
+  if [ -f "$CONFIG_LOADER" ]; then
+    CONFIG_EXPORTS=$(python "$CONFIG_LOADER" "$CONFIG_FILE" 2>/dev/null || true)
+  else
+    echo "Config loader script missing at ${CONFIG_LOADER}; skipping config file." >&2
+  fi
   if [ -n "$CONFIG_EXPORTS" ]; then
     CONFIG_SOURCE="$CONFIG_FILE"
     if command -v jq >/dev/null 2>&1; then
