@@ -872,10 +872,24 @@ PYCODE
     TOTAL_PROMPT_TOKENS="$(jq -r '.prompt_tokens // 0' "$COST_INFO" 2>/dev/null || echo 0)"
     TOTAL_COMPLETION_TOKENS="$(jq -r '.completion_tokens // 0' "$COST_INFO" 2>/dev/null || echo 0)"
     TOTAL_TOKENS="$(jq -r '.total_tokens // 0' "$COST_INFO" 2>/dev/null || echo 0)"
+    ESTIMATED_COST_DETAILS_STR="$(printf "%s\n" "${ESTIMATED_COST_DETAILS[@]}")"
+    export ESTIMATED_COST_TOTAL ESTIMATED_COST_DETAILS_STR TOTAL_PROMPT_TOKENS TOTAL_COMPLETION_TOKENS TOTAL_TOKENS
+    # backward compat: expose details under expected name
+    ESTIMATED_COST_DETAILS="${ESTIMATED_COST_DETAILS_STR}"
+    export ESTIMATED_COST_DETAILS
   fi
 fi
 
-if [ "$BUDGET_MAX_USD" -gt 0 ] && [ -n "$ESTIMATED_COST_TOTAL" ]; then
+budget_positive=$(python - "$BUDGET_MAX_USD" <<'PYCODE' || echo "0"
+import sys, decimal
+try:
+    val = decimal.Decimal(sys.argv[1])
+    print("1" if val > 0 else "0")
+except Exception:
+    print("0")
+PYCODE
+)
+if [ "$budget_positive" = "1" ] && [ -n "$ESTIMATED_COST_TOTAL" ]; then
   over_budget=$(python - "$ESTIMATED_COST_TOTAL" "$BUDGET_MAX_USD" <<'PYCODE' || echo "0"
 import sys, decimal
 try:
