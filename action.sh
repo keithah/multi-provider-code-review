@@ -69,6 +69,7 @@ MAX_CHANGED_FILES="${MAX_CHANGED_FILES:-}"
 PROVIDER_ALLOWLIST_RAW="${PROVIDER_ALLOWLIST_RAW:-}"
 PROVIDER_BLOCKLIST_RAW="${PROVIDER_BLOCKLIST_RAW:-}"
 SKIP_LABELS_RAW="${SKIP_LABELS_RAW:-}"
+COMPLETION_TOKENS_RATIO="${COMPLETION_TOKENS_RATIO:-0.5}"
 if [ -f "$CONFIG_FILE" ]; then
   echo "Loading config from ${CONFIG_FILE}"
   if [ -f "$CONFIG_LOADER" ]; then
@@ -286,6 +287,16 @@ for var_name in PROVIDER_LIMIT MIN_CHANGED_LINES MAX_CHANGED_FILES INLINE_MAX_CO
     declare -g "${var_name}=0"
   fi
 done
+
+# Validate completion ratio as float
+if ! python - <<'PY' "$COMPLETION_TOKENS_RATIO" >/dev/null 2>&1; then
+import sys
+float(sys.argv[1])
+PY
+then
+  echo "Warning: invalid COMPLETION_TOKENS_RATIO '${COMPLETION_TOKENS_RATIO}', defaulting to 0.5" >&2
+  COMPLETION_TOKENS_RATIO="0.5"
+fi
 
 # Cap provider limit to available providers to avoid duplication
 if [ "$PROVIDER_LIMIT" -gt "${#PROVIDERS[@]}" ]; then
@@ -614,18 +625,36 @@ fi
 PROMPT_CONTENT="$(cat "$PROMPT_FILE")"
 PROMPT_SIZE="$(wc -c < "$PROMPT_FILE")"
 
-# Early budget guard: estimate cost from pricing data before calling providers
-if [ "$BUDGET_MAX_USD" -gt 0 ] && [ -f "$PRICING_CACHE" ]; then
-  EARLY_BUDGET_HIT=$(python - "$PRICING_CACHE" "$BUDGET_MAX_USD" "$PROMPT_SIZE" "${PROVIDERS[@]}" <<'PYCODE' 2>/dev/null || echo "0"
+# Early budget guard: estimate cost from pricing data before calling providers.
+# If pricing data is missing but a budget is set and OpenRouter providers are requested,
+# fail closed to avoid surprise spend.
+if [ "$BUDGET_MAX_USD" -gt 0 ]; then
+  HAS_OPENROUTER="false"
+  for p in "${PROVIDERS[@]}"; do
+    if [[ "$p" == openrouter/* ]]; then
+      HAS_OPENROUTER="true"
+      break
+    fi
+  done
+  if [ "$HAS_OPENROUTER" = "true" ]; then
+    if [ ! -s "$PRICING_CACHE" ]; then
+      echo "Budget set but OpenRouter pricing data unavailable; skipping run to avoid exceeding budget." >&2
+      cat > "$BUDGET_SKIP" <<EOF
+Skipping review: budget cap \$${BUDGET_MAX_USD} set but pricing data unavailable for OpenRouter providers.
+EOF
+      gh api --method POST -H "Accept: application/vnd.github+json" "/repos/${REPO}/issues/${PR_NUMBER}/comments" -F body=@"$BUDGET_SKIP"
+      exit 0
+    fi
+    EARLY_BUDGET_HIT=$(python - "$PRICING_CACHE" "$BUDGET_MAX_USD" "$PROMPT_SIZE" "$COMPLETION_TOKENS_RATIO" "${PROVIDERS[@]}" <<'PYCODE' 2>/dev/null || echo "0"
 import json, sys, math
-models_path, budget_str, prompt_bytes, *providers = sys.argv[1:]
+models_path, budget_str, prompt_bytes, completion_ratio, *providers = sys.argv[1:]
 try:
     budget = float(budget_str)
-    prompt_tokens = math.ceil(int(prompt_bytes) / 4)  # rough chars->tokens
+    prompt_tokens = max(1, math.ceil(int(prompt_bytes) / 4))  # rough chars->tokens
+    completion_tokens = max(1, int(prompt_tokens * float(completion_ratio)))
 except Exception:
     print("0")
     raise SystemExit
-completion_tokens = max(1, prompt_tokens // 2)
 pricing = {}
 try:
     data = json.load(open(models_path, encoding="utf-8"))
@@ -654,13 +683,14 @@ for prov in providers:
 print("1" if cost > budget else "0")
 PYCODE
 )
-  if [ "$EARLY_BUDGET_HIT" = "1" ]; then
-    echo "Estimated cost exceeds budget ${BUDGET_MAX_USD}; skipping before provider calls."
-    cat > "$BUDGET_SKIP" <<EOF
+    if [ "$EARLY_BUDGET_HIT" = "1" ]; then
+      echo "Estimated cost exceeds budget ${BUDGET_MAX_USD}; skipping before provider calls."
+      cat > "$BUDGET_SKIP" <<EOF
 Skipping review: estimated pre-run cost exceeds budget cap \$${BUDGET_MAX_USD}.
 EOF
-    gh api --method POST -H "Accept: application/vnd.github+json" "/repos/${REPO}/issues/${PR_NUMBER}/comments" -F body=@"$BUDGET_SKIP"
-    exit 0
+      gh api --method POST -H "Accept: application/vnd.github+json" "/repos/${REPO}/issues/${PR_NUMBER}/comments" -F body=@"$BUDGET_SKIP"
+      exit 0
+    fi
   fi
 fi
 
