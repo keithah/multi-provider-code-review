@@ -187,6 +187,35 @@ fi
 # Prefer explicit workflow input SKIP_LABELS over config/defaults
 SKIP_LABELS_RAW="${SKIP_LABELS:-$SKIP_LABELS_RAW}"
 
+# Initialize temp paths before any use
+TMP_DIR="$(mktemp -d -t mpr.XXXXXX)"
+trap 'rm -rf "$TMP_DIR"' EXIT INT TERM ERR
+PR_FILES="${TMP_DIR}/pr-files.json"
+DIFF_FILE="${TMP_DIR}/pr.diff"
+PR_META="${TMP_DIR}/pr-meta.json"
+PR_META_FIELDS="${TMP_DIR}/pr-meta-fields"
+PRICING_CACHE="${TMP_DIR}/openrouter-models.json"
+PROMPT_FILE="${TMP_DIR}/review-prompt.txt"
+SKIP_COMMENT="${TMP_DIR}/skip-comment.md"
+BUDGET_SKIP="${TMP_DIR}/budget-skip.md"
+REVIEWS_DIR="${TMP_DIR}/reviews"
+mkdir -p "$REVIEWS_DIR"
+PROVIDER_REPORT_JL="${TMP_DIR}/provider-report.jsonl"
+COST_INFO="${TMP_DIR}/cost-info.json"
+PROVIDER_FINDINGS_FILE="${TMP_DIR}/provider-findings.json"
+SYN_PROMPT="${TMP_DIR}/synthesis-prompt.txt"
+SYNTHESIS_OUTPUT="${TMP_DIR}/synthesis.txt"
+SYNTHESIS_LOG="${TMP_DIR}/synthesis.log"
+COMMENT_FILE="${TMP_DIR}/final-review.md"
+COMMENT_CHUNK_PREFIX="${TMP_DIR}/comment-chunk"
+MISSING_TEST_FILES="${TMP_DIR}/missing-tests.txt"
+GEMINI_RATE_FILE="${TMP_DIR}/gemini-rate-limit.flag"
+RATE_LIMITED_GEMINI="false"
+RATE_LIMIT_FILE="${TMP_DIR}/provider-rate-limits.txt"
+RATE_LOCK_FILE="${TMP_DIR}/provider-rate-limits.lock"
+MAX_PARALLEL="${PROVIDER_MAX_PARALLEL:-3}"
+PROMPT_PROVIDERS=()
+
 # Try to discover OpenRouter free models dynamically (best-effort)
 if [ -n "$OPENROUTER_API_KEY" ]; then
   if curl -sS \
@@ -1550,6 +1579,9 @@ for (file, line, msg), entry in by_key.items():
     if detail and detail != msg:
         body_lines.append(detail)
     suggestion = f.get("suggestion") or ""
+    if not suggestion.strip():
+        suggestion = "No specific suggestion provided; please adjust accordingly."
+        f["suggestion"] = suggestion
     body_lines.append("```suggestion")
     body_lines.append(suggestion)
     body_lines.append("```")
