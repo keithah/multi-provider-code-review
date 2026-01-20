@@ -23,8 +23,11 @@ run_openrouter() {
   local model="${provider#openrouter/}"
   local payload_file
   local response_file
+  local header_file
   payload_file=$(mktemp) || return 1
-  response_file=$(mktemp) || return 1
+  response_file=$(mktemp) || { rm -f "$payload_file"; return 1; }
+  header_file=$(mktemp) || { rm -f "$payload_file" "$response_file"; return 1; }
+  chmod 600 "$header_file" || true
 
   if ! python - "$prompt" "$model" "$payload_file" >/dev/null <<'PYCODE'
 import json, sys
@@ -39,17 +42,22 @@ with open(path, "w", encoding="utf-8") as f:
     json.dump(payload, f)
 PYCODE
   then
+    rm -f "$payload_file" "$response_file" "$header_file"
     return 1
   fi
 
+  {
+    echo "header = \"Content-Type: application/json\""
+    echo "header = \"Authorization: Bearer ${OPENROUTER_API_KEY}\""
+    echo "header = \"HTTP-Referer: https://github.com/keithah/multi-provider-code-review\""
+    echo "header = \"X-Title: Multi-Provider Code Review\""
+  } > "$header_file"
+
   http_status=$(run_with_timeout curl -sS -w "%{http_code}" -o "${response_file}" -X POST "https://openrouter.ai/api/v1/chat/completions" \
-    -H "Content-Type: application/json" \
-    -H "Authorization: Bearer ${OPENROUTER_API_KEY}" \
-    -H "HTTP-Referer: https://github.com/keithah/multi-provider-code-review" \
-    -H "X-Title: Multi-Provider Code Review" \
+    -K "${header_file}" \
     --data-binary @"${payload_file}")
   curl_rc=$?
-  rm -f "$payload_file"
+  rm -f "$payload_file" "$header_file"
   if [ $curl_rc -ne 0 ]; then
     echo "curl failed for OpenRouter provider ${provider} (rc=${curl_rc})" >&2
     rm -f "$response_file"
@@ -119,7 +127,7 @@ run_providers() {
     provider="$(echo "$raw_provider" | xargs)"
     [ -z "$provider" ] && continue
     PROVIDER_LIST+=("$provider")
-    safe_provider="$(echo "$provider" | sed 's/[^A-Za-z0-9._-]/_/g')"
+    safe_provider="${provider//[^A-Za-z0-9._-]/_}"
     outfile="${REVIEWS_DIR}/${safe_provider}.txt"
     log_file="${outfile}.log"
     usage_file="${outfile}.usage.json"

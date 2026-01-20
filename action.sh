@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+#!/usr/bin/env bash
 set -euo pipefail
 
 if ! command -v npm >/dev/null 2>&1; then
@@ -421,7 +422,12 @@ for f in files:
         if not name:
             continue
         norm_name = os.path.normpath(name)
+        real_name = os.path.realpath(os.path.join(repo_root, norm_name))
         if os.path.isabs(norm_name) or norm_name.startswith(".."):
+            continue
+        if not real_name.startswith(repo_root_real):
+            continue
+        if os.path.islink(real_name):
             continue
         changed.add(norm_name)
 
@@ -434,7 +440,12 @@ for f in files:
     if not name or test_patterns.search(name):
         continue
     norm_name = os.path.normpath(name)
+    real_name = os.path.realpath(os.path.join(repo_root, norm_name))
     if os.path.isabs(norm_name) or norm_name.startswith(".."):
+        continue
+    if not real_name.startswith(repo_root_real):
+        continue
+    if os.path.islink(real_name):
         continue
     base = os.path.basename(norm_name)
     root, ext = os.path.splitext(base)
