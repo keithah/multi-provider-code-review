@@ -172,30 +172,85 @@ fi
 # Prefer explicit workflow input SKIP_LABELS over config/defaults
 SKIP_LABELS_RAW="${SKIP_LABELS:-$SKIP_LABELS_RAW}"
 
-if [ -z "$REVIEW_PROVIDERS" ]; then
-  RAW_PROVIDERS=()
-else
-  mapfile -t RAW_PROVIDERS < <(printf "%s" "$REVIEW_PROVIDERS" | tr ',' '\n')
+# Try to discover OpenRouter free models dynamically (best-effort)
+if [ -n "$OPENROUTER_API_KEY" ]; then
+  if curl -sS \
+    -H "Authorization: Bearer ${OPENROUTER_API_KEY}" \
+    -H "HTTP-Referer: https://github.com/keithah/multi-provider-code-review" \
+    -H "X-Title: Multi-Provider Code Review" \
+    https://openrouter.ai/api/v1/models > "$PRICING_CACHE"; then
+    mapfile -t OPENROUTER_DYNAMIC_PROVIDERS < <(python - "$PRICING_CACHE" <<'PYCODE' 2>/dev/null || true
+import json, sys
+try:
+    data = json.load(open(sys.argv[1], encoding="utf-8"))
+except Exception:
+    raise SystemExit(0)
+out = []
+for m in data.get("data", []):
+    mid = m.get("id")
+    pricing = m.get("pricing") or {}
+    p = pricing.get("prompt", 0)
+    c = pricing.get("completion", 0)
+    try:
+        p = float(p or 0)
+        c = float(c or 0)
+    except Exception:
+        continue
+    if p == 0 and c == 0 and mid:
+        out.append(f"openrouter/{mid}")
+for name in out:
+    print(name)
+PYCODE
+)
+  fi
 fi
+
+# Build provider list (user override > defaults)
+RAW_PROVIDERS=()
+if [ -n "$REVIEW_PROVIDERS" ]; then
+mapfile -t RAW_PROVIDERS < <(printf "%s" "$REVIEW_PROVIDERS" | tr ',' '\n')
+else
+  if [ -n "$OPENROUTER_API_KEY" ]; then
+    if [ "${#OPENROUTER_DYNAMIC_PROVIDERS[@]}" -gt 0 ]; then
+      RAW_PROVIDERS+=("${OPENROUTER_DYNAMIC_PROVIDERS[@]}")
+    else
+      RAW_PROVIDERS+=("${DEFAULT_OPENROUTER_PROVIDERS[@]}")
+    fi
+  fi
+  RAW_PROVIDERS+=("${FALLBACK_OPENCODE_PROVIDERS[@]}")
+fi
+
 PROVIDERS=()
+OPENROUTER_REQUESTED="false"
 for raw_provider in "${RAW_PROVIDERS[@]}"; do
   provider="$(echo "$raw_provider" | xargs)"
   [ -z "$provider" ] && continue
-  if [[ "$provider" == openrouter/* ]] && [ -z "$OPENROUTER_API_KEY" ]; then
-    echo "Skipping ${provider} because OPENROUTER_API_KEY is not set (will fall back if none remain)."
-    continue
+  if [[ "$provider" == openrouter/* ]]; then
+    OPENROUTER_REQUESTED="true"
+    if [ -z "$OPENROUTER_API_KEY" ]; then
+      echo "Skipping ${provider} because OPENROUTER_API_KEY is not set."
+      continue
+    fi
   fi
+  # dedupe
+  skip=false
+  for existing in "${PROVIDERS[@]}"; do
+    if [ "$existing" = "$provider" ]; then
+      skip=true
+      break
+    fi
+  done
+  $skip && continue
   PROVIDERS+=("$provider")
 done
 
 if [ "${#PROVIDERS[@]}" -eq 0 ]; then
-  if [ -z "$OPENROUTER_API_KEY" ]; then
-    echo "OPENROUTER_API_KEY is not set; using OpenCode fallback providers."
-    PROVIDERS=("${FALLBACK_OPENCODE_PROVIDERS[@]}")
-  else
-    echo "No providers specified; using default OpenRouter providers."
-    PROVIDERS=("${DEFAULT_OPENROUTER_PROVIDERS[@]}")
-  fi
+  echo "No review providers available after processing configuration."
+  exit 1
+fi
+if [ -z "$OPENROUTER_API_KEY" ] && [ "$OPENROUTER_REQUESTED" = "true" ] && [ -n "$REVIEW_PROVIDERS" ]; then
+  echo "OpenRouter providers were requested but OPENROUTER_API_KEY is not set."
+  exit 1
 fi
 
 if [ -n "${PROVIDER_ALLOWLIST_RAW:-}" ]; then
@@ -249,7 +304,7 @@ is_int='^[0-9]+$'
 for var_name in PROVIDER_LIMIT MIN_CHANGED_LINES MAX_CHANGED_FILES INLINE_MAX_COMMENTS INLINE_MIN_AGREEMENT RUN_TIMEOUT_SECONDS DIFF_MAX_BYTES PROVIDER_RETRIES; do
   val="${!var_name}"
   if ! [[ "$val" =~ $is_int ]]; then
-    printf -v "$var_name" "%s" "0"
+    declare -g "${var_name}=0"
   fi
 done
 
@@ -294,7 +349,7 @@ REPORT_DIR="${GITHUB_WORKSPACE:-$PWD}/multi-provider-report"
 mkdir -p "$REPORT_DIR"
 
 TMP_DIR="$(mktemp -d -t mpr.XXXXXX)"
-trap 'rm -rf "$TMP_DIR"' EXIT
+trap 'rm -rf "$TMP_DIR"' EXIT INT TERM ERR
 PR_FILES="${TMP_DIR}/pr-files.json"
 DIFF_FILE="${TMP_DIR}/pr.diff"
 PR_META="${TMP_DIR}/pr-meta.json"
@@ -316,6 +371,8 @@ COMMENT_CHUNK_PREFIX="${TMP_DIR}/comment-chunk"
 MISSING_TEST_FILES="${TMP_DIR}/missing-tests.txt"
 GEMINI_RATE_FILE="${TMP_DIR}/gemini-rate-limit.flag"
 RATE_LIMITED_GEMINI="false"
+RATE_LIMIT_FILE="${TMP_DIR}/provider-rate-limits.txt"
+MAX_PARALLEL="${PROVIDER_MAX_PARALLEL:-3}"
 
 run_with_timeout() {
   if command -v timeout >/dev/null 2>&1; then
@@ -383,9 +440,12 @@ EOF
   fi
   if ! [[ "$http_status" =~ ^2[0-9][0-9]$ ]]; then
     echo "OpenRouter provider ${provider} returned HTTP ${http_status}" >&2
-    if [ "$http_status" = "429" ] && [[ "$provider" == "openrouter/google/gemini-2.0-flash-exp:free" ]]; then
-      echo "Gemini free model rate limited; will avoid for synthesis." >&2
-      echo "limited" > "$GEMINI_RATE_FILE"
+    if [ "$http_status" = "429" ] || [ "$http_status" = "401" ]; then
+      echo "$provider" >> "$RATE_LIMIT_FILE"
+      if [ "$provider" = "openrouter/google/gemini-2.0-flash-exp:free" ]; then
+        echo "Gemini free model rate limited; will avoid for synthesis." >&2
+        echo "limited" > "$GEMINI_RATE_FILE"
+      fi
     fi
     head -c 500 "${response_file}" >&2 || true
     return 1
@@ -695,7 +755,8 @@ for raw_provider in "${PROVIDERS[@]}"; do
   provider="$(echo "$raw_provider" | xargs)"
   [ -z "$provider" ] && continue
   PROVIDER_LIST+=("$provider")
-  outfile="${REVIEWS_DIR}/$(echo "$provider" | tr '/:' '__').txt"
+  safe_provider="$(echo "$provider" | sed 's/[^A-Za-z0-9._-]/_/g')"
+  outfile="${REVIEWS_DIR}/${safe_provider}.txt"
   log_file="${outfile}.log"
   usage_file="${outfile}.usage.json"
   report_line="${outfile}.report"
@@ -758,6 +819,17 @@ print(json.dumps({
 PYCODE
   ) &
   PIDS+=($!)
+  if [ "${#PIDS[@]}" -ge "$MAX_PARALLEL" ]; then
+    wait -n || true
+    # remove finished PIDs
+    tmp_pids=()
+    for pid in "${PIDS[@]}"; do
+      if kill -0 "$pid" 2>/dev/null; then
+        tmp_pids+=("$pid")
+      fi
+    done
+    PIDS=("${tmp_pids[@]}")
+  fi
 done
 
 if [ "${#PIDS[@]}" -gt 0 ]; then
@@ -818,6 +890,52 @@ if [ "$PROVIDER_SUCCESS_COUNT" -eq 0 ]; then
   echo "⚠️ All providers reported failure; proceeding with best-effort outputs" >&2
 fi
 
+SUCCESS_PROVIDERS=()
+FAILED_PROVIDERS=()
+if [ -f "$PROVIDER_REPORT_JL" ]; then
+  mapfile -t SUCCESS_PROVIDERS < <(python - "$PROVIDER_REPORT_JL" <<'PYCODE' 2>/dev/null || true
+import json, sys
+names = []
+try:
+    with open(sys.argv[1], encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            r = json.loads(line)
+            if r.get("status") == "success" and r.get("name"):
+                names.append(r["name"])
+except Exception:
+    pass
+for n in names:
+    print(n)
+PYCODE
+)
+  mapfile -t FAILED_PROVIDERS < <(python - "$PROVIDER_REPORT_JL" <<'PYCODE' 2>/dev/null || true
+import json, sys
+names = []
+try:
+    with open(sys.argv[1], encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            r = json.loads(line)
+            if r.get("status") != "success" and r.get("name"):
+                names.append(r["name"])
+except Exception:
+    pass
+for n in names:
+    print(n)
+PYCODE
+)
+fi
+
+RATE_LIMITED_PROVIDERS=()
+if [ -f "$RATE_LIMIT_FILE" ]; then
+  mapfile -t RATE_LIMITED_PROVIDERS < "$RATE_LIMIT_FILE"
+fi
+
 if [ "${#PROVIDER_LIST[@]}" -eq 0 ]; then
   echo "No valid providers ran successfully."
   exit 1
@@ -837,7 +955,7 @@ if [ "$RATE_LIMITED_GEMINI" = "true" ] && [ "$SYNTHESIS_MODEL" = "openrouter/goo
 fi
 
 USES_OPENROUTER="false"
-for p in "${PROVIDER_LIST[@]}"; do
+for p in "${SUCCESS_PROVIDERS[@]}"; do
   if [[ "$p" == openrouter/* ]]; then
     USES_OPENROUTER="true"
     break
@@ -1031,8 +1149,9 @@ Output structure:
 Provider reviews:
 SYN_HEAD
 
-for provider in "${PROVIDER_LIST[@]}"; do
-  fname="${REVIEWS_DIR}/$(echo "$provider" | tr '/:' '__').txt"
+for provider in "${PROMPT_PROVIDERS[@]}"; do
+  safe_provider="$(echo "$provider" | sed 's/[^A-Za-z0-9._-]/_/g')"
+  fname="${REVIEWS_DIR}/${safe_provider}.txt"
   {
     echo ""
     echo "### ${provider}"
@@ -1064,11 +1183,25 @@ run_synthesis_model() {
   return 1
 }
 
+PROMPT_PROVIDERS=("${SUCCESS_PROVIDERS[@]}")
+if [ "${#PROMPT_PROVIDERS[@]}" -eq 0 ]; then
+  PROMPT_PROVIDERS=("${PROVIDER_LIST[@]}")
+fi
+
 fallback_synth_models=()
 # prefer configured synthesis model first, then other successful providers, then defaults
 fallback_synth_models+=("$SYNTHESIS_MODEL")
-for p in "${PROVIDER_LIST[@]}"; do
+for p in "${PROMPT_PROVIDERS[@]}"; do
   [[ "$p" == "$SYNTHESIS_MODEL" ]] && continue
+  # skip rate-limited providers
+  skip_rate=false
+  for rl in "${RATE_LIMITED_PROVIDERS[@]}"; do
+    if [ "$rl" = "$p" ]; then
+      skip_rate=true
+      break
+    fi
+  done
+  $skip_rate && continue
   fallback_synth_models+=("$p")
 done
 fallback_synth_models+=("openrouter/mistralai/devstral-2512:free" "openrouter/xiaomi/mimo-v2-flash:free" "opencode/grok-code")
