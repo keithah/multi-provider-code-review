@@ -171,6 +171,9 @@ EOF
     fi
   fi
 fi
+# Prefer explicit workflow input SKIP_LABELS over config/defaults
+SKIP_LABELS_RAW="${SKIP_LABELS:-$SKIP_LABELS_RAW}"
+
 if [ -z "$REVIEW_PROVIDERS" ]; then
   RAW_PROVIDERS=()
 else
@@ -499,7 +502,7 @@ else:
         pass
 PYCODE
 
-cat > "$PROMPT_FILE" <<'EOF'
+cat > "$PROMPT_FILE" <<EOF
 REPO: ${REPO}
 PR NUMBER: ${PR_NUMBER}
 PR TITLE: ${PR_TITLE_VALUE}
