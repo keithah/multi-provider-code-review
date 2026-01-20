@@ -17,13 +17,12 @@ on:
 jobs:
   review:
     if: >
-      github.event_name == 'pull_request'
-      || github.event_name == 'push'
+      github.event.pull_request
       || (github.event.issue.pull_request
           && (startsWith(github.event.comment.body, '/review')
               || contains(github.event.comment.body, '@opencode')
               || contains(github.event.comment.body, '@claude')))
-      || github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'workflow_dispatch' && github.event.inputs.pr_number)
     runs-on: ubuntu-latest
     permissions:
       contents: read
