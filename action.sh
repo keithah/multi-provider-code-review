@@ -41,6 +41,19 @@ fi
 
 CONFIG_FILE=".github/multi-review.yml"
 CONFIG_SOURCE="defaults"
+# initialize configurable inputs to avoid set -u errors during config merge
+REVIEW_PROVIDERS="${REVIEW_PROVIDERS:-}"
+SYNTHESIS_MODEL="${SYNTHESIS_MODEL:-}"
+INLINE_MAX_COMMENTS="${INLINE_MAX_COMMENTS:-}"
+INLINE_MIN_SEVERITY="${INLINE_MIN_SEVERITY:-}"
+INLINE_MIN_AGREEMENT="${INLINE_MIN_AGREEMENT:-}"
+DIFF_MAX_BYTES="${DIFF_MAX_BYTES:-}"
+RUN_TIMEOUT_SECONDS="${RUN_TIMEOUT_SECONDS:-}"
+MIN_CHANGED_LINES="${MIN_CHANGED_LINES:-}"
+MAX_CHANGED_FILES="${MAX_CHANGED_FILES:-}"
+PROVIDER_ALLOWLIST_RAW="${PROVIDER_ALLOWLIST_RAW:-}"
+PROVIDER_BLOCKLIST_RAW="${PROVIDER_BLOCKLIST_RAW:-}"
+SKIP_LABELS_RAW="${SKIP_LABELS_RAW:-}"
 if [ -f "$CONFIG_FILE" ]; then
   echo "Loading config from ${CONFIG_FILE}"
   CONFIG_EXPORTS=$(python - "$CONFIG_FILE" <<'PYCODE' || true
@@ -721,7 +734,8 @@ fi
 cat "${REVIEWS_DIR}"/*.report > "$PROVIDER_REPORT_JL" 2>/dev/null || true
 
 # Recompute totals and success count from provider reports
-python - "$PROVIDER_REPORT_JL" <<'PYCODE'
+read -r TOTAL_PROMPT_TOKENS TOTAL_COMPLETION_TOKENS TOTAL_TOKENS PROVIDER_SUCCESS_COUNT <<EOF
+$(python - "$PROVIDER_REPORT_JL" <<'PYCODE'
 import json, sys
 path = sys.argv[1]
 total_prompt = total_completion = total_tokens = 0
@@ -749,7 +763,14 @@ print(total_completion)
 print(total_tokens)
 print(success)
 PYCODE
-read -r TOTAL_PROMPT_TOKENS TOTAL_COMPLETION_TOKENS TOTAL_TOKENS PROVIDER_SUCCESS_COUNT < <(tail -n 4 "$PROVIDER_REPORT_JL".tmp 2>/dev/null || true)
+)
+EOF
+
+# ensure safe defaults
+TOTAL_PROMPT_TOKENS=${TOTAL_PROMPT_TOKENS:-0}
+TOTAL_COMPLETION_TOKENS=${TOTAL_COMPLETION_TOKENS:-0}
+TOTAL_TOKENS=${TOTAL_TOKENS:-0}
+PROVIDER_SUCCESS_COUNT=${PROVIDER_SUCCESS_COUNT:-0}
 
 if [ "$PROVIDER_SUCCESS_COUNT" -eq 0 ]; then
   echo "All providers failed after retries."
