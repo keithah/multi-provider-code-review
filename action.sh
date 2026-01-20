@@ -733,9 +733,9 @@ fi
 
 cat "${REVIEWS_DIR}"/*.report > "$PROVIDER_REPORT_JL" 2>/dev/null || true
 
-# Recompute totals and success count from provider reports
-read -r TOTAL_PROMPT_TOKENS TOTAL_COMPLETION_TOKENS TOTAL_TOKENS PROVIDER_SUCCESS_COUNT <<EOF
-$(python - "$PROVIDER_REPORT_JL" <<'PYCODE'
+# Recompute totals and success count from provider reports (do not hard-fail if empty)
+TOTALS_TMP="${PROVIDER_REPORT_JL}.totals"
+python - "$PROVIDER_REPORT_JL" <<'PYCODE' > "$TOTALS_TMP" || true
 import json, sys
 path = sys.argv[1]
 total_prompt = total_completion = total_tokens = 0
@@ -763,8 +763,15 @@ print(total_completion)
 print(total_tokens)
 print(success)
 PYCODE
-)
-EOF
+
+if [ -s "$TOTALS_TMP" ]; then
+  read -r TOTAL_PROMPT_TOKENS TOTAL_COMPLETION_TOKENS TOTAL_TOKENS PROVIDER_SUCCESS_COUNT < "$TOTALS_TMP"
+else
+  TOTAL_PROMPT_TOKENS=0
+  TOTAL_COMPLETION_TOKENS=0
+  TOTAL_TOKENS=0
+  PROVIDER_SUCCESS_COUNT=0
+fi
 
 # ensure safe defaults
 TOTAL_PROMPT_TOKENS=${TOTAL_PROMPT_TOKENS:-0}
@@ -773,8 +780,7 @@ TOTAL_TOKENS=${TOTAL_TOKENS:-0}
 PROVIDER_SUCCESS_COUNT=${PROVIDER_SUCCESS_COUNT:-0}
 
 if [ "$PROVIDER_SUCCESS_COUNT" -eq 0 ]; then
-  echo "All providers failed after retries."
-  exit 1
+  echo "⚠️ All providers reported failure; proceeding with best-effort outputs" >&2
 fi
 
 if [ "${#PROVIDER_LIST[@]}" -eq 0 ]; then
