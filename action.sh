@@ -357,6 +357,7 @@ is_int='^[0-9]+$'
 for var_name in PROVIDER_LIMIT MIN_CHANGED_LINES MAX_CHANGED_FILES INLINE_MAX_COMMENTS INLINE_MIN_AGREEMENT RUN_TIMEOUT_SECONDS DIFF_MAX_BYTES PROVIDER_RETRIES; do
   val="${!var_name}"
   if ! [[ "$val" =~ $is_int ]]; then
+    echo "Warning: invalid numeric value for ${var_name} ('${val}'); defaulting to 0." >&2
     declare -g "${var_name}=0"
   fi
 done
@@ -400,34 +401,6 @@ SKIP_LABELS=()
 REPORT_BASENAME="${REPORT_BASENAME:-multi-provider-review}"
 REPORT_DIR="${GITHUB_WORKSPACE:-$PWD}/multi-provider-report"
 mkdir -p "$REPORT_DIR"
-
-TMP_DIR="$(mktemp -d -t mpr.XXXXXX)"
-trap 'rm -rf "$TMP_DIR"' EXIT INT TERM ERR
-PR_FILES="${TMP_DIR}/pr-files.json"
-DIFF_FILE="${TMP_DIR}/pr.diff"
-PR_META="${TMP_DIR}/pr-meta.json"
-PR_META_FIELDS="${TMP_DIR}/pr-meta-fields"
-PRICING_CACHE="${TMP_DIR}/openrouter-models.json"
-PROMPT_FILE="${TMP_DIR}/review-prompt.txt"
-SKIP_COMMENT="${TMP_DIR}/skip-comment.md"
-BUDGET_SKIP="${TMP_DIR}/budget-skip.md"
-REVIEWS_DIR="${TMP_DIR}/reviews"
-mkdir -p "$REVIEWS_DIR"
-PROVIDER_REPORT_JL="${TMP_DIR}/provider-report.jsonl"
-COST_INFO="${TMP_DIR}/cost-info.json"
-PROVIDER_FINDINGS_FILE="${TMP_DIR}/provider-findings.json"
-SYN_PROMPT="${TMP_DIR}/synthesis-prompt.txt"
-SYNTHESIS_OUTPUT="${TMP_DIR}/synthesis.txt"
-SYNTHESIS_LOG="${TMP_DIR}/synthesis.log"
-COMMENT_FILE="${TMP_DIR}/final-review.md"
-COMMENT_CHUNK_PREFIX="${TMP_DIR}/comment-chunk"
-MISSING_TEST_FILES="${TMP_DIR}/missing-tests.txt"
-GEMINI_RATE_FILE="${TMP_DIR}/gemini-rate-limit.flag"
-RATE_LIMITED_GEMINI="false"
-RATE_LIMIT_FILE="${TMP_DIR}/provider-rate-limits.txt"
-RATE_LOCK_FILE="${TMP_DIR}/provider-rate-limits.lock"
-MAX_PARALLEL="${PROVIDER_MAX_PARALLEL:-3}"
-PROMPT_PROVIDERS=()
 
 run_with_timeout() {
   if command -v timeout >/dev/null 2>&1; then
@@ -589,6 +562,7 @@ python - "$PR_FILES" "$MISSING_TEST_FILES" "${GITHUB_WORKSPACE:-}" <<'PYCODE' 2>
 import json, sys, os, re
 files_path, out_path, repo_root = sys.argv[1:]
 repo_root = repo_root or "."
+repo_root_real = os.path.realpath(repo_root)
 try:
     files = json.load(open(files_path, encoding="utf-8"))
 except Exception:
@@ -598,8 +572,12 @@ changed = set()
 for f in files:
     if isinstance(f, dict):
         name = f.get("filename") or ""
-        if name:
-            changed.add(name)
+        if not name:
+            continue
+        norm_name = os.path.normpath(name)
+        if os.path.isabs(norm_name) or norm_name.startswith(".."):
+            continue
+        changed.add(norm_name)
 
 test_patterns = re.compile(r"(test|spec|__tests__|__snapshots__|\.test\.|\.spec\.|Tests/|Spec/)", re.IGNORECASE)
 missing = []
@@ -609,16 +587,27 @@ for f in files:
     name = f.get("filename") or ""
     if not name or test_patterns.search(name):
         continue
-    base = os.path.basename(name)
+    norm_name = os.path.normpath(name)
+    if os.path.isabs(norm_name) or norm_name.startswith(".."):
+        continue
+    base = os.path.basename(norm_name)
     root, ext = os.path.splitext(base)
     candidates = [
-        name.replace(base, f"{root}.test{ext}"),
-        name.replace(base, f"{root}.spec{ext}"),
+        norm_name.replace(base, f"{root}.test{ext}"),
+        norm_name.replace(base, f"{root}.spec{ext}"),
     ]
     has_match = False
     for cand in candidates:
-        ws_path = os.path.join(repo_root, cand)
-        if cand in changed or os.path.exists(ws_path):
+        # Prevent traversal/abs paths before checking existence
+        if os.path.isabs(cand):
+            continue
+        norm_cand = os.path.normpath(cand)
+        if norm_cand.startswith(".."):
+            continue
+        ws_path = os.path.realpath(os.path.join(repo_root, norm_cand))
+        if not ws_path.startswith(repo_root_real):
+            continue
+        if norm_cand in changed or os.path.exists(ws_path):
             has_match = True
             break
     if not has_match:
