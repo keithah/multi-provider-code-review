@@ -32,3 +32,11 @@ PY
       - uses: actions/checkout@v4
       - name: Run integration budget test
         run: python tests/integration_budget.py
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inline consensus test
+        run: python tests/inline_consensus_test.py
+      - name: Provider validation test
+        run: python tests/provider_validation_test.py
