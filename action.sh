@@ -846,7 +846,11 @@ done
 
 if [ "$USES_OPENROUTER" = "true" ] && [ -n "$OPENROUTER_API_KEY" ]; then
   if [ ! -f "$PRICING_CACHE" ]; then
-    curl -sS -H "Authorization: Bearer ${OPENROUTER_API_KEY}" https://openrouter.ai/api/v1/models > "$PRICING_CACHE" || true
+    curl -sS \
+      -H "Authorization: Bearer ${OPENROUTER_API_KEY}" \
+      -H "HTTP-Referer: https://github.com/keithah/multi-provider-code-review" \
+      -H "X-Title: Multi-Provider Code Review" \
+      https://openrouter.ai/api/v1/models > "$PRICING_CACHE" || true
   fi
 fi
 
