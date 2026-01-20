@@ -78,12 +78,10 @@ def load_yaml(p):
         import yaml  # type: ignore
     except Exception:
         try:
-            subprocess.run([sys.executable, "-m", "pip", "install", "pyyaml==6.0.2", "--quiet", "--disable-pip-version-check"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run([sys.executable, "-m", "pip", "install", "pyyaml>=6.0.0,<7", "--quiet", "--disable-pip-version-check"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             import yaml  # type: ignore
-            if getattr(yaml, "__version__", "") != "6.0.2":
-                raise RuntimeError("Unexpected PyYAML version")
         except Exception:
-            sys.stderr.write("Failed to import/install pyyaml 6.0.2; YAML config will be skipped.\n")
+            sys.stderr.write("Failed to import/install pyyaml >=6,<7; YAML config will be skipped.\n")
             return None
     try:
         with open(p, "r", encoding="utf-8") as f:
@@ -362,6 +360,11 @@ for var_name in PROVIDER_LIMIT MIN_CHANGED_LINES MAX_CHANGED_FILES INLINE_MAX_CO
     declare -g "${var_name}=0"
   fi
 done
+
+# Cap provider limit to available providers to avoid duplication
+if [ "$PROVIDER_LIMIT" -gt "${#PROVIDERS[@]}" ]; then
+  PROVIDER_LIMIT=${#PROVIDERS[@]}
+fi
 
 # Limit providers if requested (deterministic rotation based on PR number)
 if [ "$PROVIDER_LIMIT" -gt 0 ] && [ "${#PROVIDERS[@]}" -gt "$PROVIDER_LIMIT" ]; then
@@ -713,7 +716,7 @@ TEST_HINT=""
 TEST_HINT_FLAG="false"
 if [ -s "$PR_FILES" ]; then
   if command -v jq >/dev/null 2>&1; then
-    PATCH_COUNT=$(jq '[.[] | has("patch")] | map(select(.==true)) | length' "$PR_FILES")
+    PATCH_COUNT=$(jq '[.[] | select(has("patch"))] | length' "$PR_FILES")
     FILE_COUNT=$(jq 'length' "$PR_FILES")
     if [ "$FILE_COUNT" -gt 0 ] && [ "$PATCH_COUNT" -eq 0 ]; then
       ONLY_BINARY="true"
@@ -779,6 +782,56 @@ fi
 
 PROMPT_CONTENT="$(cat "$PROMPT_FILE")"
 PROMPT_SIZE="$(wc -c < "$PROMPT_FILE")"
+
+# Early budget guard: estimate cost from pricing data before calling providers
+if [ "$BUDGET_MAX_USD" -gt 0 ] && [ -f "$PRICING_CACHE" ]; then
+  EARLY_BUDGET_HIT=$(python - "$PRICING_CACHE" "$BUDGET_MAX_USD" "$PROMPT_SIZE" "${PROVIDERS[@]}" <<'PYCODE' 2>/dev/null || echo "0"
+import json, sys, math
+models_path, budget_str, prompt_bytes, *providers = sys.argv[1:]
+try:
+    budget = float(budget_str)
+    prompt_tokens = math.ceil(int(prompt_bytes) / 4)  # rough chars->tokens
+except Exception:
+    print("0")
+    raise SystemExit
+completion_tokens = max(1, prompt_tokens // 2)
+pricing = {}
+try:
+    data = json.load(open(models_path, encoding="utf-8"))
+    for m in data.get("data", []):
+        mid = m.get("id")
+        p = m.get("pricing") or {}
+        if mid:
+            try:
+                pricing[mid] = (float(p.get("prompt", 0) or 0), float(p.get("completion", 0) or 0))
+            except Exception:
+                continue
+except Exception:
+    print("0")
+    raise SystemExit
+
+cost = 0.0
+for prov in providers:
+    if not prov.startswith("openrouter/"):
+        continue
+    mid = prov.split("/", 1)[1]
+    if mid not in pricing:
+        continue
+    pr, cr = pricing[mid]
+    cost += pr * prompt_tokens + cr * completion_tokens
+
+print("1" if cost > budget else "0")
+PYCODE
+)
+  if [ "$EARLY_BUDGET_HIT" = "1" ]; then
+    echo "Estimated cost exceeds budget ${BUDGET_MAX_USD}; skipping before provider calls."
+    cat > "$BUDGET_SKIP" <<EOF
+Skipping review: estimated pre-run cost exceeds budget cap \$${BUDGET_MAX_USD}.
+EOF
+    gh api --method POST -H "Accept: application/vnd.github+json" "/repos/${REPO}/issues/${PR_NUMBER}/comments" -F body=@"$BUDGET_SKIP"
+    exit 0
+  fi
+fi
 
 echo "========================================"
 echo "Running multi-provider code review"
