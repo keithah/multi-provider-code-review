@@ -1197,6 +1197,23 @@ print(summary)
 PYCODE
 )
 
+CLEAN_SYNTHESIS_OUTPUT="${TMP_DIR}/synthesis-clean.txt"
+python - "$SYNTHESIS_OUTPUT" "$CLEAN_SYNTHESIS_OUTPUT" <<'PYCODE' 2>/dev/null || cp "$SYNTHESIS_OUTPUT" "$CLEAN_SYNTHESIS_OUTPUT"
+import sys, re
+src, dst = sys.argv[1:]
+try:
+    lines = open(src, encoding="utf-8").read().splitlines()
+except Exception:
+    raise SystemExit(1)
+filtered = []
+for line in lines:
+    if re.search(r"ai[- ]generated code likelihood", line, re.IGNORECASE):
+        continue
+    filtered.append(line)
+with open(dst, "w", encoding="utf-8") as f:
+    f.write("\n".join(filtered))
+PYCODE
+
 PROVIDER_STATUS_SUMMARY="$(python - "$PROVIDER_REPORT_JL" "$COST_INFO" <<'PYCODE'
 import json, sys
 prov_path, cost_path = sys.argv[1:]
@@ -1242,7 +1259,7 @@ PYCODE
   echo ""
   echo "**Review**"
   echo ""
-  cat "$SYNTHESIS_OUTPUT"
+  cat "$CLEAN_SYNTHESIS_OUTPUT"
   echo ""
   echo "<details><summary>Run details (usage, cost, providers, status)</summary>"
   echo ""
@@ -1257,7 +1274,6 @@ PYCODE
   fi
   echo "- Providers: ${PROVIDER_LIST[*]}"
   echo "- Synthesis model: ${SYNTHESIS_MODEL}"
-  echo "- AI-generated code likelihood: see section below"
   echo ""
   echo "Provider status, usage, cost:"
   if [ -n "$PROVIDER_STATUS_SUMMARY" ]; then
