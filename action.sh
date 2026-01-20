@@ -361,17 +361,17 @@ PYCODE
   fi
 
   cat > "$curl_cfg" <<EOF
-url = "https://openrouter.ai/api/v1/chat/completions"
-request = "POST"
-header = "Content-Type: application/json"
-header = "Authorization: Bearer ${OPENROUTER_API_KEY}"
-header = "HTTP-Referer: https://github.com/keithah/multi-provider-code-review"
-header = "X-Title: Multi-Provider Code Review"
-data = @"${payload_file}"
+url = https://openrouter.ai/api/v1/chat/completions
+request = POST
+header = Content-Type: application/json
+header = Authorization: Bearer ${OPENROUTER_API_KEY}
+header = HTTP-Referer: https://github.com/keithah/multi-provider-code-review
+header = X-Title: Multi-Provider Code Review
+data = @${payload_file}
 silent
 show-error
-write-out = "%{http_code}"
-output = "${response_file}"
+write-out = %{http_code}
+output = ${response_file}
 EOF
 
   http_status=$(run_with_timeout curl --config "$curl_cfg")
