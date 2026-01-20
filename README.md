@@ -62,7 +62,7 @@ permissions:
 | `OPENROUTER_API_KEY`  | _unset_                                                                                     | Optional key for OpenRouter models                                                            |
 | `INLINE_MAX_COMMENTS` | `5`                                                                                         | Max inline review comments from structured findings                                           |
 | `INLINE_MIN_SEVERITY` | `major`                                                                                     | Minimum severity to post inline (`critical`, `major`, `minor`)                                |
-| `INLINE_MIN_AGREEMENT`| `1`                                                                                         | Minimum number of providers that must agree before posting inline suggestions                 |
+| `INLINE_MIN_AGREEMENT`| `2`                                                                                         | Minimum number of providers that must agree before posting inline suggestions                 |
 | `MIN_CHANGED_LINES`   | `0`                                                                                         | If >0, skip review when total line changes are below this threshold                           |
 | `MAX_CHANGED_FILES`   | `0`                                                                                         | If >0, skip review when changed files exceed this count                                       |
 | `SKIP_LABELS`         | `""`                                                                                        | Comma-separated labels that cause the review to skip                                          |

@@ -76,10 +76,12 @@ def load_yaml(p):
         import yaml  # type: ignore
     except Exception:
         try:
-            subprocess.run([sys.executable, "-m", "pip", "install", "pyyaml==6.0.2", "--quiet"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run([sys.executable, "-m", "pip", "install", "pyyaml==6.0.2", "--quiet", "--disable-pip-version-check"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             import yaml  # type: ignore
+            if getattr(yaml, "__version__", "") != "6.0.2":
+                raise RuntimeError("Unexpected PyYAML version")
         except Exception:
-            sys.stderr.write("Failed to import/install pyyaml; YAML config will be skipped.\n")
+            sys.stderr.write("Failed to import/install pyyaml 6.0.2; YAML config will be skipped.\n")
             return None
     try:
         with open(p, "r", encoding="utf-8") as f:
@@ -990,16 +992,6 @@ for p in "${SUCCESS_PROVIDERS[@]}"; do
     break
   fi
 done
-
-if [ "$USES_OPENROUTER" = "true" ] && [ -n "$OPENROUTER_API_KEY" ]; then
-  if [ ! -f "$PRICING_CACHE" ]; then
-    curl -sS \
-      -H "Authorization: Bearer ${OPENROUTER_API_KEY}" \
-      -H "HTTP-Referer: https://github.com/keithah/multi-provider-code-review" \
-      -H "X-Title: Multi-Provider Code Review" \
-      https://openrouter.ai/api/v1/models > "$PRICING_CACHE" || true
-  fi
-fi
 
 if [ "$USES_OPENROUTER" = "true" ] && [ -f "$PRICING_CACHE" ]; then
   python - "$PROVIDER_REPORT_JL" "$PRICING_CACHE" "$COST_INFO" <<'PYCODE' || true

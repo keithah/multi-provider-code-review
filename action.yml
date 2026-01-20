@@ -48,7 +48,7 @@ inputs:
   INLINE_MIN_AGREEMENT:
     description: "Minimum number of providers that must agree before posting inline"
     required: false
-    default: "1"
+    default: "2"
   REPORT_BASENAME:
     description: "Base filename for exported review reports (JSON/SARIF)"
     required: false
