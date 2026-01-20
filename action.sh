@@ -206,6 +206,8 @@ PYCODE
 fi
 
 # Build provider list (user override > defaults)
+
+# Build provider list (user override > defaults)
 RAW_PROVIDERS=()
 if [ -n "$REVIEW_PROVIDERS" ]; then
 mapfile -t RAW_PROVIDERS < <(printf "%s" "$REVIEW_PROVIDERS" | tr ',' '\n')
@@ -373,6 +375,7 @@ GEMINI_RATE_FILE="${TMP_DIR}/gemini-rate-limit.flag"
 RATE_LIMITED_GEMINI="false"
 RATE_LIMIT_FILE="${TMP_DIR}/provider-rate-limits.txt"
 MAX_PARALLEL="${PROVIDER_MAX_PARALLEL:-3}"
+PROMPT_PROVIDERS=()
 
 run_with_timeout() {
   if command -v timeout >/dev/null 2>&1; then
@@ -934,6 +937,11 @@ fi
 RATE_LIMITED_PROVIDERS=()
 if [ -f "$RATE_LIMIT_FILE" ]; then
   mapfile -t RATE_LIMITED_PROVIDERS < "$RATE_LIMIT_FILE"
+fi
+
+PROMPT_PROVIDERS=("${SUCCESS_PROVIDERS[@]}")
+if [ "${#PROMPT_PROVIDERS[@]}" -eq 0 ]; then
+  PROMPT_PROVIDERS=("${PROVIDER_LIST[@]}")
 fi
 
 if [ "${#PROVIDER_LIST[@]}" -eq 0 ]; then
