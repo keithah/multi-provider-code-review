@@ -42,6 +42,17 @@ CONFIG_SOURCE="defaults"
 # default provider pools (defined early to avoid unset use during fallback)
 DEFAULT_OPENROUTER_PROVIDERS=("openrouter/google/gemini-2.0-flash-exp:free" "openrouter/mistralai/devstral-2512:free" "openrouter/xiaomi/mimo-v2-flash:free")
 FALLBACK_OPENCODE_PROVIDERS=("opencode/big-pickle" "opencode/grok-code" "opencode/minimax-m2.1-free" "opencode/glm-4.7-free")
+OPENROUTER_DYNAMIC_PROVIDERS=()
+# provider name validation
+validate_provider_name() {
+  local name="$1"
+  local allowed='^(opencode|openrouter)/[A-Za-z0-9._-]+(:free)?$'
+  if [[ "$name" =~ $allowed ]]; then
+    return 0
+  fi
+  echo "Invalid provider name: $name" >&2
+  return 1
+}
 # initialize configurable inputs to avoid set -u errors during config merge
 REVIEW_PROVIDERS="${REVIEW_PROVIDERS:-}"
 SYNTHESIS_MODEL="${SYNTHESIS_MODEL:-}"
@@ -210,7 +221,7 @@ fi
 # Build provider list (user override > defaults)
 RAW_PROVIDERS=()
 if [ -n "$REVIEW_PROVIDERS" ]; then
-mapfile -t RAW_PROVIDERS < <(printf "%s" "$REVIEW_PROVIDERS" | tr ',' '\n')
+  mapfile -t RAW_PROVIDERS < <(printf "%s" "$REVIEW_PROVIDERS" | tr ',' '\n')
 else
   if [ -n "$OPENROUTER_API_KEY" ]; then
     if [ "${#OPENROUTER_DYNAMIC_PROVIDERS[@]}" -gt 0 ]; then
@@ -227,6 +238,10 @@ OPENROUTER_REQUESTED="false"
 for raw_provider in "${RAW_PROVIDERS[@]}"; do
   provider="$(echo "$raw_provider" | xargs)"
   [ -z "$provider" ] && continue
+  if ! validate_provider_name "$provider"; then
+    echo "Skipping invalid provider: ${provider}" >&2
+    continue
+  fi
   if [[ "$provider" == openrouter/* ]]; then
     OPENROUTER_REQUESTED="true"
     if [ -z "$OPENROUTER_API_KEY" ]; then
@@ -314,7 +329,7 @@ done
 if [ "$PROVIDER_LIMIT" -gt 0 ] && [ "${#PROVIDERS[@]}" -gt "$PROVIDER_LIMIT" ]; then
   pr_hash=${PR_NUMBER//[^0-9]/}
   [ -z "$pr_hash" ] && pr_hash=1
-  start=$((pr_hash % ${#PROVIDERS[@]}))
+  start=$(( (pr_hash % ${#PROVIDERS[@]} + ${#PROVIDERS[@]}) % ${#PROVIDERS[@]} ))
   selected=()
   for i in $(seq 0 $((PROVIDER_LIMIT - 1))); do
     idx=$(((start + i) % ${#PROVIDERS[@]}))
@@ -374,6 +389,7 @@ MISSING_TEST_FILES="${TMP_DIR}/missing-tests.txt"
 GEMINI_RATE_FILE="${TMP_DIR}/gemini-rate-limit.flag"
 RATE_LIMITED_GEMINI="false"
 RATE_LIMIT_FILE="${TMP_DIR}/provider-rate-limits.txt"
+RATE_LOCK_FILE="${TMP_DIR}/provider-rate-limits.lock"
 MAX_PARALLEL="${PROVIDER_MAX_PARALLEL:-3}"
 PROMPT_PROVIDERS=()
 
@@ -444,7 +460,10 @@ EOF
   if ! [[ "$http_status" =~ ^2[0-9][0-9]$ ]]; then
     echo "OpenRouter provider ${provider} returned HTTP ${http_status}" >&2
     if [ "$http_status" = "429" ] || [ "$http_status" = "401" ]; then
-      echo "$provider" >> "$RATE_LIMIT_FILE"
+      (
+        flock -x 200
+        echo "$provider" >> "$RATE_LIMIT_FILE"
+      ) 200>"${RATE_LOCK_FILE}"
       if [ "$provider" = "openrouter/google/gemini-2.0-flash-exp:free" ]; then
         echo "Gemini free model rate limited; will avoid for synthesis." >&2
         echo "limited" > "$GEMINI_RATE_FILE"
@@ -909,7 +928,8 @@ try:
             if r.get("status") == "success" and r.get("name"):
                 names.append(r["name"])
 except Exception:
-    pass
+    import traceback
+    sys.stderr.write("Failed to parse provider success reports\n")
 for n in names:
     print(n)
 PYCODE
@@ -927,7 +947,8 @@ try:
             if r.get("status") != "success" and r.get("name"):
                 names.append(r["name"])
 except Exception:
-    pass
+    import traceback
+    sys.stderr.write("Failed to parse provider failure reports\n")
 for n in names:
     print(n)
 PYCODE
