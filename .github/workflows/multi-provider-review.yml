@@ -16,28 +16,13 @@ on:
 
 jobs:
   review:
-    if: |
-      (
-        github.event_name == 'pull_request' ||
-        (github.event.issue.pull_request &&
-          (startsWith(github.event.comment.body, '/review') ||
-           contains(github.event.comment.body, '@opencode') ||
-           contains(github.event.comment.body, '@claude'))) ||
-        github.event_name == 'workflow_dispatch'
-      )
-      && (
-        !github.event.pull_request ||
-        (
-          (
-            (vars.MAX_CHANGED_FILES != '' && vars.MAX_CHANGED_FILES != null && github.event.pull_request.changed_files <= fromJSON(vars.MAX_CHANGED_FILES))
-            || ((vars.MAX_CHANGED_FILES == '' || vars.MAX_CHANGED_FILES == null) && github.event.pull_request.changed_files <= 9999)
-          )
-          && (
-            (vars.MIN_CHANGED_LINES != '' && vars.MIN_CHANGED_LINES != null && (github.event.pull_request.additions + github.event.pull_request.deletions) >= fromJSON(vars.MIN_CHANGED_LINES))
-            || ((vars.MIN_CHANGED_LINES == '' || vars.MIN_CHANGED_LINES == null) && (github.event.pull_request.additions + github.event.pull_request.deletions) >= 0)
-          )
-        )
-      )
+    if: >
+      github.event_name == 'pull_request'
+      || (github.event.issue.pull_request
+          && (startsWith(github.event.comment.body, '/review')
+              || contains(github.event.comment.body, '@opencode')
+              || contains(github.event.comment.body, '@claude')))
+      || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
