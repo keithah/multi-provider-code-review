@@ -214,6 +214,7 @@ RATE_LIMITED_GEMINI="false"
 RATE_LIMIT_FILE="${TMP_DIR}/provider-rate-limits.txt"
 RATE_LOCK_FILE="${TMP_DIR}/provider-rate-limits.lock"
 MAX_PARALLEL="${PROVIDER_MAX_PARALLEL:-3}"
+AI_LIKELIHOOD_SECTION="${TMP_DIR}/ai-likelihood.md"
 PROMPT_PROVIDERS=()
 
 # Try to discover OpenRouter free models dynamically (best-effort)
@@ -1326,6 +1327,55 @@ with open(out_path, "w", encoding="utf-8") as f:
 PYCODE
 fi
 
+# Extract AI-generated code likelihood block for collapsible output
+AI_LIKELIHOOD_SUMMARY=$(python - "$SYNTHESIS_OUTPUT" "$AI_LIKELIHOOD_SECTION" <<'PYCODE' 2>/dev/null || true
+import sys, re, os
+path, out_path = sys.argv[1:]
+try:
+    lines = open(path, encoding="utf-8").read().splitlines()
+except Exception:
+    open(out_path, "w").close()
+    print("")
+    raise SystemExit
+
+start = None
+for idx, line in enumerate(lines):
+    if re.search(r"ai[- ]generated code likelihood", line, re.IGNORECASE):
+        start = idx
+        break
+
+if start is None:
+    open(out_path, "w").close()
+    print("")
+    raise SystemExit
+
+block = []
+for line in lines[start:]:
+    if block and re.match(r"^##+\\s", line):
+        break
+    block.append(line)
+
+text = "\n".join(block).strip()
+with open(out_path, "w", encoding="utf-8") as f:
+    f.write(text + ("\n" if text else ""))
+
+summary = ""
+for line in block:
+    m = re.search(r"overall estimate[:\\s]*([0-9]+%?)", line, re.IGNORECASE)
+    if m:
+        summary = f"AI Generated Code Likelihood: {m.group(1)}"
+        break
+if not summary:
+    for line in block:
+        m = re.search(r"([0-9]+%)[^0-9]*$", line)
+        if m:
+            summary = f"AI Generated Code Likelihood: {m.group(1)}"
+            break
+
+print(summary)
+PYCODE
+)
+
 PROVIDER_STATUS_SUMMARY="$(python - "$PROVIDER_REPORT_JL" "$COST_INFO" <<'PYCODE'
 import json, sys
 prov_path, cost_path = sys.argv[1:]
@@ -1386,7 +1436,7 @@ PYCODE
   fi
   echo "- Providers: ${PROVIDER_LIST[*]}"
   echo "- Synthesis model: ${SYNTHESIS_MODEL}"
-  echo "- AI-generated code likelihood: see Review section"
+  echo "- AI-generated code likelihood: see section below"
   echo ""
   echo "Provider status, usage, cost:"
   if [ -n "$PROVIDER_STATUS_SUMMARY" ]; then
@@ -1396,6 +1446,14 @@ PYCODE
   fi
   echo ""
   echo "</details>"
+  if [ -s "$AI_LIKELIHOOD_SECTION" ]; then
+    summary="${AI_LIKELIHOOD_SUMMARY:-AI Generated Code Likelihood}"
+    echo "<details><summary>${summary}</summary>"
+    echo ""
+    cat "$AI_LIKELIHOOD_SECTION"
+    echo ""
+    echo "</details>"
+  fi
   echo "<details><summary>Raw provider outputs</summary>"
   echo ""
   for provider in "${PROVIDER_LIST[@]}"; do
