@@ -1,9 +1,9 @@
 name: Test
 
 on:
-  push:
-  pull_request:
-  workflow_dispatch:
+  push: {}
+  pull_request: {}
+  workflow_dispatch: {}
 
 jobs:
   lint:
@@ -17,7 +17,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Ensure PyYAML present
-        run: python - <<'PY'
+        run: |
+          python - <<'PY'
 import sys, subprocess
 try:
     import yaml  # type: ignore
