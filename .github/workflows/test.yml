@@ -25,3 +25,9 @@ except Exception:
 PY
       - name: Config smoke tests
         run: python tests/config_smoke.py
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run integration budget test
+        run: python tests/integration_budget.py

@@ -31,8 +31,6 @@ if ! command -v gh >/dev/null 2>&1; then
   exit 1
 fi
 
-export GH_TOKEN="${GITHUB_TOKEN}"
-
 REPO="${GITHUB_REPOSITORY:-}"
 if [ -z "$REPO" ]; then
   echo "GITHUB_REPOSITORY is not set; unable to determine repository."
