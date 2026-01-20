@@ -52,6 +52,7 @@ def build_inline_payload(provider_findings, struct_line, max_comments, min_sev, 
         if severity_order.get(severity, 0) > severity_order.get(entry["max_sev"], 0):
             entry["max_sev"] = severity
             entry["finding"] = f
+            entry["finding"]["suggestion"] = suggestion
         if f.get("provider"):
             entry["providers"].add(f["provider"])
 
@@ -66,6 +67,8 @@ def build_inline_payload(provider_findings, struct_line, max_comments, min_sev, 
         if detail and detail != msg:
             body_lines.append(detail)
         suggestion = f.get("suggestion") or ""
+        if not suggestion.strip():
+            suggestion = "No specific suggestion provided; please adjust accordingly."
         body_lines.append("```suggestion")
         body_lines.append(suggestion)
         body_lines.append("```")

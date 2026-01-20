@@ -4,7 +4,7 @@ Tests for provider name validation and allowlist/blocklist filtering logic.
 """
 import re
 
-VALID_RE = re.compile(r"^(opencode|openrouter)/[A-Za-z0-9._-]+(:free)?$")
+VALID_RE = re.compile(r"^(opencode/[A-Za-z0-9._-]+|openrouter/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+(:free)?)$")
 
 
 def validate_provider_name(name: str) -> bool:

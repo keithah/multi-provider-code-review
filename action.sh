@@ -43,10 +43,12 @@ CONFIG_SOURCE="defaults"
 DEFAULT_OPENROUTER_PROVIDERS=("openrouter/google/gemini-2.0-flash-exp:free" "openrouter/mistralai/devstral-2512:free" "openrouter/xiaomi/mimo-v2-flash:free")
 FALLBACK_OPENCODE_PROVIDERS=("opencode/big-pickle" "opencode/grok-code" "opencode/minimax-m2.1-free" "opencode/glm-4.7-free")
 OPENROUTER_DYNAMIC_PROVIDERS=()
+# cap how many OpenRouter providers run by default (can be overridden)
+DEFAULT_PROVIDER_LIMIT=3
 # provider name validation
 validate_provider_name() {
   local name="$1"
-  local allowed='^(opencode|openrouter)/[A-Za-z0-9._-]+(:free)?$'
+  local allowed='^(opencode/[A-Za-z0-9._-]+|openrouter/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+(:free)?)$'
   if [[ "$name" =~ $allowed ]]; then
     return 0
   fi
@@ -215,10 +217,13 @@ for name in out:
     print(name)
 PYCODE
 )
+    if [ "${#OPENROUTER_DYNAMIC_PROVIDERS[@]}" -gt "$DEFAULT_PROVIDER_LIMIT" ]; then
+      OPENROUTER_DYNAMIC_PROVIDERS=("${OPENROUTER_DYNAMIC_PROVIDERS[@]:0:$DEFAULT_PROVIDER_LIMIT}")
+    fi
+  else
+    echo "Warning: failed to fetch OpenRouter model list; using static defaults." >&2
   fi
 fi
-
-# Build provider list (user override > defaults)
 
 # Build provider list (user override > defaults)
 RAW_PROVIDERS=()
@@ -229,7 +234,7 @@ else
     if [ "${#OPENROUTER_DYNAMIC_PROVIDERS[@]}" -gt 0 ]; then
       RAW_PROVIDERS+=("${OPENROUTER_DYNAMIC_PROVIDERS[@]}")
     else
-      RAW_PROVIDERS+=("${DEFAULT_OPENROUTER_PROVIDERS[@]}")
+      RAW_PROVIDERS+=("${DEFAULT_OPENROUTER_PROVIDERS[@]:0:$DEFAULT_PROVIDER_LIMIT}")
     fi
   fi
   RAW_PROVIDERS+=("${FALLBACK_OPENCODE_PROVIDERS[@]}")
@@ -346,7 +351,7 @@ RUN_TIMEOUT_SECONDS="${RUN_TIMEOUT_SECONDS:-600}"
 OPENROUTER_API_KEY="${OPENROUTER_API_KEY:-}"
 INLINE_MAX_COMMENTS="${INLINE_MAX_COMMENTS:-5}"
 INLINE_MIN_SEVERITY="${INLINE_MIN_SEVERITY:-major}"
-INLINE_MIN_AGREEMENT="${INLINE_MIN_AGREEMENT:-1}"
+INLINE_MIN_AGREEMENT="${INLINE_MIN_AGREEMENT:-2}"
 PROVIDER_LIMIT="${PROVIDER_LIMIT:-0}"
 PROVIDER_RETRIES="${PROVIDER_RETRIES:-2}"
 MIN_CHANGED_LINES="${MIN_CHANGED_LINES:-0}"
@@ -417,10 +422,8 @@ run_openrouter() {
   local model="${provider#openrouter/}"
   local payload_file
   local response_file
-  local curl_cfg
   payload_file=$(mktemp) || return 1
   response_file=$(mktemp) || return 1
-  curl_cfg=$(mktemp) || return 1
 
   if ! python - "$prompt" "$model" "$payload_file" >/dev/null <<'PYCODE'
 import json, sys
@@ -438,25 +441,17 @@ PYCODE
     return 1
   fi
 
-  cat > "$curl_cfg" <<EOF
-url = "https://openrouter.ai/api/v1/chat/completions"
-request = "POST"
-header = "Content-Type: application/json"
-header = "Authorization: Bearer ${OPENROUTER_API_KEY}"
-header = "HTTP-Referer: https://github.com/keithah/multi-provider-code-review"
-header = "X-Title: Multi-Provider Code Review"
-data = @${payload_file}
-silent
-show-error
-write-out = "%{http_code}"
-output = ${response_file}
-EOF
-
-  http_status=$(run_with_timeout curl --config "$curl_cfg")
+  http_status=$(run_with_timeout curl -sS -w "%{http_code}" -o "${response_file}" -X POST "https://openrouter.ai/api/v1/chat/completions" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer ${OPENROUTER_API_KEY}" \
+    -H "HTTP-Referer: https://github.com/keithah/multi-provider-code-review" \
+    -H "X-Title: Multi-Provider Code Review" \
+    --data-binary @"${payload_file}")
   curl_rc=$?
-  rm -f "$curl_cfg"
+  rm -f "$payload_file"
   if [ $curl_rc -ne 0 ]; then
     echo "curl failed for OpenRouter provider ${provider} (rc=${curl_rc})" >&2
+    rm -f "$response_file"
     return 1
   fi
   if ! [[ "$http_status" =~ ^2[0-9][0-9]$ ]]; then
@@ -472,6 +467,7 @@ EOF
       fi
     fi
     head -c 500 "${response_file}" >&2 || true
+    rm -f "$response_file"
     return 1
   fi
 
@@ -500,9 +496,11 @@ PYCODE
   if [ $? -ne 0 ]; then
     echo "Failed to parse OpenRouter response for ${provider}" >&2
     cat "${response_file}" >&2 || true
+    rm -f "$response_file"
     return 1
   fi
 
+  rm -f "$response_file"
   return 0
 }
 
@@ -959,7 +957,10 @@ fi
 
 RATE_LIMITED_PROVIDERS=()
 if [ -f "$RATE_LIMIT_FILE" ]; then
-  mapfile -t RATE_LIMITED_PROVIDERS < "$RATE_LIMIT_FILE"
+  (
+    flock -s 200
+    mapfile -t RATE_LIMITED_PROVIDERS < "$RATE_LIMIT_FILE"
+  ) 200>"${RATE_LOCK_FILE}"
 fi
 
 PROMPT_PROVIDERS=("${SUCCESS_PROVIDERS[@]}")
