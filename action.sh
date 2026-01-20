@@ -41,6 +41,9 @@ fi
 
 CONFIG_FILE=".github/multi-review.yml"
 CONFIG_SOURCE="defaults"
+# default provider pools (defined early to avoid unset use during fallback)
+DEFAULT_OPENROUTER_PROVIDERS=("openrouter/google/gemini-2.0-flash-exp:free" "openrouter/mistralai/devstral-2512:free" "openrouter/xiaomi/mimo-v2-flash:free")
+FALLBACK_OPENCODE_PROVIDERS=("opencode/big-pickle" "opencode/grok-code" "opencode/minimax-m2.1-free" "opencode/glm-4.7-free")
 # initialize configurable inputs to avoid set -u errors during config merge
 REVIEW_PROVIDERS="${REVIEW_PROVIDERS:-}"
 SYNTHESIS_MODEL="${SYNTHESIS_MODEL:-}"
@@ -67,6 +70,7 @@ def load_yaml(p):
             subprocess.run([sys.executable, "-m", "pip", "install", "pyyaml==6.0.2", "--quiet"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             import yaml  # type: ignore
         except Exception:
+            sys.stderr.write("Failed to import/install pyyaml; YAML config will be skipped.\n")
             return None
     try:
         with open(p, "r", encoding="utf-8") as f:
@@ -167,7 +171,11 @@ EOF
     fi
   fi
 fi
-IFS=',' read -ra RAW_PROVIDERS <<< "$REVIEW_PROVIDERS"
+if [ -z "$REVIEW_PROVIDERS" ]; then
+  RAW_PROVIDERS=()
+else
+  mapfile -t RAW_PROVIDERS < <(printf "%s" "$REVIEW_PROVIDERS" | tr ',' '\n')
+fi
 PROVIDERS=()
 for raw_provider in "${RAW_PROVIDERS[@]}"; do
   provider="$(echo "$raw_provider" | xargs)"
@@ -268,8 +276,6 @@ TOTAL_PROMPT_TOKENS=0
 TOTAL_COMPLETION_TOKENS=0
 TOTAL_TOKENS=0
 BUDGET_MAX_USD="${BUDGET_MAX_USD:-0}"
-DEFAULT_OPENROUTER_PROVIDERS=("openrouter/google/gemini-2.0-flash-exp:free" "openrouter/mistralai/devstral-2512:free" "openrouter/xiaomi/mimo-v2-flash:free")
-FALLBACK_OPENCODE_PROVIDERS=("opencode/big-pickle" "opencode/grok-code" "opencode/minimax-m2.1-free" "opencode/glm-4.7-free")
 PROVIDER_ALLOWLIST=()
 PROVIDER_BLOCKLIST=()
 SKIP_LABELS=()
@@ -278,6 +284,7 @@ REPORT_DIR="${GITHUB_WORKSPACE:-$PWD}/multi-provider-report"
 mkdir -p "$REPORT_DIR"
 
 TMP_DIR="$(mktemp -d -t mpr.XXXXXX)"
+trap 'rm -rf "$TMP_DIR"' EXIT
 PR_FILES="${TMP_DIR}/pr-files.json"
 DIFF_FILE="${TMP_DIR}/pr.diff"
 PR_META="${TMP_DIR}/pr-meta.json"
@@ -351,6 +358,7 @@ PYCODE
   fi
   if ! [[ "$http_status" =~ ^2[0-9][0-9]$ ]]; then
     echo "OpenRouter provider ${provider} returned HTTP ${http_status}" >&2
+    head -c 500 "${response_file}" >&2 || true
     return 1
   fi
 
@@ -728,7 +736,9 @@ PYCODE
 done
 
 if [ "${#PIDS[@]}" -gt 0 ]; then
-  wait "${PIDS[@]}"
+  if ! wait "${PIDS[@]}"; then
+    echo "One or more providers exited with failure status (continuing with available outputs)." >&2
+  fi
 fi
 
 cat "${REVIEWS_DIR}"/*.report > "$PROVIDER_REPORT_JL" 2>/dev/null || true
@@ -1295,7 +1305,7 @@ for f in all_findings:
         continue
     suggestion = f.get("suggestion") or ""
     if not suggestion.strip():
-        continue  # require suggestion to post inline
+        suggestion = "No specific suggestion provided; please adjust accordingly."
     key = (file, line, msg)
     entry = by_key.setdefault(key, {"providers": set(), "finding": f, "max_sev": severity})
     if severity_order.get(severity, 0) > severity_order.get(entry["max_sev"], 0):
