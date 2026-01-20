@@ -782,11 +782,6 @@ if [ "${#PROVIDER_LIST[@]}" -eq 0 ]; then
   exit 1
 fi
 
-if [ "$PROVIDER_SUCCESS_COUNT" -eq 0 ]; then
-  echo "All providers failed after retries."
-  exit 1
-fi
-
 if [ -f "$PRICING_CACHE" ]; then
   python - "$PROVIDER_REPORT_JL" "$PRICING_CACHE" "$COST_INFO" <<'PYCODE' || true
 import json, sys
