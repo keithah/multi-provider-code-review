@@ -314,6 +314,8 @@ SYNTHESIS_LOG="${TMP_DIR}/synthesis.log"
 COMMENT_FILE="${TMP_DIR}/final-review.md"
 COMMENT_CHUNK_PREFIX="${TMP_DIR}/comment-chunk"
 MISSING_TEST_FILES="${TMP_DIR}/missing-tests.txt"
+GEMINI_RATE_FILE="${TMP_DIR}/gemini-rate-limit.flag"
+RATE_LIMITED_GEMINI="false"
 
 run_with_timeout() {
   if command -v timeout >/dev/null 2>&1; then
@@ -381,6 +383,10 @@ EOF
   fi
   if ! [[ "$http_status" =~ ^2[0-9][0-9]$ ]]; then
     echo "OpenRouter provider ${provider} returned HTTP ${http_status}" >&2
+    if [ "$http_status" = "429" ] && [[ "$provider" == "openrouter/google/gemini-2.0-flash-exp:free" ]]; then
+      echo "Gemini free model rate limited; will avoid for synthesis." >&2
+      echo "limited" > "$GEMINI_RATE_FILE"
+    fi
     head -c 500 "${response_file}" >&2 || true
     return 1
   fi
@@ -815,6 +821,19 @@ fi
 if [ "${#PROVIDER_LIST[@]}" -eq 0 ]; then
   echo "No valid providers ran successfully."
   exit 1
+fi
+
+# If Gemini free is rate-limited, avoid using it for synthesis
+if [ -f "$GEMINI_RATE_FILE" ]; then
+  RATE_LIMITED_GEMINI="true"
+fi
+if [ "$RATE_LIMITED_GEMINI" = "true" ] && [ "$SYNTHESIS_MODEL" = "openrouter/google/gemini-2.0-flash-exp:free" ]; then
+  if [ -n "$OPENROUTER_API_KEY" ]; then
+    SYNTHESIS_MODEL="openrouter/mistralai/devstral-2512:free"
+  else
+    SYNTHESIS_MODEL="opencode/big-pickle"
+  fi
+  echo "Synthesis model switched due to Gemini free rate limit: ${SYNTHESIS_MODEL}"
 fi
 
 USES_OPENROUTER="false"
