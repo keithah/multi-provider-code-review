@@ -246,6 +246,15 @@ if [[ "$SYNTHESIS_MODEL" == openrouter/* ]] && [ -z "$OPENROUTER_API_KEY" ]; the
   SYNTHESIS_MODEL="opencode/big-pickle"
 fi
 
+# Validate numeric inputs early to avoid arithmetic errors
+is_int='^[0-9]+$'
+for var_name in PROVIDER_LIMIT MIN_CHANGED_LINES MAX_CHANGED_FILES INLINE_MAX_COMMENTS INLINE_MIN_AGREEMENT RUN_TIMEOUT_SECONDS DIFF_MAX_BYTES PROVIDER_RETRIES; do
+  val="${!var_name}"
+  if ! [[ "$val" =~ $is_int ]]; then
+    printf -v "$var_name" "%s" "0"
+  fi
+done
+
 # Limit providers if requested (deterministic rotation based on PR number)
 if [ "$PROVIDER_LIMIT" -gt 0 ] && [ "${#PROVIDERS[@]}" -gt "$PROVIDER_LIMIT" ]; then
   pr_hash=${PR_NUMBER//[^0-9]/}
@@ -330,10 +339,12 @@ run_openrouter() {
   local model="${provider#openrouter/}"
   local payload_file
   local response_file
+  local curl_cfg
   payload_file=$(mktemp) || return 1
   response_file=$(mktemp) || return 1
+  curl_cfg=$(mktemp) || return 1
 
-  python - "$prompt" "$model" "$payload_file" >/dev/null <<'PYCODE'
+  if ! python - "$prompt" "$model" "$payload_file" >/dev/null <<'PYCODE'
 import json, sys
 prompt, model, path = sys.argv[1], sys.argv[2], sys.argv[3]
 payload = {
@@ -345,18 +356,29 @@ payload = {
 with open(path, "w", encoding="utf-8") as f:
     json.dump(payload, f)
 PYCODE
-  if [ $? -ne 0 ]; then
+  then
     return 1
   fi
 
-  http_status=$(run_with_timeout curl -sS -w "%{http_code}" -o "${response_file}" -X POST "https://openrouter.ai/api/v1/chat/completions" \
-    -H "Content-Type: application/json" \
-    -H "Authorization: Bearer ${OPENROUTER_API_KEY}" \
-    -H "HTTP-Referer: https://github.com/keithah/multi-provider-code-review" \
-    -H "X-Title: Multi-Provider Code Review" \
-    -d @"${payload_file}" || echo "curl_error")
-  if [ "$http_status" = "curl_error" ]; then
-    echo "curl failed for OpenRouter provider ${provider}" >&2
+  cat > "$curl_cfg" <<EOF
+url = "https://openrouter.ai/api/v1/chat/completions"
+request = "POST"
+header = "Content-Type: application/json"
+header = "Authorization: Bearer ${OPENROUTER_API_KEY}"
+header = "HTTP-Referer: https://github.com/keithah/multi-provider-code-review"
+header = "X-Title: Multi-Provider Code Review"
+data = @"${payload_file}"
+silent
+show-error
+write-out = "%{http_code}"
+output = "${response_file}"
+EOF
+
+  http_status=$(run_with_timeout curl --config "$curl_cfg")
+  curl_rc=$?
+  rm -f "$curl_cfg"
+  if [ $curl_rc -ne 0 ]; then
+    echo "curl failed for OpenRouter provider ${provider} (rc=${curl_rc})" >&2
     return 1
   fi
   if ! [[ "$http_status" =~ ^2[0-9][0-9]$ ]]; then
@@ -431,10 +453,6 @@ print(f"{adds} {dels} {files} {','.join(labels)}")
 PYCODE
     read -r TOTAL_ADDITIONS TOTAL_DELETIONS CHANGED_FILES LABELS_CSV < "$PR_META_FIELDS" || true
   fi
-fi
-
-if [ -n "$OPENROUTER_API_KEY" ]; then
-  curl -sS -H "Authorization: Bearer ${OPENROUTER_API_KEY}" https://openrouter.ai/api/v1/models > "$PRICING_CACHE" || true
 fi
 
 if gh api "/repos/${REPO}/pulls/${PR_NUMBER}" -H "Accept: application/vnd.github.v3.diff" > "$DIFF_FILE"; then
@@ -801,7 +819,21 @@ if [ "${#PROVIDER_LIST[@]}" -eq 0 ]; then
   exit 1
 fi
 
-if [ -f "$PRICING_CACHE" ]; then
+USES_OPENROUTER="false"
+for p in "${PROVIDER_LIST[@]}"; do
+  if [[ "$p" == openrouter/* ]]; then
+    USES_OPENROUTER="true"
+    break
+  fi
+done
+
+if [ "$USES_OPENROUTER" = "true" ] && [ -n "$OPENROUTER_API_KEY" ]; then
+  if [ ! -f "$PRICING_CACHE" ]; then
+    curl -sS -H "Authorization: Bearer ${OPENROUTER_API_KEY}" https://openrouter.ai/api/v1/models > "$PRICING_CACHE" || true
+  fi
+fi
+
+if [ "$USES_OPENROUTER" = "true" ] && [ -f "$PRICING_CACHE" ]; then
   python - "$PROVIDER_REPORT_JL" "$PRICING_CACHE" "$COST_INFO" <<'PYCODE' || true
 import json, sys
 from decimal import Decimal
