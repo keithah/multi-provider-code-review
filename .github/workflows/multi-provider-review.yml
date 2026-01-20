@@ -17,7 +17,8 @@ on:
 jobs:
   review:
     if: >
-      github.event.pull_request
+      github.event_name == 'push'
+      || github.event.pull_request
       || (github.event.issue.pull_request
           && (startsWith(github.event.comment.body, '/review')
               || contains(github.event.comment.body, '@opencode')
@@ -67,6 +68,10 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            // Resolve PR number for pull_request, issue_comment, workflow_dispatch, or push events.
             let number = context.payload.pull_request?.number;
             if (!number && context.payload.issue?.pull_request) {
               number = context.payload.issue.number;
@@ -74,13 +79,39 @@ jobs:
             if (!number && context.payload.inputs?.pr_number) {
               number = Number(context.payload.inputs.pr_number);
             }
+            if (!number && context.eventName === 'push') {
+              // Try to find an open PR for this commit/branch
+              const ref = context.ref?.replace('refs/heads/', '');
+              if (context.sha) {
+                const associated = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                  owner,
+                  repo,
+                  commit_sha: context.sha,
+                });
+                const openPr = associated.data.find(pr => pr.state === 'open');
+                if (openPr) number = openPr.number;
+              }
+              if (!number && ref) {
+                const prs = await github.rest.pulls.list({
+                  owner,
+                  repo,
+                  head: `${owner}:${ref}`,
+                  state: 'open',
+                });
+                if (prs.data.length > 0) {
+                  number = prs.data[0].number;
+                }
+              }
+            }
+
             if (!number) {
               core.setFailed('No pull request context available');
               return;
             }
+
             const { data } = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
+              owner,
+              repo,
               pull_number: number,
             });
             core.setOutput('number', data.number);
