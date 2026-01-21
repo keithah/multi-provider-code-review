@@ -78,21 +78,7 @@ if [ -f "$CONFIG_FILE" ]; then
   fi
   if [ -n "$CONFIG_EXPORTS" ]; then
     CONFIG_SOURCE="$CONFIG_FILE"
-    if command -v jq >/dev/null 2>&1; then
-      REVIEW_PROVIDERS="$(echo "$CONFIG_EXPORTS" | jq -r '.REVIEW_PROVIDERS // "'$REVIEW_PROVIDERS'"')"
-      SYNTHESIS_MODEL="$(echo "$CONFIG_EXPORTS" | jq -r '.SYNTHESIS_MODEL // "'$SYNTHESIS_MODEL'"')"
-      INLINE_MAX_COMMENTS="$(echo "$CONFIG_EXPORTS" | jq -r '.INLINE_MAX_COMMENTS // "'$INLINE_MAX_COMMENTS'"')"
-      INLINE_MIN_SEVERITY="$(echo "$CONFIG_EXPORTS" | jq -r '.INLINE_MIN_SEVERITY // "'$INLINE_MIN_SEVERITY'"')"
-      INLINE_MIN_AGREEMENT="$(echo "$CONFIG_EXPORTS" | jq -r '.INLINE_MIN_AGREEMENT // "'$INLINE_MIN_AGREEMENT'"')"
-      DIFF_MAX_BYTES="$(echo "$CONFIG_EXPORTS" | jq -r '.DIFF_MAX_BYTES // "'$DIFF_MAX_BYTES'"')"
-      RUN_TIMEOUT_SECONDS="$(echo "$CONFIG_EXPORTS" | jq -r '.RUN_TIMEOUT_SECONDS // "'$RUN_TIMEOUT_SECONDS'"')"
-      MIN_CHANGED_LINES="$(echo "$CONFIG_EXPORTS" | jq -r '.MIN_CHANGED_LINES // "'$MIN_CHANGED_LINES'"')"
-      MAX_CHANGED_FILES="$(echo "$CONFIG_EXPORTS" | jq -r '.MAX_CHANGED_FILES // "'$MAX_CHANGED_FILES'"')"
-      PROVIDER_ALLOWLIST_RAW="$(echo "$CONFIG_EXPORTS" | jq -r '.PROVIDER_ALLOWLIST // ""')"
-      PROVIDER_BLOCKLIST_RAW="$(echo "$CONFIG_EXPORTS" | jq -r '.PROVIDER_BLOCKLIST // ""')"
-      SKIP_LABELS_RAW="$(echo "$CONFIG_EXPORTS" | jq -r '.SKIP_LABELS // ""')"
-    else
-      read -r REVIEW_PROVIDERS SYNTHESIS_MODEL INLINE_MAX_COMMENTS INLINE_MIN_SEVERITY INLINE_MIN_AGREEMENT DIFF_MAX_BYTES RUN_TIMEOUT_SECONDS MIN_CHANGED_LINES MAX_CHANGED_FILES PROVIDER_ALLOWLIST_RAW PROVIDER_BLOCKLIST_RAW SKIP_LABELS_RAW <<EOF
+    read -r REVIEW_PROVIDERS SYNTHESIS_MODEL INLINE_MAX_COMMENTS INLINE_MIN_SEVERITY INLINE_MIN_AGREEMENT DIFF_MAX_BYTES RUN_TIMEOUT_SECONDS MIN_CHANGED_LINES MAX_CHANGED_FILES PROVIDER_ALLOWLIST_RAW PROVIDER_BLOCKLIST_RAW SKIP_LABELS_RAW <<EOF
 $(python - <<'PYCODE' "$CONFIG_EXPORTS" "$REVIEW_PROVIDERS" "$SYNTHESIS_MODEL" "$INLINE_MAX_COMMENTS" "$INLINE_MIN_SEVERITY" "$INLINE_MIN_AGREEMENT" "$DIFF_MAX_BYTES" "$RUN_TIMEOUT_SECONDS" "$MIN_CHANGED_LINES" "$MAX_CHANGED_FILES"
 import json, sys
 data = json.loads(sys.argv[1])
@@ -105,7 +91,8 @@ print(" ".join(out))
 PYCODE
 )
 EOF
-    fi
+  else
+    echo "Config file present but could not be parsed; using defaults." >&2
   fi
 fi
 # Prefer explicit workflow input SKIP_LABELS over config/defaults
@@ -143,11 +130,14 @@ PROMPT_PROVIDERS=()
 
 # Try to discover OpenRouter free models dynamically (best-effort)
 if [ -n "$OPENROUTER_API_KEY" ]; then
-  if curl -sS \
-    -H "Authorization: Bearer ${OPENROUTER_API_KEY}" \
-    -H "HTTP-Referer: https://github.com/keithah/multi-provider-code-review" \
-    -H "X-Title: Multi-Provider Code Review" \
-    https://openrouter.ai/api/v1/models > "$PRICING_CACHE"; then
+  header_file="$(mktemp)"
+  chmod 600 "$header_file" || true
+  {
+    echo "header = \"Authorization: Bearer ${OPENROUTER_API_KEY}\""
+    echo "header = \"HTTP-Referer: https://github.com/keithah/multi-provider-code-review\""
+    echo "header = \"X-Title: Multi-Provider Code Review\""
+  } > "$header_file"
+  if curl -sS -K "$header_file" https://openrouter.ai/api/v1/models > "$PRICING_CACHE"; then
     mapfile -t OPENROUTER_DYNAMIC_PROVIDERS < <(python - "$PRICING_CACHE" <<'PYCODE' 2>/dev/null || true
 import json, sys
 try:
@@ -177,6 +167,7 @@ PYCODE
   else
     echo "Warning: failed to fetch OpenRouter model list; using static defaults." >&2
   fi
+  rm -f "$header_file"
 fi
 
 # Build provider list (user override > defaults)
@@ -218,7 +209,9 @@ for raw_provider in "${RAW_PROVIDERS[@]}"; do
       break
     fi
   done
-  $skip && continue
+  if $skip; then
+    continue
+  fi
   PROVIDERS+=("$provider")
 done
 
@@ -366,13 +359,7 @@ LABELS_CSV=""
 SKIP_REASON=""
 
 if gh api "/repos/${REPO}/pulls/${PR_NUMBER}" > "$PR_META"; then
-  if command -v jq >/dev/null 2>&1; then
-    TOTAL_ADDITIONS=$(jq -r '.additions // 0' "$PR_META")
-    TOTAL_DELETIONS=$(jq -r '.deletions // 0' "$PR_META")
-    CHANGED_FILES=$(jq -r '.changed_files // 0' "$PR_META")
-    LABELS_CSV=$(jq -r '[.labels[]?.name] | join(",")' "$PR_META")
-  else
-    python - "$PR_META" <<'PYCODE' >"$PR_META_FIELDS" 2>/dev/null || true
+  python - "$PR_META" <<'PYCODE' >"$PR_META_FIELDS" 2>/dev/null || true
 import json, sys
 data = json.load(open(sys.argv[1]))
 adds = data.get("additions", 0)
@@ -381,8 +368,7 @@ files = data.get("changed_files", 0)
 labels = [l.get("name","") for l in data.get("labels", []) if l.get("name")]
 print(f"{adds} {dels} {files} {','.join(labels)}")
 PYCODE
-    read -r TOTAL_ADDITIONS TOTAL_DELETIONS CHANGED_FILES LABELS_CSV < "$PR_META_FIELDS" || true
-  fi
+  read -r TOTAL_ADDITIONS TOTAL_DELETIONS CHANGED_FILES LABELS_CSV < "$PR_META_FIELDS" || true
 fi
 
 if gh api "/repos/${REPO}/pulls/${PR_NUMBER}" -H "Accept: application/vnd.github.v3.diff" > "$DIFF_FILE"; then

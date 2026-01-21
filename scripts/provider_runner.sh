@@ -20,6 +20,13 @@ run_openrouter() {
     return 1
   fi
 
+  # Ensure lock file exists for flock
+  : > "$RATE_LOCK_FILE" 2>/dev/null || true
+  if [ ! -w "$RATE_LOCK_FILE" ]; then
+    echo "Rate limit lock file not writable: ${RATE_LOCK_FILE}" >&2
+    return 1
+  fi
+
   local model="${provider#openrouter/}"
   local payload_file
   local response_file
@@ -209,7 +216,11 @@ PYCODE
     fi
   fi
 
-  cat "${REVIEWS_DIR}"/*.report > "$PROVIDER_REPORT_JL" 2>/dev/null || true
+  if compgen -G "${REVIEWS_DIR}"/*.report >/dev/null 2>&1; then
+    cat "${REVIEWS_DIR}"/*.report > "$PROVIDER_REPORT_JL" 2>/dev/null || true
+  else
+    : > "$PROVIDER_REPORT_JL"
+  fi
   mapfile -t SUCCESS_PROVIDERS < <(python - "$PROVIDER_REPORT_JL" <<'PYCODE' 2>/dev/null || true
 import json, sys
 names = []
