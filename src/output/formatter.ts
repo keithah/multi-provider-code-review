@@ -20,19 +20,21 @@ export class MarkdownFormatter {
     }
 
     if (review.actionItems.length > 0) {
-      lines.push('\n## Action Items');
+      lines.push('\n<details><summary>Action Items</summary>');
       review.actionItems.forEach(item => lines.push(`- ${item}`));
+      lines.push('</details>');
     }
 
     if (review.testHints && review.testHints.length > 0) {
-      lines.push('\n## Test Coverage');
+      lines.push('\n<details><summary>Test Coverage</summary>');
       review.testHints.forEach(hint =>
         lines.push(`- ${hint.file} → add ${hint.suggestedTestFile} (${hint.testPattern})`)
       );
+      lines.push('</details>');
     }
 
     lines.push('\n---');
-    lines.push('### Run details (usage, cost, providers, status)');
+    lines.push('<details><summary>Run details (usage, cost, providers, status)</summary>');
     lines.push(
       `- Duration: ${review.metrics.durationSeconds.toFixed(1)}s • Cost: $${review.metrics.totalCost.toFixed(4)} • Tokens: ${review.metrics.totalTokens}`
     );
@@ -44,16 +46,18 @@ export class MarkdownFormatter {
         );
       });
     }
+    lines.push('</details>');
 
     if (review.aiAnalysis) {
-      lines.push('\n### AI Generated Code Likelihood');
+      lines.push('\n<details><summary>AI Generated Code Likelihood</summary>');
       lines.push(
         `- Overall: ${(review.aiAnalysis.averageLikelihood * 100).toFixed(1)}% (${review.aiAnalysis.consensus})`
       );
+      lines.push('</details>');
     }
 
     if (review.providerResults && review.providerResults.length > 0) {
-      lines.push('\n### Raw provider outputs');
+      lines.push('\n<details><summary>Raw provider outputs</summary>');
       for (const result of review.providerResults) {
         lines.push(`- ${result.name} [${result.status}] (${result.durationSeconds.toFixed(1)}s)`);
         if (result.result?.content) {
@@ -63,6 +67,7 @@ export class MarkdownFormatter {
           lines.push('```');
         }
       }
+      lines.push('</details>');
     }
 
     return lines.join('\n');

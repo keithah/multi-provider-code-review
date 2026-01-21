@@ -31579,10 +31579,12 @@ var ProviderRegistry = class {
   openRouterPricing = new PricingService(process.env.OPENROUTER_API_KEY);
   async createProviders(config) {
     let providers = this.instantiate(config.providers);
-    if (providers.length === 0 && process.env.OPENROUTER_API_KEY) {
+    const userProvidedList = Boolean(process.env.REVIEW_PROVIDERS);
+    if (process.env.OPENROUTER_API_KEY && (!userProvidedList || providers.length === 0)) {
       const freeModels = await this.fetchFreeOpenRouterModels();
       providers.push(...this.instantiate(freeModels));
     }
+    providers = this.dedupeProviders(providers);
     providers = this.applyAllowBlock(providers, config);
     providers = await this.filterRateLimited(providers);
     const selectionLimit = config.providerLimit > 0 ? config.providerLimit : Math.min(6, providers.length || 6);
@@ -31662,6 +31664,17 @@ var ProviderRegistry = class {
     const shuffled = [...providers].sort(() => Math.random() - 0.5);
     const count = Math.max(min, Math.min(max, shuffled.length));
     return shuffled.slice(0, count);
+  }
+  dedupeProviders(providers) {
+    const seen = /* @__PURE__ */ new Set();
+    const result = [];
+    for (const p of providers) {
+      if (seen.has(p.name))
+        continue;
+      seen.add(p.name);
+      result.push(p);
+    }
+    return result;
   }
   async fetchFreeOpenRouterModels() {
     try {
@@ -33227,17 +33240,19 @@ var MarkdownFormatter = class {
       });
     }
     if (review.actionItems.length > 0) {
-      lines.push("\n## Action Items");
+      lines.push("\n<details><summary>Action Items</summary>");
       review.actionItems.forEach((item) => lines.push(`- ${item}`));
+      lines.push("</details>");
     }
     if (review.testHints && review.testHints.length > 0) {
-      lines.push("\n## Test Coverage");
+      lines.push("\n<details><summary>Test Coverage</summary>");
       review.testHints.forEach(
         (hint) => lines.push(`- ${hint.file} \u2192 add ${hint.suggestedTestFile} (${hint.testPattern})`)
       );
+      lines.push("</details>");
     }
     lines.push("\n---");
-    lines.push("### Run details (usage, cost, providers, status)");
+    lines.push("<details><summary>Run details (usage, cost, providers, status)</summary>");
     lines.push(
       `- Duration: ${review.metrics.durationSeconds.toFixed(1)}s \u2022 Cost: $${review.metrics.totalCost.toFixed(4)} \u2022 Tokens: ${review.metrics.totalTokens}`
     );
@@ -33249,14 +33264,16 @@ var MarkdownFormatter = class {
         );
       });
     }
+    lines.push("</details>");
     if (review.aiAnalysis) {
-      lines.push("\n### AI Generated Code Likelihood");
+      lines.push("\n<details><summary>AI Generated Code Likelihood</summary>");
       lines.push(
         `- Overall: ${(review.aiAnalysis.averageLikelihood * 100).toFixed(1)}% (${review.aiAnalysis.consensus})`
       );
+      lines.push("</details>");
     }
     if (review.providerResults && review.providerResults.length > 0) {
-      lines.push("\n### Raw provider outputs");
+      lines.push("\n<details><summary>Raw provider outputs</summary>");
       for (const result of review.providerResults) {
         lines.push(`- ${result.name} [${result.status}] (${result.durationSeconds.toFixed(1)}s)`);
         if (result.result?.content) {
@@ -33266,6 +33283,7 @@ var MarkdownFormatter = class {
           lines.push("```");
         }
       }
+      lines.push("</details>");
     }
     return lines.join("\n");
   }
@@ -33430,7 +33448,7 @@ var ReviewOrchestrator = class {
     const cachedFindings = config.enableCaching ? await this.components.cache.load(pr) : null;
     const providers = await this.components.providerRegistry.createProviders(config);
     const prompt = this.components.promptBuilder.build(pr);
-    await this.ensureBudget(config, prompt, providers.map((p) => p.name));
+    await this.ensureBudget(config);
     const astFindings = config.enableAstAnalysis ? this.components.astAnalyzer.analyze(pr.files) : [];
     const ruleFindings = this.components.rules.run(pr.files);
     const securityFindings = config.enableSecurity ? this.components.security.scan(pr.files) : [];
@@ -33513,20 +33531,9 @@ var ReviewOrchestrator = class {
     const lower = author.toLowerCase();
     return ["bot", "dependabot", "renovate", "github-actions", "[bot]"].some((p) => lower.includes(p));
   }
-  async ensureBudget(config, prompt, providerNames) {
+  async ensureBudget(config) {
     if (config.budgetMaxUsd <= 0)
       return;
-    const estimatedTokens = this.estimateTokens(prompt);
-    let projected = 0;
-    for (const name of providerNames) {
-      const modelId = name.replace("openrouter/", "").replace("opencode/", "");
-      if (!this.components.costTracker)
-        continue;
-      projected += 0;
-    }
-    if (projected > config.budgetMaxUsd) {
-      throw new Error(`Estimated cost $${projected.toFixed(4)} exceeds budget $${config.budgetMaxUsd.toFixed(2)}`);
-    }
   }
   estimateTokens(text) {
     return Math.ceil(Buffer.byteLength(text, "utf8") / 4);
