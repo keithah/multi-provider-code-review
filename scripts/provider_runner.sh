@@ -11,9 +11,8 @@ run_with_timeout() {
 
 run_openrouter() {
   local provider="$1"
-  local prompt="$2"
-  local outfile="$3"
-  local usagefile="${4:-}"
+  local outfile="$2"
+  local usagefile="${3:-}"
 
   if [ -z "$OPENROUTER_API_KEY" ]; then
     echo "OpenRouter provider ${provider} requested but OPENROUTER_API_KEY is not set."
@@ -36,9 +35,14 @@ run_openrouter() {
   header_file=$(mktemp) || { rm -f "$payload_file" "$response_file"; return 1; }
   chmod 600 "$header_file" || true
 
-  if ! python - "$prompt" "$model" "$payload_file" >/dev/null <<'PYCODE'
-import json, sys
-prompt, model, path = sys.argv[1], sys.argv[2], sys.argv[3]
+  if ! python - "$PROMPT_FILE" "$model" "$payload_file" >/dev/null <<'PYCODE'
+import json, sys, os
+prompt_path, model, path = sys.argv[1], sys.argv[2], sys.argv[3]
+try:
+    with open(prompt_path, "r", encoding="utf-8") as f:
+        prompt = f.read()
+except Exception:
+    prompt = ""
 payload = {
     "model": model,
     "messages": [{"role": "user", "content": prompt}],
@@ -146,14 +150,14 @@ run_providers() {
       attempt=1
       while [ $attempt -le "$PROVIDER_RETRIES" ]; do
         if [[ "$provider" == openrouter/* ]]; then
-          if run_openrouter "${provider}" "${PROMPT_CONTENT}" "${outfile}" "${usage_file}" > "${log_file}" 2>&1; then
-            status_label="success"
-          fi
-        else
-          if run_with_timeout opencode run -m "${provider}" -- "${PROMPT_CONTENT}" > "$outfile" 2> "${log_file}"; then
-            status_label="success"
-          fi
+        if run_openrouter "${provider}" "${outfile}" "${usage_file}" > "${log_file}" 2>&1; then
+          status_label="success"
         fi
+      else
+        if run_with_timeout opencode run -m "${provider}" -- < "$PROMPT_FILE" > "$outfile" 2> "${log_file}"; then
+          status_label="success"
+        fi
+      fi
         if [ "$status_label" = "success" ]; then
           echo "✅ ${provider} completed (attempt ${attempt}/${PROVIDER_RETRIES})"
           break

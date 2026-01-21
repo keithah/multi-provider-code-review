@@ -483,13 +483,19 @@ fi
 ONLY_BINARY="false"
 if [ -s "$PR_FILES" ]; then
   if command -v jq >/dev/null 2>&1; then
-    PATCH_COUNT=$(jq '[.[] | select(has("patch"))] | length' "$PR_FILES")
-    FILE_COUNT=$(jq 'length' "$PR_FILES")
+    python - <<'PYCODE' "$PR_FILES" > "${TMP_DIR}/binary-and-tests.tmp" || true
+import json, sys
+files = json.load(open(sys.argv[1]))
+patch_count = len([f for f in files if isinstance(f, dict) and "patch" in f])
+file_count = len(files) if isinstance(files, list) else 0
+test_count = len([f for f in files if isinstance(f, dict) and f.get("filename") and __import__("re").search(r"test|spec|__tests__|__snapshots__|\.test\.|\.spec\.|Tests/|Spec/", f["filename"], __import__("re").IGNORECASE)])
+print(f"{patch_count} {file_count} {test_count}")
+PYCODE
+    read -r PATCH_COUNT FILE_COUNT TEST_COUNT < "${TMP_DIR}/binary-and-tests.tmp" || PATCH_COUNT=0 FILE_COUNT=0 TEST_COUNT=0
     if [ "$FILE_COUNT" -gt 0 ] && [ "$PATCH_COUNT" -eq 0 ]; then
       ONLY_BINARY="true"
     fi
-    TEST_COUNT=$(jq '[.[] | select(.filename|test("test|spec|__tests__|__snapshots__|\\.test\\.|\\.spec\\.|Tests/|Spec/"))] | length' "$PR_FILES")
-    SOURCE_COUNT=$(jq 'length' "$PR_FILES")
+    SOURCE_COUNT="$FILE_COUNT"
   else
     PATCH_COUNT=0; FILE_COUNT=0; TEST_COUNT=0; SOURCE_COUNT=0
   fi
