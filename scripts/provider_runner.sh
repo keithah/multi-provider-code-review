@@ -14,6 +14,7 @@ run_openrouter() {
   local prompt_file="${2:-$PROMPT_FILE}"
   local outfile="$3"
   local usagefile="${4:-}"
+  local rate_rc=1
 
   if [ -z "$OPENROUTER_API_KEY" ]; then
     echo "OpenRouter provider ${provider} requested but OPENROUTER_API_KEY is not set."
@@ -86,6 +87,8 @@ PYCODE
         echo "Gemini free model rate limited; will avoid for synthesis." >&2
         echo "limited" > "$GEMINI_RATE_FILE"
       fi
+      rm -f "$response_file"
+      return 9
     fi
     if [ "${DEBUG_MODE:-false}" = "true" ]; then
       head -c 500 "${response_file}" >&2 || true
@@ -160,21 +163,28 @@ run_providers() {
       echo "Running provider: ${provider}"
       provider_start=$(date +%s)
       status_label="failed"
+      rc=1
       attempt=1
       while [ $attempt -le "$PROVIDER_RETRIES" ]; do
         if [[ "$provider" == openrouter/* ]]; then
           if run_openrouter "${provider}" "$PROMPT_FILE" "${outfile}" "${usage_file}" > "${log_file}" 2>&1; then
             status_label="success"
+            rc=0
           fi
         else
           if run_with_timeout opencode run -m "${provider}" --file "$PROMPT_FILE" -- "Review the attached PR context and provide structured findings." > "$outfile" 2> "${log_file}"; then
             status_label="success"
+            rc=0
           fi
         fi
         if [ "$status_label" = "success" ]; then
           echo "✅ ${provider} completed (attempt ${attempt}/${PROVIDER_RETRIES})"
           break
         else
+          if [ "$rc" -eq 9 ]; then
+            echo "Rate-limited or fatal response for ${provider}; not retrying." >&2
+            break
+          fi
           if [ $attempt -lt "$PROVIDER_RETRIES" ]; then
             echo "Retrying ${provider} (attempt ${attempt}/${PROVIDER_RETRIES})..."
             sleep $((attempt))
