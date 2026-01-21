@@ -453,6 +453,9 @@ else:
 PYCODE
 
 PROMPT_DELIM="__REVIEW_PROMPT_EOF_${RANDOM}_$$__"
+# Defaults for prompt builder inputs
+TEST_HINT=""
+TEST_HINT_FLAG="false"
 python "${GITHUB_ACTION_PATH:-$PWD}/scripts/prompt_builder.py" "$PROMPT_FILE" "$REPO" "$PR_NUMBER" "$PR_TITLE_VALUE" "$PR_BODY_VALUE" "$AGENTS_SECTION" "$PR_FILES" "${DIFF_FILE:-}" "$TEST_HINT" "$MISSING_TEST_FILES" || {
   echo "Failed to build prompt" >&2
   exit 1
@@ -478,8 +481,6 @@ PYCODE
 fi
 
 ONLY_BINARY="false"
-TEST_HINT=""
-TEST_HINT_FLAG="false"
 if [ -s "$PR_FILES" ]; then
   if command -v jq >/dev/null 2>&1; then
     PATCH_COUNT=$(jq '[.[] | select(has("patch"))] | length' "$PR_FILES")
