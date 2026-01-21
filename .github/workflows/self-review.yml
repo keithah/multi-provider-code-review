@@ -5,6 +5,10 @@ on:
     branches:
       - '**'
   workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Pull request number to review"
+        required: true
 
 permissions:
   contents: read
@@ -19,7 +23,7 @@ jobs:
         uses: ./
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
           REVIEW_PROVIDERS: openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free
           FALLBACK_PROVIDERS: opencode/minimax-m2.1-free
         env:
