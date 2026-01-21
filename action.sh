@@ -222,12 +222,13 @@ for raw_provider in "${RAW_PROVIDERS[@]}"; do
   PROVIDERS+=("$provider")
 done
 
+if [ "${#PROVIDERS[@]}" -eq 0 ] && [ "$OPENROUTER_REQUESTED" = "true" ]; then
+  echo "No OpenRouter providers available without API key; falling back to bundled providers." >&2
+  PROVIDERS=("${FALLBACK_OPENCODE_PROVIDERS[@]}")
+fi
+
 if [ "${#PROVIDERS[@]}" -eq 0 ]; then
   echo "No review providers available after processing configuration."
-  exit 1
-fi
-if [ -z "$OPENROUTER_API_KEY" ] && [ "$OPENROUTER_REQUESTED" = "true" ] && [ -n "$REVIEW_PROVIDERS" ]; then
-  echo "OpenRouter providers were requested but OPENROUTER_API_KEY is not set."
   exit 1
 fi
 
@@ -475,6 +476,71 @@ else:
         pass
 PYCODE
 
+PROMPT_DELIM="__REVIEW_PROMPT_EOF_${RANDOM}_$$__"
+cat > "$PROMPT_FILE" <<"$PROMPT_DELIM"
+REPO: ${REPO}
+PR NUMBER: ${PR_NUMBER}
+PR TITLE: ${PR_TITLE_VALUE}
+PR DESCRIPTION:
+${PR_BODY_VALUE}
+
+Please review this pull request and provide a comprehensive code review focusing on:
+
+## Code Quality & Best Practices
+- Clean code principles and readability
+- Proper error handling and edge cases
+- TypeScript/JavaScript best practices
+- Consistent naming conventions
+
+## Bug Detection
+- Logic errors and edge cases
+- Unhandled error scenarios
+- Race conditions and concurrency issues
+- Input validation and sanitization
+
+## Performance
+- Inefficient algorithms or operations
+- Memory leaks and unnecessary allocations
+- Large file handling
+
+## Security
+- SQL injection, XSS, CSRF vulnerabilities
+- Authentication/authorization issues
+- Sensitive data exposure
+
+## Testing
+- Test coverage gaps
+- Missing edge case handling${AGENTS_SECTION}
+
+## AI-Generated Code Likelihood
+- Estimate the likelihood (0-100%) that the changed code was AI-generated. Give a brief rationale.
+
+## Output Format
+- Provide specific file and line numbers when possible
+- Include code suggestions in fenced code blocks using the GitHub suggestion format when appropriate:
+  ```suggestion
+  // code change
+  ```
+- Return a structured JSON block at the end, on its own line, containing findings. Use this shape exactly:
+  ```json
+  {
+    "findings": [
+      {
+        "file": "path/to/file.ext",
+        "line": 123,
+        "severity": "critical|major|minor",
+        "title": "short title",
+        "message": "concise description",
+        "suggestion": "optional code snippet or empty string"
+      }
+    ]
+  }
+  ```
+- Summarize key findings and risks at the end
+
+IMPORTANT: Only flag actual issues. If everything looks good, respond with 'lgtm'.
+$PROMPT_DELIM
+
 if [ -s "$PR_FILES" ]; then
   echo $'\n\n## Changed Files' >> "$PROMPT_FILE"
   if command -v jq >/dev/null 2>&1; then
@@ -562,71 +628,6 @@ if [ -s "$MISSING_TEST_FILES" ]; then
     printf -- "- %s\n" "$line" >> "$PROMPT_FILE"
   done < "$MISSING_TEST_FILES"
 fi
-
-PROMPT_DELIM="__REVIEW_PROMPT_EOF_${RANDOM}_$$__"
-cat > "$PROMPT_FILE" <<"$PROMPT_DELIM"
-REPO: ${REPO}
-PR NUMBER: ${PR_NUMBER}
-PR TITLE: ${PR_TITLE_VALUE}
-PR DESCRIPTION:
-${PR_BODY_VALUE}
-
-Please review this pull request and provide a comprehensive code review focusing on:
-
-## Code Quality & Best Practices
-- Clean code principles and readability
-- Proper error handling and edge cases
-- TypeScript/JavaScript best practices
-- Consistent naming conventions
-
-## Bug Detection
-- Logic errors and edge cases
-- Unhandled error scenarios
-- Race conditions and concurrency issues
-- Input validation and sanitization
-
-## Performance
-- Inefficient algorithms or operations
-- Memory leaks and unnecessary allocations
-- Large file handling
-
-## Security
-- SQL injection, XSS, CSRF vulnerabilities
-- Authentication/authorization issues
-- Sensitive data exposure
-
-## Testing
-- Test coverage gaps
-- Missing edge case handling${AGENTS_SECTION}
-
-## AI-Generated Code Likelihood
-- Estimate the likelihood (0-100%) that the changed code was AI-generated. Give a brief rationale.
-
-## Output Format
-- Provide specific file and line numbers when possible
-- Include code suggestions in fenced code blocks using the GitHub suggestion format when appropriate:
-  ```suggestion
-  // code change
-  ```
-- Return a structured JSON block at the end, on its own line, containing findings. Use this shape exactly:
-  ```json
-  {
-    "findings": [
-      {
-        "file": "path/to/file.ext",
-        "line": 123,
-        "severity": "critical|major|minor",
-        "title": "short title",
-        "message": "concise description",
-        "suggestion": "optional code snippet or empty string"
-      }
-    ]
-  }
-  ```
-- Summarize key findings and risks at the end
-
-IMPORTANT: Only flag actual issues. If everything looks good, respond with 'lgtm'.
-$PROMPT_DELIM
 
 PROMPT_CONTENT="$(cat "$PROMPT_FILE")"
 PROMPT_SIZE="$(wc -c < "$PROMPT_FILE")"
