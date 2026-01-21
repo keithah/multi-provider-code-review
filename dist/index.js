@@ -33225,23 +33225,19 @@ var GitHubClient = class {
 var MarkdownFormatter = class {
   format(review) {
     const lines = [];
+    lines.push("## Multi Provider Review Summary");
+    lines.push("");
     lines.push(review.summary);
-    if (review.findings.length > 0) {
-      lines.push("\n## Findings");
-      review.findings.forEach((f) => {
-        lines.push(`- [${f.severity.toUpperCase()}] ${f.file}:${f.line} \u2014 ${f.title}`);
-        lines.push(`  ${f.message}`);
-        if (f.suggestion) {
-          lines.push(`  Suggestion: ${f.suggestion}`);
-        }
-        if (f.providers && f.providers.length > 0) {
-          lines.push(`  Providers: ${f.providers.join(", ")}`);
-        }
-      });
-    }
-    if (review.actionItems.length > 0) {
+    const critical = review.findings.filter((f) => f.severity === "critical");
+    const major = review.findings.filter((f) => f.severity === "major");
+    const minor = review.findings.filter((f) => f.severity === "minor");
+    this.printSeveritySection(lines, "Critical", critical);
+    this.printSeveritySection(lines, "Major", major);
+    this.printSeveritySection(lines, "Minor", minor);
+    const uniqueActions = Array.from(new Set(review.actionItems || []));
+    if (uniqueActions.length > 0) {
       lines.push("\n<details><summary>Action Items</summary>");
-      review.actionItems.forEach((item) => lines.push(`- ${item}`));
+      uniqueActions.forEach((item) => lines.push(`- ${item}`));
       lines.push("</details>");
     }
     if (review.testHints && review.testHints.length > 0) {
@@ -33275,22 +33271,35 @@ var MarkdownFormatter = class {
     if (review.providerResults && review.providerResults.length > 0) {
       lines.push("\n<details><summary>Raw provider outputs</summary>");
       for (const result of review.providerResults) {
-        lines.push(`- ${result.name} [${result.status}] (${result.durationSeconds.toFixed(1)}s)`);
+        lines.push(`<details><summary>${result.name} [${result.status}] (${result.durationSeconds.toFixed(1)}s)</summary>`);
         if (result.result?.content) {
-          const body = this.truncate(result.result.content.trim(), 1200);
           lines.push("```");
-          lines.push(body);
+          lines.push(result.result.content.trim());
           lines.push("```");
+        } else {
+          lines.push("_no content_");
         }
+        lines.push("</details>");
       }
       lines.push("</details>");
     }
     return lines.join("\n");
   }
-  truncate(value, max) {
-    if (value.length <= max)
-      return value;
-    return value.slice(0, max) + "\n... (truncated)";
+  printSeveritySection(lines, title, findings) {
+    if (findings.length === 0)
+      return;
+    lines.push(`
+### ${title}`);
+    findings.forEach((f) => {
+      lines.push(`- ${f.file}:${f.line} \u2014 ${f.title}`);
+      lines.push(`  ${f.message}`);
+      if (f.suggestion) {
+        lines.push(`  Suggestion: ${f.suggestion}`);
+      }
+      if (f.providers && f.providers.length > 0) {
+        lines.push(`  Providers: ${f.providers.join(", ")}`);
+      }
+    });
   }
 };
 

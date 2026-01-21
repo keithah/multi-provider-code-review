@@ -3,25 +3,22 @@ import { Review } from '../types';
 export class MarkdownFormatter {
   format(review: Review): string {
     const lines: string[] = [];
+    lines.push('## Multi Provider Review Summary');
+    lines.push('');
     lines.push(review.summary);
 
-    if (review.findings.length > 0) {
-      lines.push('\n## Findings');
-      review.findings.forEach(f => {
-        lines.push(`- [${f.severity.toUpperCase()}] ${f.file}:${f.line} — ${f.title}`);
-        lines.push(`  ${f.message}`);
-        if (f.suggestion) {
-          lines.push(`  Suggestion: ${f.suggestion}`);
-        }
-        if (f.providers && f.providers.length > 0) {
-          lines.push(`  Providers: ${f.providers.join(', ')}`);
-        }
-      });
-    }
+    const critical = review.findings.filter(f => f.severity === 'critical');
+    const major = review.findings.filter(f => f.severity === 'major');
+    const minor = review.findings.filter(f => f.severity === 'minor');
 
-    if (review.actionItems.length > 0) {
+    this.printSeveritySection(lines, 'Critical', critical);
+    this.printSeveritySection(lines, 'Major', major);
+    this.printSeveritySection(lines, 'Minor', minor);
+
+    const uniqueActions = Array.from(new Set(review.actionItems || []));
+    if (uniqueActions.length > 0) {
       lines.push('\n<details><summary>Action Items</summary>');
-      review.actionItems.forEach(item => lines.push(`- ${item}`));
+      uniqueActions.forEach(item => lines.push(`- ${item}`));
       lines.push('</details>');
     }
 
@@ -59,13 +56,15 @@ export class MarkdownFormatter {
     if (review.providerResults && review.providerResults.length > 0) {
       lines.push('\n<details><summary>Raw provider outputs</summary>');
       for (const result of review.providerResults) {
-        lines.push(`- ${result.name} [${result.status}] (${result.durationSeconds.toFixed(1)}s)`);
+        lines.push(`<details><summary>${result.name} [${result.status}] (${result.durationSeconds.toFixed(1)}s)</summary>`);
         if (result.result?.content) {
-          const body = this.truncate(result.result.content.trim(), 1200);
           lines.push('```');
-          lines.push(body);
+          lines.push(result.result.content.trim());
           lines.push('```');
+        } else {
+          lines.push('_no content_');
         }
+        lines.push('</details>');
       }
       lines.push('</details>');
     }
@@ -73,8 +72,18 @@ export class MarkdownFormatter {
     return lines.join('\n');
   }
 
-  private truncate(value: string, max: number): string {
-    if (value.length <= max) return value;
-    return value.slice(0, max) + '\n... (truncated)';
+  private printSeveritySection(lines: string[], title: string, findings: Review['findings']): void {
+    if (findings.length === 0) return;
+    lines.push(`\n### ${title}`);
+    findings.forEach(f => {
+      lines.push(`- ${f.file}:${f.line} — ${f.title}`);
+      lines.push(`  ${f.message}`);
+      if (f.suggestion) {
+        lines.push(`  Suggestion: ${f.suggestion}`);
+      }
+      if (f.providers && f.providers.length > 0) {
+        lines.push(`  Providers: ${f.providers.join(', ')}`);
+      }
+    });
   }
 }
