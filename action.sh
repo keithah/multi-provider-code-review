@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
 
 if ! command -v npm >/dev/null 2>&1; then
   echo "npm is required but not found on PATH."
@@ -322,6 +323,13 @@ REPORT_BASENAME="${REPORT_BASENAME:-multi-provider-review}"
 REPORT_DIR="${GITHUB_WORKSPACE:-$PWD}/multi-provider-report"
 mkdir -p "$REPORT_DIR"
 
+# Sanitize report basename to prevent path traversal or invalid filenames
+REPORT_BASENAME_SANITIZED="$(echo "$REPORT_BASENAME" | tr -c 'A-Za-z0-9._-' '-')"
+if [ -z "$REPORT_BASENAME_SANITIZED" ]; then
+  REPORT_BASENAME_SANITIZED="multi-provider-review"
+fi
+REPORT_BASENAME="$REPORT_BASENAME_SANITIZED"
+
 PROVIDER_RUNNER="${GITHUB_ACTION_PATH:-$PWD}/scripts/provider_runner.sh"
 if [ -f "$PROVIDER_RUNNER" ]; then
   # shellcheck source=/dev/null
@@ -560,7 +568,16 @@ PROMPT_SIZE="$(wc -c < "$PROMPT_FILE")"
 # Early budget guard: estimate cost from pricing data before calling providers.
 # If pricing data is missing but a budget is set and OpenRouter providers are requested,
 # fail closed to avoid surprise spend.
-if [ "$BUDGET_MAX_USD" -gt 0 ]; then
+BUDGET_POSITIVE=$(python - "$BUDGET_MAX_USD" <<'PYCODE' || echo "0"
+import sys, decimal
+try:
+    val = decimal.Decimal(sys.argv[1])
+    print("1" if val > 0 else "0")
+except Exception:
+    print("0")
+PYCODE
+)
+if [ "$BUDGET_POSITIVE" = "1" ]; then
   HAS_OPENROUTER="false"
   for p in "${PROVIDERS[@]}"; do
     if [[ "$p" == openrouter/* ]]; then
@@ -733,11 +750,14 @@ fi
 
 RATE_LIMITED_PROVIDERS=()
 if [ -f "$RATE_LIMIT_FILE" ]; then
-  : > "$RATE_LOCK_FILE" 2>/dev/null || true
-  (
-    flock -s 200
-    mapfile -t RATE_LIMITED_PROVIDERS < "$RATE_LIMIT_FILE"
-  ) 200>"${RATE_LOCK_FILE}"
+  if : > "$RATE_LOCK_FILE" 2>/dev/null; then
+    (
+      flock -s 200
+      mapfile -t RATE_LIMITED_PROVIDERS < "$RATE_LIMIT_FILE"
+    ) 200>"${RATE_LOCK_FILE}"
+  else
+    echo "Warning: unable to create rate limit lock file (${RATE_LOCK_FILE}); proceeding without reading prior rate limits." >&2
+  fi
 fi
 
 if [ "${#PROVIDER_LIST[@]}" -eq 0 ]; then
@@ -970,8 +990,7 @@ run_synthesis_model() {
       return 0
     fi
   else
-    prompt_arg="$(cat "$prompt_file")"
-    if run_with_timeout opencode run -m "$model" -- "$prompt_arg" > "$out_file" 2> "$log_file"; then
+    if run_with_timeout opencode run -m "$model" --file "$prompt_file" -- "Synthesize the attached provider reviews into the requested structure." > "$out_file" 2> "$log_file"; then
       return 0
     fi
   fi
@@ -1015,8 +1034,30 @@ for synth_model in "${fallback_synth_models[@]}"; do
     echo "✅ Synthesis complete using ${synth_model}"
     SYNTHESIS_SUCCESS="true"
     SYNTHESIS_MODEL="$synth_model"
-    if grep -qi "please provide the actual provider reviews you'd like me to" "$SYNTHESIS_OUTPUT"; then
-      echo "Synthesis returned template content; trying next fallback." >&2
+    if ! python - "$SYNTHESIS_OUTPUT" <<'PYCODE' >/dev/null 2>&1; then
+import sys, re, os
+path = sys.argv[1]
+try:
+    text = open(path, encoding="utf-8").read()
+except Exception:
+    sys.exit(1)
+lower = text.lower()
+bad_markers = [
+    "please provide the actual provider reviews you'd like me to",
+    "here's a template of how the output will look once you provide the reviews",
+    "for now, here's a template",
+    "please paste the provider reviews",
+]
+if any(b in lower for b in bad_markers):
+    sys.exit(1)
+if len(text.strip()) < 50:
+    sys.exit(1)
+if not re.search(r"(summary|findings|verdict)", lower):
+    sys.exit(1)
+sys.exit(0)
+PYCODE
+    then
+      echo "Synthesis output looks like a template/placeholder; trying next fallback." >&2
       SYNTHESIS_SUCCESS="false"
     else
       break
