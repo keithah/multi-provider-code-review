@@ -26,9 +26,9 @@ FIELDS: List[str] = [
 
 
 def main() -> None:
-if len(sys.argv) < len(FIELDS) + 2:
-    print("Error: insufficient arguments to config_merge", file=sys.stderr)
-    sys.exit(1)
+    if len(sys.argv) < len(FIELDS) + 2:
+        print("Error: insufficient arguments to config_merge", file=sys.stderr)
+        sys.exit(1)
     config_raw = sys.argv[1]
     defaults = sys.argv[2:]
     try:
