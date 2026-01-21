@@ -79,17 +79,7 @@ if [ -f "$CONFIG_FILE" ]; then
   if [ -n "$CONFIG_EXPORTS" ]; then
     CONFIG_SOURCE="$CONFIG_FILE"
     read -r REVIEW_PROVIDERS SYNTHESIS_MODEL INLINE_MAX_COMMENTS INLINE_MIN_SEVERITY INLINE_MIN_AGREEMENT DIFF_MAX_BYTES RUN_TIMEOUT_SECONDS MIN_CHANGED_LINES MAX_CHANGED_FILES PROVIDER_ALLOWLIST_RAW PROVIDER_BLOCKLIST_RAW SKIP_LABELS_RAW <<EOF
-$(python - <<'PYCODE' "$CONFIG_EXPORTS" "$REVIEW_PROVIDERS" "$SYNTHESIS_MODEL" "$INLINE_MAX_COMMENTS" "$INLINE_MIN_SEVERITY" "$INLINE_MIN_AGREEMENT" "$DIFF_MAX_BYTES" "$RUN_TIMEOUT_SECONDS" "$MIN_CHANGED_LINES" "$MAX_CHANGED_FILES"
-import json, sys
-data = json.loads(sys.argv[1])
-defaults = sys.argv[2:]
-keys = ["REVIEW_PROVIDERS","SYNTHESIS_MODEL","INLINE_MAX_COMMENTS","INLINE_MIN_SEVERITY","INLINE_MIN_AGREEMENT","DIFF_MAX_BYTES","RUN_TIMEOUT_SECONDS","MIN_CHANGED_LINES","MAX_CHANGED_FILES","PROVIDER_ALLOWLIST","PROVIDER_BLOCKLIST","SKIP_LABELS"]
-out = []
-for i, key in enumerate(keys):
-    out.append(str(data.get(key, defaults[i] if i < len(defaults) else "")))
-print(" ".join(out))
-PYCODE
-)
+$(python "${GITHUB_ACTION_PATH:-$PWD}/scripts/config_merge.py" "$CONFIG_EXPORTS" "$REVIEW_PROVIDERS" "$SYNTHESIS_MODEL" "$INLINE_MAX_COMMENTS" "$INLINE_MIN_SEVERITY" "$INLINE_MIN_AGREEMENT" "$DIFF_MAX_BYTES" "$RUN_TIMEOUT_SECONDS" "$MIN_CHANGED_LINES" "$MAX_CHANGED_FILES" "" "" "" )
 EOF
   else
     echo "Config file present but could not be parsed; using defaults." >&2
@@ -463,69 +453,10 @@ else:
 PYCODE
 
 PROMPT_DELIM="__REVIEW_PROMPT_EOF_${RANDOM}_$$__"
-cat > "$PROMPT_FILE" <<"$PROMPT_DELIM"
-REPO: ${REPO}
-PR NUMBER: ${PR_NUMBER}
-PR TITLE: ${PR_TITLE_VALUE}
-PR DESCRIPTION:
-${PR_BODY_VALUE}
-
-Please review this pull request and provide a comprehensive code review focusing on:
-
-## Code Quality & Best Practices
-- Clean code principles and readability
-- Proper error handling and edge cases
-- TypeScript/JavaScript best practices
-- Consistent naming conventions
-
-## Bug Detection
-- Logic errors and edge cases
-- Unhandled error scenarios
-- Race conditions and concurrency issues
-- Input validation and sanitization
-
-## Performance
-- Inefficient algorithms or operations
-- Memory leaks and unnecessary allocations
-- Large file handling
-
-## Security
-- SQL injection, XSS, CSRF vulnerabilities
-- Authentication/authorization issues
-- Sensitive data exposure
-
-## Testing
-- Test coverage gaps
-- Missing edge case handling${AGENTS_SECTION}
-
-## AI-Generated Code Likelihood
-- Estimate the likelihood (0-100%) that the changed code was AI-generated. Give a brief rationale.
-
-## Output Format
-- Provide specific file and line numbers when possible
-- Include code suggestions in fenced code blocks using the GitHub suggestion format when appropriate:
-  ```suggestion
-  // code change
-  ```
-- Return a structured JSON block at the end, on its own line, containing findings. Use this shape exactly:
-  ```json
-  {
-    "findings": [
-      {
-        "file": "path/to/file.ext",
-        "line": 123,
-        "severity": "critical|major|minor",
-        "title": "short title",
-        "message": "concise description",
-        "suggestion": "optional code snippet or empty string"
-      }
-    ]
-  }
-  ```
-- Summarize key findings and risks at the end
-
-IMPORTANT: Only flag actual issues. If everything looks good, respond with 'lgtm'.
-$PROMPT_DELIM
+python "${GITHUB_ACTION_PATH:-$PWD}/scripts/prompt_builder.py" "$PROMPT_FILE" "$REPO" "$PR_NUMBER" "$PR_TITLE_VALUE" "$PR_BODY_VALUE" "$AGENTS_SECTION" "$PR_FILES" "${DIFF_FILE:-}" "$TEST_HINT" "$MISSING_TEST_FILES" || {
+  echo "Failed to build prompt" >&2
+  exit 1
+}
 
 if [ -s "$PR_FILES" ]; then
   echo $'\n\n## Changed Files' >> "$PROMPT_FILE"
