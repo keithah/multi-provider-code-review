@@ -452,6 +452,11 @@ else:
         pass
 PYCODE
 
+PROMPT_PROVIDERS=("${SUCCESS_PROVIDERS[@]}")
+if [ "${#PROMPT_PROVIDERS[@]}" -eq 0 ]; then
+  PROMPT_PROVIDERS=("${PROVIDER_LIST[@]}")
+fi
+
 PROMPT_DELIM="__REVIEW_PROMPT_EOF_${RANDOM}_$$__"
 # Defaults for prompt builder inputs
 TEST_HINT=""
@@ -971,11 +976,6 @@ run_synthesis_model() {
   fi
   return 1
 }
-
-PROMPT_PROVIDERS=("${SUCCESS_PROVIDERS[@]}")
-if [ "${#PROMPT_PROVIDERS[@]}" -eq 0 ]; then
-  PROMPT_PROVIDERS=("${PROVIDER_LIST[@]}")
-fi
 
 fallback_synth_models=()
 # prefer configured synthesis model first, then other successful providers, then defaults

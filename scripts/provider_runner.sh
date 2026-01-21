@@ -159,14 +159,14 @@ run_providers() {
       attempt=1
       while [ $attempt -le "$PROVIDER_RETRIES" ]; do
         if [[ "$provider" == openrouter/* ]]; then
-        if run_openrouter "${provider}" "$PROMPT_FILE" "${outfile}" "${usage_file}" > "${log_file}" 2>&1; then
-          status_label="success"
+          if run_openrouter "${provider}" "$PROMPT_FILE" "${outfile}" "${usage_file}" > "${log_file}" 2>&1; then
+            status_label="success"
+          fi
+        else
+          if run_with_timeout opencode run -m "${provider}" -- < "$PROMPT_FILE" > "$outfile" 2> "${log_file}"; then
+            status_label="success"
+          fi
         fi
-      else
-        if run_with_timeout opencode run -m "${provider}" -- < "$PROMPT_FILE" > "$outfile" 2> "${log_file}"; then
-          status_label="success"
-        fi
-      fi
         if [ "$status_label" = "success" ]; then
           echo "✅ ${provider} completed (attempt ${attempt}/${PROVIDER_RETRIES})"
           break

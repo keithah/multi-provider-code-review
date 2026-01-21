@@ -65,7 +65,8 @@ def append_test_hint(lines: List[str], test_hint: str) -> None:
 
 
 def main() -> None:
-    if len(sys.argv) < 9:
+    # Expect script name + 10 args
+    if len(sys.argv) < 11:
         raise SystemExit(0)
     (
         out_path,
