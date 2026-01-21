@@ -1,6 +1,0 @@
-providers:
-  - openrouter/google/gemini-2.0-flash-exp:free
-  - opencode/big-pickle
-synthesis_model: openrouter/mistralai/devstral-2512:free
-inline_max_comments: 3
-inline_min_severity: major

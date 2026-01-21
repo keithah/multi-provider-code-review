@@ -1,116 +1,117 @@
 name: "Multi-Provider Code Review"
-description: "Run code reviews with multiple providers using OpenCode"
+description: "Hybrid AST + LLM code review with multiple providers"
+author: "Keith Herrington"
+branding:
+  icon: "code-review"
+  color: "blue"
 
 inputs:
   GITHUB_TOKEN:
     description: "GitHub token"
     required: true
-  REVIEW_PROVIDERS:
-    description: "Comma-separated list of review providers (OpenRouter first by default)"
-    required: false
-    default: "openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free,openrouter/xiaomi/mimo-v2-flash:free,opencode/big-pickle,opencode/grok-code,opencode/minimax-m2.1-free,opencode/glm-4.7-free"
-  PR_TITLE:
-    description: "PR title"
-    required: true
   PR_NUMBER:
-    description: "PR number"
+    description: "Pull request number"
     required: true
-  PR_BODY:
-    description: "PR body"
-    required: true
-  HAS_AGENTS:
-    description: "Whether AGENTS.md exists"
+  REVIEW_PROVIDERS:
+    description: "Comma-separated provider list"
     required: false
-    default: "false"
+    default: "openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free"
+  FALLBACK_PROVIDERS:
+    description: "Comma-separated fallback providers"
+    required: false
+    default: ""
   SYNTHESIS_MODEL:
-    description: "Model used to synthesize provider outputs"
+    description: "Model used for synthesis/prompts"
     required: false
     default: "openrouter/google/gemini-2.0-flash-exp:free"
-  DIFF_MAX_BYTES:
-    description: "Maximum diff bytes to include in prompt"
-    required: false
-    default: "120000"
-  RUN_TIMEOUT_SECONDS:
-    description: "Seconds to allow each model run before timing out"
-    required: false
-    default: "600"
-  OPENROUTER_API_KEY:
-    description: "API key for OpenRouter providers (optional)"
-    required: false
   INLINE_MAX_COMMENTS:
-    description: "Maximum inline review comments to post from structured findings"
+    description: "Maximum inline comments"
     required: false
     default: "5"
   INLINE_MIN_SEVERITY:
-    description: "Minimum severity for inline comments (critical, major, or minor)"
+    description: "Minimum severity for inline comments"
     required: false
     default: "major"
   INLINE_MIN_AGREEMENT:
-    description: "Minimum number of providers that must agree before posting inline"
+    description: "Providers required to agree"
     required: false
     default: "2"
-  REPORT_BASENAME:
-    description: "Base filename for exported review reports (JSON/SARIF)"
-    required: false
-    default: "multi-provider-review"
   MIN_CHANGED_LINES:
-    description: "Skip review if total changed lines are below this number (0 disables)"
+    description: "Skip if below this line count"
     required: false
     default: "0"
   MAX_CHANGED_FILES:
-    description: "Skip review if changed files exceed this number (0 disables)"
+    description: "Skip if over this file count"
     required: false
     default: "0"
   SKIP_LABELS:
-    description: "Comma-separated labels that cause the review to skip"
+    description: "Comma-separated labels to skip"
     required: false
     default: ""
   PROVIDER_LIMIT:
-    description: "If >0, limit to this many providers (rotated deterministically)"
+    description: "Limit number of providers to rotate"
     required: false
     default: "0"
   PROVIDER_RETRIES:
-    description: "Retries per provider on failure/timeout (>=1)"
+    description: "Retries per provider"
     required: false
     default: "2"
-  BUDGET_MAX_USD:
-    description: "If >0, warn and skip posting results when estimated cost exceeds this amount"
-    required: false
-    default: "0"
   PROVIDER_MAX_PARALLEL:
-    description: "Max providers to run in parallel (defaults to 3)"
+    description: "Maximum providers to run in parallel"
     required: false
     default: "3"
+  DIFF_MAX_BYTES:
+    description: "Maximum diff bytes to send to providers"
+    required: false
+    default: "120000"
+  RUN_TIMEOUT_SECONDS:
+    description: "Timeout per provider run"
+    required: false
+    default: "600"
+  BUDGET_MAX_USD:
+    description: "Budget guard in USD"
+    required: false
+    default: "0"
+  ENABLE_AST_ANALYSIS:
+    description: "Enable AST analysis"
+    required: false
+    default: "true"
+  ENABLE_SECURITY:
+    description: "Enable security scan"
+    required: false
+    default: "true"
+  ENABLE_CACHING:
+    description: "Enable caching of findings"
+    required: false
+    default: "true"
+  ENABLE_TEST_HINTS:
+    description: "Enable test coverage hints"
+    required: false
+    default: "true"
+  ENABLE_AI_DETECTION:
+    description: "Enable AI-generated code detection"
+    required: false
+    default: "true"
+  REPORT_BASENAME:
+    description: "Base name for JSON/SARIF reports"
+    required: false
+    default: "multi-provider-review"
+  OPENROUTER_API_KEY:
+    description: "API key for OpenRouter"
+    required: false
+
+outputs:
+  findings_count:
+    description: "Number of findings"
+  critical_count:
+    description: "Critical findings count"
+  cost_usd:
+    description: "Total cost in USD"
+  total_cost:
+    description: "Total cost in USD (alias for cost_usd)"
+  ai_likelihood:
+    description: "Average AI-generated likelihood"
 
 runs:
-  using: "composite"
-  steps:
-    - name: Run Multi-Provider Review
-      shell: bash
-      env:
-        GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
-        REVIEW_PROVIDERS: ${{ inputs.REVIEW_PROVIDERS }}
-        PR_TITLE: ${{ inputs.PR_TITLE }}
-        PR_NUMBER: ${{ inputs.PR_NUMBER }}
-        PR_BODY: ${{ inputs.PR_BODY }}
-        HAS_AGENTS: ${{ inputs.HAS_AGENTS }}
-        SYNTHESIS_MODEL: ${{ inputs.SYNTHESIS_MODEL }}
-        DIFF_MAX_BYTES: ${{ inputs.DIFF_MAX_BYTES }}
-        RUN_TIMEOUT_SECONDS: ${{ inputs.RUN_TIMEOUT_SECONDS }}
-        OPENROUTER_API_KEY: ${{ inputs.OPENROUTER_API_KEY }}
-        INLINE_MAX_COMMENTS: ${{ inputs.INLINE_MAX_COMMENTS }}
-        INLINE_MIN_SEVERITY: ${{ inputs.INLINE_MIN_SEVERITY }}
-        INLINE_MIN_AGREEMENT: ${{ inputs.INLINE_MIN_AGREEMENT }}
-        MIN_CHANGED_LINES: ${{ inputs.MIN_CHANGED_LINES }}
-        MAX_CHANGED_FILES: ${{ inputs.MAX_CHANGED_FILES }}
-        SKIP_LABELS: ${{ inputs.SKIP_LABELS }}
-        PROVIDER_LIMIT: ${{ inputs.PROVIDER_LIMIT }}
-        PROVIDER_RETRIES: ${{ inputs.PROVIDER_RETRIES }}
-        BUDGET_MAX_USD: ${{ inputs.BUDGET_MAX_USD }}
-        REPORT_BASENAME: ${{ inputs.REPORT_BASENAME }}
-        PROVIDER_MAX_PARALLEL: ${{ inputs.PROVIDER_MAX_PARALLEL }}
-      run: bash "${{ github.action_path }}/action.sh"
-
-branding:
-  icon: "code-review"
-  color: "blue"
+  using: "node20"
+  main: "dist/index.js"
