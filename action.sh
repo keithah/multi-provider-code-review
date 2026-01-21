@@ -795,11 +795,6 @@ if [ -f "$RATE_LIMIT_FILE" ]; then
   ) 200>"${RATE_LOCK_FILE}"
 fi
 
-PROMPT_PROVIDERS=("${SUCCESS_PROVIDERS[@]}")
-if [ "${#PROMPT_PROVIDERS[@]}" -eq 0 ]; then
-  PROMPT_PROVIDERS=("${PROVIDER_LIST[@]}")
-fi
-
 if [ "${#PROVIDER_LIST[@]}" -eq 0 ]; then
   echo "No valid providers ran successfully."
   exit 1
