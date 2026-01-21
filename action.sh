@@ -500,7 +500,8 @@ if [ -s "$PR_FILES" ]; then
 fi
 
 if [ "$ONLY_BINARY" = "true" ]; then
-  SKIP_REASON="Skipping review: only binary changes detected."
+  SKIP_REASON="Binary-only changes detected (no patches); review skipped."
+  echo "Warning: ${SKIP_REASON}"
 fi
 
 TOTAL_CHANGES=$((TOTAL_ADDITIONS + TOTAL_DELETIONS))

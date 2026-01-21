@@ -41,3 +41,5 @@ jobs:
         run: python tests/inline_consensus_test.py
       - name: Provider validation test
         run: python tests/provider_validation_test.py
+      - name: Prompt builder test
+        run: python tests/prompt_builder_test.py
