@@ -1,6 +1,6 @@
 # Multi-Provider Code Review GitHub Action
 
-[![GitHub Action](https://img.shields.io/badge/GitHub%20Action-blue.svg)](https://github.com/keithah/multi-provider-code-review) [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opencode.ai)
+[![GitHub Action](https://img.shields.io/badge/GitHub%20Action-blue.svg)](https://github.com/keithah/multi-provider-code-review) [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
 Run comprehensive code reviews with multiple providers (OpenRouter-first) and synthesize the results into one actionable review. If no OpenRouter key is available, the action automatically falls back to bundled free models.
 
@@ -200,6 +200,7 @@ Each provider is run directly via OpenCode CLI using the list from `REVIEW_PROVI
 | `openrouter/tngtech/deepseek-r1t-chimera:free`     | CoT/analysis oriented (heavier)              |
 
 **Bundled fallback (no key required; auto-used when `OPENROUTER_API_KEY` is missing)**
+
 | Provider                     | Style/Strength          | Notes                  |
 | ---------------------------- | ----------------------- | ---------------------- |
 | `opencode/big-pickle`        | Large reasoning         | Fallback synthesis model |
@@ -270,7 +271,6 @@ run_timeout_seconds: 600
 ```
 
 Values in the config file override action inputs/vars at runtime.
-```
 
 ### Project Guidelines Integration
 

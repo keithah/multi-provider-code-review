@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-
-#!/usr/bin/env bash
 set -euo pipefail
 
 if ! command -v npm >/dev/null 2>&1; then
@@ -290,11 +288,7 @@ for var_name in PROVIDER_LIMIT MIN_CHANGED_LINES MAX_CHANGED_FILES INLINE_MAX_CO
 done
 
 # Validate completion ratio as float
-if ! python - <<'PY' "$COMPLETION_TOKENS_RATIO" >/dev/null 2>&1; then
-import sys
-float(sys.argv[1])
-PY
-then
+if ! python -c "import sys; float(sys.argv[1])" "$COMPLETION_TOKENS_RATIO" >/dev/null 2>&1; then
   echo "Warning: invalid COMPLETION_TOKENS_RATIO '${COMPLETION_TOKENS_RATIO}', defaulting to 0.5" >&2
   COMPLETION_TOKENS_RATIO="0.5"
 fi
