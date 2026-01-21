@@ -1015,7 +1015,12 @@ for synth_model in "${fallback_synth_models[@]}"; do
     echo "✅ Synthesis complete using ${synth_model}"
     SYNTHESIS_SUCCESS="true"
     SYNTHESIS_MODEL="$synth_model"
-    break
+    if grep -qi "please provide the actual provider reviews you'd like me to" "$SYNTHESIS_OUTPUT"; then
+      echo "Synthesis returned template content; trying next fallback." >&2
+      SYNTHESIS_SUCCESS="false"
+    else
+      break
+    fi
   else
     status=$?
     if [ "$status" -eq 124 ]; then

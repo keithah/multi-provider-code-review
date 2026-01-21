@@ -48,8 +48,10 @@ def append_diff(lines: List[str], diff_path: str) -> None:
 def append_missing_tests(lines: List[str], missing_tests_path: str) -> None:
     if not missing_tests_path or not os.path.isfile(missing_tests_path):
         return
+    entries: List[str] = []
     try:
-        entries = [ln.strip() for ln in open(missing_tests_path, encoding="utf-8").read().splitlines() if ln.strip()]
+        with open(missing_tests_path, encoding="utf-8") as f:
+            entries = [ln.strip() for ln in f.read().splitlines() if ln.strip()]
     except Exception:
         entries = []
     if entries:
