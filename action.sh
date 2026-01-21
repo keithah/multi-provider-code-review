@@ -920,7 +920,7 @@ Requirements:
 - Include file and line references when present.
 - Provide code suggestions in fenced blocks where applicable.
 - Keep output under GitHub's comment limits.
-- Summarize per-provider estimates of AI-generated code likelihood (0-100%) and provide an overall estimate.
+- Summarize per-provider estimates of AI-generated code likelihood (0-100%) using the real provider names shown below (not placeholders), and provide an overall estimate.
 
 Output structure:
 1) Summary (bullet list)
