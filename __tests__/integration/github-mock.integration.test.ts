@@ -81,7 +81,7 @@ describe('GitHub integration mock (no network)', () => {
   };
 
   it('uses fake octokit client to post summary and inline comments', async () => {
-    const fakeOctokit = {
+    const fakeOctokit: any = {
       rest: {
         pulls: {
           get: jest.fn().mockResolvedValue({
@@ -110,16 +110,17 @@ describe('GitHub integration mock (no network)', () => {
               },
             ],
           }),
+          createReview: jest.fn().mockResolvedValue({}),
+        },
+        issues: {
+          createComment: jest.fn().mockResolvedValue({}),
         },
       },
       request: jest.fn().mockResolvedValue({ data: '@@ diff' }),
-      issues: {
-        createComment: jest.fn().mockResolvedValue({}),
-      },
-      pulls: {
-        createReview: jest.fn().mockResolvedValue({}),
-      },
-    } as any;
+    };
+
+    fakeOctokit.issues = fakeOctokit.rest.issues;
+    fakeOctokit.pulls = fakeOctokit.rest.pulls;
 
     const fakeClient = { octokit: fakeOctokit, owner: 'owner', repo: 'repo' } as any;
 

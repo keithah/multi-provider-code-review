@@ -32271,6 +32271,25 @@ async function pRetry(input, options) {
 
 // src/utils/retry.ts
 async function withRetry(fn, options) {
+  if (options.retryOn) {
+    const maxAttempts = options.retries + 1;
+    const minTimeout = options.minTimeout ?? 500;
+    const factor = options.factor ?? 2;
+    let delay = minTimeout;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await fn();
+      } catch (error) {
+        const err = error;
+        if (!options.retryOn(err) || attempt === maxAttempts) {
+          throw err;
+        }
+        logger.warn(`Retryable error: attempt ${attempt} of ${maxAttempts}`, err.message);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        delay = Math.min(delay * factor, options.maxTimeout ?? 4e3);
+      }
+    }
+  }
   return pRetry(fn, {
     retries: options.retries,
     factor: options.factor ?? 2,
@@ -32300,7 +32319,8 @@ var LLMExecutor = class {
         const runner = async () => provider.review(prompt, timeoutMs);
         try {
           const result = await withRetry(runner, {
-            retries: Math.max(0, this.config.providerRetries - 1)
+            retries: Math.max(0, this.config.providerRetries - 1),
+            retryOn: (error) => !(error instanceof RateLimitError)
           });
           results.push({
             name: provider.name,
@@ -33082,7 +33102,7 @@ var CommentPoster = class _CommentPoster {
 
 ` : "";
       const content = header + chunks[i];
-      await octokit.issues.createComment({ owner, repo, issue_number: prNumber, body: content });
+      await octokit.rest.issues.createComment({ owner, repo, issue_number: prNumber, body: content });
       if (i < chunks.length - 1) {
         await new Promise((resolve) => setTimeout(resolve, 1e3));
       }
@@ -33092,7 +33112,7 @@ var CommentPoster = class _CommentPoster {
     if (comments.length === 0)
       return;
     const { octokit, owner, repo } = this.client;
-    await octokit.pulls.createReview({
+    await octokit.rest.pulls.createReview({
       owner,
       repo,
       pull_number: prNumber,
