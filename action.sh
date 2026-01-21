@@ -970,7 +970,8 @@ run_synthesis_model() {
       return 0
     fi
   else
-    if run_with_timeout opencode run -m "$model" -- < "$prompt_file" > "$out_file" 2> "$log_file"; then
+    prompt_arg="$(cat "$prompt_file")"
+    if run_with_timeout opencode run -m "$model" -- "$prompt_arg" > "$out_file" 2> "$log_file"; then
       return 0
     fi
   fi

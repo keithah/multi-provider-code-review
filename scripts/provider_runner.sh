@@ -163,7 +163,8 @@ run_providers() {
             status_label="success"
           fi
         else
-          if run_with_timeout opencode run -m "${provider}" -- < "$PROMPT_FILE" > "$outfile" 2> "${log_file}"; then
+          prompt_arg="$(cat "$PROMPT_FILE")"
+          if run_with_timeout opencode run -m "${provider}" -- "$prompt_arg" > "$outfile" 2> "${log_file}"; then
             status_label="success"
           fi
         fi
