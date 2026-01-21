@@ -1060,7 +1060,6 @@ if not re.search(r"(summary|findings|verdict)", lower):
     sys.exit(1)
 sys.exit(0)
 PYCODE
-    then
       echo "Synthesis output looks like a template/placeholder; trying next fallback." >&2
       SYNTHESIS_SUCCESS="false"
     else
