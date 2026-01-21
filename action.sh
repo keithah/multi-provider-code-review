@@ -960,11 +960,11 @@ run_synthesis_model() {
   local out_file="$3"
   local log_file="$4"
   if [[ "$model" == openrouter/* ]]; then
-    if run_openrouter "$model" "$(cat "$prompt_file")" "$out_file" > "$log_file" 2>&1; then
+    if run_openrouter "$model" "$prompt_file" "$out_file" > "$log_file" 2>&1; then
       return 0
     fi
   else
-    if run_with_timeout opencode run -m "$model" -- "$(cat "$prompt_file")" > "$out_file" 2> "$log_file"; then
+    if run_with_timeout opencode run -m "$model" -- < "$prompt_file" > "$out_file" 2> "$log_file"; then
       return 0
     fi
   fi

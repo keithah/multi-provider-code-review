@@ -11,8 +11,9 @@ run_with_timeout() {
 
 run_openrouter() {
   local provider="$1"
-  local outfile="$2"
-  local usagefile="${3:-}"
+  local prompt_file="${2:-$PROMPT_FILE}"
+  local outfile="$3"
+  local usagefile="${4:-}"
 
   if [ -z "$OPENROUTER_API_KEY" ]; then
     echo "OpenRouter provider ${provider} requested but OPENROUTER_API_KEY is not set."
@@ -35,7 +36,7 @@ run_openrouter() {
   header_file=$(mktemp) || { rm -f "$payload_file" "$response_file"; return 1; }
   chmod 600 "$header_file" || true
 
-  if ! python - "$PROMPT_FILE" "$model" "$payload_file" >/dev/null <<'PYCODE'
+  if ! python - "$prompt_file" "$model" "$payload_file" >/dev/null <<'PYCODE'
 import json, sys, os
 prompt_path, model, path = sys.argv[1], sys.argv[2], sys.argv[3]
 try:
@@ -150,7 +151,7 @@ run_providers() {
       attempt=1
       while [ $attempt -le "$PROVIDER_RETRIES" ]; do
         if [[ "$provider" == openrouter/* ]]; then
-        if run_openrouter "${provider}" "${outfile}" "${usage_file}" > "${log_file}" 2>&1; then
+        if run_openrouter "${provider}" "$PROMPT_FILE" "${outfile}" "${usage_file}" > "${log_file}" 2>&1; then
           status_label="success"
         fi
       else
