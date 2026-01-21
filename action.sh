@@ -46,6 +46,7 @@ FALLBACK_OPENCODE_PROVIDERS=("opencode/big-pickle" "opencode/grok-code" "opencod
 OPENROUTER_DYNAMIC_PROVIDERS=()
 # cap how many OpenRouter providers run by default (can be overridden)
 DEFAULT_PROVIDER_LIMIT=3
+MAX_PROVIDER_POOL="${MAX_PROVIDER_POOL:-12}"
 # provider name validation
 validate_provider_name() {
   local name="$1"
@@ -267,7 +268,7 @@ fi
 
 # Validate numeric inputs early to avoid arithmetic errors
 is_int='^[0-9]+$'
-for var_name in PROVIDER_LIMIT MIN_CHANGED_LINES MAX_CHANGED_FILES INLINE_MAX_COMMENTS INLINE_MIN_AGREEMENT RUN_TIMEOUT_SECONDS DIFF_MAX_BYTES PROVIDER_RETRIES; do
+for var_name in PROVIDER_LIMIT MIN_CHANGED_LINES MAX_CHANGED_FILES INLINE_MAX_COMMENTS INLINE_MIN_AGREEMENT RUN_TIMEOUT_SECONDS DIFF_MAX_BYTES PROVIDER_RETRIES MAX_PROVIDER_POOL; do
   val="${!var_name}"
   if ! [[ "$val" =~ $is_int ]]; then
     echo "Warning: invalid numeric value for ${var_name} ('${val}'); defaulting to 0." >&2
@@ -307,7 +308,6 @@ INLINE_MAX_COMMENTS="${INLINE_MAX_COMMENTS:-5}"
 INLINE_MIN_SEVERITY="${INLINE_MIN_SEVERITY:-major}"
 INLINE_MIN_AGREEMENT="${INLINE_MIN_AGREEMENT:-2}"
 PROVIDER_LIMIT="${PROVIDER_LIMIT:-0}"
-MAX_PROVIDER_POOL="${MAX_PROVIDER_POOL:-12}"
 PROVIDER_RETRIES="${PROVIDER_RETRIES:-2}"
 MIN_CHANGED_LINES="${MIN_CHANGED_LINES:-0}"
 MAX_CHANGED_FILES="${MAX_CHANGED_FILES:-0}"
