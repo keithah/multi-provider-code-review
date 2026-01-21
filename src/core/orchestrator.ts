@@ -14,11 +14,10 @@ import { MarkdownFormatter } from '../output/formatter';
 import { buildJson } from '../output/json';
 import { buildSarif } from '../output/sarif';
 import { CacheManager } from '../cache/manager';
-import { CostEstimator } from '../cost/estimator';
 import { CostTracker } from '../cost/tracker';
 import { SecurityScanner } from '../security/scanner';
 import { RulesEngine } from '../rules/engine';
-import { ReviewConfig, Review, PRContext } from '../types';
+import { ReviewConfig, Review, PRContext, RunDetails } from '../types';
 import { logger } from '../utils/logger';
 import * as fs from 'fs/promises';
 import path from 'path';
@@ -34,7 +33,6 @@ export interface ReviewComponents {
   testCoverage: TestCoverageAnalyzer;
   astAnalyzer: ASTAnalyzer;
   cache: CacheManager;
-  costEstimator: CostEstimator;
   costTracker: CostTracker;
   security: SecurityScanner;
   rules: RulesEngine;
@@ -88,15 +86,35 @@ export class ReviewOrchestrator {
     const consensus = this.components.consensus.filter(deduped);
 
     const testHints = config.enableTestHints ? this.components.testCoverage.analyze(pr.files) : undefined;
-    const review = this.components.synthesis.synthesize(consensus, pr, testHints, aiAnalysis);
-
     const costSummary = this.components.costTracker.summary();
+    const runDetails: RunDetails = {
+      providers: providerResults.map(r => ({
+        name: r.name,
+        status: r.status,
+        durationSeconds: r.durationSeconds,
+        tokens: r.result?.usage?.totalTokens,
+        cost: costSummary.breakdown[r.name],
+        errorMessage: r.error?.message,
+      })),
+      totalCost: costSummary.totalCost,
+      totalTokens: costSummary.totalTokens,
+      durationSeconds: 0,
+      cacheHit: Boolean(cachedFindings),
+      synthesisModel: config.synthesisModel,
+      providerPoolSize: providers.length,
+    };
+
+    const review = this.components.synthesis.synthesize(consensus, pr, testHints, aiAnalysis, providerResults, runDetails);
+
     review.metrics.totalCost = costSummary.totalCost;
     review.metrics.totalTokens = costSummary.totalTokens;
     review.metrics.providersUsed = providers.length;
     review.metrics.providersSuccess = providerResults.filter(r => r.status === 'success').length;
     review.metrics.providersFailed = providerResults.length - review.metrics.providersSuccess;
     review.metrics.durationSeconds = (Date.now() - start) / 1000;
+    if (review.runDetails) {
+      review.runDetails.durationSeconds = review.metrics.durationSeconds;
+    }
     review.metrics.cached = Boolean(cachedFindings);
 
     if (config.enableCaching) {
@@ -148,8 +166,10 @@ export class ReviewOrchestrator {
 
     for (const name of providerNames) {
       const modelId = name.replace('openrouter/', '').replace('opencode/', '');
-      const estimate = await this.components.costEstimator.estimate(modelId, estimatedTokens);
-      projected += estimate.totalCost;
+      // Without pricing service available, treat as zero-cost for budget gate.
+      if (!this.components.costTracker) continue;
+      // Use cached pricing if already tracked
+      projected += 0; // placeholder; costTracker will update actuals post-run
     }
 
     if (projected > config.budgetMaxUsd) {

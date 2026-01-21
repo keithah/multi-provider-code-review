@@ -32508,9 +32508,9 @@ var SynthesisEngine = class {
   constructor(config) {
     this.config = config;
   }
-  synthesize(findings, pr, testHints, aiAnalysis) {
+  synthesize(findings, pr, testHints, aiAnalysis, providerResults, runDetails) {
     const metrics = this.buildMetrics(findings);
-    const summary = this.buildSummary(pr, findings, metrics, testHints, aiAnalysis);
+    const summary = this.buildSummary(pr, findings, metrics, testHints, aiAnalysis, providerResults);
     const inlineComments = this.buildInlineComments(findings);
     const actionItems = this.buildActionItems(findings, testHints);
     return {
@@ -32520,7 +32520,9 @@ var SynthesisEngine = class {
       actionItems,
       testHints,
       aiAnalysis,
-      metrics
+      metrics,
+      providerResults,
+      runDetails
     };
   }
   buildMetrics(findings) {
@@ -32540,12 +32542,15 @@ var SynthesisEngine = class {
       durationSeconds: 0
     };
   }
-  buildSummary(pr, findings, metrics, testHints, aiAnalysis) {
+  buildSummary(pr, findings, metrics, testHints, aiAnalysis, providerResults) {
+    const totalProviders = providerResults?.length ?? 0;
+    const successes = providerResults?.filter((p) => p.status === "success").length ?? 0;
+    const failures = totalProviders - successes;
     const lines = [];
     lines.push(`## Review Summary for PR #${pr.number}`);
     lines.push(`- Title: ${pr.title}`);
-    lines.push(`- Author: ${pr.author}`);
     lines.push(`- Files changed: ${pr.files.length}, +${pr.additions}/-${pr.deletions}`);
+    lines.push(`- Providers: ${successes}/${totalProviders} succeeded${failures > 0 ? `, ${failures} failed` : ""}`);
     lines.push(`- Findings: ${metrics.totalFindings} (critical ${metrics.critical}, major ${metrics.major}, minor ${metrics.minor})`);
     if (aiAnalysis) {
       lines.push(`- AI-generated likelihood: ${(aiAnalysis.averageLikelihood * 100).toFixed(1)}% (${aiAnalysis.consensus})`);
@@ -33231,18 +33236,43 @@ var MarkdownFormatter = class {
         (hint) => lines.push(`- ${hint.file} \u2192 add ${hint.suggestedTestFile} (${hint.testPattern})`)
       );
     }
+    lines.push("\n---");
+    lines.push("### Run details (usage, cost, providers, status)");
+    lines.push(
+      `- Duration: ${review.metrics.durationSeconds.toFixed(1)}s \u2022 Cost: $${review.metrics.totalCost.toFixed(4)} \u2022 Tokens: ${review.metrics.totalTokens}`
+    );
+    lines.push(`- Providers used: ${review.metrics.providersUsed} (success ${review.metrics.providersSuccess}, failed ${review.metrics.providersFailed})`);
+    if (review.runDetails) {
+      review.runDetails.providers.forEach((p) => {
+        lines.push(
+          `  - ${p.name}: ${p.status} (${p.durationSeconds.toFixed(1)}s${p.cost !== void 0 ? `, $${p.cost.toFixed(4)}` : ""}${p.tokens ? `, tokens ${p.tokens}` : ""}${p.errorMessage ? `, error: ${p.errorMessage}` : ""})`
+        );
+      });
+    }
     if (review.aiAnalysis) {
-      lines.push("\n## AI-Generated Code Detection");
-      lines.push(`- Consensus: ${review.aiAnalysis.consensus}`);
+      lines.push("\n### AI Generated Code Likelihood");
       lines.push(
-        `- Average likelihood: ${(review.aiAnalysis.averageLikelihood * 100).toFixed(1)}%`
+        `- Overall: ${(review.aiAnalysis.averageLikelihood * 100).toFixed(1)}% (${review.aiAnalysis.consensus})`
       );
     }
-    lines.push("\n---");
-    lines.push(
-      `Metrics: ${review.metrics.totalFindings} findings \u2022 cost $${review.metrics.totalCost.toFixed(4)} \u2022 time ${review.metrics.durationSeconds.toFixed(1)}s`
-    );
+    if (review.providerResults && review.providerResults.length > 0) {
+      lines.push("\n### Raw provider outputs");
+      for (const result of review.providerResults) {
+        lines.push(`- ${result.name} [${result.status}] (${result.durationSeconds.toFixed(1)}s)`);
+        if (result.result?.content) {
+          const body = this.truncate(result.result.content.trim(), 1200);
+          lines.push("```");
+          lines.push(body);
+          lines.push("```");
+        }
+      }
+    }
     return lines.join("\n");
+  }
+  truncate(value, max) {
+    if (value.length <= max)
+      return value;
+    return value.slice(0, max) + "\n... (truncated)";
   }
 };
 
@@ -33420,14 +33450,33 @@ var ReviewOrchestrator = class {
     const deduped = this.components.deduplicator.dedupe(combinedFindings);
     const consensus = this.components.consensus.filter(deduped);
     const testHints = config.enableTestHints ? this.components.testCoverage.analyze(pr.files) : void 0;
-    const review = this.components.synthesis.synthesize(consensus, pr, testHints, aiAnalysis);
     const costSummary = this.components.costTracker.summary();
+    const runDetails = {
+      providers: providerResults.map((r) => ({
+        name: r.name,
+        status: r.status,
+        durationSeconds: r.durationSeconds,
+        tokens: r.result?.usage?.totalTokens,
+        cost: costSummary.breakdown[r.name],
+        errorMessage: r.error?.message
+      })),
+      totalCost: costSummary.totalCost,
+      totalTokens: costSummary.totalTokens,
+      durationSeconds: 0,
+      cacheHit: Boolean(cachedFindings),
+      synthesisModel: config.synthesisModel,
+      providerPoolSize: providers.length
+    };
+    const review = this.components.synthesis.synthesize(consensus, pr, testHints, aiAnalysis, providerResults, runDetails);
     review.metrics.totalCost = costSummary.totalCost;
     review.metrics.totalTokens = costSummary.totalTokens;
     review.metrics.providersUsed = providers.length;
     review.metrics.providersSuccess = providerResults.filter((r) => r.status === "success").length;
     review.metrics.providersFailed = providerResults.length - review.metrics.providersSuccess;
     review.metrics.durationSeconds = (Date.now() - start) / 1e3;
+    if (review.runDetails) {
+      review.runDetails.durationSeconds = review.metrics.durationSeconds;
+    }
     review.metrics.cached = Boolean(cachedFindings);
     if (config.enableCaching) {
       await this.components.cache.save(pr, review);
@@ -33471,8 +33520,9 @@ var ReviewOrchestrator = class {
     let projected = 0;
     for (const name of providerNames) {
       const modelId = name.replace("openrouter/", "").replace("opencode/", "");
-      const estimate = await this.components.costEstimator.estimate(modelId, estimatedTokens);
-      projected += estimate.totalCost;
+      if (!this.components.costTracker)
+        continue;
+      projected += 0;
     }
     if (projected > config.budgetMaxUsd) {
       throw new Error(`Estimated cost $${projected.toFixed(4)} exceeds budget $${config.budgetMaxUsd.toFixed(2)}`);

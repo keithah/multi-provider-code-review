@@ -135,7 +135,6 @@ describe('GitHub integration mock (no network)', () => {
       testCoverage: new TestCoverageAnalyzer(),
       astAnalyzer: new ASTAnalyzer(),
       cache: new CacheManager(),
-      costEstimator: new CostEstimator({ getPricing: async () => ({ modelId: 'fake', promptPrice: 0, completionPrice: 0, isFree: true }) } as any),
       costTracker: new CostTracker({ getPricing: async () => ({ modelId: 'fake', promptPrice: 0, completionPrice: 0, isFree: true }) } as any),
       security: new SecurityScanner(),
       rules: new RulesEngine([]),
