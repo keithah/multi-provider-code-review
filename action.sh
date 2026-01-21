@@ -204,6 +204,9 @@ for raw_provider in "${RAW_PROVIDERS[@]}"; do
     continue
   fi
   PROVIDERS+=("$provider")
+  if [ "${#PROVIDERS[@]}" -ge "$MAX_PROVIDER_POOL" ]; then
+    break
+  fi
 done
 
 if [ "${#PROVIDERS[@]}" -eq 0 ] && [ "$OPENROUTER_REQUESTED" = "true" ]; then
@@ -304,6 +307,7 @@ INLINE_MAX_COMMENTS="${INLINE_MAX_COMMENTS:-5}"
 INLINE_MIN_SEVERITY="${INLINE_MIN_SEVERITY:-major}"
 INLINE_MIN_AGREEMENT="${INLINE_MIN_AGREEMENT:-2}"
 PROVIDER_LIMIT="${PROVIDER_LIMIT:-0}"
+MAX_PROVIDER_POOL="${MAX_PROVIDER_POOL:-12}"
 PROVIDER_RETRIES="${PROVIDER_RETRIES:-2}"
 MIN_CHANGED_LINES="${MIN_CHANGED_LINES:-0}"
 MAX_CHANGED_FILES="${MAX_CHANGED_FILES:-0}"
@@ -1355,7 +1359,7 @@ INLINE_PAYLOAD=$(python - "$PROVIDER_FINDINGS_FILE" "$STRUCT_LINE" "$INLINE_MAX_
 import json, sys
 prov_path, struct_line, max_comments, min_sev, min_agree, synth_model, files_path, providers = sys.argv[1:]
 providers_list = providers.split()
-severity_order = {"critical": 3, "major": 2, "minor": 1}
+severity_order = {"critical": 3, "major": 2, "minor": 1, "issue": 1}
 min_rank = severity_order.get(min_sev.lower(), 1)
 try:
     min_agree = max(1, int(min_agree))

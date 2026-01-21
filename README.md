@@ -24,6 +24,7 @@ Run comprehensive code reviews with multiple providers (OpenRouter-first) and sy
 - OpenCode CLI (installed automatically via npm in the workflow template if missing)
 - GitHub CLI is already available on `ubuntu-latest` runners
 - Python on the runner (used to build/parse JSON for OpenRouter; `python` must be on PATH)
+- PyYAML (installed automatically when a `.github/multi-review.yml` config is present; requires `pip` on the runner)
 - Optional: `OPENROUTER_API_KEY` if you want to run OpenRouter-hosted models (recommended default)
 
 ### Add to your repo
