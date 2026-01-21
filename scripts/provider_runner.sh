@@ -59,10 +59,10 @@ PYCODE
   fi
 
   {
-    echo "header = \"Content-Type: application/json\""
-    echo "header = \"Authorization: Bearer ${OPENROUTER_API_KEY}\""
-    echo "header = \"HTTP-Referer: https://github.com/keithah/multi-provider-code-review\""
-    echo "header = \"X-Title: Multi-Provider Code Review\""
+    printf 'header = "Content-Type: application/json"\n'
+    printf 'header = "Authorization: Bearer %s"\n' "$OPENROUTER_API_KEY"
+    printf 'header = "HTTP-Referer: https://github.com/keithah/multi-provider-code-review"\n'
+    printf 'header = "X-Title: Multi-Provider Code Review"\n'
   } > "$header_file"
 
   http_status=$(run_with_timeout curl -sS -w "%{http_code}" -o "${response_file}" -X POST "https://openrouter.ai/api/v1/chat/completions" \
@@ -87,7 +87,11 @@ PYCODE
         echo "limited" > "$GEMINI_RATE_FILE"
       fi
     fi
-    head -c 500 "${response_file}" >&2 || true
+    if [ "${DEBUG_MODE:-false}" = "true" ]; then
+      head -c 500 "${response_file}" >&2 || true
+    else
+      echo "API request failed for ${provider}" >&2
+    fi
     rm -f "$response_file"
     return 1
   fi

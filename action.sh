@@ -120,12 +120,12 @@ PROMPT_PROVIDERS=()
 
 # Try to discover OpenRouter free models dynamically (best-effort)
 if [ -n "$OPENROUTER_API_KEY" ]; then
-  header_file="$(mktemp)"
+  header_file="$(mktemp -t mpr.headers.XXXXXX)"
   chmod 600 "$header_file" || true
   {
-    echo "header = \"Authorization: Bearer ${OPENROUTER_API_KEY}\""
-    echo "header = \"HTTP-Referer: https://github.com/keithah/multi-provider-code-review\""
-    echo "header = \"X-Title: Multi-Provider Code Review\""
+    printf 'header = "Authorization: Bearer %s"\n' "$OPENROUTER_API_KEY"
+    printf 'header = "HTTP-Referer: https://github.com/keithah/multi-provider-code-review"\n'
+    printf 'header = "X-Title: Multi-Provider Code Review"\n'
   } > "$header_file"
   if curl -sS -K "$header_file" https://openrouter.ai/api/v1/models > "$PRICING_CACHE"; then
     mapfile -t OPENROUTER_DYNAMIC_PROVIDERS < <(python - "$PRICING_CACHE" <<'PYCODE' 2>/dev/null || true
@@ -394,7 +394,7 @@ for f in files:
             continue
         norm_name = os.path.normpath(name)
         real_name = os.path.realpath(os.path.join(repo_root, norm_name))
-        if os.path.isabs(norm_name) or norm_name.startswith(".."):
+        if os.path.isabs(norm_name) or norm_name.startswith("..") or ".." in norm_name.split(os.sep):
             continue
         if not real_name.startswith(repo_root_real):
             continue
@@ -412,7 +412,7 @@ for f in files:
         continue
     norm_name = os.path.normpath(name)
     real_name = os.path.realpath(os.path.join(repo_root, norm_name))
-    if os.path.isabs(norm_name) or norm_name.startswith(".."):
+    if os.path.isabs(norm_name) or norm_name.startswith("..") or ".." in norm_name.split(os.sep):
         continue
     if not real_name.startswith(repo_root_real):
         continue
@@ -484,11 +484,11 @@ ONLY_BINARY="false"
 if [ -s "$PR_FILES" ]; then
   if command -v jq >/dev/null 2>&1; then
     python - <<'PYCODE' "$PR_FILES" > "${TMP_DIR}/binary-and-tests.tmp" || true
-import json, sys
+import json, sys, re
 files = json.load(open(sys.argv[1]))
 patch_count = len([f for f in files if isinstance(f, dict) and "patch" in f])
 file_count = len(files) if isinstance(files, list) else 0
-test_count = len([f for f in files if isinstance(f, dict) and f.get("filename") and __import__("re").search(r"test|spec|__tests__|__snapshots__|\.test\.|\.spec\.|Tests/|Spec/", f["filename"], __import__("re").IGNORECASE)])
+test_count = len([f for f in files if isinstance(f, dict) and f.get("filename") and re.search(r"test|spec|__tests__|__snapshots__|\.test\.|\.spec\.|Tests/|Spec/", f["filename"], re.IGNORECASE)])
 print(f"{patch_count} {file_count} {test_count}")
 PYCODE
     read -r PATCH_COUNT FILE_COUNT TEST_COUNT < "${TMP_DIR}/binary-and-tests.tmp" || PATCH_COUNT=0 FILE_COUNT=0 TEST_COUNT=0
