@@ -452,11 +452,6 @@ else:
         pass
 PYCODE
 
-PROMPT_PROVIDERS=("${SUCCESS_PROVIDERS[@]}")
-if [ "${#PROMPT_PROVIDERS[@]}" -eq 0 ]; then
-  PROMPT_PROVIDERS=("${PROVIDER_LIST[@]}")
-fi
-
 PROMPT_DELIM="__REVIEW_PROMPT_EOF_${RANDOM}_$$__"
 # Defaults for prompt builder inputs
 TEST_HINT=""
@@ -729,6 +724,11 @@ for n in names:
     print(n)
 PYCODE
 )
+fi
+
+PROMPT_PROVIDERS=("${SUCCESS_PROVIDERS[@]}")
+if [ "${#PROMPT_PROVIDERS[@]}" -eq 0 ]; then
+  PROMPT_PROVIDERS=("${PROVIDER_LIST[@]}")
 fi
 
 RATE_LIMITED_PROVIDERS=()
