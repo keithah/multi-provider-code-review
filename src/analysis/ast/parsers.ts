@@ -1,13 +1,3 @@
-import Parser from 'tree-sitter';
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const TypeScript = require('tree-sitter-typescript');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const Python = require('tree-sitter-python');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const Go = (() => { try { return require('tree-sitter-go'); } catch { return null; } })();
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const Rust = (() => { try { return require('tree-sitter-rust'); } catch { return null; } })();
-
 export type Language = 'typescript' | 'javascript' | 'python' | 'go' | 'rust' | 'unknown';
 
 export function detectLanguage(filename: string): Language {
@@ -19,27 +9,48 @@ export function detectLanguage(filename: string): Language {
   return 'unknown';
 }
 
-export function getParser(language: Language): Parser | null {
+export function getParser(language: Language): any | null {
+  const Parser = loadModule('tree-sitter');
+  if (!Parser) return null;
+
   const parser = new Parser();
   try {
     if (language === 'typescript' || language === 'javascript') {
-      parser.setLanguage(TypeScript.typescript);
+      const ts = loadModule('tree-sitter-typescript');
+      if (!ts?.typescript) return null;
+      parser.setLanguage(ts.typescript);
       return parser;
     }
     if (language === 'python') {
-      parser.setLanguage(Python);
+      const py = loadModule('tree-sitter-python');
+      if (!py) return null;
+      parser.setLanguage(py);
       return parser;
     }
-    if (language === 'go' && Go) {
-      parser.setLanguage(Go);
+    if (language === 'go') {
+      const go = loadModule('tree-sitter-go');
+      if (!go) return null;
+      parser.setLanguage(go);
       return parser;
     }
-    if (language === 'rust' && Rust) {
-      parser.setLanguage(Rust);
+    if (language === 'rust') {
+      const rust = loadModule('tree-sitter-rust');
+      if (!rust) return null;
+      parser.setLanguage(rust);
       return parser;
     }
   } catch {
     return null;
   }
+
   return null;
+}
+
+function loadModule(name: string): any | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    return require(name);
+  } catch {
+    return null;
+  }
 }
