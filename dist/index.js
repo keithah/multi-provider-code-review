@@ -27044,14 +27044,15 @@ var safeDump = renamed("safeDump", "dump");
 // src/config/defaults.ts
 var DEFAULT_CONFIG = {
   providers: [
-    "openrouter/google/gemini-2.0-flash-exp:free",
-    "openrouter/mistralai/devstral-2512:free"
+    "opencode/minimax-m2.1-free",
+    "opencode/glm-4.7-free",
+    "opencode/grok-code"
   ],
   synthesisModel: "openrouter/google/gemini-2.0-flash-exp:free",
-  fallbackProviders: [],
+  fallbackProviders: ["opencode/minimax-m2.1-free"],
   providerAllowlist: [],
   providerBlocklist: [],
-  providerLimit: 0,
+  providerLimit: 6,
   providerRetries: 2,
   providerMaxParallel: 3,
   inlineMaxComments: 5,
@@ -31524,16 +31525,70 @@ var RateLimiter = class {
   }
 };
 
+// src/cost/pricing.ts
+var PricingService = class _PricingService {
+  constructor(apiKey) {
+    this.apiKey = apiKey;
+  }
+  cache = /* @__PURE__ */ new Map();
+  cacheExpiry = 0;
+  static CACHE_TTL = 60 * 60 * 1e3;
+  async getPricing(modelId) {
+    if (modelId.includes(":free")) {
+      return { modelId, promptPrice: 0, completionPrice: 0, isFree: true };
+    }
+    if (Date.now() > this.cacheExpiry) {
+      await this.refresh();
+    }
+    return this.cache.get(modelId) || {
+      modelId,
+      promptPrice: 0,
+      completionPrice: 0,
+      isFree: false
+    };
+  }
+  async refresh() {
+    if (!this.apiKey)
+      return;
+    try {
+      const response = await fetch("https://openrouter.ai/api/v1/models", {
+        headers: { Authorization: `Bearer ${this.apiKey}` }
+      });
+      if (!response.ok)
+        return;
+      const data = await response.json();
+      for (const model of data.data || []) {
+        const pricing = model.pricing || {};
+        this.cache.set(model.id, {
+          modelId: model.id,
+          promptPrice: parseFloat(pricing.prompt || "0") * 1e6,
+          completionPrice: parseFloat(pricing.completion || "0") * 1e6,
+          isFree: model.id.includes(":free")
+        });
+      }
+      this.cacheExpiry = Date.now() + _PricingService.CACHE_TTL;
+    } catch {
+    }
+  }
+};
+
 // src/providers/registry.ts
 var ProviderRegistry = class {
   rateLimiter = new RateLimiter();
   rotationIndex = 0;
+  openRouterPricing = new PricingService(process.env.OPENROUTER_API_KEY);
   async createProviders(config) {
     let providers = this.instantiate(config.providers);
+    if (providers.length === 0 && process.env.OPENROUTER_API_KEY) {
+      const freeModels = await this.fetchFreeOpenRouterModels();
+      providers.push(...this.instantiate(freeModels));
+    }
     providers = this.applyAllowBlock(providers, config);
     providers = await this.filterRateLimited(providers);
-    if (config.providerLimit > 0 && providers.length > config.providerLimit) {
-      providers = this.applyRotation(providers, config.providerLimit);
+    const selectionLimit = config.providerLimit > 0 ? config.providerLimit : Math.min(6, providers.length || 6);
+    const minSelection = Math.min(3, selectionLimit);
+    if (providers.length > selectionLimit) {
+      providers = this.randomSelect(providers, selectionLimit, minSelection);
     }
     if (providers.length === 0 && config.fallbackProviders.length > 0) {
       logger.warn("Primary providers unavailable, using fallbacks");
@@ -31602,6 +31657,29 @@ var ProviderRegistry = class {
     }
     this.rotationIndex = (this.rotationIndex + limit) % providers.length;
     return selected;
+  }
+  randomSelect(providers, max, min) {
+    const shuffled = [...providers].sort(() => Math.random() - 0.5);
+    const count = Math.max(min, Math.min(max, shuffled.length));
+    return shuffled.slice(0, count);
+  }
+  async fetchFreeOpenRouterModels() {
+    try {
+      const response = await fetch("https://openrouter.ai/api/v1/models", {
+        headers: { Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}` }
+      });
+      if (!response.ok) {
+        logger.warn(`Failed to fetch OpenRouter models: HTTP ${response.status}`);
+        return [];
+      }
+      const data = await response.json();
+      const free = (data.data || []).filter((model) => model.id.includes(":free") || model.pricing?.prompt === "0" && model.pricing?.completion === "0").map((model) => `openrouter/${model.id}`);
+      const unique = Array.from(new Set(free));
+      return unique.slice(0, Math.max(8, unique.length));
+    } catch (error) {
+      logger.warn("Error fetching OpenRouter models", error);
+      return [];
+    }
   }
 };
 
@@ -32863,53 +32941,6 @@ var CacheManager = class {
       timestamp: Date.now()
     };
     await this.storage.write(key, JSON.stringify(payload));
-  }
-};
-
-// src/cost/pricing.ts
-var PricingService = class _PricingService {
-  constructor(apiKey) {
-    this.apiKey = apiKey;
-  }
-  cache = /* @__PURE__ */ new Map();
-  cacheExpiry = 0;
-  static CACHE_TTL = 60 * 60 * 1e3;
-  async getPricing(modelId) {
-    if (modelId.includes(":free")) {
-      return { modelId, promptPrice: 0, completionPrice: 0, isFree: true };
-    }
-    if (Date.now() > this.cacheExpiry) {
-      await this.refresh();
-    }
-    return this.cache.get(modelId) || {
-      modelId,
-      promptPrice: 0,
-      completionPrice: 0,
-      isFree: false
-    };
-  }
-  async refresh() {
-    if (!this.apiKey)
-      return;
-    try {
-      const response = await fetch("https://openrouter.ai/api/v1/models", {
-        headers: { Authorization: `Bearer ${this.apiKey}` }
-      });
-      if (!response.ok)
-        return;
-      const data = await response.json();
-      for (const model of data.data || []) {
-        const pricing = model.pricing || {};
-        this.cache.set(model.id, {
-          modelId: model.id,
-          promptPrice: parseFloat(pricing.prompt || "0") * 1e6,
-          completionPrice: parseFloat(pricing.completion || "0") * 1e6,
-          isFree: model.id.includes(":free")
-        });
-      }
-      this.cacheExpiry = Date.now() + _PricingService.CACHE_TTL;
-    } catch {
-    }
   }
 };
 

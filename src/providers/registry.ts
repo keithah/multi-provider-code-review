@@ -4,18 +4,30 @@ import { OpenCodeProvider } from './opencode';
 import { ReviewConfig } from '../types';
 import { RateLimiter } from './rate-limiter';
 import { logger } from '../utils/logger';
+import { PricingService } from '../cost/pricing';
 
 export class ProviderRegistry {
   private readonly rateLimiter = new RateLimiter();
   private rotationIndex = 0;
+  private openRouterPricing = new PricingService(process.env.OPENROUTER_API_KEY);
 
   async createProviders(config: ReviewConfig): Promise<Provider[]> {
     let providers = this.instantiate(config.providers);
+
+    // If nothing configured and we have an OpenRouter key, discover free OpenRouter models.
+    if (providers.length === 0 && process.env.OPENROUTER_API_KEY) {
+      const freeModels = await this.fetchFreeOpenRouterModels();
+      providers.push(...this.instantiate(freeModels));
+    }
+
     providers = this.applyAllowBlock(providers, config);
     providers = await this.filterRateLimited(providers);
 
-    if (config.providerLimit > 0 && providers.length > config.providerLimit) {
-      providers = this.applyRotation(providers, config.providerLimit);
+    const selectionLimit = config.providerLimit > 0 ? config.providerLimit : Math.min(6, providers.length || 6);
+    const minSelection = Math.min(3, selectionLimit);
+
+    if (providers.length > selectionLimit) {
+      providers = this.randomSelect(providers, selectionLimit, minSelection);
     }
 
     if (providers.length === 0 && config.fallbackProviders.length > 0) {
@@ -97,5 +109,33 @@ export class ProviderRegistry {
     }
     this.rotationIndex = (this.rotationIndex + limit) % providers.length;
     return selected;
+  }
+
+  private randomSelect(providers: Provider[], max: number, min: number): Provider[] {
+    const shuffled = [...providers].sort(() => Math.random() - 0.5);
+    const count = Math.max(min, Math.min(max, shuffled.length));
+    return shuffled.slice(0, count);
+  }
+
+  private async fetchFreeOpenRouterModels(): Promise<string[]> {
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/models', {
+        headers: { Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}` },
+      });
+      if (!response.ok) {
+        logger.warn(`Failed to fetch OpenRouter models: HTTP ${response.status}`);
+        return [];
+      }
+      const data = (await response.json()) as { data?: Array<{ id: string; pricing?: { prompt?: string; completion?: string } }> };
+      const free = (data.data || [])
+        .filter(model => model.id.includes(':free') || (model.pricing?.prompt === '0' && model.pricing?.completion === '0'))
+        .map(model => `openrouter/${model.id}`);
+      // ensure uniqueness and at least 8 if available
+      const unique = Array.from(new Set(free));
+      return unique.slice(0, Math.max(8, unique.length));
+    } catch (error) {
+      logger.warn('Error fetching OpenRouter models', error as Error);
+      return [];
+    }
   }
 }
