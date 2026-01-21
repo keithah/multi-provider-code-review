@@ -107,7 +107,25 @@ def test_placeholder_suggestion():
     assert "No specific suggestion provided" in comments[0]["body"]
 
 
+def test_empty_inputs_no_crash():
+    comments = build_inline_payload([], "", max_comments=5, min_sev="minor", min_agree=2, providers=[], changed_files=set())
+    assert comments == []
+
+
+def test_invalid_json_struct_line():
+    prov_findings = [
+        {"file": "c.py", "line": 1, "severity": "critical", "title": "T1", "message": "m", "suggestion": "s", "provider": "p1"},
+        {"file": "c.py", "line": 1, "severity": "critical", "title": "T1", "message": "m", "suggestion": "s", "provider": "p2"},
+    ]
+    struct_line = "{invalid json"
+    comments = build_inline_payload(prov_findings, struct_line, max_comments=5, min_sev="minor", min_agree=2, providers=["p1", "p2"], changed_files={"c.py"})
+    assert len(comments) == 1
+    assert "T1" in comments[0]["body"]
+
+
 if __name__ == "__main__":
     test_consensus_min_agree()
     test_placeholder_suggestion()
+    test_empty_inputs_no_crash()
+    test_invalid_json_struct_line()
     print("inline_consensus_test: OK")

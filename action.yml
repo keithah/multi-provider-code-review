@@ -77,6 +77,10 @@ inputs:
     description: "If >0, warn and skip posting results when estimated cost exceeds this amount"
     required: false
     default: "0"
+  PROVIDER_MAX_PARALLEL:
+    description: "Max providers to run in parallel (defaults to 3)"
+    required: false
+    default: "3"
 
 runs:
   using: "composite"
@@ -104,6 +108,7 @@ runs:
         PROVIDER_RETRIES: ${{ inputs.PROVIDER_RETRIES }}
         BUDGET_MAX_USD: ${{ inputs.BUDGET_MAX_USD }}
         REPORT_BASENAME: ${{ inputs.REPORT_BASENAME }}
+        PROVIDER_MAX_PARALLEL: ${{ inputs.PROVIDER_MAX_PARALLEL }}
       run: bash "${{ github.action_path }}/action.sh"
 
 branding:

@@ -127,6 +127,14 @@ PYCODE
 
 # Run providers in parallel respecting MAX_PARALLEL and populate report file.
 run_providers() {
+  PROVIDER_RETRIES="${PROVIDER_RETRIES:-2}"
+  if [ "$PROVIDER_RETRIES" -lt 1 ]; then
+    PROVIDER_RETRIES=1
+  fi
+  if [ -z "${PROMPT_FILE:-}" ]; then
+    echo "Error: PROMPT_FILE is not set" >&2
+    return 1
+  fi
   local providers=("$@")
   PROVIDER_LIST=()
   SUCCESS_PROVIDERS=()

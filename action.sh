@@ -728,6 +728,7 @@ fi
 
 RATE_LIMITED_PROVIDERS=()
 if [ -f "$RATE_LIMIT_FILE" ]; then
+  : > "$RATE_LOCK_FILE" 2>/dev/null || true
   (
     flock -s 200
     mapfile -t RATE_LIMITED_PROVIDERS < "$RATE_LIMIT_FILE"

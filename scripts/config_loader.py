@@ -52,6 +52,7 @@ def main() -> None:
             try:
                 val = cast(val)
             except Exception:
+                print(f"Warning: failed to cast {key} value '{val}' to {cast.__name__}", file=sys.stderr)
                 return
         exports[env_key] = val
 
