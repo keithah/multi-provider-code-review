@@ -323,12 +323,12 @@ BUDGET_MAX_USD="${BUDGET_MAX_USD:-0}"
 PROVIDER_ALLOWLIST=()
 PROVIDER_BLOCKLIST=()
 SKIP_LABELS=()
-REPORT_BASENAME="${REPORT_BASENAME:-multi-provider-review}"
+REPORT_BASENAME_RAW="${REPORT_BASENAME:-multi-provider-review}"
 REPORT_DIR="${GITHUB_WORKSPACE:-$PWD}/multi-provider-report"
 mkdir -p "$REPORT_DIR"
 
 # Sanitize report basename to prevent path traversal or invalid filenames
-REPORT_BASENAME_SANITIZED="$(echo "$REPORT_BASENAME" | tr -c 'A-Za-z0-9._-' '-')"
+REPORT_BASENAME_SANITIZED="$(echo "$REPORT_BASENAME_RAW" | tr -c 'A-Za-z0-9._-' '-')"
 if [ -z "$REPORT_BASENAME_SANITIZED" ]; then
   REPORT_BASENAME_SANITIZED="multi-provider-review"
 fi
@@ -1597,6 +1597,16 @@ with open(sarif_path, "w", encoding="utf-8") as f:
     json.dump(sarif, f, indent=2)
 print(f"Wrote SARIF report to {sarif_path} with {len(results)} result(s)")
 PYCODE
+
+# If the sanitized basename differs from the raw input, write copies to match the expected upload path.
+if [ "$REPORT_BASENAME_RAW" != "$REPORT_BASENAME" ]; then
+  if [ -f "$REPORT_JSON" ]; then
+    cp "$REPORT_JSON" "${REPORT_DIR}/${REPORT_BASENAME_RAW}.json" || true
+  fi
+  if [ -f "$REPORT_SARIF" ]; then
+    cp "$REPORT_SARIF" "${REPORT_DIR}/${REPORT_BASENAME_RAW}.sarif" || true
+  fi
+fi
 
 echo ""
 echo "✅ Review posted to PR #${PR_NUMBER}"
