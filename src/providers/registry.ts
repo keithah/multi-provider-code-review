@@ -34,10 +34,13 @@ export class ProviderRegistry {
     providers = this.dedupeProviders(providers);
 
     providers = this.applyAllowBlock(providers, config);
+    logger.info(`After allowBlock: ${providers.length} providers`);
     providers = await this.filterRateLimited(providers);
+    logger.info(`After filterRateLimited: ${providers.length} providers`);
 
     const selectionLimit = config.providerLimit > 0 ? config.providerLimit : Math.min(6, providers.length || 6);
     const minSelection = Math.min(5, selectionLimit);
+    logger.info(`Selection limit: ${selectionLimit}, min: ${minSelection}, fallback count: ${config.fallbackProviders.length}`);
 
     // Add fallback providers if we haven't reached the selection limit
     if (providers.length < selectionLimit && config.fallbackProviders.length > 0) {
@@ -45,6 +48,9 @@ export class ProviderRegistry {
       const fallbacks = this.instantiate(config.fallbackProviders);
       const filteredFallbacks = await this.filterRateLimited(fallbacks);
       providers = this.dedupeProviders([...providers, ...filteredFallbacks]);
+      logger.info(`After adding fallbacks: ${providers.length} providers`);
+    } else {
+      logger.info(`Skipping fallback providers: providers.length=${providers.length}, selectionLimit=${selectionLimit}, fallbackProviders.length=${config.fallbackProviders.length}`);
     }
 
     if (providers.length > selectionLimit) {
