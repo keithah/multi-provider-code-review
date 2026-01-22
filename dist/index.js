@@ -27045,7 +27045,7 @@ var safeDump = renamed("safeDump", "dump");
 var DEFAULT_CONFIG = {
   providers: [
     "opencode/minimax-m2.1-free",
-    "opencode/glm-4.7-free",
+    "opencode/big-pickle",
     "opencode/grok-code"
   ],
   synthesisModel: "openrouter/google/gemini-2.0-flash-exp:free",

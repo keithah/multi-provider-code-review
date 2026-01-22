@@ -52,6 +52,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.resolve-pr.outputs.pr }}
           REVIEW_PROVIDERS: openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free,openrouter/xiaomi/mimo-v2-flash:free
-          FALLBACK_PROVIDERS: opencode/minimax-m2.1-free,opencode/glm-4.7-free,opencode/grok-code
+          FALLBACK_PROVIDERS: opencode/minimax-m2.1-free,opencode/big-pickle,opencode/grok-code
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
