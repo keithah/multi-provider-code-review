@@ -15,7 +15,9 @@ permissions:
 
 jobs:
   review:
-    runs-on: ubicloud-standard-2
+    runs-on:
+      - self-hosted
+      - ubicloud-standard-2
     steps:
       - uses: actions/checkout@v4
       - name: Resolve PR number
@@ -46,7 +48,7 @@ jobs:
       - name: Install OpenCode CLI
         run: npm install -g opencode-ai@latest
       - name: Multi-Provider Code Review
-        if: ${{ steps.resolve-pr.outputs.pr != '' }}
+        if: ${{ steps.resolve-pr.outputs.pr != '' && (github.event.pull_request.head.repo.fork == false || secrets.OPENROUTER_API_KEY != '') }}
         uses: ./
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
