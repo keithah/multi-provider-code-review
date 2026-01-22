@@ -6,7 +6,6 @@ import { RateLimiter } from './rate-limiter';
 import { logger } from '../utils/logger';
 import { PricingService } from '../cost/pricing';
 import { DEFAULT_CONFIG } from '../config/defaults';
-import fetch from 'node-fetch';
 
 export class ProviderRegistry {
   private readonly rateLimiter = new RateLimiter();

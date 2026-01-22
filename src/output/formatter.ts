@@ -60,6 +60,12 @@ export class MarkdownFormatter {
           `  - ${p.name}: ${p.status} (${p.durationSeconds.toFixed(1)}s${p.cost !== undefined ? `, $${p.cost.toFixed(4)}` : ''}${p.tokens ? `, tokens ${p.tokens}` : ''}${p.errorMessage ? `, error: ${p.errorMessage}` : ''})`
         );
       });
+
+      const timeouts = review.runDetails.providers.filter(p => p.errorMessage?.includes('timed out'));
+      if (timeouts.length > 0) {
+        lines.push('');
+        lines.push(`*Note: ${timeouts.length} provider(s) timed out. This is expected for large PRs and does not affect the quality of results from successful providers.*`);
+      }
     }
     lines.push('</details>');
 
