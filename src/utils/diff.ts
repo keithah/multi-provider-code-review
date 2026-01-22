@@ -1,11 +1,11 @@
 export function trimDiff(diff: string, maxBytes: number): string {
-  const bytes = Buffer.byteLength(diff, 'utf8');
-  if (bytes <= maxBytes) return diff;
+  const buf = Buffer.from(diff, 'utf8');
+  if (buf.byteLength <= maxBytes) return diff;
 
-  // Keep head and tail chunks for context
-  const half = Math.floor(maxBytes / 2);
-  const head = diff.slice(0, half);
-  const tail = diff.slice(-half);
+  const marker = Buffer.byteLength('\n...diff truncated...\n', 'utf8');
+  const halfBytes = Math.floor((maxBytes - marker) / 2);
+  const head = buf.slice(0, halfBytes).toString('utf8');
+  const tail = buf.slice(Math.max(buf.byteLength - halfBytes, 0)).toString('utf8');
   return `${head}\n...diff truncated...\n${tail}`;
 }
 

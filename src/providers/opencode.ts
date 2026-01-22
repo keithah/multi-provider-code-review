@@ -5,6 +5,7 @@ import { spawn } from 'child_process';
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
+import * as crypto from 'crypto';
 
 export class OpenCodeProvider extends Provider {
   constructor(private readonly modelId: string) {
@@ -20,9 +21,9 @@ export class OpenCodeProvider extends Provider {
       : `opencode/${this.modelId}`;
 
     // Write prompt to temp file to avoid command line length limits
-    const tmpDir = os.tmpdir();
-    const promptFile = path.join(tmpDir, `opencode-prompt-${Date.now()}-${Math.random().toString(36).slice(2)}.txt`);
-    await fs.writeFile(promptFile, prompt, 'utf8');
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'opencode-'));
+    const promptFile = path.join(tmpDir, `prompt-${crypto.randomBytes(8).toString('hex')}.txt`);
+    await fs.writeFile(promptFile, prompt, { encoding: 'utf8', mode: 0o600 });
 
     const args = [...baseArgs, 'run', '-m', cliModel, '--file', promptFile, '--', 'Review the attached PR context and provide structured findings.'];
 
@@ -30,13 +31,13 @@ export class OpenCodeProvider extends Provider {
 
     try {
       const { stdout, stderr } = await this.runCli(bin, args, timeoutMs);
-      const content = stdout.trim() || stderr.trim();
+      const content = stdout.trim();
       const durationSeconds = (Date.now() - started) / 1000;
       logger.info(
         `OpenCode CLI output for ${this.name}: stdout=${stdout.length} bytes, stderr=${stderr.length} bytes, duration=${durationSeconds.toFixed(1)}s`
       );
-      if (!content) {
-        throw new Error('OpenCode CLI returned no output');
+      if (!content || content.toLowerCase().includes('error')) {
+        throw new Error(`OpenCode CLI returned no usable output${stderr ? `; stderr: ${stderr}` : ''}`);
       }
       return {
         content,
@@ -50,6 +51,7 @@ export class OpenCodeProvider extends Provider {
       // Clean up temp file
       try {
         await fs.unlink(promptFile);
+        await fs.rmdir(tmpDir);
       } catch (err) {
         // Ignore cleanup errors
       }

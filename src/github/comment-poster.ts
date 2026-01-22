@@ -80,7 +80,7 @@ export class CommentPoster {
             }
             lineChunk += line + '\n';
           }
-          current = lineChunk;
+          current = lineChunk + '\n\n';
         } else {
           current = para + '\n\n';
         }
