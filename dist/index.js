@@ -31439,12 +31439,15 @@ var OpenCodeProvider = class extends Provider {
     const args = [...baseArgs, "run", "-m", this.modelId, "--", prompt];
     logger.info(`Running OpenCode CLI: ${bin} ${args.slice(0, 3).join(" ")} \u2026`);
     try {
-      const content = await this.runCli(bin, args, timeoutMs);
+      const { stdout, stderr } = await this.runCli(bin, args, timeoutMs);
+      if (!stdout.trim()) {
+        throw new Error(`OpenCode CLI returned no output${stderr ? `; stderr: ${stderr.trim()}` : ""}`);
+      }
       const durationSeconds = (Date.now() - started) / 1e3;
       return {
-        content,
+        content: stdout,
         durationSeconds,
-        findings: this.extractFindings(content)
+        findings: this.extractFindings(stdout)
       };
     } catch (error) {
       logger.error(`OpenCode provider failed: ${this.name}`, error);
@@ -31473,9 +31476,9 @@ var OpenCodeProvider = class extends Provider {
       proc.on("close", (code) => {
         clearTimeout(timer);
         if (code !== 0) {
-          reject(new Error(`OpenCode CLI exited with code ${code}: ${stderr || stdout}`));
+          reject(new Error(`OpenCode CLI exited with code ${code}: ${stderr || stdout || "no output"}`));
         } else {
-          resolve(stdout.trim());
+          resolve({ stdout: stdout.trim(), stderr: stderr.trim() });
         }
       });
     });
