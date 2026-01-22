@@ -33335,7 +33335,7 @@ var MarkdownFormatter = class {
       );
       lines.push("</details>");
     }
-    if (review.mermaidDiagram) {
+    if (review.mermaidDiagram && review.mermaidDiagram.trim()) {
       lines.push("\n<details><summary>Impact graph</summary>");
       lines.push("```mermaid");
       lines.push(review.mermaidDiagram);
