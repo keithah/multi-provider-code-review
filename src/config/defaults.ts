@@ -5,6 +5,7 @@ export const DEFAULT_CONFIG: ReviewConfig = {
     'opencode/minimax-m2.1-free',
     'opencode/big-pickle',
     'opencode/grok-code',
+    'opencode/glm-4.7-free',
   ],
   synthesisModel: 'openrouter/google/gemini-2.0-flash-exp:free',
   fallbackProviders: ['opencode/minimax-m2.1-free'],
