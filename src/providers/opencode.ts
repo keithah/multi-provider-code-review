@@ -112,6 +112,7 @@ export class OpenCodeProvider extends Provider {
       const match = content.match(/```json\s*([\s\S]*?)```/i);
       if (match) {
         const parsed = JSON.parse(match[1]);
+        if (Array.isArray(parsed)) return parsed;
         return parsed.findings || [];
       }
     } catch (error) {

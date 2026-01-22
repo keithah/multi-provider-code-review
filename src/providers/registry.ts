@@ -39,6 +39,14 @@ export class ProviderRegistry {
     const selectionLimit = config.providerLimit > 0 ? config.providerLimit : Math.min(6, providers.length || 6);
     const minSelection = Math.min(5, selectionLimit);
 
+    // Add fallback providers if we haven't reached the selection limit
+    if (providers.length < selectionLimit && config.fallbackProviders.length > 0) {
+      logger.info(`Adding ${config.fallbackProviders.length} fallback providers to reach target of ${selectionLimit}`);
+      const fallbacks = this.instantiate(config.fallbackProviders);
+      const filteredFallbacks = await this.filterRateLimited(fallbacks);
+      providers = this.dedupeProviders([...providers, ...filteredFallbacks]);
+    }
+
     if (providers.length > selectionLimit) {
       providers = this.randomSelect(providers, selectionLimit, minSelection);
     }

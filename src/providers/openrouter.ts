@@ -108,10 +108,12 @@ export class OpenRouterProvider extends Provider {
       const jsonMatch = content.match(/```json\s*([\s\S]*?)```/i);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[1]);
+        if (Array.isArray(parsed)) return parsed;
         return parsed.findings || [];
       }
 
       const parsed = JSON.parse(content);
+      if (Array.isArray(parsed)) return parsed;
       return parsed.findings || [];
     } catch (error) {
       logger.debug('Failed to parse findings from content', error);
