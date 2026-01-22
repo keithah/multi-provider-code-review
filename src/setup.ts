@@ -64,7 +64,6 @@ export function createComponents(config: ReviewConfig, githubToken: string): Rev
     testCoverage,
     astAnalyzer,
     cache,
-    costEstimator,
     costTracker,
     security,
     rules,

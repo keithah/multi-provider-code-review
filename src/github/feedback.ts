@@ -25,7 +25,7 @@ export class FeedbackFilter {
             comment_id: comment.id,
             per_page: 100,
           });
-          const hasThumbsDown = reactions.data.some(r => r.content === 'thumbs_down');
+          const hasThumbsDown = reactions.data.some(r => r.content === '-1');
           if (hasThumbsDown) {
             const signature = this.signatureFromComment(comment.path, comment.line, comment.body || '');
             suppressed.add(signature);
