@@ -18,6 +18,12 @@ export class ProviderRegistry {
     const userProvidedList = Boolean(process.env.REVIEW_PROVIDERS);
     const usingDefaults = this.usesDefaultProviders(config.providers);
 
+    // Always keep OpenCode defaults in the pool so we can mix OpenCode + OpenRouter.
+    const hasOpenCode = providers.some(p => p.name.startsWith('opencode/'));
+    if (!hasOpenCode) {
+      providers.push(...this.instantiate(DEFAULT_CONFIG.providers));
+    }
+
     // If nothing configured, or just defaults with an OpenRouter key, discover free OpenRouter models.
     if (process.env.OPENROUTER_API_KEY && ((!userProvidedList && usingDefaults) || providers.length === 0)) {
       const freeModels = await this.fetchFreeOpenRouterModels();

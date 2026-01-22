@@ -31589,6 +31589,10 @@ var ProviderRegistry = class {
     let providers = this.instantiate(config.providers);
     const userProvidedList = Boolean(process.env.REVIEW_PROVIDERS);
     const usingDefaults = this.usesDefaultProviders(config.providers);
+    const hasOpenCode = providers.some((p) => p.name.startsWith("opencode/"));
+    if (!hasOpenCode) {
+      providers.push(...this.instantiate(DEFAULT_CONFIG.providers));
+    }
     if (process.env.OPENROUTER_API_KEY && (!userProvidedList && usingDefaults || providers.length === 0)) {
       const freeModels = await this.fetchFreeOpenRouterModels();
       providers.push(...this.instantiate(freeModels));
