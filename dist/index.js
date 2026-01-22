@@ -34015,10 +34015,15 @@ async function run() {
     core3.info("Review completed successfully");
   } catch (error) {
     core3.setFailed(`Review failed: ${error.message}`);
-    throw error;
+    process.exit(1);
   }
 }
-run();
+run().then(() => {
+  process.exit(0);
+}).catch((error) => {
+  core3.setFailed(`Unhandled error: ${error.message}`);
+  process.exit(1);
+});
 /*! Bundled license information:
 
 undici/lib/fetch/body.js:

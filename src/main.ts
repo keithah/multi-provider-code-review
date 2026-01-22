@@ -76,8 +76,13 @@ async function run(): Promise<void> {
     core.info('Review completed successfully');
   } catch (error) {
     core.setFailed(`Review failed: ${(error as Error).message}`);
-    throw error;
+    process.exit(1);
   }
 }
 
-run();
+run().then(() => {
+  process.exit(0);
+}).catch((error) => {
+  core.setFailed(`Unhandled error: ${error.message}`);
+  process.exit(1);
+});
