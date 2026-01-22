@@ -33461,13 +33461,13 @@ var ContextRetriever = class {
 
 // src/analysis/impact.ts
 var ImpactAnalyzer = class {
-  analyze(files, contexts) {
+  analyze(files, contexts, hasFindings = true) {
     const consumers = this.collectByRelationship(contexts, "consumer");
     const dependencies = this.collectByRelationship(contexts, "dependency");
     const callers = this.collectByRelationship(contexts, "caller");
     const derived = this.collectByRelationship(contexts, "derived");
     const totalAffected = files.length + contexts.length;
-    const impactLevel = this.calculateImpact(totalAffected, files);
+    const impactLevel = hasFindings ? this.calculateImpact(totalAffected, files) : "low";
     return {
       file: files[0]?.filename ?? "repository",
       totalAffected,
@@ -33810,7 +33810,7 @@ var ReviewOrchestrator = class {
     );
     const quietFiltered = this.applyQuietMode(enriched, config);
     const testHints = config.enableTestHints ? this.components.testCoverage.analyze(pr.files) : void 0;
-    const impactAnalysis = this.components.impactAnalyzer.analyze(pr.files, context2);
+    const impactAnalysis = this.components.impactAnalyzer.analyze(pr.files, context2, quietFiltered.length > 0);
     const mermaidDiagram = this.components.mermaidGenerator.generateImpactDiagram(pr.files, context2);
     const costSummary = this.components.costTracker.summary();
     const runDetails = {

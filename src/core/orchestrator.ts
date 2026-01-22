@@ -103,7 +103,7 @@ export class ReviewOrchestrator {
     const quietFiltered = this.applyQuietMode(enriched, config);
 
     const testHints = config.enableTestHints ? this.components.testCoverage.analyze(pr.files) : undefined;
-    const impactAnalysis = this.components.impactAnalyzer.analyze(pr.files, context);
+    const impactAnalysis = this.components.impactAnalyzer.analyze(pr.files, context, quietFiltered.length > 0);
     const mermaidDiagram = this.components.mermaidGenerator.generateImpactDiagram(pr.files, context);
     const costSummary = this.components.costTracker.summary();
     const runDetails: RunDetails = {

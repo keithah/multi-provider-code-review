@@ -1,14 +1,14 @@
 import { FileChange, ImpactAnalysis, UnchangedContext, CodeSnippet } from '../types';
 
 export class ImpactAnalyzer {
-  analyze(files: FileChange[], contexts: UnchangedContext[]): ImpactAnalysis {
+  analyze(files: FileChange[], contexts: UnchangedContext[], hasFindings = true): ImpactAnalysis {
     const consumers = this.collectByRelationship(contexts, 'consumer');
     const dependencies = this.collectByRelationship(contexts, 'dependency');
     const callers = this.collectByRelationship(contexts, 'caller');
     const derived = this.collectByRelationship(contexts, 'derived');
 
     const totalAffected = files.length + contexts.length;
-    const impactLevel = this.calculateImpact(totalAffected, files);
+    const impactLevel = hasFindings ? this.calculateImpact(totalAffected, files) : 'low';
 
     return {
       file: files[0]?.filename ?? 'repository',
