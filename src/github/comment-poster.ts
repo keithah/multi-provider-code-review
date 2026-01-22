@@ -2,6 +2,7 @@ import { InlineComment, FileChange } from '../types';
 import { GitHubClient } from './client';
 import { logger } from '../utils/logger';
 import { mapLinesToPositions } from '../utils/diff';
+import { withRetry } from '../utils/retry';
 
 export class CommentPoster {
   private static readonly MAX_COMMENT_SIZE = 60_000;
@@ -15,7 +16,10 @@ export class CommentPoster {
     for (let i = 0; i < chunks.length; i++) {
       const header = chunks.length > 1 ? `## Review Summary (Part ${i + 1}/${chunks.length})\n\n` : '';
       const content = header + chunks[i];
-      await octokit.rest.issues.createComment({ owner, repo, issue_number: prNumber, body: content });
+      await withRetry(
+        () => octokit.rest.issues.createComment({ owner, repo, issue_number: prNumber, body: content }),
+        { retries: 2, minTimeout: 1000, maxTimeout: 5000 }
+      );
       if (i < chunks.length - 1) {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
@@ -50,13 +54,16 @@ export class CommentPoster {
     }
 
     const { octokit, owner, repo } = this.client;
-    await octokit.rest.pulls.createReview({
-      owner,
-      repo,
-      pull_number: prNumber,
-      event: 'COMMENT',
-      comments: apiComments,
-    });
+    await withRetry(
+      () => octokit.rest.pulls.createReview({
+        owner,
+        repo,
+        pull_number: prNumber,
+        event: 'COMMENT',
+        comments: apiComments,
+      }),
+      { retries: 2, minTimeout: 1000, maxTimeout: 5000 }
+    );
   }
 
   private chunk(content: string): string[] {

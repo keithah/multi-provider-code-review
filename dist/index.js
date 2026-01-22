@@ -31492,6 +31492,9 @@ var OpenRouterProvider = class _OpenRouterProvider extends Provider {
     this.modelId = modelId;
     this.apiKey = apiKey;
     this.rateLimiter = rateLimiter;
+    if (typeof fetch === "undefined") {
+      throw new Error("fetch is not available. Please use Node.js 18+ or polyfill fetch.");
+    }
   }
   static BASE_URL = "https://openrouter.ai/api/v1";
   async review(prompt, timeoutMs) {
@@ -33316,7 +33319,10 @@ var CommentPoster = class _CommentPoster {
 
 ` : "";
       const content = header + chunks[i];
-      await octokit.rest.issues.createComment({ owner, repo, issue_number: prNumber, body: content });
+      await withRetry(
+        () => octokit.rest.issues.createComment({ owner, repo, issue_number: prNumber, body: content }),
+        { retries: 2, minTimeout: 1e3, maxTimeout: 5e3 }
+      );
       if (i < chunks.length - 1) {
         await new Promise((resolve) => setTimeout(resolve, 1e3));
       }
@@ -33343,13 +33349,16 @@ var CommentPoster = class _CommentPoster {
       return;
     }
     const { octokit, owner, repo } = this.client;
-    await octokit.rest.pulls.createReview({
-      owner,
-      repo,
-      pull_number: prNumber,
-      event: "COMMENT",
-      comments: apiComments
-    });
+    await withRetry(
+      () => octokit.rest.pulls.createReview({
+        owner,
+        repo,
+        pull_number: prNumber,
+        event: "COMMENT",
+        comments: apiComments
+      }),
+      { retries: 2, minTimeout: 1e3, maxTimeout: 5e3 }
+    );
   }
   chunk(content) {
     const paragraphs = content.split("\n\n");

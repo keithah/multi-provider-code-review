@@ -14,6 +14,9 @@ export class OpenRouterProvider extends Provider {
     private readonly rateLimiter: RateLimiter
   ) {
     super(`openrouter/${modelId}`);
+    if (typeof fetch === 'undefined') {
+      throw new Error('fetch is not available. Please use Node.js 18+ or polyfill fetch.');
+    }
   }
 
   async review(prompt: string, timeoutMs: number): Promise<ReviewResult> {
