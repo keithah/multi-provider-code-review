@@ -32486,7 +32486,13 @@ var LLMExecutor = class {
         try {
           const result = await withRetry(runner, {
             retries: Math.max(0, this.config.providerRetries - 1),
-            retryOn: (error) => !(error instanceof RateLimitError)
+            retryOn: (error) => {
+              if (error instanceof RateLimitError)
+                return false;
+              if (error.message.includes("timed out after"))
+                return false;
+              return true;
+            }
           });
           results.push({
             name: provider.name,
