@@ -33554,6 +33554,54 @@ var MermaidGenerator = class {
   }
 };
 
+// src/github/feedback.ts
+var FeedbackFilter = class {
+  constructor(client) {
+    this.client = client;
+  }
+  async loadSuppressed(prNumber) {
+    const { octokit, owner, repo } = this.client;
+    const suppressed = /* @__PURE__ */ new Set();
+    try {
+      const comments = await octokit.paginate(octokit.rest.pulls.listReviewComments, {
+        owner,
+        repo,
+        pull_number: prNumber,
+        per_page: 100
+      });
+      for (const comment of comments) {
+        try {
+          const reactions = await octokit.rest.reactions.listForPullRequestReviewComment({
+            owner,
+            repo,
+            comment_id: comment.id,
+            per_page: 100
+          });
+          const hasThumbsDown = reactions.data.some((r) => r.content === "thumbs_down");
+          if (hasThumbsDown) {
+            const signature = this.signatureFromComment(comment.path, comment.line, comment.body || "");
+            suppressed.add(signature);
+          }
+        } catch (error) {
+          logger.warn(`Failed to load reactions for comment ${comment.id}`, error);
+        }
+      }
+    } catch (error) {
+      logger.warn("Failed to load review comments for feedback filter", error);
+    }
+    return suppressed;
+  }
+  shouldPost(comment, suppressed) {
+    const signature = this.signatureFromComment(comment.path, comment.line, comment.body);
+    return !suppressed.has(signature);
+  }
+  signatureFromComment(path6, line, body) {
+    const titleMatch = body.match(/\*\*(.+?)\*\*/);
+    const title = titleMatch ? titleMatch[1] : body.split("\n")[0] || "unknown";
+    return `${(path6 || "unknown").toLowerCase()}:${line ?? 0}:${title.toLowerCase()}`;
+  }
+};
+
 // src/setup.ts
 function createComponents(config, githubToken) {
   const providerRegistry = new ProviderRegistry();
@@ -33582,6 +33630,7 @@ function createComponents(config, githubToken) {
   const impactAnalyzer = new ImpactAnalyzer();
   const evidenceScorer = new EvidenceScorer();
   const mermaidGenerator = new MermaidGenerator();
+  const feedbackFilter = new FeedbackFilter(githubClient);
   return {
     config,
     providerRegistry,
@@ -33603,7 +33652,8 @@ function createComponents(config, githubToken) {
     contextRetriever,
     impactAnalyzer,
     evidenceScorer,
-    mermaidGenerator
+    mermaidGenerator,
+    feedbackFilter
   };
 }
 
@@ -33785,8 +33835,10 @@ var ReviewOrchestrator = class {
       await this.components.cache.save(pr, review);
     }
     const markdown = this.components.formatter.format(review);
+    const suppressed = await this.components.feedbackFilter.loadSuppressed(pr.number);
+    const inlineFiltered = review.inlineComments.filter((c) => this.components.feedbackFilter.shouldPost(c, suppressed));
     await this.components.commentPoster.postSummary(pr.number, markdown);
-    await this.components.commentPoster.postInline(pr.number, review.inlineComments);
+    await this.components.commentPoster.postInline(pr.number, inlineFiltered);
     await this.writeReports(review);
     return review;
   }

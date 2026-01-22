@@ -18,6 +18,7 @@ import { ContextRetriever } from '../../src/analysis/context';
 import { ImpactAnalyzer } from '../../src/analysis/impact';
 import { EvidenceScorer } from '../../src/analysis/evidence';
 import { MermaidGenerator } from '../../src/output/mermaid';
+import { FeedbackFilter } from '../../src/github/feedback';
 
 class FakeProvider extends Provider {
   constructor() {
@@ -106,6 +107,15 @@ class NoopCache extends CacheManager {
   }
 }
 
+class StubFeedbackFilter {
+  async loadSuppressed(): Promise<Set<string>> {
+    return new Set();
+  }
+  shouldPost(): boolean {
+    return true;
+  }
+}
+
 describe('ReviewOrchestrator integration (offline)', () => {
   const config: ReviewConfig = {
     providers: ['fake/model'],
@@ -156,6 +166,7 @@ describe('ReviewOrchestrator integration (offline)', () => {
       impactAnalyzer: new ImpactAnalyzer(),
       evidenceScorer: new EvidenceScorer(),
       mermaidGenerator: new MermaidGenerator(),
+      feedbackFilter: new StubFeedbackFilter() as unknown as FeedbackFilter,
     };
 
     const orchestrator = new ReviewOrchestrator(components);

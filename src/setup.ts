@@ -22,6 +22,7 @@ import { ContextRetriever } from './analysis/context';
 import { ImpactAnalyzer } from './analysis/impact';
 import { EvidenceScorer } from './analysis/evidence';
 import { MermaidGenerator } from './output/mermaid';
+import { FeedbackFilter } from './github/feedback';
 
 export function createComponents(config: ReviewConfig, githubToken: string): ReviewComponents {
   const providerRegistry = new ProviderRegistry();
@@ -50,6 +51,7 @@ export function createComponents(config: ReviewConfig, githubToken: string): Rev
   const impactAnalyzer = new ImpactAnalyzer();
   const evidenceScorer = new EvidenceScorer();
   const mermaidGenerator = new MermaidGenerator();
+  const feedbackFilter = new FeedbackFilter(githubClient);
 
   return {
     config,
@@ -73,5 +75,6 @@ export function createComponents(config: ReviewConfig, githubToken: string): Rev
     impactAnalyzer,
     evidenceScorer,
     mermaidGenerator,
+    feedbackFilter,
   };
 }

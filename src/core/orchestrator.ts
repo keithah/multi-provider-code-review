@@ -12,6 +12,7 @@ import { PullRequestLoader } from '../github/pr-loader';
 import { CommentPoster } from '../github/comment-poster';
 import { MarkdownFormatter } from '../output/formatter';
 import { MermaidGenerator } from '../output/mermaid';
+import { FeedbackFilter } from '../github/feedback';
 import { buildJson } from '../output/json';
 import { buildSarif } from '../output/sarif';
 import { CacheManager } from '../cache/manager';
@@ -48,6 +49,7 @@ export interface ReviewComponents {
   impactAnalyzer: ImpactAnalyzer;
   evidenceScorer: EvidenceScorer;
   mermaidGenerator: MermaidGenerator;
+  feedbackFilter: FeedbackFilter;
 }
 
 export class ReviewOrchestrator {
@@ -148,8 +150,11 @@ export class ReviewOrchestrator {
     }
 
     const markdown = this.components.formatter.format(review);
+    const suppressed = await this.components.feedbackFilter.loadSuppressed(pr.number);
+    const inlineFiltered = review.inlineComments.filter(c => this.components.feedbackFilter.shouldPost(c, suppressed));
+
     await this.components.commentPoster.postSummary(pr.number, markdown);
-    await this.components.commentPoster.postInline(pr.number, review.inlineComments);
+    await this.components.commentPoster.postInline(pr.number, inlineFiltered);
 
     await this.writeReports(review);
 

@@ -19,6 +19,7 @@ import { ContextRetriever } from '../../src/analysis/context';
 import { ImpactAnalyzer } from '../../src/analysis/impact';
 import { EvidenceScorer } from '../../src/analysis/evidence';
 import { MermaidGenerator } from '../../src/output/mermaid';
+import { FeedbackFilter } from '../../src/github/feedback';
 
 class FakeProvider extends Provider {
   constructor() {
@@ -148,6 +149,10 @@ describe('GitHub integration mock (no network)', () => {
       impactAnalyzer: new ImpactAnalyzer(),
       evidenceScorer: new EvidenceScorer(),
       mermaidGenerator: new MermaidGenerator(),
+      feedbackFilter: {
+        loadSuppressed: async () => new Set(),
+        shouldPost: () => true,
+      } as unknown as FeedbackFilter,
     };
 
     const orchestrator = new ReviewOrchestrator(components);
