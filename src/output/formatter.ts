@@ -85,9 +85,8 @@ export class MarkdownFormatter {
         lines.push(`<details><summary>${result.name} [${result.status}] (${result.durationSeconds.toFixed(1)}s)</summary>`);
         lines.push('');
         if (result.result?.content) {
-          lines.push('```');
+          // Content may already have code fences - just output as-is
           lines.push(result.result.content.trim());
-          lines.push('```');
         } else {
           lines.push('_no content_');
         }

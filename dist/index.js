@@ -33488,9 +33488,7 @@ var MarkdownFormatter = class {
         lines.push(`<details><summary>${result.name} [${result.status}] (${result.durationSeconds.toFixed(1)}s)</summary>`);
         lines.push("");
         if (result.result?.content) {
-          lines.push("```");
           lines.push(result.result.content.trim());
-          lines.push("```");
         } else {
           lines.push("_no content_");
         }
