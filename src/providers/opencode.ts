@@ -1,50 +1,23 @@
 import { Provider } from './base';
 import { ReviewResult } from '../types';
 import { logger } from '../utils/logger';
+import { spawn } from 'child_process';
 
 export class OpenCodeProvider extends Provider {
-  private static readonly DEFAULT_ENDPOINT = 'https://opencode.local/v1/chat/completions';
-
   constructor(private readonly modelId: string) {
     super(`opencode/${modelId}`);
   }
 
   async review(prompt: string, timeoutMs: number): Promise<ReviewResult> {
-    const endpoint = process.env.OPENCODE_ENDPOINT || OpenCodeProvider.DEFAULT_ENDPOINT;
-    const apiKey = process.env.OPENCODE_API_KEY;
-
-    if (!apiKey) {
-      throw new Error('OPENCODE_API_KEY not set');
-    }
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     const started = Date.now();
 
+    const { bin, args: baseArgs } = await this.resolveBinary();
+    const args = [...baseArgs, 'run', '-m', this.modelId, '--', prompt];
+
+    logger.info(`Running OpenCode CLI: ${bin} ${args.slice(0, 3).join(' ')} …`);
+
     try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: this.modelId,
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.2,
-          max_tokens: 1500,
-        }),
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        throw new Error(`OpenCode API error: ${response.status} ${response.statusText}`);
-      }
-
-      const data = (await response.json()) as {
-        choices?: Array<{ message?: { content?: string } }>;
-      };
-      const content: string = data.choices?.[0]?.message?.content || '';
+      const content = await this.runCli(bin, args, timeoutMs);
       const durationSeconds = (Date.now() - started) / 1000;
       return {
         content,
@@ -54,9 +27,56 @@ export class OpenCodeProvider extends Provider {
     } catch (error) {
       logger.error(`OpenCode provider failed: ${this.name}`, error as Error);
       throw error;
-    } finally {
-      clearTimeout(timeout);
     }
+  }
+
+  private runCli(bin: string, args: string[], timeoutMs: number): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const proc = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+      let stdout = '';
+      let stderr = '';
+      const timer = setTimeout(() => {
+        proc.kill('SIGKILL');
+        reject(new Error(`OpenCode CLI timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+
+      proc.stdout.on('data', chunk => {
+        stdout += chunk.toString();
+      });
+      proc.stderr.on('data', chunk => {
+        stderr += chunk.toString();
+      });
+      proc.on('error', err => {
+        clearTimeout(timer);
+        reject(err);
+      });
+      proc.on('close', code => {
+        clearTimeout(timer);
+        if (code !== 0) {
+          reject(new Error(`OpenCode CLI exited with code ${code}: ${stderr || stdout}`));
+        } else {
+          resolve(stdout.trim());
+        }
+      });
+    });
+  }
+
+  private async resolveBinary(): Promise<{ bin: string; args: string[] }> {
+    if (await this.canRun('opencode', ['--version'])) {
+      return { bin: 'opencode', args: [] };
+    }
+    if (await this.canRun('npx', ['--yes', 'opencode-ai', '--version'])) {
+      return { bin: 'npx', args: ['--yes', 'opencode-ai'] };
+    }
+    throw new Error('OpenCode CLI is not available (opencode or npx opencode-ai)');
+  }
+
+  private async canRun(cmd: string, args: string[]): Promise<boolean> {
+    return new Promise(resolve => {
+      const proc = spawn(cmd, args, { stdio: 'ignore' });
+      proc.on('error', () => resolve(false));
+      proc.on('close', code => resolve(code === 0));
+    });
   }
 
   private extractFindings(content: string): any[] {
