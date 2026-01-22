@@ -2,6 +2,7 @@ import { FileChange, UnchangedContext } from '../types';
 
 export class MermaidGenerator {
   generateImpactDiagram(files: FileChange[], context: UnchangedContext[]): string {
+    if (files.length > 30) return '';
     const lines: string[] = ['graph TD'];
     const fileNodes = new Set<string>();
 
@@ -11,14 +12,14 @@ export class MermaidGenerator {
       lines.push(`${node}[${file.filename}]`);
     }
 
-    for (const ctx of context) {
+    for (const ctx of context.slice(0, 50)) {
       const from = this.normalizeNode(ctx.file);
       if (!fileNodes.has(from)) {
         lines.push(`${from}[${ctx.file}]`);
         fileNodes.add(from);
       }
 
-      for (const consumer of ctx.downstreamConsumers) {
+      for (const consumer of ctx.downstreamConsumers.slice(0, 50)) {
         const to = this.normalizeNode(consumer);
         if (!fileNodes.has(to)) {
           lines.push(`${to}[${consumer}]`);

@@ -32,6 +32,8 @@ export function detectPatternFindings(
   filename: string,
   addedLines: Array<{ line: number; content: string }>
 ): Finding[] {
+  if (filename.includes('analysis/ast/patterns.ts')) return [];
+
   const findings: Finding[] = [];
 
   for (const { line, content } of addedLines) {

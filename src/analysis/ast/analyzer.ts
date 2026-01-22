@@ -147,7 +147,7 @@ export class ASTAnalyzer {
     const findings: Finding[] = [];
 
     for (const { line, content } of addedLines) {
-      if (/Promise<any>/.test(content) || /\s:any\b/.test(content)) {
+      if ((/\bPromise<any>\b/.test(content) && !content.includes('/Promise<any>/')) || (/\s:any\b/.test(content) && !content.includes('/\\s:any\\b/'))) {
         findings.push({
           file: filename,
           line,

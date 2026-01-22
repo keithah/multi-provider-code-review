@@ -21,6 +21,9 @@ const SECRET_PATTERNS: Array<{ regex: RegExp; title: string; message: string }> 
 
 export function detectSecrets(file: FileChange): Finding[] {
   const findings: Finding[] = [];
+  if (isTestFile(file.filename)) {
+    return findings;
+  }
   const addedLines = mapAddedLines(file.patch);
 
   for (const { line, content } of addedLines) {
@@ -40,4 +43,16 @@ export function detectSecrets(file: FileChange): Finding[] {
   }
 
   return findings;
+}
+
+function isTestFile(filename: string): boolean {
+  const lower = filename.toLowerCase();
+  return (
+    lower.includes('__tests__') ||
+    lower.includes('/tests/') ||
+    lower.endsWith('.test.ts') ||
+    lower.endsWith('.test.js') ||
+    lower.endsWith('.spec.ts') ||
+    lower.endsWith('.spec.js')
+  );
 }

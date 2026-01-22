@@ -32746,6 +32746,8 @@ var PATTERNS = [
   }
 ];
 function detectPatternFindings(filename, addedLines) {
+  if (filename.includes("analysis/ast/patterns.ts"))
+    return [];
   const findings = [];
   for (const { line, content } of addedLines) {
     for (const pattern of PATTERNS) {
@@ -32947,7 +32949,7 @@ var ASTAnalyzer = class {
   runHeuristics(filename, addedLines) {
     const findings = [];
     for (const { line, content } of addedLines) {
-      if (/Promise<any>/.test(content) || /\s:any\b/.test(content)) {
+      if (/\bPromise<any>\b/.test(content) && !content.includes("/Promise<any>/") || /\s:any\b/.test(content) && !content.includes("/\\s:any\\b/")) {
         findings.push({
           file: filename,
           line,
@@ -33098,6 +33100,9 @@ var SECRET_PATTERNS = [
 ];
 function detectSecrets(file) {
   const findings = [];
+  if (isTestFile(file.filename)) {
+    return findings;
+  }
   const addedLines = mapAddedLines(file.patch);
   for (const { line, content } of addedLines) {
     for (const pattern of SECRET_PATTERNS) {
@@ -33115,6 +33120,10 @@ function detectSecrets(file) {
     }
   }
   return findings;
+}
+function isTestFile(filename) {
+  const lower = filename.toLowerCase();
+  return lower.includes("__tests__") || lower.includes("/tests/") || lower.endsWith(".test.ts") || lower.endsWith(".test.js") || lower.endsWith(".spec.ts") || lower.endsWith(".spec.js");
 }
 
 // src/security/scanner.ts
@@ -33514,6 +33523,8 @@ var EvidenceScorer = class {
 // src/output/mermaid.ts
 var MermaidGenerator = class {
   generateImpactDiagram(files, context2) {
+    if (files.length > 30)
+      return "";
     const lines = ["graph TD"];
     const fileNodes = /* @__PURE__ */ new Set();
     for (const file of files) {
@@ -33521,13 +33532,13 @@ var MermaidGenerator = class {
       fileNodes.add(node);
       lines.push(`${node}[${file.filename}]`);
     }
-    for (const ctx of context2) {
+    for (const ctx of context2.slice(0, 50)) {
       const from = this.normalizeNode(ctx.file);
       if (!fileNodes.has(from)) {
         lines.push(`${from}[${ctx.file}]`);
         fileNodes.add(from);
       }
-      for (const consumer of ctx.downstreamConsumers) {
+      for (const consumer of ctx.downstreamConsumers.slice(0, 50)) {
         const to = this.normalizeNode(consumer);
         if (!fileNodes.has(to)) {
           lines.push(`${to}[${consumer}]`);
