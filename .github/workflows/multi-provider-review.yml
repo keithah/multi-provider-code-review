@@ -44,7 +44,7 @@ jobs:
           echo "No PR found for this event/branch; skipping review."
           echo "pr=" >> "$GITHUB_OUTPUT"
       - name: Install OpenCode CLI
-        run: npm install -g opencode-ai@2.1.1
+        run: npm install -g opencode-ai@1.1.32
       # Run review if: (1) PR number found, AND (2) either not a fork PR OR has OpenRouter API key
       # Fork PRs can run using free opencode providers if OPENROUTER_API_KEY is not available
       - name: Multi-Provider Code Review
