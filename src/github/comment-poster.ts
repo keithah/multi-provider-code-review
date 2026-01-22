@@ -1,6 +1,7 @@
-import { InlineComment } from '../types';
+import { InlineComment, FileChange } from '../types';
 import { GitHubClient } from './client';
 import { logger } from '../utils/logger';
+import { mapLinesToPositions } from '../utils/diff';
 
 export class CommentPoster {
   private static readonly MAX_COMMENT_SIZE = 60_000;
@@ -21,16 +22,40 @@ export class CommentPoster {
     }
   }
 
-  async postInline(prNumber: number, comments: InlineComment[]): Promise<void> {
+  async postInline(prNumber: number, comments: InlineComment[], files: FileChange[]): Promise<void> {
     if (comments.length === 0) return;
-    const { octokit, owner, repo } = this.client;
 
+    // Build a map from file path to line->position mapping
+    const positionMaps = new Map<string, Map<number, number>>();
+    for (const file of files) {
+      positionMaps.set(file.filename, mapLinesToPositions(file.patch));
+    }
+
+    // Convert comments to GitHub API format, filtering out those without valid positions
+    const apiComments = comments
+      .map(c => {
+        const posMap = positionMaps.get(c.path);
+        const position = posMap?.get(c.line);
+        if (!position) {
+          logger.warn(`Cannot find diff position for ${c.path}:${c.line}, skipping inline comment`);
+          return null;
+        }
+        return { path: c.path, position, body: c.body };
+      })
+      .filter((c): c is { path: string; position: number; body: string } => c !== null);
+
+    if (apiComments.length === 0) {
+      logger.info('No inline comments with valid diff positions to post');
+      return;
+    }
+
+    const { octokit, owner, repo } = this.client;
     await octokit.rest.pulls.createReview({
       owner,
       repo,
       pull_number: prNumber,
       event: 'COMMENT',
-      comments: comments.map(c => ({ path: c.path, line: c.line, side: c.side, body: c.body })),
+      comments: apiComments,
     });
   }
 

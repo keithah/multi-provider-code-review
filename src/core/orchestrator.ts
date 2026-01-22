@@ -154,7 +154,7 @@ export class ReviewOrchestrator {
     const inlineFiltered = review.inlineComments.filter(c => this.components.feedbackFilter.shouldPost(c, suppressed));
 
     await this.components.commentPoster.postSummary(pr.number, markdown);
-    await this.components.commentPoster.postInline(pr.number, inlineFiltered);
+    await this.components.commentPoster.postInline(pr.number, inlineFiltered, pr.files);
 
     await this.writeReports(review);
 

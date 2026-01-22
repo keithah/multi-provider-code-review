@@ -13073,7 +13073,7 @@ var require_fetch = __commonJS({
         this.emit("terminated", error);
       }
     };
-    function fetch2(input, init = {}) {
+    function fetch4(input, init = {}) {
       webidl.argumentLengthCheck(arguments, 1, { header: "globalThis.fetch" });
       const p = createDeferredPromise();
       let requestObject;
@@ -14003,7 +14003,7 @@ var require_fetch = __commonJS({
       }
     }
     module2.exports = {
-      fetch: fetch2,
+      fetch: fetch4,
       Fetch,
       fetching,
       finalizeAndReportTiming
@@ -17261,7 +17261,7 @@ var require_undici = __commonJS({
     module2.exports.getGlobalDispatcher = getGlobalDispatcher;
     if (util2.nodeMajor > 16 || util2.nodeMajor === 16 && util2.nodeMinor >= 8) {
       let fetchImpl = null;
-      module2.exports.fetch = async function fetch2(resource) {
+      module2.exports.fetch = async function fetch4(resource) {
         if (!fetchImpl) {
           fetchImpl = require_fetch().fetch;
         }
@@ -19877,188 +19877,6 @@ Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
   }
 });
 
-// node_modules/eventemitter3/index.js
-var require_eventemitter3 = __commonJS({
-  "node_modules/eventemitter3/index.js"(exports2, module2) {
-    "use strict";
-    var has = Object.prototype.hasOwnProperty;
-    var prefix = "~";
-    function Events() {
-    }
-    if (Object.create) {
-      Events.prototype = /* @__PURE__ */ Object.create(null);
-      if (!new Events().__proto__)
-        prefix = false;
-    }
-    function EE(fn, context2, once) {
-      this.fn = fn;
-      this.context = context2;
-      this.once = once || false;
-    }
-    function addListener(emitter, event, fn, context2, once) {
-      if (typeof fn !== "function") {
-        throw new TypeError("The listener must be a function");
-      }
-      var listener = new EE(fn, context2 || emitter, once), evt = prefix ? prefix + event : event;
-      if (!emitter._events[evt])
-        emitter._events[evt] = listener, emitter._eventsCount++;
-      else if (!emitter._events[evt].fn)
-        emitter._events[evt].push(listener);
-      else
-        emitter._events[evt] = [emitter._events[evt], listener];
-      return emitter;
-    }
-    function clearEvent(emitter, evt) {
-      if (--emitter._eventsCount === 0)
-        emitter._events = new Events();
-      else
-        delete emitter._events[evt];
-    }
-    function EventEmitter2() {
-      this._events = new Events();
-      this._eventsCount = 0;
-    }
-    EventEmitter2.prototype.eventNames = function eventNames() {
-      var names = [], events, name;
-      if (this._eventsCount === 0)
-        return names;
-      for (name in events = this._events) {
-        if (has.call(events, name))
-          names.push(prefix ? name.slice(1) : name);
-      }
-      if (Object.getOwnPropertySymbols) {
-        return names.concat(Object.getOwnPropertySymbols(events));
-      }
-      return names;
-    };
-    EventEmitter2.prototype.listeners = function listeners(event) {
-      var evt = prefix ? prefix + event : event, handlers = this._events[evt];
-      if (!handlers)
-        return [];
-      if (handlers.fn)
-        return [handlers.fn];
-      for (var i = 0, l = handlers.length, ee = new Array(l); i < l; i++) {
-        ee[i] = handlers[i].fn;
-      }
-      return ee;
-    };
-    EventEmitter2.prototype.listenerCount = function listenerCount(event) {
-      var evt = prefix ? prefix + event : event, listeners = this._events[evt];
-      if (!listeners)
-        return 0;
-      if (listeners.fn)
-        return 1;
-      return listeners.length;
-    };
-    EventEmitter2.prototype.emit = function emit(event, a1, a2, a3, a4, a5) {
-      var evt = prefix ? prefix + event : event;
-      if (!this._events[evt])
-        return false;
-      var listeners = this._events[evt], len = arguments.length, args, i;
-      if (listeners.fn) {
-        if (listeners.once)
-          this.removeListener(event, listeners.fn, void 0, true);
-        switch (len) {
-          case 1:
-            return listeners.fn.call(listeners.context), true;
-          case 2:
-            return listeners.fn.call(listeners.context, a1), true;
-          case 3:
-            return listeners.fn.call(listeners.context, a1, a2), true;
-          case 4:
-            return listeners.fn.call(listeners.context, a1, a2, a3), true;
-          case 5:
-            return listeners.fn.call(listeners.context, a1, a2, a3, a4), true;
-          case 6:
-            return listeners.fn.call(listeners.context, a1, a2, a3, a4, a5), true;
-        }
-        for (i = 1, args = new Array(len - 1); i < len; i++) {
-          args[i - 1] = arguments[i];
-        }
-        listeners.fn.apply(listeners.context, args);
-      } else {
-        var length = listeners.length, j;
-        for (i = 0; i < length; i++) {
-          if (listeners[i].once)
-            this.removeListener(event, listeners[i].fn, void 0, true);
-          switch (len) {
-            case 1:
-              listeners[i].fn.call(listeners[i].context);
-              break;
-            case 2:
-              listeners[i].fn.call(listeners[i].context, a1);
-              break;
-            case 3:
-              listeners[i].fn.call(listeners[i].context, a1, a2);
-              break;
-            case 4:
-              listeners[i].fn.call(listeners[i].context, a1, a2, a3);
-              break;
-            default:
-              if (!args)
-                for (j = 1, args = new Array(len - 1); j < len; j++) {
-                  args[j - 1] = arguments[j];
-                }
-              listeners[i].fn.apply(listeners[i].context, args);
-          }
-        }
-      }
-      return true;
-    };
-    EventEmitter2.prototype.on = function on(event, fn, context2) {
-      return addListener(this, event, fn, context2, false);
-    };
-    EventEmitter2.prototype.once = function once(event, fn, context2) {
-      return addListener(this, event, fn, context2, true);
-    };
-    EventEmitter2.prototype.removeListener = function removeListener(event, fn, context2, once) {
-      var evt = prefix ? prefix + event : event;
-      if (!this._events[evt])
-        return this;
-      if (!fn) {
-        clearEvent(this, evt);
-        return this;
-      }
-      var listeners = this._events[evt];
-      if (listeners.fn) {
-        if (listeners.fn === fn && (!once || listeners.once) && (!context2 || listeners.context === context2)) {
-          clearEvent(this, evt);
-        }
-      } else {
-        for (var i = 0, events = [], length = listeners.length; i < length; i++) {
-          if (listeners[i].fn !== fn || once && !listeners[i].once || context2 && listeners[i].context !== context2) {
-            events.push(listeners[i]);
-          }
-        }
-        if (events.length)
-          this._events[evt] = events.length === 1 ? events[0] : events;
-        else
-          clearEvent(this, evt);
-      }
-      return this;
-    };
-    EventEmitter2.prototype.removeAllListeners = function removeAllListeners(event) {
-      var evt;
-      if (event) {
-        evt = prefix ? prefix + event : event;
-        if (this._events[evt])
-          clearEvent(this, evt);
-      } else {
-        this._events = new Events();
-        this._eventsCount = 0;
-      }
-      return this;
-    };
-    EventEmitter2.prototype.off = EventEmitter2.prototype.removeListener;
-    EventEmitter2.prototype.addListener = EventEmitter2.prototype.on;
-    EventEmitter2.prefixed = prefix;
-    EventEmitter2.EventEmitter = EventEmitter2;
-    if ("undefined" !== typeof module2) {
-      module2.exports = EventEmitter2;
-    }
-  }
-});
-
 // node_modules/retry/lib/retry_operation.js
 var require_retry_operation = __commonJS({
   "node_modules/retry/lib/retry_operation.js"(exports2, module2) {
@@ -20284,6 +20102,188 @@ var require_retry = __commonJS({
 var require_retry2 = __commonJS({
   "node_modules/retry/index.js"(exports2, module2) {
     module2.exports = require_retry();
+  }
+});
+
+// node_modules/eventemitter3/index.js
+var require_eventemitter3 = __commonJS({
+  "node_modules/eventemitter3/index.js"(exports2, module2) {
+    "use strict";
+    var has = Object.prototype.hasOwnProperty;
+    var prefix = "~";
+    function Events() {
+    }
+    if (Object.create) {
+      Events.prototype = /* @__PURE__ */ Object.create(null);
+      if (!new Events().__proto__)
+        prefix = false;
+    }
+    function EE(fn, context2, once) {
+      this.fn = fn;
+      this.context = context2;
+      this.once = once || false;
+    }
+    function addListener(emitter, event, fn, context2, once) {
+      if (typeof fn !== "function") {
+        throw new TypeError("The listener must be a function");
+      }
+      var listener = new EE(fn, context2 || emitter, once), evt = prefix ? prefix + event : event;
+      if (!emitter._events[evt])
+        emitter._events[evt] = listener, emitter._eventsCount++;
+      else if (!emitter._events[evt].fn)
+        emitter._events[evt].push(listener);
+      else
+        emitter._events[evt] = [emitter._events[evt], listener];
+      return emitter;
+    }
+    function clearEvent(emitter, evt) {
+      if (--emitter._eventsCount === 0)
+        emitter._events = new Events();
+      else
+        delete emitter._events[evt];
+    }
+    function EventEmitter2() {
+      this._events = new Events();
+      this._eventsCount = 0;
+    }
+    EventEmitter2.prototype.eventNames = function eventNames() {
+      var names = [], events, name;
+      if (this._eventsCount === 0)
+        return names;
+      for (name in events = this._events) {
+        if (has.call(events, name))
+          names.push(prefix ? name.slice(1) : name);
+      }
+      if (Object.getOwnPropertySymbols) {
+        return names.concat(Object.getOwnPropertySymbols(events));
+      }
+      return names;
+    };
+    EventEmitter2.prototype.listeners = function listeners(event) {
+      var evt = prefix ? prefix + event : event, handlers = this._events[evt];
+      if (!handlers)
+        return [];
+      if (handlers.fn)
+        return [handlers.fn];
+      for (var i = 0, l = handlers.length, ee = new Array(l); i < l; i++) {
+        ee[i] = handlers[i].fn;
+      }
+      return ee;
+    };
+    EventEmitter2.prototype.listenerCount = function listenerCount(event) {
+      var evt = prefix ? prefix + event : event, listeners = this._events[evt];
+      if (!listeners)
+        return 0;
+      if (listeners.fn)
+        return 1;
+      return listeners.length;
+    };
+    EventEmitter2.prototype.emit = function emit(event, a1, a2, a3, a4, a5) {
+      var evt = prefix ? prefix + event : event;
+      if (!this._events[evt])
+        return false;
+      var listeners = this._events[evt], len = arguments.length, args, i;
+      if (listeners.fn) {
+        if (listeners.once)
+          this.removeListener(event, listeners.fn, void 0, true);
+        switch (len) {
+          case 1:
+            return listeners.fn.call(listeners.context), true;
+          case 2:
+            return listeners.fn.call(listeners.context, a1), true;
+          case 3:
+            return listeners.fn.call(listeners.context, a1, a2), true;
+          case 4:
+            return listeners.fn.call(listeners.context, a1, a2, a3), true;
+          case 5:
+            return listeners.fn.call(listeners.context, a1, a2, a3, a4), true;
+          case 6:
+            return listeners.fn.call(listeners.context, a1, a2, a3, a4, a5), true;
+        }
+        for (i = 1, args = new Array(len - 1); i < len; i++) {
+          args[i - 1] = arguments[i];
+        }
+        listeners.fn.apply(listeners.context, args);
+      } else {
+        var length = listeners.length, j;
+        for (i = 0; i < length; i++) {
+          if (listeners[i].once)
+            this.removeListener(event, listeners[i].fn, void 0, true);
+          switch (len) {
+            case 1:
+              listeners[i].fn.call(listeners[i].context);
+              break;
+            case 2:
+              listeners[i].fn.call(listeners[i].context, a1);
+              break;
+            case 3:
+              listeners[i].fn.call(listeners[i].context, a1, a2);
+              break;
+            case 4:
+              listeners[i].fn.call(listeners[i].context, a1, a2, a3);
+              break;
+            default:
+              if (!args)
+                for (j = 1, args = new Array(len - 1); j < len; j++) {
+                  args[j - 1] = arguments[j];
+                }
+              listeners[i].fn.apply(listeners[i].context, args);
+          }
+        }
+      }
+      return true;
+    };
+    EventEmitter2.prototype.on = function on(event, fn, context2) {
+      return addListener(this, event, fn, context2, false);
+    };
+    EventEmitter2.prototype.once = function once(event, fn, context2) {
+      return addListener(this, event, fn, context2, true);
+    };
+    EventEmitter2.prototype.removeListener = function removeListener(event, fn, context2, once) {
+      var evt = prefix ? prefix + event : event;
+      if (!this._events[evt])
+        return this;
+      if (!fn) {
+        clearEvent(this, evt);
+        return this;
+      }
+      var listeners = this._events[evt];
+      if (listeners.fn) {
+        if (listeners.fn === fn && (!once || listeners.once) && (!context2 || listeners.context === context2)) {
+          clearEvent(this, evt);
+        }
+      } else {
+        for (var i = 0, events = [], length = listeners.length; i < length; i++) {
+          if (listeners[i].fn !== fn || once && !listeners[i].once || context2 && listeners[i].context !== context2) {
+            events.push(listeners[i]);
+          }
+        }
+        if (events.length)
+          this._events[evt] = events.length === 1 ? events[0] : events;
+        else
+          clearEvent(this, evt);
+      }
+      return this;
+    };
+    EventEmitter2.prototype.removeAllListeners = function removeAllListeners(event) {
+      var evt;
+      if (event) {
+        evt = prefix ? prefix + event : event;
+        if (this._events[evt])
+          clearEvent(this, evt);
+      } else {
+        this._events = new Events();
+        this._eventsCount = 0;
+      }
+      return this;
+    };
+    EventEmitter2.prototype.off = EventEmitter2.prototype.removeListener;
+    EventEmitter2.prototype.addListener = EventEmitter2.prototype.on;
+    EventEmitter2.prefixed = prefix;
+    EventEmitter2.EventEmitter = EventEmitter2;
+    if ("undefined" !== typeof module2) {
+      module2.exports = EventEmitter2;
+    }
   }
 });
 
@@ -21194,16 +21194,16 @@ var require_dist_node5 = __commonJS({
       let headers = {};
       let status;
       let url;
-      let { fetch: fetch2 } = globalThis;
+      let { fetch: fetch4 } = globalThis;
       if ((_b = requestOptions.request) == null ? void 0 : _b.fetch) {
-        fetch2 = requestOptions.request.fetch;
+        fetch4 = requestOptions.request.fetch;
       }
-      if (!fetch2) {
+      if (!fetch4) {
         throw new Error(
           "fetch is not set. Please pass a fetch implementation as new Octokit({ request: { fetch }}). Learn more at https://github.com/octokit/octokit.js/#fetch-missing"
         );
       }
-      return fetch2(requestOptions.url, {
+      return fetch4(requestOptions.url, {
         method: requestOptions.method,
         body: requestOptions.body,
         redirect: (_c = requestOptions.request) == null ? void 0 : _c.redirect,
@@ -31333,7 +31333,159 @@ var logger = {
   }
 };
 
+// node_modules/p-retry/index.js
+var import_retry = __toESM(require_retry2(), 1);
+
+// node_modules/is-network-error/index.js
+var objectToString = Object.prototype.toString;
+var isError = (value) => objectToString.call(value) === "[object Error]";
+var errorMessages = /* @__PURE__ */ new Set([
+  "network error",
+  // Chrome
+  "Failed to fetch",
+  // Chrome
+  "NetworkError when attempting to fetch resource.",
+  // Firefox
+  "The Internet connection appears to be offline.",
+  // Safari 16
+  "Network request failed",
+  // `cross-fetch`
+  "fetch failed",
+  // Undici (Node.js)
+  "terminated",
+  // Undici (Node.js)
+  " A network error occurred.",
+  // Bun (WebKit)
+  "Network connection lost"
+  // Cloudflare Workers (fetch)
+]);
+function isNetworkError(error) {
+  const isValid2 = error && isError(error) && error.name === "TypeError" && typeof error.message === "string";
+  if (!isValid2) {
+    return false;
+  }
+  const { message, stack } = error;
+  if (message === "Load failed") {
+    return stack === void 0 || "__sentry_captured__" in error;
+  }
+  if (message.startsWith("error sending request for url")) {
+    return true;
+  }
+  return errorMessages.has(message);
+}
+
+// node_modules/p-retry/index.js
+var AbortError = class extends Error {
+  constructor(message) {
+    super();
+    if (message instanceof Error) {
+      this.originalError = message;
+      ({ message } = message);
+    } else {
+      this.originalError = new Error(message);
+      this.originalError.stack = this.stack;
+    }
+    this.name = "AbortError";
+    this.message = message;
+  }
+};
+var decorateErrorWithCounts = (error, attemptNumber, options) => {
+  const retriesLeft = options.retries - (attemptNumber - 1);
+  error.attemptNumber = attemptNumber;
+  error.retriesLeft = retriesLeft;
+  return error;
+};
+async function pRetry(input, options) {
+  return new Promise((resolve, reject) => {
+    options = { ...options };
+    options.onFailedAttempt ??= () => {
+    };
+    options.shouldRetry ??= () => true;
+    options.retries ??= 10;
+    const operation = import_retry.default.operation(options);
+    const abortHandler = () => {
+      operation.stop();
+      reject(options.signal?.reason);
+    };
+    if (options.signal && !options.signal.aborted) {
+      options.signal.addEventListener("abort", abortHandler, { once: true });
+    }
+    const cleanUp = () => {
+      options.signal?.removeEventListener("abort", abortHandler);
+      operation.stop();
+    };
+    operation.attempt(async (attemptNumber) => {
+      try {
+        const result = await input(attemptNumber);
+        cleanUp();
+        resolve(result);
+      } catch (error) {
+        try {
+          if (!(error instanceof Error)) {
+            throw new TypeError(`Non-error was thrown: "${error}". You should only throw errors.`);
+          }
+          if (error instanceof AbortError) {
+            throw error.originalError;
+          }
+          if (error instanceof TypeError && !isNetworkError(error)) {
+            throw error;
+          }
+          decorateErrorWithCounts(error, attemptNumber, options);
+          if (!await options.shouldRetry(error)) {
+            operation.stop();
+            reject(error);
+          }
+          await options.onFailedAttempt(error);
+          if (!operation.retry(error)) {
+            throw operation.mainError();
+          }
+        } catch (finalError) {
+          decorateErrorWithCounts(finalError, attemptNumber, options);
+          cleanUp();
+          reject(finalError);
+        }
+      }
+    });
+  });
+}
+
+// src/utils/retry.ts
+async function withRetry(fn, options) {
+  if (options.retryOn) {
+    const maxAttempts = options.retries + 1;
+    const minTimeout = options.minTimeout ?? 500;
+    const factor = options.factor ?? 2;
+    let delay = minTimeout;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await fn();
+      } catch (error) {
+        const err = error;
+        if (!options.retryOn(err) || attempt === maxAttempts) {
+          throw err;
+        }
+        logger.warn(`Retryable error: attempt ${attempt} of ${maxAttempts}`, err.message);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        delay = Math.min(delay * factor, options.maxTimeout ?? 4e3);
+      }
+    }
+  }
+  return pRetry(fn, {
+    retries: options.retries,
+    factor: options.factor ?? 2,
+    minTimeout: options.minTimeout ?? 500,
+    maxTimeout: options.maxTimeout ?? 4e3,
+    onFailedAttempt: (error) => {
+      logger.warn(
+        `Retryable error: attempt ${error.attemptNumber} of ${options.retries + 1}`,
+        error.message
+      );
+    }
+  });
+}
+
 // src/providers/openrouter.ts
+var import_undici = __toESM(require_undici());
 var OpenRouterProvider = class _OpenRouterProvider extends Provider {
   constructor(modelId, apiKey, rateLimiter) {
     super(`openrouter/${modelId}`);
@@ -31350,22 +31502,38 @@ var OpenRouterProvider = class _OpenRouterProvider extends Provider {
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     const started = Date.now();
     try {
-      const response = await fetch(`${_OpenRouterProvider.BASE_URL}/chat/completions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${this.apiKey}`,
-          "HTTP-Referer": "https://github.com/keithah/multi-provider-code-review",
-          "X-Title": "Multi-Provider Code Review"
-        },
-        body: JSON.stringify({
-          model: this.modelId,
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.1,
-          max_tokens: 2e3
+      const response = await withRetry(
+        () => (0, import_undici.fetch)(`${_OpenRouterProvider.BASE_URL}/chat/completions`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.apiKey}`,
+            "HTTP-Referer": "https://github.com/keithah/multi-provider-code-review",
+            "X-Title": "Multi-Provider Code Review"
+          },
+          body: JSON.stringify({
+            model: this.modelId,
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.1,
+            max_tokens: 2e3
+          }),
+          signal: controller.signal
         }),
-        signal: controller.signal
-      });
+        {
+          retries: 1,
+          retryOn: (error) => {
+            const err = error;
+            if (err instanceof RateLimitError)
+              return false;
+            if (err.name === "AbortError")
+              return true;
+            return true;
+          }
+        }
+      );
+      if (!response || !("ok" in response)) {
+        throw new Error("OpenRouter API returned invalid response");
+      }
       if (!response.ok) {
         if (response.status === 429) {
           const retryAfter = response.headers.get("retry-after");
@@ -31621,6 +31789,7 @@ var PricingService = class _PricingService {
 };
 
 // src/providers/registry.ts
+var import_undici2 = __toESM(require_undici());
 var ProviderRegistry = class {
   rateLimiter = new RateLimiter();
   rotationIndex = 0;
@@ -31629,29 +31798,13 @@ var ProviderRegistry = class {
     let providers = this.instantiate(config.providers);
     const userProvidedList = Boolean(process.env.REVIEW_PROVIDERS);
     const usingDefaults = this.usesDefaultProviders(config.providers);
-    const hasOpenCode = providers.some((p) => p.name.startsWith("opencode/"));
-    if (!hasOpenCode) {
+    if (process.env.OPENROUTER_API_KEY && providers.length === 0 && usingDefaults && !userProvidedList) {
       providers.push(...this.instantiate(DEFAULT_CONFIG.providers));
-    }
-    if (process.env.OPENROUTER_API_KEY && (!userProvidedList && usingDefaults || providers.length === 0)) {
       const freeModels = await this.fetchFreeOpenRouterModels();
       providers.push(...this.instantiate(freeModels));
     }
-    if (providers.length < 3) {
-      if (process.env.OPENROUTER_API_KEY) {
-        const freeModels = await this.fetchFreeOpenRouterModels();
-        for (const model of freeModels) {
-          if (providers.length >= 5)
-            break;
-          providers.push(...this.instantiate([model]));
-        }
-      }
-      const fallbackPool = this.instantiate(DEFAULT_CONFIG.providers);
-      for (const p of fallbackPool) {
-        if (providers.length >= 3)
-          break;
-        providers.push(p);
-      }
+    if (providers.length === 0) {
+      providers = this.instantiate(DEFAULT_CONFIG.providers);
     }
     providers = this.dedupeProviders(providers);
     providers = this.applyAllowBlock(providers, config);
@@ -31747,7 +31900,7 @@ var ProviderRegistry = class {
   }
   async fetchFreeOpenRouterModels() {
     try {
-      const response = await fetch("https://openrouter.ai/api/v1/models", {
+      const response = await (0, import_undici2.fetch)("https://openrouter.ai/api/v1/models", {
         headers: { Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}` }
       });
       if (!response.ok) {
@@ -31806,6 +31959,32 @@ function mapAddedLines(patch) {
   }
   return added;
 }
+function mapLinesToPositions(patch) {
+  const map2 = /* @__PURE__ */ new Map();
+  if (!patch)
+    return map2;
+  const lines = patch.split("\n");
+  let currentNew = 0;
+  let position = 0;
+  const hunkRegex = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/;
+  for (const raw of lines) {
+    position += 1;
+    const hunkMatch = raw.match(hunkRegex);
+    if (hunkMatch) {
+      currentNew = parseInt(hunkMatch[2], 10);
+      continue;
+    }
+    if (raw.startsWith("+")) {
+      map2.set(currentNew, position);
+      currentNew += 1;
+    } else if (raw.startsWith("-")) {
+    } else {
+      map2.set(currentNew, position);
+      currentNew += 1;
+    }
+  }
+  return map2;
+}
 
 // src/analysis/llm/prompt-builder.ts
 var PromptBuilder = class {
@@ -31840,14 +32019,14 @@ var TimeoutError = class extends Error {
     this.name = "TimeoutError";
   }
 };
-var AbortError = class extends Error {
+var AbortError2 = class extends Error {
   constructor(message) {
     super();
     this.name = "AbortError";
     this.message = message;
   }
 };
-var getDOMException = (errorMessage) => globalThis.DOMException === void 0 ? new AbortError(errorMessage) : new DOMException(errorMessage);
+var getDOMException = (errorMessage) => globalThis.DOMException === void 0 ? new AbortError2(errorMessage) : new DOMException(errorMessage);
 var getAbortedReason = (signal) => {
   const reason = signal.reason === void 0 ? getDOMException("This operation was aborted.") : signal.reason;
   return reason instanceof Error ? reason : getDOMException(reason);
@@ -32319,157 +32498,6 @@ function createQueue(concurrency) {
   return new PQueue({ concurrency, autoStart: true });
 }
 
-// node_modules/p-retry/index.js
-var import_retry = __toESM(require_retry2(), 1);
-
-// node_modules/is-network-error/index.js
-var objectToString = Object.prototype.toString;
-var isError = (value) => objectToString.call(value) === "[object Error]";
-var errorMessages = /* @__PURE__ */ new Set([
-  "network error",
-  // Chrome
-  "Failed to fetch",
-  // Chrome
-  "NetworkError when attempting to fetch resource.",
-  // Firefox
-  "The Internet connection appears to be offline.",
-  // Safari 16
-  "Network request failed",
-  // `cross-fetch`
-  "fetch failed",
-  // Undici (Node.js)
-  "terminated",
-  // Undici (Node.js)
-  " A network error occurred.",
-  // Bun (WebKit)
-  "Network connection lost"
-  // Cloudflare Workers (fetch)
-]);
-function isNetworkError(error) {
-  const isValid2 = error && isError(error) && error.name === "TypeError" && typeof error.message === "string";
-  if (!isValid2) {
-    return false;
-  }
-  const { message, stack } = error;
-  if (message === "Load failed") {
-    return stack === void 0 || "__sentry_captured__" in error;
-  }
-  if (message.startsWith("error sending request for url")) {
-    return true;
-  }
-  return errorMessages.has(message);
-}
-
-// node_modules/p-retry/index.js
-var AbortError2 = class extends Error {
-  constructor(message) {
-    super();
-    if (message instanceof Error) {
-      this.originalError = message;
-      ({ message } = message);
-    } else {
-      this.originalError = new Error(message);
-      this.originalError.stack = this.stack;
-    }
-    this.name = "AbortError";
-    this.message = message;
-  }
-};
-var decorateErrorWithCounts = (error, attemptNumber, options) => {
-  const retriesLeft = options.retries - (attemptNumber - 1);
-  error.attemptNumber = attemptNumber;
-  error.retriesLeft = retriesLeft;
-  return error;
-};
-async function pRetry(input, options) {
-  return new Promise((resolve, reject) => {
-    options = { ...options };
-    options.onFailedAttempt ??= () => {
-    };
-    options.shouldRetry ??= () => true;
-    options.retries ??= 10;
-    const operation = import_retry.default.operation(options);
-    const abortHandler = () => {
-      operation.stop();
-      reject(options.signal?.reason);
-    };
-    if (options.signal && !options.signal.aborted) {
-      options.signal.addEventListener("abort", abortHandler, { once: true });
-    }
-    const cleanUp = () => {
-      options.signal?.removeEventListener("abort", abortHandler);
-      operation.stop();
-    };
-    operation.attempt(async (attemptNumber) => {
-      try {
-        const result = await input(attemptNumber);
-        cleanUp();
-        resolve(result);
-      } catch (error) {
-        try {
-          if (!(error instanceof Error)) {
-            throw new TypeError(`Non-error was thrown: "${error}". You should only throw errors.`);
-          }
-          if (error instanceof AbortError2) {
-            throw error.originalError;
-          }
-          if (error instanceof TypeError && !isNetworkError(error)) {
-            throw error;
-          }
-          decorateErrorWithCounts(error, attemptNumber, options);
-          if (!await options.shouldRetry(error)) {
-            operation.stop();
-            reject(error);
-          }
-          await options.onFailedAttempt(error);
-          if (!operation.retry(error)) {
-            throw operation.mainError();
-          }
-        } catch (finalError) {
-          decorateErrorWithCounts(finalError, attemptNumber, options);
-          cleanUp();
-          reject(finalError);
-        }
-      }
-    });
-  });
-}
-
-// src/utils/retry.ts
-async function withRetry(fn, options) {
-  if (options.retryOn) {
-    const maxAttempts = options.retries + 1;
-    const minTimeout = options.minTimeout ?? 500;
-    const factor = options.factor ?? 2;
-    let delay = minTimeout;
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        return await fn();
-      } catch (error) {
-        const err = error;
-        if (!options.retryOn(err) || attempt === maxAttempts) {
-          throw err;
-        }
-        logger.warn(`Retryable error: attempt ${attempt} of ${maxAttempts}`, err.message);
-        await new Promise((resolve) => setTimeout(resolve, delay));
-        delay = Math.min(delay * factor, options.maxTimeout ?? 4e3);
-      }
-    }
-  }
-  return pRetry(fn, {
-    retries: options.retries,
-    factor: options.factor ?? 2,
-    minTimeout: options.minTimeout ?? 500,
-    maxTimeout: options.maxTimeout ?? 4e3,
-    onFailedAttempt: (error) => {
-      logger.warn(
-        `Retryable error: attempt ${error.attemptNumber} of ${options.retries + 1}`,
-        error.message
-      );
-    }
-  });
-}
-
 // src/analysis/llm/executor.ts
 var LLMExecutor = class {
   constructor(config) {
@@ -32502,7 +32530,12 @@ var LLMExecutor = class {
           });
         } catch (error) {
           const err = error;
-          const status = err instanceof RateLimitError ? "rate-limited" : "error";
+          let status = "error";
+          if (err instanceof RateLimitError) {
+            status = "rate-limited";
+          } else if (err.name === "TimeoutError" || err.message.toLowerCase().includes("timed out") || err.code === "ETIMEDOUT") {
+            status = "timeout";
+          }
           logger.warn(`Provider ${provider.name} failed: ${err.message}`);
           results.push({
             name: provider.name,
@@ -33213,6 +33246,10 @@ var PullRequestLoader = class {
       );
       hasMore = res.data.length === per_page;
       page += 1;
+      if (files.length > 500) {
+        logger.warn(`PR #${prNumber} has more than 500 files; further file fetching skipped for safety.`);
+        break;
+      }
     }
     const diff = await this.fetchDiff(owner, repo, prNumber);
     return {
@@ -33262,16 +33299,33 @@ var CommentPoster = class _CommentPoster {
       }
     }
   }
-  async postInline(prNumber, comments) {
+  async postInline(prNumber, comments, files) {
     if (comments.length === 0)
       return;
+    const positionMaps = /* @__PURE__ */ new Map();
+    for (const file of files) {
+      positionMaps.set(file.filename, mapLinesToPositions(file.patch));
+    }
+    const apiComments = comments.map((c) => {
+      const posMap = positionMaps.get(c.path);
+      const position = posMap?.get(c.line);
+      if (!position) {
+        logger.warn(`Cannot find diff position for ${c.path}:${c.line}, skipping inline comment`);
+        return null;
+      }
+      return { path: c.path, position, body: c.body };
+    }).filter((c) => c !== null);
+    if (apiComments.length === 0) {
+      logger.info("No inline comments with valid diff positions to post");
+      return;
+    }
     const { octokit, owner, repo } = this.client;
     await octokit.rest.pulls.createReview({
       owner,
       repo,
       pull_number: prNumber,
       event: "COMMENT",
-      comments: comments.map((c) => ({ path: c.path, line: c.line, side: c.side, body: c.body }))
+      comments: apiComments
     });
   }
   chunk(content) {
@@ -33877,7 +33931,7 @@ var ReviewOrchestrator = class {
     const suppressed = await this.components.feedbackFilter.loadSuppressed(pr.number);
     const inlineFiltered = review.inlineComments.filter((c) => this.components.feedbackFilter.shouldPost(c, suppressed));
     await this.components.commentPoster.postSummary(pr.number, markdown);
-    await this.components.commentPoster.postInline(pr.number, inlineFiltered);
+    await this.components.commentPoster.postInline(pr.number, inlineFiltered, pr.files);
     await this.writeReports(review);
     return review;
   }
