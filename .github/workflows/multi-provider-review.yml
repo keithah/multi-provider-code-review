@@ -2,6 +2,7 @@ name: Multi-Provider Code Review
 
 on:
   pull_request:
+  push:
   workflow_dispatch:
     inputs:
       pr_number:
@@ -17,13 +18,39 @@ jobs:
     runs-on: ubicloud-standard-2
     steps:
       - uses: actions/checkout@v4
+      - name: Resolve PR number
+        id: resolve-pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          pr="${{ github.event.pull_request.number || '' }}"
+          if [ -n "$pr" ]; then
+            echo "pr=$pr" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          pr="${{ inputs.pr_number || '' }}"
+          if [ -n "$pr" ]; then
+            echo "pr=$pr" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "${{ github.event_name }}" = "push" ]; then
+            pr=$(gh pr list --state open --head "$BRANCH" --json number --jq '.[0].number')
+            if [ -n "$pr" ]; then
+              echo "pr=$pr" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo "No PR found for this event/branch; skipping review."
+          echo "pr=" >> "$GITHUB_OUTPUT"
       - name: Install OpenCode CLI
         run: npm install -g opencode-ai@latest
       - name: Multi-Provider Code Review
+        if: ${{ steps.resolve-pr.outputs.pr != '' }}
         uses: ./
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
+          PR_NUMBER: ${{ steps.resolve-pr.outputs.pr }}
           REVIEW_PROVIDERS: openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free
           FALLBACK_PROVIDERS: opencode/minimax-m2.1-free
         env:
