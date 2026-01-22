@@ -103,9 +103,6 @@ export class MarkdownFormatter {
       if (f.suggestion) {
         lines.push(`  Suggestion: ${f.suggestion}`);
       }
-      if (f.providers && f.providers.length > 0) {
-        lines.push(`  Providers: ${f.providers.join(', ')}`);
-      }
       if (f.evidence) {
         lines.push(
           `  Evidence: ${f.evidence.badge} (${Math.round(f.evidence.confidence * 100)}%)${f.evidence.reasoning ? ` — ${f.evidence.reasoning}` : ''}`

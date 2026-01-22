@@ -3,6 +3,8 @@ import * as path from 'path';
 import { FileChange, TestCoverageHint } from '../types';
 
 export class TestCoverageAnalyzer {
+  private static readonly MAX_HINTS = 20;
+
   analyze(files: FileChange[]): TestCoverageHint[] {
     const hints: TestCoverageHint[] = [];
 
@@ -20,7 +22,7 @@ export class TestCoverageAnalyzer {
       }
     }
 
-    return hints;
+    return hints.slice(0, TestCoverageAnalyzer.MAX_HINTS);
   }
 
   private isCodeFile(filename: string): boolean {

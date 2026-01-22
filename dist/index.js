@@ -32657,7 +32657,8 @@ var SynthesisEngine = class {
 // src/analysis/test-coverage.ts
 var fs3 = __toESM(require("fs"));
 var path3 = __toESM(require("path"));
-var TestCoverageAnalyzer = class {
+var TestCoverageAnalyzer = class _TestCoverageAnalyzer {
+  static MAX_HINTS = 20;
   analyze(files) {
     const hints = [];
     for (const file of files) {
@@ -32674,7 +32675,7 @@ var TestCoverageAnalyzer = class {
         });
       }
     }
-    return hints;
+    return hints.slice(0, _TestCoverageAnalyzer.MAX_HINTS);
   }
   isCodeFile(filename) {
     return [".ts", ".tsx", ".js", ".jsx", ".py", ".go", ".rs", ".rb", ".java"].some(
@@ -32830,12 +32831,16 @@ var ASTAnalyzer = class {
   analyze(files) {
     const findings = [];
     for (const file of files) {
+      if (this.isTestFile(file.filename)) {
+        continue;
+      }
       const language = detectLanguage(file.filename);
       const addedLines = mapAddedLines(file.patch);
       findings.push(...detectPatternFindings(file.filename, addedLines));
       if (language !== "unknown") {
         findings.push(...this.runLanguageChecks(file.filename, language, addedLines));
       }
+      findings.push(...this.runHeuristics(file.filename, addedLines));
     }
     return findings;
   }
@@ -32935,6 +32940,10 @@ var ASTAnalyzer = class {
     }
     return findings;
   }
+  isTestFile(filename) {
+    const lower = filename.toLowerCase();
+    return lower.includes("__tests__") || lower.includes("/tests/") || lower.endsWith(".test.ts") || lower.endsWith(".test.js") || lower.endsWith(".spec.ts") || lower.endsWith(".spec.js");
+  }
   runHeuristics(filename, addedLines) {
     const findings = [];
     for (const { line, content } of addedLines) {
@@ -32949,7 +32958,7 @@ var ASTAnalyzer = class {
           providers: ["ast"]
         });
       }
-      if (/catch\s*\([^)]*\)\s*{\s*}/.test(content) || /catch\s*\([^)]*\)\s*{\s*$/.test(content.trim())) {
+      if (/catch\s*\([^)]*\)\s*{\s*}/.test(content)) {
         findings.push({
           file: filename,
           line,
@@ -33377,9 +33386,6 @@ var MarkdownFormatter = class {
       lines.push(`  ${f.message}`);
       if (f.suggestion) {
         lines.push(`  Suggestion: ${f.suggestion}`);
-      }
-      if (f.providers && f.providers.length > 0) {
-        lines.push(`  Providers: ${f.providers.join(", ")}`);
       }
       if (f.evidence) {
         lines.push(

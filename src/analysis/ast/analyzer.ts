@@ -8,6 +8,9 @@ export class ASTAnalyzer {
     const findings: Finding[] = [];
 
     for (const file of files) {
+      if (this.isTestFile(file.filename)) {
+        continue;
+      }
       const language = detectLanguage(file.filename);
       const addedLines = mapAddedLines(file.patch);
 
@@ -16,6 +19,8 @@ export class ASTAnalyzer {
       if (language !== 'unknown') {
         findings.push(...this.runLanguageChecks(file.filename, language, addedLines));
       }
+
+      findings.push(...this.runHeuristics(file.filename, addedLines));
     }
 
     return findings;
@@ -130,6 +135,11 @@ export class ASTAnalyzer {
     return findings;
   }
 
+  private isTestFile(filename: string): boolean {
+    const lower = filename.toLowerCase();
+    return lower.includes('__tests__') || lower.includes('/tests/') || lower.endsWith('.test.ts') || lower.endsWith('.test.js') || lower.endsWith('.spec.ts') || lower.endsWith('.spec.js');
+  }
+
   private runHeuristics(
     filename: string,
     addedLines: ReturnType<typeof mapAddedLines>
@@ -149,7 +159,7 @@ export class ASTAnalyzer {
         });
       }
 
-      if (/catch\s*\([^)]*\)\s*{\s*}/.test(content) || /catch\s*\([^)]*\)\s*{\s*$/.test(content.trim())) {
+      if (/catch\s*\([^)]*\)\s*{\s*}/.test(content)) {
         findings.push({
           file: filename,
           line,
