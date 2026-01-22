@@ -31821,9 +31821,9 @@ var ProviderRegistry = class {
     logger.info(`After allowBlock: ${providers.length} providers`);
     providers = await this.filterRateLimited(providers);
     logger.info(`After filterRateLimited: ${providers.length} providers`);
-    const selectionLimit = config.providerLimit > 0 ? config.providerLimit : Math.min(6, providers.length || 6);
+    const selectionLimit = config.providerLimit > 0 ? config.providerLimit : 6;
     const minSelection = Math.min(5, selectionLimit);
-    logger.info(`Selection limit: ${selectionLimit}, min: ${minSelection}, fallback count: ${config.fallbackProviders.length}`);
+    logger.info(`Selection limit: ${selectionLimit} (configured: ${config.providerLimit}), min: ${minSelection}, fallback count: ${config.fallbackProviders.length}`);
     if (providers.length < selectionLimit && config.fallbackProviders.length > 0) {
       logger.info(`Adding ${config.fallbackProviders.length} fallback providers to reach target of ${selectionLimit}`);
       const fallbacks = this.instantiate(config.fallbackProviders);

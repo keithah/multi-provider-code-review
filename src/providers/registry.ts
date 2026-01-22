@@ -38,9 +38,10 @@ export class ProviderRegistry {
     providers = await this.filterRateLimited(providers);
     logger.info(`After filterRateLimited: ${providers.length} providers`);
 
-    const selectionLimit = config.providerLimit > 0 ? config.providerLimit : Math.min(6, providers.length || 6);
+    // If providerLimit is 0 or unset, default to 6. Otherwise use the configured limit.
+    const selectionLimit = config.providerLimit > 0 ? config.providerLimit : 6;
     const minSelection = Math.min(5, selectionLimit);
-    logger.info(`Selection limit: ${selectionLimit}, min: ${minSelection}, fallback count: ${config.fallbackProviders.length}`);
+    logger.info(`Selection limit: ${selectionLimit} (configured: ${config.providerLimit}), min: ${minSelection}, fallback count: ${config.fallbackProviders.length}`);
 
     // Add fallback providers if we haven't reached the selection limit
     if (providers.length < selectionLimit && config.fallbackProviders.length > 0) {
