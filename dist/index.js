@@ -31441,14 +31441,18 @@ var OpenCodeProvider = class extends Provider {
     logger.info(`Running OpenCode CLI: ${bin} ${args.slice(0, 3).join(" ")} \u2026`);
     try {
       const { stdout, stderr } = await this.runCli(bin, args, timeoutMs);
-      if (!stdout.trim()) {
-        throw new Error(`OpenCode CLI returned no output${stderr ? `; stderr: ${stderr.trim()}` : ""}`);
+      const content = stdout.trim() || stderr.trim();
+      logger.info(
+        `OpenCode CLI output for ${this.name}: stdout=${stdout.length} bytes, stderr=${stderr.length} bytes`
+      );
+      if (!content) {
+        throw new Error("OpenCode CLI returned no output");
       }
       const durationSeconds = (Date.now() - started) / 1e3;
       return {
-        content: stdout,
+        content,
         durationSeconds,
-        findings: this.extractFindings(stdout)
+        findings: this.extractFindings(content)
       };
     } catch (error) {
       logger.error(`OpenCode provider failed: ${this.name}`, error);

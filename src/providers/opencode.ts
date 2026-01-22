@@ -21,14 +21,18 @@ export class OpenCodeProvider extends Provider {
 
     try {
       const { stdout, stderr } = await this.runCli(bin, args, timeoutMs);
-      if (!stdout.trim()) {
-        throw new Error(`OpenCode CLI returned no output${stderr ? `; stderr: ${stderr.trim()}` : ''}`);
+      const content = stdout.trim() || stderr.trim();
+      logger.info(
+        `OpenCode CLI output for ${this.name}: stdout=${stdout.length} bytes, stderr=${stderr.length} bytes`
+      );
+      if (!content) {
+        throw new Error('OpenCode CLI returned no output');
       }
       const durationSeconds = (Date.now() - started) / 1000;
       return {
-        content: stdout,
+        content,
         durationSeconds,
-        findings: this.extractFindings(stdout),
+        findings: this.extractFindings(content),
       };
     } catch (error) {
       logger.error(`OpenCode provider failed: ${this.name}`, error as Error);
