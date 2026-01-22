@@ -31436,7 +31436,8 @@ var OpenCodeProvider = class extends Provider {
   async review(prompt, timeoutMs) {
     const started = Date.now();
     const { bin, args: baseArgs } = await this.resolveBinary();
-    const args = [...baseArgs, "run", "-m", this.modelId, "--", prompt];
+    const cliModel = this.modelId.startsWith("opencode/") ? this.modelId : `opencode/${this.modelId}`;
+    const args = [...baseArgs, "run", "-m", cliModel, "--", prompt];
     logger.info(`Running OpenCode CLI: ${bin} ${args.slice(0, 3).join(" ")} \u2026`);
     try {
       const { stdout, stderr } = await this.runCli(bin, args, timeoutMs);
