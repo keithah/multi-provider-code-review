@@ -32949,7 +32949,7 @@ var ASTAnalyzer = class {
   runHeuristics(filename, addedLines) {
     const findings = [];
     for (const { line, content } of addedLines) {
-      if (/\bPromise<any>\b/.test(content) && !content.includes("/Promise<any>/") || /\s:any\b/.test(content) && !content.includes("/\\s:any\\b/")) {
+      if (/\bPromise<any>\b/.test(content) && !content.includes("/Promise<any>/") || /:\\s*any\\b/.test(content) && !content.includes("/:\\s*any\\b/")) {
         findings.push({
           file: filename,
           line,
@@ -33527,21 +33527,22 @@ var MermaidGenerator = class {
       return "";
     const lines = ["graph TD"];
     const fileNodes = /* @__PURE__ */ new Set();
+    const usedIds = /* @__PURE__ */ new Set();
     for (const file of files) {
-      const node = this.normalizeNode(file.filename);
+      const node = this.normalizeNode(file.filename, usedIds);
       fileNodes.add(node);
-      lines.push(`${node}[${file.filename}]`);
+      lines.push(`${node}["${this.escapeLabel(file.filename)}"]`);
     }
     for (const ctx of context2.slice(0, 50)) {
-      const from = this.normalizeNode(ctx.file);
+      const from = this.normalizeNode(ctx.file, usedIds);
       if (!fileNodes.has(from)) {
-        lines.push(`${from}[${ctx.file}]`);
+        lines.push(`${from}["${this.escapeLabel(ctx.file)}"]`);
         fileNodes.add(from);
       }
       for (const consumer of ctx.downstreamConsumers.slice(0, 50)) {
-        const to = this.normalizeNode(consumer);
+        const to = this.normalizeNode(consumer, usedIds);
         if (!fileNodes.has(to)) {
-          lines.push(`${to}[${consumer}]`);
+          lines.push(`${to}["${this.escapeLabel(consumer)}"]`);
           fileNodes.add(to);
         }
         lines.push(`${from} --> ${to}`);
@@ -33549,8 +33550,21 @@ var MermaidGenerator = class {
     }
     return lines.join("\n");
   }
-  normalizeNode(name) {
-    return name.replace(/[^a-zA-Z0-9]/g, "_");
+  normalizeNode(name, used) {
+    let base = name.replace(/[^a-zA-Z0-9]/g, "_");
+    if (/^[0-9]/.test(base)) {
+      base = `n_${base}`;
+    }
+    let candidate = base || "node";
+    let counter = 1;
+    while (used.has(candidate)) {
+      candidate = `${base}_${counter++}`;
+    }
+    used.add(candidate);
+    return candidate;
+  }
+  escapeLabel(label) {
+    return label.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/]/g, "&#93;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
 };
 
