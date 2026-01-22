@@ -31,13 +31,13 @@ export class OpenCodeProvider extends Provider {
     try {
       const { stdout, stderr } = await this.runCli(bin, args, timeoutMs);
       const content = stdout.trim() || stderr.trim();
+      const durationSeconds = (Date.now() - started) / 1000;
       logger.info(
-        `OpenCode CLI output for ${this.name}: stdout=${stdout.length} bytes, stderr=${stderr.length} bytes`
+        `OpenCode CLI output for ${this.name}: stdout=${stdout.length} bytes, stderr=${stderr.length} bytes, duration=${durationSeconds.toFixed(1)}s`
       );
       if (!content) {
         throw new Error('OpenCode CLI returned no output');
       }
-      const durationSeconds = (Date.now() - started) / 1000;
       return {
         content,
         durationSeconds,
