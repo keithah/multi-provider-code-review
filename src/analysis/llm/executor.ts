@@ -22,6 +22,7 @@ export class LLMExecutor {
         try {
           const result = await withRetry(runner, {
             retries: Math.max(0, this.config.providerRetries - 1),
+            retryOn: error => !(error instanceof RateLimitError),
           });
           results.push({
             name: provider.name,

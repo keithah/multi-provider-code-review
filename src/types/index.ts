@@ -13,6 +13,8 @@ export interface ReviewConfig {
   providerLimit: number;
   providerRetries: number;
   providerMaxParallel: number;
+  quietModeEnabled?: boolean;
+  quietMinConfidence?: number;
 
   inlineMaxComments: number;
   inlineMinSeverity: Severity;
@@ -70,6 +72,8 @@ export interface Finding {
   providers?: string[];
   confidence?: number;
   category?: string;
+  evidence?: EvidenceScore;
+  evidenceDetail?: EvidenceDetail;
 }
 
 export interface PRContext {
@@ -139,6 +143,10 @@ export interface Review {
   metrics: ReviewMetrics;
   testHints?: TestCoverageHint[];
   aiAnalysis?: AIAnalysis;
+  providerResults?: ProviderResult[];
+  runDetails?: RunDetails;
+  impactAnalysis?: ImpactAnalysis;
+  mermaidDiagram?: string;
 }
 
 export interface CostEstimate {
@@ -151,6 +159,42 @@ export interface CostSummary {
   totalCost: number;
   breakdown: Record<string, number>;
   totalTokens: number;
+}
+
+export interface ProviderRunInfo {
+  name: string;
+  status: ProviderResult['status'];
+  durationSeconds: number;
+  cost?: number;
+  tokens?: number;
+  errorMessage?: string;
+}
+
+export interface RunDetails {
+  providers: ProviderRunInfo[];
+  totalCost: number;
+  totalTokens: number;
+  durationSeconds: number;
+  cacheHit: boolean;
+  synthesisModel: string;
+  providerPoolSize: number;
+}
+
+export interface ImpactAnalysis {
+  file: string;
+  totalAffected: number;
+  callers: CodeSnippet[];
+  consumers: CodeSnippet[];
+  derived: CodeSnippet[];
+  dependencies?: CodeSnippet[];
+  impactLevel: 'critical' | 'high' | 'medium' | 'low';
+  summary: string;
+}
+
+export interface EvidenceScore {
+  confidence: number; // 0-1
+  reasoning: string;
+  badge: string;
 }
 
 export interface SARIFReport {
@@ -195,4 +239,47 @@ export interface SARIFResult {
       };
     };
   }>;
+}
+
+export interface CodeSnippet {
+  filename: string;
+  startLine: number;
+  endLine: number;
+  code: string;
+}
+
+export interface EvidenceDetail {
+  changedLines: number[];
+  relatedSnippets: CodeSnippet[];
+  providerAgreement: number;
+  astConfirmed: boolean;
+  graphConfirmed: boolean;
+}
+
+export interface UnchangedContext {
+  file: string;
+  relationship: 'caller' | 'consumer' | 'derived' | 'dependency';
+  affectedCode: CodeSnippet[];
+  impactLevel: ImpactAnalysis['impactLevel'];
+  downstreamConsumers: string[];
+}
+
+export interface Definition {
+  name: string;
+  type: 'function' | 'class' | 'variable' | 'interface';
+  file: string;
+  line: number;
+}
+
+export interface CodeGraph {
+  definitions: Map<string, Definition>;
+  calls: Map<string, string[]>;
+  imports: Map<string, string[]>;
+  inherits: Map<string, string[]>;
+  findCallers(symbol: string): CodeSnippet[];
+  findCallees(symbol: string): CodeSnippet[];
+  findConsumers(module: string): CodeSnippet[];
+  findDerivedClasses(className: string): CodeSnippet[];
+  findDependencies(file: string): CodeSnippet[];
+  findImpactRadius(file: string): ImpactAnalysis;
 }

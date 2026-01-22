@@ -50,6 +50,8 @@ export class ConfigLoader {
       providerLimit: this.parseNumber(env.PROVIDER_LIMIT),
       providerRetries: this.parseNumber(env.PROVIDER_RETRIES),
       providerMaxParallel: this.parseNumber(env.PROVIDER_MAX_PARALLEL),
+      quietModeEnabled: this.parseBoolean(env.QUIET_MODE_ENABLED),
+      quietMinConfidence: this.parseFloat(env.QUIET_MIN_CONFIDENCE),
 
       inlineMaxComments: this.parseNumber(env.INLINE_MAX_COMMENTS),
       inlineMinSeverity: this.parseSeverity(env.INLINE_MIN_SEVERITY),
@@ -84,6 +86,8 @@ export class ConfigLoader {
       providerLimit: config.provider_limit,
       providerRetries: config.provider_retries,
       providerMaxParallel: config.provider_max_parallel,
+      quietModeEnabled: config.quiet_mode_enabled,
+      quietMinConfidence: config.quiet_min_confidence,
       inlineMaxComments: config.inline_max_comments,
       inlineMinSeverity: config.inline_min_severity,
       inlineMinAgreement: config.inline_min_agreement,

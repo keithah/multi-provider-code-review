@@ -14,7 +14,7 @@ export class CommentPoster {
     for (let i = 0; i < chunks.length; i++) {
       const header = chunks.length > 1 ? `## Review Summary (Part ${i + 1}/${chunks.length})\n\n` : '';
       const content = header + chunks[i];
-      await octokit.issues.createComment({ owner, repo, issue_number: prNumber, body: content });
+      await octokit.rest.issues.createComment({ owner, repo, issue_number: prNumber, body: content });
       if (i < chunks.length - 1) {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
@@ -25,7 +25,7 @@ export class CommentPoster {
     if (comments.length === 0) return;
     const { octokit, owner, repo } = this.client;
 
-    await octokit.pulls.createReview({
+    await octokit.rest.pulls.createReview({
       owner,
       repo,
       pull_number: prNumber,

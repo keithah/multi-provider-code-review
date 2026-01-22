@@ -9,6 +9,8 @@ export const ReviewConfigSchema = z.object({
   provider_limit: z.number().int().min(0).optional(),
   provider_retries: z.number().int().min(1).optional(),
   provider_max_parallel: z.number().int().min(1).optional(),
+  quiet_mode_enabled: z.boolean().optional(),
+  quiet_min_confidence: z.number().min(0).max(1).optional(),
 
   inline_max_comments: z.number().int().min(0).optional(),
   inline_min_severity: z.enum(['critical', 'major', 'minor']).optional(),

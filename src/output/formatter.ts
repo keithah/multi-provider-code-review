@@ -7,6 +7,11 @@ export class MarkdownFormatter {
     lines.push('');
     lines.push(review.summary);
 
+    if (review.impactAnalysis) {
+      lines.push('\n### Impact');
+      lines.push(`- Level: ${review.impactAnalysis.impactLevel} • ${review.impactAnalysis.summary}`);
+    }
+
     const critical = review.findings.filter(f => f.severity === 'critical');
     const major = review.findings.filter(f => f.severity === 'major');
     const minor = review.findings.filter(f => f.severity === 'minor');
@@ -27,6 +32,14 @@ export class MarkdownFormatter {
       review.testHints.forEach(hint =>
         lines.push(`- ${hint.file} → add ${hint.suggestedTestFile} (${hint.testPattern})`)
       );
+      lines.push('</details>');
+    }
+
+    if (review.mermaidDiagram) {
+      lines.push('\n<details><summary>Impact graph</summary>');
+      lines.push('```mermaid');
+      lines.push(review.mermaidDiagram);
+      lines.push('```');
       lines.push('</details>');
     }
 
@@ -83,6 +96,11 @@ export class MarkdownFormatter {
       }
       if (f.providers && f.providers.length > 0) {
         lines.push(`  Providers: ${f.providers.join(', ')}`);
+      }
+      if (f.evidence) {
+        lines.push(
+          `  Evidence: ${f.evidence.badge} (${Math.round(f.evidence.confidence * 100)}%)${f.evidence.reasoning ? ` — ${f.evidence.reasoning}` : ''}`
+        );
       }
     });
   }

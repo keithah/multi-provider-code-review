@@ -13,6 +13,8 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   providerLimit: 6,
   providerRetries: 2,
   providerMaxParallel: 3,
+  quietModeEnabled: false,
+  quietMinConfidence: 0.5,
 
   inlineMaxComments: 5,
   inlineMinSeverity: 'major',

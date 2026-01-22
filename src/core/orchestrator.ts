@@ -11,14 +11,19 @@ import { ProviderRegistry } from '../providers/registry';
 import { PullRequestLoader } from '../github/pr-loader';
 import { CommentPoster } from '../github/comment-poster';
 import { MarkdownFormatter } from '../output/formatter';
+import { MermaidGenerator } from '../output/mermaid';
 import { buildJson } from '../output/json';
 import { buildSarif } from '../output/sarif';
 import { CacheManager } from '../cache/manager';
 import { CostTracker } from '../cost/tracker';
 import { SecurityScanner } from '../security/scanner';
 import { RulesEngine } from '../rules/engine';
-import { ReviewConfig, Review, PRContext, RunDetails } from '../types';
+import { ContextRetriever } from '../analysis/context';
+import { EvidenceScorer } from '../analysis/evidence';
+import { ImpactAnalyzer } from '../analysis/impact';
+import { ReviewConfig, Review, PRContext, RunDetails, Finding, FileChange, UnchangedContext } from '../types';
 import { logger } from '../utils/logger';
+import { mapAddedLines } from '../utils/diff';
 import * as fs from 'fs/promises';
 import path from 'path';
 
@@ -39,6 +44,10 @@ export interface ReviewComponents {
   prLoader: PullRequestLoader;
   commentPoster: CommentPoster;
   formatter: MarkdownFormatter;
+  contextRetriever: ContextRetriever;
+  impactAnalyzer: ImpactAnalyzer;
+  evidenceScorer: EvidenceScorer;
+  mermaidGenerator: MermaidGenerator;
 }
 
 export class ReviewOrchestrator {
@@ -60,11 +69,12 @@ export class ReviewOrchestrator {
     const providers = await this.components.providerRegistry.createProviders(config);
     const prompt = this.components.promptBuilder.build(pr);
 
-    await this.ensureBudget(config, prompt, providers.map(p => p.name));
+    await this.ensureBudget(config);
 
     const astFindings = config.enableAstAnalysis ? this.components.astAnalyzer.analyze(pr.files) : [];
     const ruleFindings = this.components.rules.run(pr.files);
     const securityFindings = config.enableSecurity ? this.components.security.scan(pr.files) : [];
+    const context = this.components.contextRetriever.findRelatedContext(pr.files);
 
     const providerResults = await this.components.llmExecutor.execute(providers, prompt);
     const llmFindings = extractFindings(providerResults);
@@ -84,8 +94,15 @@ export class ReviewOrchestrator {
 
     const deduped = this.components.deduplicator.dedupe(combinedFindings);
     const consensus = this.components.consensus.filter(deduped);
+    const providerCount = providers.length || 1;
+    const enriched = consensus.map(f =>
+      this.enrichFinding(f, pr.files, context, providerCount)
+    );
+    const quietFiltered = this.applyQuietMode(enriched, config);
 
     const testHints = config.enableTestHints ? this.components.testCoverage.analyze(pr.files) : undefined;
+    const impactAnalysis = this.components.impactAnalyzer.analyze(pr.files, context);
+    const mermaidDiagram = this.components.mermaidGenerator.generateImpactDiagram(pr.files, context);
     const costSummary = this.components.costTracker.summary();
     const runDetails: RunDetails = {
       providers: providerResults.map(r => ({
@@ -104,7 +121,16 @@ export class ReviewOrchestrator {
       providerPoolSize: providers.length,
     };
 
-    const review = this.components.synthesis.synthesize(consensus, pr, testHints, aiAnalysis, providerResults, runDetails);
+    const review = this.components.synthesis.synthesize(
+      quietFiltered,
+      pr,
+      testHints,
+      aiAnalysis,
+      providerResults,
+      runDetails,
+      impactAnalysis,
+      mermaidDiagram
+    );
 
     review.metrics.totalCost = costSummary.totalCost;
     review.metrics.totalTokens = costSummary.totalTokens;
@@ -159,26 +185,55 @@ export class ReviewOrchestrator {
     return ['bot', 'dependabot', 'renovate', 'github-actions', '[bot]'].some(p => lower.includes(p));
   }
 
-  private async ensureBudget(config: ReviewConfig, prompt: string, providerNames: string[]): Promise<void> {
+  private async ensureBudget(config: ReviewConfig): Promise<void> {
     if (config.budgetMaxUsd <= 0) return;
-    const estimatedTokens = this.estimateTokens(prompt);
-    let projected = 0;
-
-    for (const name of providerNames) {
-      const modelId = name.replace('openrouter/', '').replace('opencode/', '');
-      // Without pricing service available, treat as zero-cost for budget gate.
-      if (!this.components.costTracker) continue;
-      // Use cached pricing if already tracked
-      projected += 0; // placeholder; costTracker will update actuals post-run
-    }
-
-    if (projected > config.budgetMaxUsd) {
-      throw new Error(`Estimated cost $${projected.toFixed(4)} exceeds budget $${config.budgetMaxUsd.toFixed(2)}`);
-    }
+    // Budget pre-check is skipped; cost is tracked after execution.
   }
 
   private estimateTokens(text: string): number {
     return Math.ceil(Buffer.byteLength(text, 'utf8') / 4);
+  }
+
+  private enrichFinding(
+    finding: Finding,
+    files: FileChange[],
+    context: UnchangedContext[],
+    providerCount: number
+  ): Finding {
+    const file = files.find(f => f.filename === finding.file);
+    const changedLines = mapAddedLines(file?.patch);
+    const hasDirectEvidence = changedLines.some(l => l.line === finding.line);
+    const astConfirmed = Boolean(finding.providers?.includes('ast') || finding.provider === 'ast');
+    const graphConfirmed = context.some(ctx => ctx.file === finding.file);
+    const relatedSnippets = context
+      .filter(ctx => ctx.file === finding.file)
+      .flatMap(ctx => ctx.affectedCode);
+
+    const evidence = this.components.evidenceScorer.score(
+      finding,
+      providerCount,
+      astConfirmed,
+      graphConfirmed,
+      hasDirectEvidence
+    );
+
+    return {
+      ...finding,
+      evidence,
+      evidenceDetail: {
+        changedLines: changedLines.map(c => c.line),
+        relatedSnippets,
+        providerAgreement: providerCount > 0 ? (finding.providers?.length || 0) / providerCount : 0,
+        astConfirmed,
+        graphConfirmed,
+      },
+    };
+  }
+
+  private applyQuietMode(findings: Finding[], config: ReviewConfig): Finding[] {
+    if (!config.quietModeEnabled) return findings;
+    const threshold = config.quietMinConfidence ?? 0.5;
+    return findings.filter(f => (f.evidence?.confidence ?? 1) >= threshold);
   }
 
   private async writeReports(review: Review): Promise<void> {

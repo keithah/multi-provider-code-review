@@ -6,7 +6,6 @@ import { SynthesisEngine } from '../../src/analysis/synthesis';
 import { TestCoverageAnalyzer } from '../../src/analysis/test-coverage';
 import { ASTAnalyzer } from '../../src/analysis/ast/analyzer';
 import { CacheManager } from '../../src/cache/manager';
-import { CostEstimator } from '../../src/cost/estimator';
 import { CostTracker } from '../../src/cost/tracker';
 import { SecurityScanner } from '../../src/security/scanner';
 import { RulesEngine } from '../../src/rules/engine';
@@ -15,6 +14,10 @@ import { MarkdownFormatter } from '../../src/output/formatter';
 import { CommentPoster } from '../../src/github/comment-poster';
 import { PullRequestLoader } from '../../src/github/pr-loader';
 import { Provider } from '../../src/providers/base';
+import { ContextRetriever } from '../../src/analysis/context';
+import { ImpactAnalyzer } from '../../src/analysis/impact';
+import { EvidenceScorer } from '../../src/analysis/evidence';
+import { MermaidGenerator } from '../../src/output/mermaid';
 
 class FakeProvider extends Provider {
   constructor() {
@@ -143,13 +146,16 @@ describe('ReviewOrchestrator integration (offline)', () => {
       testCoverage: new TestCoverageAnalyzer(),
       astAnalyzer: new ASTAnalyzer(),
       cache: new NoopCache(),
-      costEstimator: new CostEstimator({ getPricing: async () => ({ modelId: 'fake', promptPrice: 0, completionPrice: 0, isFree: true }) } as any),
       costTracker: new CostTracker({ getPricing: async () => ({ modelId: 'fake', promptPrice: 0, completionPrice: 0, isFree: true }) } as any),
       security: new SecurityScanner(),
       rules: new RulesEngine([]),
       prLoader: new StubPRLoader() as unknown as PullRequestLoader,
       commentPoster: new StubCommentPoster() as unknown as CommentPoster,
       formatter: new MarkdownFormatter(),
+      contextRetriever: new ContextRetriever(),
+      impactAnalyzer: new ImpactAnalyzer(),
+      evidenceScorer: new EvidenceScorer(),
+      mermaidGenerator: new MermaidGenerator(),
     };
 
     const orchestrator = new ReviewOrchestrator(components);

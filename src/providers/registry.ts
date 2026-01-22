@@ -5,6 +5,7 @@ import { ReviewConfig } from '../types';
 import { RateLimiter } from './rate-limiter';
 import { logger } from '../utils/logger';
 import { PricingService } from '../cost/pricing';
+import { DEFAULT_CONFIG } from '../config/defaults';
 
 export class ProviderRegistry {
   private readonly rateLimiter = new RateLimiter();
@@ -14,11 +15,17 @@ export class ProviderRegistry {
   async createProviders(config: ReviewConfig): Promise<Provider[]> {
     let providers = this.instantiate(config.providers);
 
-    // If nothing configured and we have an OpenRouter key, discover free OpenRouter models.
-    if (providers.length === 0 && process.env.OPENROUTER_API_KEY) {
+    const userProvidedList = Boolean(process.env.REVIEW_PROVIDERS);
+    const usingDefaults = this.usesDefaultProviders(config.providers);
+
+    // If nothing configured, or just defaults with an OpenRouter key, discover free OpenRouter models.
+    if (process.env.OPENROUTER_API_KEY && ((!userProvidedList && usingDefaults) || providers.length === 0)) {
       const freeModels = await this.fetchFreeOpenRouterModels();
       providers.push(...this.instantiate(freeModels));
     }
+
+    // De-dup providers
+    providers = this.dedupeProviders(providers);
 
     providers = this.applyAllowBlock(providers, config);
     providers = await this.filterRateLimited(providers);
@@ -117,6 +124,17 @@ export class ProviderRegistry {
     return shuffled.slice(0, count);
   }
 
+  private dedupeProviders(providers: Provider[]): Provider[] {
+    const seen = new Set<string>();
+    const result: Provider[] = [];
+    for (const p of providers) {
+      if (seen.has(p.name)) continue;
+      seen.add(p.name);
+      result.push(p);
+    }
+    return result;
+  }
+
   private async fetchFreeOpenRouterModels(): Promise<string[]> {
     try {
       const response = await fetch('https://openrouter.ai/api/v1/models', {
@@ -132,10 +150,16 @@ export class ProviderRegistry {
         .map(model => `openrouter/${model.id}`);
       // ensure uniqueness and at least 8 if available
       const unique = Array.from(new Set(free));
-      return unique.slice(0, Math.max(8, unique.length));
+      const target = Math.max(8, Math.min(unique.length, 12));
+      return unique.slice(0, target);
     } catch (error) {
       logger.warn('Error fetching OpenRouter models', error as Error);
       return [];
     }
+  }
+
+  private usesDefaultProviders(list: string[]): boolean {
+    if (!Array.isArray(list) || list.length !== DEFAULT_CONFIG.providers.length) return false;
+    return list.every(p => DEFAULT_CONFIG.providers.includes(p));
   }
 }

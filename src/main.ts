@@ -17,6 +17,8 @@ function syncEnvFromInputs(): void {
     'PROVIDER_LIMIT',
     'PROVIDER_RETRIES',
     'PROVIDER_MAX_PARALLEL',
+    'QUIET_MODE_ENABLED',
+    'QUIET_MIN_CONFIDENCE',
     'DIFF_MAX_BYTES',
     'RUN_TIMEOUT_SECONDS',
     'BUDGET_MAX_USD',

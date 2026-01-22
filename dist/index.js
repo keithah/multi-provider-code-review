@@ -27055,6 +27055,8 @@ var DEFAULT_CONFIG = {
   providerLimit: 6,
   providerRetries: 2,
   providerMaxParallel: 3,
+  quietModeEnabled: false,
+  quietMinConfidence: 0.5,
   inlineMaxComments: 5,
   inlineMinSeverity: "major",
   inlineMinAgreement: 2,
@@ -31124,6 +31126,8 @@ var ReviewConfigSchema = external_exports.object({
   provider_limit: external_exports.number().int().min(0).optional(),
   provider_retries: external_exports.number().int().min(1).optional(),
   provider_max_parallel: external_exports.number().int().min(1).optional(),
+  quiet_mode_enabled: external_exports.boolean().optional(),
+  quiet_min_confidence: external_exports.number().min(0).max(1).optional(),
   inline_max_comments: external_exports.number().int().min(0).optional(),
   inline_min_severity: external_exports.enum(["critical", "major", "minor"]).optional(),
   inline_min_agreement: external_exports.number().int().min(1).optional(),
@@ -31182,6 +31186,8 @@ var ConfigLoader = class {
       providerLimit: this.parseNumber(env.PROVIDER_LIMIT),
       providerRetries: this.parseNumber(env.PROVIDER_RETRIES),
       providerMaxParallel: this.parseNumber(env.PROVIDER_MAX_PARALLEL),
+      quietModeEnabled: this.parseBoolean(env.QUIET_MODE_ENABLED),
+      quietMinConfidence: this.parseFloat(env.QUIET_MIN_CONFIDENCE),
       inlineMaxComments: this.parseNumber(env.INLINE_MAX_COMMENTS),
       inlineMinSeverity: this.parseSeverity(env.INLINE_MIN_SEVERITY),
       inlineMinAgreement: this.parseNumber(env.INLINE_MIN_AGREEMENT),
@@ -31210,6 +31216,8 @@ var ConfigLoader = class {
       providerLimit: config.provider_limit,
       providerRetries: config.provider_retries,
       providerMaxParallel: config.provider_max_parallel,
+      quietModeEnabled: config.quiet_mode_enabled,
+      quietMinConfidence: config.quiet_min_confidence,
       inlineMaxComments: config.inline_max_comments,
       inlineMinSeverity: config.inline_min_severity,
       inlineMinAgreement: config.inline_min_agreement,
@@ -31580,7 +31588,8 @@ var ProviderRegistry = class {
   async createProviders(config) {
     let providers = this.instantiate(config.providers);
     const userProvidedList = Boolean(process.env.REVIEW_PROVIDERS);
-    if (process.env.OPENROUTER_API_KEY && (!userProvidedList || providers.length === 0)) {
+    const usingDefaults = this.usesDefaultProviders(config.providers);
+    if (process.env.OPENROUTER_API_KEY && (!userProvidedList && usingDefaults || providers.length === 0)) {
       const freeModels = await this.fetchFreeOpenRouterModels();
       providers.push(...this.instantiate(freeModels));
     }
@@ -31688,11 +31697,17 @@ var ProviderRegistry = class {
       const data = await response.json();
       const free = (data.data || []).filter((model) => model.id.includes(":free") || model.pricing?.prompt === "0" && model.pricing?.completion === "0").map((model) => `openrouter/${model.id}`);
       const unique = Array.from(new Set(free));
-      return unique.slice(0, Math.max(8, unique.length));
+      const target = Math.max(8, Math.min(unique.length, 12));
+      return unique.slice(0, target);
     } catch (error) {
       logger.warn("Error fetching OpenRouter models", error);
       return [];
     }
+  }
+  usesDefaultProviders(list) {
+    if (!Array.isArray(list) || list.length !== DEFAULT_CONFIG.providers.length)
+      return false;
+    return list.every((p) => DEFAULT_CONFIG.providers.includes(p));
   }
 };
 
@@ -32521,9 +32536,9 @@ var SynthesisEngine = class {
   constructor(config) {
     this.config = config;
   }
-  synthesize(findings, pr, testHints, aiAnalysis, providerResults, runDetails) {
+  synthesize(findings, pr, testHints, aiAnalysis, providerResults, runDetails, impactAnalysis, mermaidDiagram) {
     const metrics = this.buildMetrics(findings);
-    const summary = this.buildSummary(pr, findings, metrics, testHints, aiAnalysis, providerResults);
+    const summary = this.buildSummary(pr, findings, metrics, testHints, aiAnalysis, providerResults, impactAnalysis);
     const inlineComments = this.buildInlineComments(findings);
     const actionItems = this.buildActionItems(findings, testHints);
     return {
@@ -32535,7 +32550,9 @@ var SynthesisEngine = class {
       aiAnalysis,
       metrics,
       providerResults,
-      runDetails
+      runDetails,
+      impactAnalysis,
+      mermaidDiagram
     };
   }
   buildMetrics(findings) {
@@ -32555,27 +32572,34 @@ var SynthesisEngine = class {
       durationSeconds: 0
     };
   }
-  buildSummary(pr, findings, metrics, testHints, aiAnalysis, providerResults) {
+  buildSummary(pr, findings, metrics, testHints, aiAnalysis, providerResults, impactAnalysis) {
     const totalProviders = providerResults?.length ?? 0;
     const successes = providerResults?.filter((p) => p.status === "success").length ?? 0;
     const failures = totalProviders - successes;
     const lines = [];
-    lines.push(`## Review Summary for PR #${pr.number}`);
-    lines.push(`- Title: ${pr.title}`);
-    lines.push(`- Files changed: ${pr.files.length}, +${pr.additions}/-${pr.deletions}`);
-    lines.push(`- Providers: ${successes}/${totalProviders} succeeded${failures > 0 ? `, ${failures} failed` : ""}`);
-    lines.push(`- Findings: ${metrics.totalFindings} (critical ${metrics.critical}, major ${metrics.major}, minor ${metrics.minor})`);
+    lines.push(`Review for PR #${pr.number}: ${pr.title}`);
+    lines.push(
+      `Files changed: ${pr.files.length}, +${pr.additions}/-${pr.deletions} \u2022 Providers: ${successes}/${totalProviders} succeeded${failures > 0 ? `, ${failures} failed` : ""}`
+    );
+    lines.push(
+      `Findings: ${metrics.totalFindings} (critical ${metrics.critical}, major ${metrics.major}, minor ${metrics.minor})`
+    );
     if (aiAnalysis) {
-      lines.push(`- AI-generated likelihood: ${(aiAnalysis.averageLikelihood * 100).toFixed(1)}% (${aiAnalysis.consensus})`);
+      lines.push(
+        `AI-generated likelihood: ${(aiAnalysis.averageLikelihood * 100).toFixed(1)}% (${aiAnalysis.consensus})`
+      );
+    }
+    if (impactAnalysis) {
+      lines.push(`- Impact: ${impactAnalysis.impactLevel} \u2022 ${impactAnalysis.summary}`);
     }
     if (findings.length > 0) {
-      lines.push("\n### Key Findings");
+      lines.push("Key findings:");
       const top = findings.slice(0, 10);
       for (const finding of top) {
         lines.push(`- [${finding.severity.toUpperCase()}] ${finding.file}:${finding.line} \u2014 ${finding.title}`);
       }
     } else {
-      lines.push("\nNo blocking issues detected.");
+      lines.push("No blocking issues detected.");
     }
     if (testHints && testHints.length > 0) {
       lines.push("\n### Test Coverage Hints");
@@ -32611,12 +32635,7 @@ var SynthesisEngine = class {
   }
   buildActionItems(findings, hints) {
     const items = findings.filter((f) => f.severity !== "minor").slice(0, 5).map((f) => `${f.file}:${f.line} \u2014 ${f.title}`);
-    if (hints) {
-      for (const hint of hints) {
-        items.push(`Add tests: ${hint.suggestedTestFile}`);
-      }
-    }
-    return items;
+    return Array.from(new Set(items));
   }
 };
 
@@ -32812,7 +32831,7 @@ var ASTAnalyzer = class {
       return findings;
     const parser = getParser(language);
     if (!parser) {
-      return findings;
+      return this.runHeuristics(filename, addedLines);
     }
     const tree = parser.parse(code);
     const lineLookup = addedLines.map((l) => l.line);
@@ -32897,6 +32916,34 @@ var ASTAnalyzer = class {
       }
       for (const child of node.children) {
         stack.push(child);
+      }
+    }
+    return findings;
+  }
+  runHeuristics(filename, addedLines) {
+    const findings = [];
+    for (const { line, content } of addedLines) {
+      if (/Promise<any>/.test(content) || /\s:any\b/.test(content)) {
+        findings.push({
+          file: filename,
+          line,
+          severity: "major",
+          title: "Unsafe any type",
+          message: "Avoid using `any`; prefer specific types.",
+          provider: "ast",
+          providers: ["ast"]
+        });
+      }
+      if (/catch\s*\([^)]*\)\s*{\s*}/.test(content) || /catch\s*\([^)]*\)\s*{\s*$/.test(content.trim())) {
+        findings.push({
+          file: filename,
+          line,
+          severity: "major",
+          title: "Empty catch block",
+          message: "Handle or log errors in catch blocks.",
+          provider: "ast",
+          providers: ["ast"]
+        });
       }
     }
     return findings;
@@ -33228,6 +33275,10 @@ var MarkdownFormatter = class {
     lines.push("## Multi Provider Review Summary");
     lines.push("");
     lines.push(review.summary);
+    if (review.impactAnalysis) {
+      lines.push("\n### Impact");
+      lines.push(`- Level: ${review.impactAnalysis.impactLevel} \u2022 ${review.impactAnalysis.summary}`);
+    }
     const critical = review.findings.filter((f) => f.severity === "critical");
     const major = review.findings.filter((f) => f.severity === "major");
     const minor = review.findings.filter((f) => f.severity === "minor");
@@ -33245,6 +33296,13 @@ var MarkdownFormatter = class {
       review.testHints.forEach(
         (hint) => lines.push(`- ${hint.file} \u2192 add ${hint.suggestedTestFile} (${hint.testPattern})`)
       );
+      lines.push("</details>");
+    }
+    if (review.mermaidDiagram) {
+      lines.push("\n<details><summary>Impact graph</summary>");
+      lines.push("```mermaid");
+      lines.push(review.mermaidDiagram);
+      lines.push("```");
       lines.push("</details>");
     }
     lines.push("\n---");
@@ -33299,7 +33357,159 @@ var MarkdownFormatter = class {
       if (f.providers && f.providers.length > 0) {
         lines.push(`  Providers: ${f.providers.join(", ")}`);
       }
+      if (f.evidence) {
+        lines.push(
+          `  Evidence: ${f.evidence.badge} (${Math.round(f.evidence.confidence * 100)}%)${f.evidence.reasoning ? ` \u2014 ${f.evidence.reasoning}` : ""}`
+        );
+      }
     });
+  }
+};
+
+// src/analysis/context.ts
+var ContextRetriever = class {
+  findRelatedContext(files) {
+    const contexts = [];
+    for (const file of files) {
+      const snippets = this.buildSnippets(file);
+      const downstreamConsumers = this.extractImports(file.patch);
+      if (snippets.length === 0 && downstreamConsumers.length === 0)
+        continue;
+      contexts.push({
+        file: file.filename,
+        relationship: downstreamConsumers.length > 0 ? "dependency" : "consumer",
+        affectedCode: snippets,
+        impactLevel: "medium",
+        downstreamConsumers
+      });
+    }
+    return contexts;
+  }
+  buildSnippets(file) {
+    const added = mapAddedLines(file.patch);
+    if (added.length === 0)
+      return [];
+    return added.map((line) => ({
+      filename: file.filename,
+      startLine: line.line,
+      endLine: line.line,
+      code: line.content
+    }));
+  }
+  extractImports(patch) {
+    if (!patch)
+      return [];
+    const imports = [];
+    const regexes = [/import .*?from ['"](.+?)['"]/, /require\\(['"](.+?)['"]\\)/];
+    for (const raw of patch.split("\n")) {
+      if (!raw.startsWith("+"))
+        continue;
+      for (const rx of regexes) {
+        const match = raw.match(rx);
+        if (match && match[1]) {
+          imports.push(match[1]);
+          break;
+        }
+      }
+    }
+    return Array.from(new Set(imports));
+  }
+};
+
+// src/analysis/impact.ts
+var ImpactAnalyzer = class {
+  analyze(files, contexts) {
+    const consumers = this.collectByRelationship(contexts, "consumer");
+    const dependencies = this.collectByRelationship(contexts, "dependency");
+    const callers = this.collectByRelationship(contexts, "caller");
+    const derived = this.collectByRelationship(contexts, "derived");
+    const totalAffected = files.length + contexts.length;
+    const impactLevel = this.calculateImpact(totalAffected, files);
+    return {
+      file: files[0]?.filename ?? "repository",
+      totalAffected,
+      callers,
+      consumers,
+      derived,
+      dependencies,
+      impactLevel,
+      summary: `Touched ${files.length} files with ${contexts.length} related contexts; impact is ${impactLevel}.`
+    };
+  }
+  collectByRelationship(contexts, relationship) {
+    return contexts.filter((ctx) => ctx.relationship === relationship).flatMap((ctx) => ctx.affectedCode);
+  }
+  calculateImpact(total, files) {
+    const additions = files.reduce((sum, f) => sum + f.additions, 0);
+    const weight = total + additions / 50;
+    if (weight > 20)
+      return "critical";
+    if (weight > 12)
+      return "high";
+    if (weight > 4)
+      return "medium";
+    return "low";
+  }
+};
+
+// src/analysis/evidence.ts
+var EvidenceScorer = class {
+  score(finding, providerCount, astConfirmed, graphConfirmed, hasDirectEvidence) {
+    const agreement = providerCount > 0 ? (finding.providers?.length || 0) / providerCount : 0;
+    const confidence = agreement * 0.3 + (astConfirmed ? 0.25 : 0) + (graphConfirmed ? 0.25 : 0) + (hasDirectEvidence ? 0.2 : 0);
+    const reasons = [];
+    if (agreement >= 0.5)
+      reasons.push(`${Math.round(agreement * 100)}% provider agreement`);
+    if (astConfirmed)
+      reasons.push("confirmed by AST analysis");
+    if (graphConfirmed)
+      reasons.push("validated by dependency graph");
+    if (hasDirectEvidence)
+      reasons.push("direct evidence in changed code");
+    return {
+      confidence: Math.min(1, confidence),
+      reasoning: reasons.join(", ") || "limited evidence",
+      badge: this.getBadge(confidence)
+    };
+  }
+  getBadge(confidence) {
+    if (confidence >= 0.8)
+      return "\u{1F7E2} High Confidence";
+    if (confidence >= 0.5)
+      return "\u{1F7E1} Medium Confidence";
+    return "\u{1F7E0} Low Confidence";
+  }
+};
+
+// src/output/mermaid.ts
+var MermaidGenerator = class {
+  generateImpactDiagram(files, context2) {
+    const lines = ["graph TD"];
+    const fileNodes = /* @__PURE__ */ new Set();
+    for (const file of files) {
+      const node = this.normalizeNode(file.filename);
+      fileNodes.add(node);
+      lines.push(`${node}[${file.filename}]`);
+    }
+    for (const ctx of context2) {
+      const from = this.normalizeNode(ctx.file);
+      if (!fileNodes.has(from)) {
+        lines.push(`${from}[${ctx.file}]`);
+        fileNodes.add(from);
+      }
+      for (const consumer of ctx.downstreamConsumers) {
+        const to = this.normalizeNode(consumer);
+        if (!fileNodes.has(to)) {
+          lines.push(`${to}[${consumer}]`);
+          fileNodes.add(to);
+        }
+        lines.push(`${from} --> ${to}`);
+      }
+    }
+    return lines.join("\n");
+  }
+  normalizeNode(name) {
+    return name.replace(/[^a-zA-Z0-9]/g, "_");
   }
 };
 
@@ -33327,6 +33537,10 @@ function createComponents(config, githubToken) {
   const prLoader = new PullRequestLoader(githubClient);
   const commentPoster = new CommentPoster(githubClient);
   const formatter = new MarkdownFormatter();
+  const contextRetriever = new ContextRetriever();
+  const impactAnalyzer = new ImpactAnalyzer();
+  const evidenceScorer = new EvidenceScorer();
+  const mermaidGenerator = new MermaidGenerator();
   return {
     config,
     providerRegistry,
@@ -33344,7 +33558,11 @@ function createComponents(config, githubToken) {
     rules,
     prLoader,
     commentPoster,
-    formatter
+    formatter,
+    contextRetriever,
+    impactAnalyzer,
+    evidenceScorer,
+    mermaidGenerator
   };
 }
 
@@ -33461,6 +33679,7 @@ var ReviewOrchestrator = class {
     const astFindings = config.enableAstAnalysis ? this.components.astAnalyzer.analyze(pr.files) : [];
     const ruleFindings = this.components.rules.run(pr.files);
     const securityFindings = config.enableSecurity ? this.components.security.scan(pr.files) : [];
+    const context2 = this.components.contextRetriever.findRelatedContext(pr.files);
     const providerResults = await this.components.llmExecutor.execute(providers, prompt);
     const llmFindings = extractFindings(providerResults);
     const aiAnalysis = config.enableAiDetection ? summarizeAIDetection(providerResults) : void 0;
@@ -33476,7 +33695,14 @@ var ReviewOrchestrator = class {
     ];
     const deduped = this.components.deduplicator.dedupe(combinedFindings);
     const consensus = this.components.consensus.filter(deduped);
+    const providerCount = providers.length || 1;
+    const enriched = consensus.map(
+      (f) => this.enrichFinding(f, pr.files, context2, providerCount)
+    );
+    const quietFiltered = this.applyQuietMode(enriched, config);
     const testHints = config.enableTestHints ? this.components.testCoverage.analyze(pr.files) : void 0;
+    const impactAnalysis = this.components.impactAnalyzer.analyze(pr.files, context2);
+    const mermaidDiagram = this.components.mermaidGenerator.generateImpactDiagram(pr.files, context2);
     const costSummary = this.components.costTracker.summary();
     const runDetails = {
       providers: providerResults.map((r) => ({
@@ -33494,7 +33720,16 @@ var ReviewOrchestrator = class {
       synthesisModel: config.synthesisModel,
       providerPoolSize: providers.length
     };
-    const review = this.components.synthesis.synthesize(consensus, pr, testHints, aiAnalysis, providerResults, runDetails);
+    const review = this.components.synthesis.synthesize(
+      quietFiltered,
+      pr,
+      testHints,
+      aiAnalysis,
+      providerResults,
+      runDetails,
+      impactAnalysis,
+      mermaidDiagram
+    );
     review.metrics.totalCost = costSummary.totalCost;
     review.metrics.totalTokens = costSummary.totalTokens;
     review.metrics.providersUsed = providers.length;
@@ -33547,6 +33782,38 @@ var ReviewOrchestrator = class {
   estimateTokens(text) {
     return Math.ceil(Buffer.byteLength(text, "utf8") / 4);
   }
+  enrichFinding(finding, files, context2, providerCount) {
+    const file = files.find((f) => f.filename === finding.file);
+    const changedLines = mapAddedLines(file?.patch);
+    const hasDirectEvidence = changedLines.some((l) => l.line === finding.line);
+    const astConfirmed = Boolean(finding.providers?.includes("ast") || finding.provider === "ast");
+    const graphConfirmed = context2.some((ctx) => ctx.file === finding.file);
+    const relatedSnippets = context2.filter((ctx) => ctx.file === finding.file).flatMap((ctx) => ctx.affectedCode);
+    const evidence = this.components.evidenceScorer.score(
+      finding,
+      providerCount,
+      astConfirmed,
+      graphConfirmed,
+      hasDirectEvidence
+    );
+    return {
+      ...finding,
+      evidence,
+      evidenceDetail: {
+        changedLines: changedLines.map((c) => c.line),
+        relatedSnippets,
+        providerAgreement: providerCount > 0 ? (finding.providers?.length || 0) / providerCount : 0,
+        astConfirmed,
+        graphConfirmed
+      }
+    };
+  }
+  applyQuietMode(findings, config) {
+    if (!config.quietModeEnabled)
+      return findings;
+    const threshold = config.quietMinConfidence ?? 0.5;
+    return findings.filter((f) => (f.evidence?.confidence ?? 1) >= threshold);
+  }
   async writeReports(review) {
     const base = process.env.REPORT_BASENAME || "multi-provider-review";
     const sarifPath = import_path.default.join(process.cwd(), `${base}.sarif`);
@@ -33572,6 +33839,8 @@ function syncEnvFromInputs() {
     "PROVIDER_LIMIT",
     "PROVIDER_RETRIES",
     "PROVIDER_MAX_PARALLEL",
+    "QUIET_MODE_ENABLED",
+    "QUIET_MIN_CONFIDENCE",
     "DIFF_MAX_BYTES",
     "RUN_TIMEOUT_SECONDS",
     "BUDGET_MAX_USD",

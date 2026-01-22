@@ -18,6 +18,10 @@ import { CommentPoster } from './github/comment-poster';
 import { GitHubClient } from './github/client';
 import { MarkdownFormatter } from './output/formatter';
 import { ReviewComponents } from './core/orchestrator';
+import { ContextRetriever } from './analysis/context';
+import { ImpactAnalyzer } from './analysis/impact';
+import { EvidenceScorer } from './analysis/evidence';
+import { MermaidGenerator } from './output/mermaid';
 
 export function createComponents(config: ReviewConfig, githubToken: string): ReviewComponents {
   const providerRegistry = new ProviderRegistry();
@@ -42,6 +46,10 @@ export function createComponents(config: ReviewConfig, githubToken: string): Rev
   const prLoader = new PullRequestLoader(githubClient);
   const commentPoster = new CommentPoster(githubClient);
   const formatter = new MarkdownFormatter();
+  const contextRetriever = new ContextRetriever();
+  const impactAnalyzer = new ImpactAnalyzer();
+  const evidenceScorer = new EvidenceScorer();
+  const mermaidGenerator = new MermaidGenerator();
 
   return {
     config,
@@ -61,5 +69,9 @@ export function createComponents(config: ReviewConfig, githubToken: string): Rev
     prLoader,
     commentPoster,
     formatter,
+    contextRetriever,
+    impactAnalyzer,
+    evidenceScorer,
+    mermaidGenerator,
   };
 }

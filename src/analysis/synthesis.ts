@@ -1,4 +1,4 @@
-import { Finding, InlineComment, PRContext, Review, ReviewConfig, ReviewMetrics, TestCoverageHint, AIAnalysis } from '../types';
+import { Finding, InlineComment, PRContext, Review, ReviewConfig, ReviewMetrics, TestCoverageHint, AIAnalysis, ProviderResult, RunDetails, ImpactAnalysis } from '../types';
 
 export class SynthesisEngine {
   constructor(private readonly config: ReviewConfig) {}
@@ -7,10 +7,14 @@ export class SynthesisEngine {
     findings: Finding[],
     pr: PRContext,
     testHints?: TestCoverageHint[],
-    aiAnalysis?: AIAnalysis
+    aiAnalysis?: AIAnalysis,
+    providerResults?: ProviderResult[],
+    runDetails?: RunDetails,
+    impactAnalysis?: ImpactAnalysis,
+    mermaidDiagram?: string
   ): Review {
     const metrics = this.buildMetrics(findings);
-    const summary = this.buildSummary(pr, findings, metrics, testHints, aiAnalysis);
+    const summary = this.buildSummary(pr, findings, metrics, testHints, aiAnalysis, providerResults, impactAnalysis);
     const inlineComments = this.buildInlineComments(findings);
     const actionItems = this.buildActionItems(findings, testHints);
 
@@ -22,6 +26,10 @@ export class SynthesisEngine {
       testHints,
       aiAnalysis,
       metrics,
+      providerResults,
+      runDetails,
+      impactAnalysis,
+      mermaidDiagram,
     };
   }
 
@@ -49,26 +57,39 @@ export class SynthesisEngine {
     findings: Finding[],
     metrics: ReviewMetrics,
     testHints?: TestCoverageHint[],
-    aiAnalysis?: AIAnalysis
+    aiAnalysis?: AIAnalysis,
+    providerResults?: ProviderResult[],
+    impactAnalysis?: ImpactAnalysis
   ): string {
+    const totalProviders = providerResults?.length ?? 0;
+    const successes = providerResults?.filter(p => p.status === 'success').length ?? 0;
+    const failures = totalProviders - successes;
+
     const lines: string[] = [];
-    lines.push(`## Review Summary for PR #${pr.number}`);
-    lines.push(`- Title: ${pr.title}`);
-    lines.push(`- Author: ${pr.author}`);
-    lines.push(`- Files changed: ${pr.files.length}, +${pr.additions}/-${pr.deletions}`);
-    lines.push(`- Findings: ${metrics.totalFindings} (critical ${metrics.critical}, major ${metrics.major}, minor ${metrics.minor})`);
+    lines.push(`Review for PR #${pr.number}: ${pr.title}`);
+    lines.push(
+      `Files changed: ${pr.files.length}, +${pr.additions}/-${pr.deletions} • Providers: ${successes}/${totalProviders} succeeded${failures > 0 ? `, ${failures} failed` : ''}`
+    );
+    lines.push(
+      `Findings: ${metrics.totalFindings} (critical ${metrics.critical}, major ${metrics.major}, minor ${metrics.minor})`
+    );
     if (aiAnalysis) {
-      lines.push(`- AI-generated likelihood: ${(aiAnalysis.averageLikelihood * 100).toFixed(1)}% (${aiAnalysis.consensus})`);
+      lines.push(
+        `AI-generated likelihood: ${(aiAnalysis.averageLikelihood * 100).toFixed(1)}% (${aiAnalysis.consensus})`
+      );
+    }
+    if (impactAnalysis) {
+      lines.push(`- Impact: ${impactAnalysis.impactLevel} • ${impactAnalysis.summary}`);
     }
 
     if (findings.length > 0) {
-      lines.push('\n### Key Findings');
+      lines.push('Key findings:');
       const top = findings.slice(0, 10);
       for (const finding of top) {
         lines.push(`- [${finding.severity.toUpperCase()}] ${finding.file}:${finding.line} — ${finding.title}`);
       }
     } else {
-      lines.push('\nNo blocking issues detected.');
+      lines.push('No blocking issues detected.');
     }
 
     if (testHints && testHints.length > 0) {
@@ -117,12 +138,6 @@ export class SynthesisEngine {
       .slice(0, 5)
       .map(f => `${f.file}:${f.line} — ${f.title}`);
 
-    if (hints) {
-      for (const hint of hints) {
-        items.push(`Add tests: ${hint.suggestedTestFile}`);
-      }
-    }
-
-    return items;
+    return Array.from(new Set(items));
   }
 }

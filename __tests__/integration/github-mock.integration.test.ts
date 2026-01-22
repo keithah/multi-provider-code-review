@@ -8,7 +8,6 @@ import { SynthesisEngine } from '../../src/analysis/synthesis';
 import { TestCoverageAnalyzer } from '../../src/analysis/test-coverage';
 import { ASTAnalyzer } from '../../src/analysis/ast/analyzer';
 import { CacheManager } from '../../src/cache/manager';
-import { CostEstimator } from '../../src/cost/estimator';
 import { CostTracker } from '../../src/cost/tracker';
 import { SecurityScanner } from '../../src/security/scanner';
 import { RulesEngine } from '../../src/rules/engine';
@@ -16,6 +15,10 @@ import { PullRequestLoader } from '../../src/github/pr-loader';
 import { CommentPoster } from '../../src/github/comment-poster';
 import { MarkdownFormatter } from '../../src/output/formatter';
 import { Provider } from '../../src/providers/base';
+import { ContextRetriever } from '../../src/analysis/context';
+import { ImpactAnalyzer } from '../../src/analysis/impact';
+import { EvidenceScorer } from '../../src/analysis/evidence';
+import { MermaidGenerator } from '../../src/output/mermaid';
 
 class FakeProvider extends Provider {
   constructor() {
@@ -141,6 +144,10 @@ describe('GitHub integration mock (no network)', () => {
       prLoader: new PullRequestLoader(fakeClient),
       commentPoster: new CommentPoster(fakeClient),
       formatter: new MarkdownFormatter(),
+      contextRetriever: new ContextRetriever(),
+      impactAnalyzer: new ImpactAnalyzer(),
+      evidenceScorer: new EvidenceScorer(),
+      mermaidGenerator: new MermaidGenerator(),
     };
 
     const orchestrator = new ReviewOrchestrator(components);

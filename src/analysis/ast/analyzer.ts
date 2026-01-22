@@ -33,7 +33,7 @@ export class ASTAnalyzer {
 
     const parser = getParser(language);
     if (!parser) {
-      return findings;
+      return this.runHeuristics(filename, addedLines);
     }
 
     const tree = parser.parse(code);
@@ -124,6 +124,41 @@ export class ASTAnalyzer {
 
       for (const child of node.children) {
         stack.push(child);
+      }
+    }
+
+    return findings;
+  }
+
+  private runHeuristics(
+    filename: string,
+    addedLines: ReturnType<typeof mapAddedLines>
+  ): Finding[] {
+    const findings: Finding[] = [];
+
+    for (const { line, content } of addedLines) {
+      if (/Promise<any>/.test(content) || /\s:any\b/.test(content)) {
+        findings.push({
+          file: filename,
+          line,
+          severity: 'major',
+          title: 'Unsafe any type',
+          message: 'Avoid using `any`; prefer specific types.',
+          provider: 'ast',
+          providers: ['ast'],
+        });
+      }
+
+      if (/catch\s*\([^)]*\)\s*{\s*}/.test(content) || /catch\s*\([^)]*\)\s*{\s*$/.test(content.trim())) {
+        findings.push({
+          file: filename,
+          line,
+          severity: 'major',
+          title: 'Empty catch block',
+          message: 'Handle or log errors in catch blocks.',
+          provider: 'ast',
+          providers: ['ast'],
+        });
       }
     }
 
