@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   review:
-    runs-on: ubicloud-standard-2
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Resolve PR number
@@ -45,6 +45,8 @@ jobs:
           echo "pr=" >> "$GITHUB_OUTPUT"
       - name: Install OpenCode CLI
         run: npm install -g opencode-ai@latest
+      # Run review if: (1) PR number found, AND (2) either not a fork PR OR has OpenRouter API key
+      # Fork PRs can run using free opencode providers if OPENROUTER_API_KEY is not available
       - name: Multi-Provider Code Review
         if: ${{ steps.resolve-pr.outputs.pr != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false || env.OPENROUTER_API_KEY != '') }}
         uses: ./
