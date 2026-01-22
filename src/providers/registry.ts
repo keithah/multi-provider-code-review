@@ -6,6 +6,7 @@ import { RateLimiter } from './rate-limiter';
 import { logger } from '../utils/logger';
 import { PricingService } from '../cost/pricing';
 import { DEFAULT_CONFIG } from '../config/defaults';
+import fetch from 'node-fetch';
 
 export class ProviderRegistry {
   private readonly rateLimiter = new RateLimiter();
@@ -18,32 +19,16 @@ export class ProviderRegistry {
     const userProvidedList = Boolean(process.env.REVIEW_PROVIDERS);
     const usingDefaults = this.usesDefaultProviders(config.providers);
 
-    // Always keep OpenCode defaults in the pool so we can mix OpenCode + OpenRouter.
-    const hasOpenCode = providers.some(p => p.name.startsWith('opencode/'));
-    if (!hasOpenCode) {
+    // Only fetch OpenRouter models when defaults are in use and no explicit env override.
+    if (process.env.OPENROUTER_API_KEY && providers.length === 0 && usingDefaults && !userProvidedList) {
       providers.push(...this.instantiate(DEFAULT_CONFIG.providers));
-    }
-
-    // If nothing configured, or just defaults with an OpenRouter key, discover free OpenRouter models.
-    if (process.env.OPENROUTER_API_KEY && ((!userProvidedList && usingDefaults) || providers.length === 0)) {
       const freeModels = await this.fetchFreeOpenRouterModels();
       providers.push(...this.instantiate(freeModels));
     }
 
-    // If user provided too few models, top up with free OpenRouter (or opencode) to reach a healthy pool.
-    if (providers.length < 3) {
-      if (process.env.OPENROUTER_API_KEY) {
-        const freeModels = await this.fetchFreeOpenRouterModels();
-        for (const model of freeModels) {
-          if (providers.length >= 5) break;
-          providers.push(...this.instantiate([model]));
-        }
-      }
-      const fallbackPool = this.instantiate(DEFAULT_CONFIG.providers);
-      for (const p of fallbackPool) {
-        if (providers.length >= 3) break;
-        providers.push(p);
-      }
+    // Ensure we have at least some providers; if user list is empty, fall back to defaults.
+    if (providers.length === 0) {
+      providers = this.instantiate(DEFAULT_CONFIG.providers);
     }
 
     // De-dup providers

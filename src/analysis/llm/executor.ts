@@ -36,7 +36,12 @@ export class LLMExecutor {
           });
         } catch (error) {
           const err = error as Error;
-          const status: ProviderResult['status'] = err instanceof RateLimitError ? 'rate-limited' : 'error';
+          let status: ProviderResult['status'] = 'error';
+          if (err instanceof RateLimitError) {
+            status = 'rate-limited';
+          } else if (err.name === 'TimeoutError' || err.message.toLowerCase().includes('timed out') || (err as any).code === 'ETIMEDOUT') {
+            status = 'timeout';
+          }
           logger.warn(`Provider ${provider.name} failed: ${err.message}`);
           results.push({
             name: provider.name,

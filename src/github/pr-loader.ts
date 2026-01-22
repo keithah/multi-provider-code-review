@@ -1,5 +1,6 @@
 import { GitHubClient } from './client';
 import { FileChange, PRContext } from '../types';
+import { logger } from '../utils/logger';
 
 export class PullRequestLoader {
   constructor(private readonly client: GitHubClient) {}
@@ -30,6 +31,10 @@ export class PullRequestLoader {
       );
       hasMore = res.data.length === per_page;
       page += 1;
+      if (files.length > 500) {
+        logger.warn(`PR #${prNumber} has more than 500 files; further file fetching skipped for safety.`);
+        break;
+      }
     }
 
     const diff = await this.fetchDiff(owner, repo, prNumber);

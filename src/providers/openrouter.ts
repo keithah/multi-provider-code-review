@@ -2,6 +2,8 @@ import { Provider, RateLimitError } from './base';
 import { ReviewResult } from '../types';
 import { RateLimiter } from './rate-limiter';
 import { logger } from '../utils/logger';
+import { withRetry } from '../utils/retry';
+// Node 18+ provides global fetch; if unavailable, we throw a clear error.
 
 export class OpenRouterProvider extends Provider {
   private static readonly BASE_URL = 'https://openrouter.ai/api/v1';
@@ -19,27 +21,47 @@ export class OpenRouterProvider extends Provider {
       throw new RateLimitError(`${this.name} is currently rate-limited`);
     }
 
+    if (typeof fetch !== 'function') {
+      throw new Error('Global fetch is not available; please use Node 18+ or provide a fetch polyfill.');
+    }
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     const started = Date.now();
 
     try {
-      const response = await fetch(`${OpenRouterProvider.BASE_URL}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.apiKey}`,
-          'HTTP-Referer': 'https://github.com/keithah/multi-provider-code-review',
-          'X-Title': 'Multi-Provider Code Review',
-        },
-        body: JSON.stringify({
-          model: this.modelId,
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.1,
-          max_tokens: 2000,
-        }),
-        signal: controller.signal,
-      });
+      const response = await withRetry(
+        () =>
+          fetch(`${OpenRouterProvider.BASE_URL}/chat/completions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${this.apiKey}`,
+              'HTTP-Referer': 'https://github.com/keithah/multi-provider-code-review',
+              'X-Title': 'Multi-Provider Code Review',
+            },
+            body: JSON.stringify({
+              model: this.modelId,
+              messages: [{ role: 'user', content: prompt }],
+              temperature: 0.1,
+              max_tokens: 2000,
+            }),
+            signal: controller.signal,
+          }),
+        {
+          retries: 1,
+          retryOn: error => {
+            const err = error as Error;
+            if (err instanceof RateLimitError) return false;
+            if (err.name === 'AbortError') return true;
+            return true;
+          },
+        }
+      );
+
+      if (!response || !('ok' in response)) {
+        throw new Error('OpenRouter API returned invalid response');
+      }
 
       if (!response.ok) {
         if (response.status === 429) {
