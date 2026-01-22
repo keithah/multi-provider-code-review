@@ -23,14 +23,18 @@ export class MarkdownFormatter {
     const uniqueActions = Array.from(new Set(review.actionItems || []));
     if (uniqueActions.length > 0) {
       lines.push('\n<details><summary>Action Items</summary>');
+      lines.push('');
       uniqueActions.forEach(item => lines.push(`- ${item}`));
       lines.push('</details>');
     }
 
     if (review.testHints && review.testHints.length > 0) {
       lines.push('\n<details><summary>Test Coverage</summary>');
+      lines.push('');
+      lines.push(`- ${review.testHints.length} areas need tests`);
+      lines.push('');
       review.testHints.forEach(hint =>
-        lines.push(`- ${hint.file} → add ${hint.suggestedTestFile} (${hint.testPattern})`)
+        lines.push(`  - ${hint.file} → add ${hint.suggestedTestFile} (${hint.testPattern})`)
       );
       lines.push('</details>');
     }
@@ -45,6 +49,7 @@ export class MarkdownFormatter {
 
     lines.push('\n---');
     lines.push('<details><summary>Run details (usage, cost, providers, status)</summary>');
+    lines.push('');
     lines.push(
       `- Duration: ${review.metrics.durationSeconds.toFixed(1)}s • Cost: $${review.metrics.totalCost.toFixed(4)} • Tokens: ${review.metrics.totalTokens}`
     );
@@ -60,6 +65,7 @@ export class MarkdownFormatter {
 
     if (review.aiAnalysis) {
       lines.push('\n<details><summary>AI Generated Code Likelihood</summary>');
+      lines.push('');
       lines.push(
         `- Overall: ${(review.aiAnalysis.averageLikelihood * 100).toFixed(1)}% (${review.aiAnalysis.consensus})`
       );
@@ -68,8 +74,10 @@ export class MarkdownFormatter {
 
     if (review.providerResults && review.providerResults.length > 0) {
       lines.push('\n<details><summary>Raw provider outputs</summary>');
+      lines.push('');
       for (const result of review.providerResults) {
         lines.push(`<details><summary>${result.name} [${result.status}] (${result.durationSeconds.toFixed(1)}s)</summary>`);
+        lines.push('');
         if (result.result?.content) {
           lines.push('```');
           lines.push(result.result.content.trim());
@@ -78,6 +86,7 @@ export class MarkdownFormatter {
           lines.push('_no content_');
         }
         lines.push('</details>');
+        lines.push('');
       }
       lines.push('</details>');
     }

@@ -31593,11 +31593,27 @@ var ProviderRegistry = class {
       const freeModels = await this.fetchFreeOpenRouterModels();
       providers.push(...this.instantiate(freeModels));
     }
+    if (providers.length < 3) {
+      if (process.env.OPENROUTER_API_KEY) {
+        const freeModels = await this.fetchFreeOpenRouterModels();
+        for (const model of freeModels) {
+          if (providers.length >= 5)
+            break;
+          providers.push(...this.instantiate([model]));
+        }
+      }
+      const fallbackPool = this.instantiate(DEFAULT_CONFIG.providers);
+      for (const p of fallbackPool) {
+        if (providers.length >= 3)
+          break;
+        providers.push(p);
+      }
+    }
     providers = this.dedupeProviders(providers);
     providers = this.applyAllowBlock(providers, config);
     providers = await this.filterRateLimited(providers);
     const selectionLimit = config.providerLimit > 0 ? config.providerLimit : Math.min(6, providers.length || 6);
-    const minSelection = Math.min(3, selectionLimit);
+    const minSelection = Math.min(5, selectionLimit);
     if (providers.length > selectionLimit) {
       providers = this.randomSelect(providers, selectionLimit, minSelection);
     }
@@ -32576,38 +32592,12 @@ var SynthesisEngine = class {
     const totalProviders = providerResults?.length ?? 0;
     const successes = providerResults?.filter((p) => p.status === "success").length ?? 0;
     const failures = totalProviders - successes;
-    const lines = [];
-    lines.push(`Review for PR #${pr.number}: ${pr.title}`);
-    lines.push(
-      `Files changed: ${pr.files.length}, +${pr.additions}/-${pr.deletions} \u2022 Providers: ${successes}/${totalProviders} succeeded${failures > 0 ? `, ${failures} failed` : ""}`
-    );
-    lines.push(
-      `Findings: ${metrics.totalFindings} (critical ${metrics.critical}, major ${metrics.major}, minor ${metrics.minor})`
-    );
-    if (aiAnalysis) {
-      lines.push(
-        `AI-generated likelihood: ${(aiAnalysis.averageLikelihood * 100).toFixed(1)}% (${aiAnalysis.consensus})`
-      );
-    }
-    if (impactAnalysis) {
-      lines.push(`- Impact: ${impactAnalysis.impactLevel} \u2022 ${impactAnalysis.summary}`);
-    }
-    if (findings.length > 0) {
-      lines.push("Key findings:");
-      const top = findings.slice(0, 10);
-      for (const finding of top) {
-        lines.push(`- [${finding.severity.toUpperCase()}] ${finding.file}:${finding.line} \u2014 ${finding.title}`);
-      }
-    } else {
-      lines.push("No blocking issues detected.");
-    }
-    if (testHints && testHints.length > 0) {
-      lines.push("\n### Test Coverage Hints");
-      for (const hint of testHints) {
-        lines.push(`- ${hint.file} \u2192 consider adding ${hint.suggestedTestFile} (${hint.testPattern})`);
-      }
-    }
-    return lines.join("\n");
+    const impactText = impactAnalysis ? ` \u2022 Impact: ${impactAnalysis.impactLevel}` : "";
+    const aiText = aiAnalysis ? ` \u2022 AI-likelihood: ${(aiAnalysis.averageLikelihood * 100).toFixed(1)}%` : "";
+    return [
+      `Review for PR #${pr.number}: ${pr.title}`,
+      `Files: ${pr.files.length} (+${pr.additions}/-${pr.deletions}) \u2022 Providers: ${successes}/${totalProviders} succeeded${failures > 0 ? `, ${failures} failed` : ""} \u2022 Findings: ${metrics.totalFindings} (C${metrics.critical}/M${metrics.major}/m${metrics.minor})${impactText}${aiText}`
+    ].join("\n");
   }
   buildInlineComments(findings) {
     const severityOrder = {
@@ -33288,13 +33278,17 @@ var MarkdownFormatter = class {
     const uniqueActions = Array.from(new Set(review.actionItems || []));
     if (uniqueActions.length > 0) {
       lines.push("\n<details><summary>Action Items</summary>");
+      lines.push("");
       uniqueActions.forEach((item) => lines.push(`- ${item}`));
       lines.push("</details>");
     }
     if (review.testHints && review.testHints.length > 0) {
       lines.push("\n<details><summary>Test Coverage</summary>");
+      lines.push("");
+      lines.push(`- ${review.testHints.length} areas need tests`);
+      lines.push("");
       review.testHints.forEach(
-        (hint) => lines.push(`- ${hint.file} \u2192 add ${hint.suggestedTestFile} (${hint.testPattern})`)
+        (hint) => lines.push(`  - ${hint.file} \u2192 add ${hint.suggestedTestFile} (${hint.testPattern})`)
       );
       lines.push("</details>");
     }
@@ -33307,6 +33301,7 @@ var MarkdownFormatter = class {
     }
     lines.push("\n---");
     lines.push("<details><summary>Run details (usage, cost, providers, status)</summary>");
+    lines.push("");
     lines.push(
       `- Duration: ${review.metrics.durationSeconds.toFixed(1)}s \u2022 Cost: $${review.metrics.totalCost.toFixed(4)} \u2022 Tokens: ${review.metrics.totalTokens}`
     );
@@ -33321,6 +33316,7 @@ var MarkdownFormatter = class {
     lines.push("</details>");
     if (review.aiAnalysis) {
       lines.push("\n<details><summary>AI Generated Code Likelihood</summary>");
+      lines.push("");
       lines.push(
         `- Overall: ${(review.aiAnalysis.averageLikelihood * 100).toFixed(1)}% (${review.aiAnalysis.consensus})`
       );
@@ -33328,8 +33324,10 @@ var MarkdownFormatter = class {
     }
     if (review.providerResults && review.providerResults.length > 0) {
       lines.push("\n<details><summary>Raw provider outputs</summary>");
+      lines.push("");
       for (const result of review.providerResults) {
         lines.push(`<details><summary>${result.name} [${result.status}] (${result.durationSeconds.toFixed(1)}s)</summary>`);
+        lines.push("");
         if (result.result?.content) {
           lines.push("```");
           lines.push(result.result.content.trim());
@@ -33338,6 +33336,7 @@ var MarkdownFormatter = class {
           lines.push("_no content_");
         }
         lines.push("</details>");
+        lines.push("");
       }
       lines.push("</details>");
     }

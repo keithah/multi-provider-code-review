@@ -24,6 +24,22 @@ export class ProviderRegistry {
       providers.push(...this.instantiate(freeModels));
     }
 
+    // If user provided too few models, top up with free OpenRouter (or opencode) to reach a healthy pool.
+    if (providers.length < 3) {
+      if (process.env.OPENROUTER_API_KEY) {
+        const freeModels = await this.fetchFreeOpenRouterModels();
+        for (const model of freeModels) {
+          if (providers.length >= 5) break;
+          providers.push(...this.instantiate([model]));
+        }
+      }
+      const fallbackPool = this.instantiate(DEFAULT_CONFIG.providers);
+      for (const p of fallbackPool) {
+        if (providers.length >= 3) break;
+        providers.push(p);
+      }
+    }
+
     // De-dup providers
     providers = this.dedupeProviders(providers);
 
@@ -31,7 +47,7 @@ export class ProviderRegistry {
     providers = await this.filterRateLimited(providers);
 
     const selectionLimit = config.providerLimit > 0 ? config.providerLimit : Math.min(6, providers.length || 6);
-    const minSelection = Math.min(3, selectionLimit);
+    const minSelection = Math.min(5, selectionLimit);
 
     if (providers.length > selectionLimit) {
       providers = this.randomSelect(providers, selectionLimit, minSelection);

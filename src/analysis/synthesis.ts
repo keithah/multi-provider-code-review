@@ -65,41 +65,15 @@ export class SynthesisEngine {
     const successes = providerResults?.filter(p => p.status === 'success').length ?? 0;
     const failures = totalProviders - successes;
 
-    const lines: string[] = [];
-    lines.push(`Review for PR #${pr.number}: ${pr.title}`);
-    lines.push(
-      `Files changed: ${pr.files.length}, +${pr.additions}/-${pr.deletions} • Providers: ${successes}/${totalProviders} succeeded${failures > 0 ? `, ${failures} failed` : ''}`
-    );
-    lines.push(
-      `Findings: ${metrics.totalFindings} (critical ${metrics.critical}, major ${metrics.major}, minor ${metrics.minor})`
-    );
-    if (aiAnalysis) {
-      lines.push(
-        `AI-generated likelihood: ${(aiAnalysis.averageLikelihood * 100).toFixed(1)}% (${aiAnalysis.consensus})`
-      );
-    }
-    if (impactAnalysis) {
-      lines.push(`- Impact: ${impactAnalysis.impactLevel} • ${impactAnalysis.summary}`);
-    }
+    const impactText = impactAnalysis ? ` • Impact: ${impactAnalysis.impactLevel}` : '';
+    const aiText = aiAnalysis
+      ? ` • AI-likelihood: ${(aiAnalysis.averageLikelihood * 100).toFixed(1)}%`
+      : '';
 
-    if (findings.length > 0) {
-      lines.push('Key findings:');
-      const top = findings.slice(0, 10);
-      for (const finding of top) {
-        lines.push(`- [${finding.severity.toUpperCase()}] ${finding.file}:${finding.line} — ${finding.title}`);
-      }
-    } else {
-      lines.push('No blocking issues detected.');
-    }
-
-    if (testHints && testHints.length > 0) {
-      lines.push('\n### Test Coverage Hints');
-      for (const hint of testHints) {
-        lines.push(`- ${hint.file} → consider adding ${hint.suggestedTestFile} (${hint.testPattern})`);
-      }
-    }
-
-    return lines.join('\n');
+    return [
+      `Review for PR #${pr.number}: ${pr.title}`,
+      `Files: ${pr.files.length} (+${pr.additions}/-${pr.deletions}) • Providers: ${successes}/${totalProviders} succeeded${failures > 0 ? `, ${failures} failed` : ''} • Findings: ${metrics.totalFindings} (C${metrics.critical}/M${metrics.major}/m${metrics.minor})${impactText}${aiText}`,
+    ].join('\n');
   }
 
   private buildInlineComments(findings: Finding[]): InlineComment[] {
