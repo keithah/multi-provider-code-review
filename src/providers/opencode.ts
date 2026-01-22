@@ -2,6 +2,9 @@ import { Provider } from './base';
 import { ReviewResult } from '../types';
 import { logger } from '../utils/logger';
 import { spawn } from 'child_process';
+import * as fs from 'fs/promises';
+import * as os from 'os';
+import * as path from 'path';
 
 export class OpenCodeProvider extends Provider {
   constructor(private readonly modelId: string) {
@@ -15,7 +18,13 @@ export class OpenCodeProvider extends Provider {
     const cliModel = this.modelId.startsWith('opencode/')
       ? this.modelId
       : `opencode/${this.modelId}`;
-    const args = [...baseArgs, 'run', '-m', cliModel, '--', prompt];
+
+    // Write prompt to temp file to avoid command line length limits
+    const tmpDir = os.tmpdir();
+    const promptFile = path.join(tmpDir, `opencode-prompt-${Date.now()}-${Math.random().toString(36).slice(2)}.txt`);
+    await fs.writeFile(promptFile, prompt, 'utf8');
+
+    const args = [...baseArgs, 'run', '-m', cliModel, '--file', promptFile, '--', 'Review the attached PR context and provide structured findings.'];
 
     logger.info(`Running OpenCode CLI: ${bin} ${args.slice(0, 3).join(' ')} …`);
 
@@ -37,6 +46,13 @@ export class OpenCodeProvider extends Provider {
     } catch (error) {
       logger.error(`OpenCode provider failed: ${this.name}`, error as Error);
       throw error;
+    } finally {
+      // Clean up temp file
+      try {
+        await fs.unlink(promptFile);
+      } catch (err) {
+        // Ignore cleanup errors
+      }
     }
   }
 
