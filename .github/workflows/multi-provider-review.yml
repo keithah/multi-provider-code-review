@@ -48,7 +48,7 @@ jobs:
       - name: Install OpenCode CLI
         run: npm install -g opencode-ai@latest
       - name: Multi-Provider Code Review
-        if: ${{ steps.resolve-pr.outputs.pr != '' && (github.event.pull_request.head.repo.fork == false || env.OPENROUTER_API_KEY != '') }}
+        if: ${{ steps.resolve-pr.outputs.pr != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false || env.OPENROUTER_API_KEY != '') }}
         uses: ./
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
