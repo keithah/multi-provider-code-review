@@ -6,7 +6,6 @@
 import { createHmac } from 'crypto';
 import { logger } from '../utils/logger';
 import { ReviewOrchestrator } from '../core/orchestrator';
-import { PRContext } from '../types';
 
 export interface WebhookPayload {
   action: string;

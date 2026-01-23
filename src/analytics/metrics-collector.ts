@@ -1,4 +1,4 @@
-import { Review, Finding } from '../types';
+import { Review } from '../types';
 import { CacheStorage } from '../cache/storage';
 import { logger } from '../utils/logger';
 
@@ -143,8 +143,6 @@ export class MetricsCollector {
 
     // This is simplified - in real implementation would track per-provider
     // For now, return overall stats
-    const totalProviders = data.reviews.reduce((sum, r) => sum + r.providersUsed, 0);
-
     return [
       {
         provider: 'All Providers',
@@ -159,7 +157,7 @@ export class MetricsCollector {
   /**
    * Get top finding categories
    */
-  async getTopCategories(limit: number = 10): Promise<CategoryMetric[]> {
+  async getTopCategories(): Promise<CategoryMetric[]> {
     // This would need to be tracked separately or extracted from reviews
     // For now, return placeholder
     return [];

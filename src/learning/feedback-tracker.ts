@@ -1,4 +1,3 @@
-import { Finding } from '../types';
 import { CacheStorage } from '../cache/storage';
 import { logger } from '../utils/logger';
 

@@ -156,7 +156,7 @@ export class CodeGraph {
    * Get a symbol definition by name (searches all files)
    */
   getDefinition(symbolName: string): Definition | undefined {
-    for (const [key, def] of this.definitions) {
+    for (const [, def] of this.definitions) {
       if (def.name === symbolName) {
         return def;
       }
@@ -394,8 +394,8 @@ export class CodeGraphBuilder {
     if (node.type === 'call_expression') {
       const functionNode = node.childForFieldName('function');
       if (functionNode) {
-        const callee = functionNode.text;
         // TODO: Track the caller context (which function is making this call)
+        // const callee = functionNode.text;
         // For now, we'll just track the call exists
       }
     }

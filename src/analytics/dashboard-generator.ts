@@ -183,7 +183,7 @@ export class DashboardGenerator {
   /**
    * Build cost trend chart HTML
    */
-  private buildCostTrendChart(costTrends: any[]): string {
+  private buildCostTrendChart(_costTrends: any[]): string {
     return `
     <div class="chart-container">
       <h2>💰 Cost Trends (Last 30 Days)</h2>
@@ -194,7 +194,7 @@ export class DashboardGenerator {
   /**
    * Build performance trend chart HTML
    */
-  private buildPerformanceTrendChart(perfTrends: any[]): string {
+  private buildPerformanceTrendChart(_perfTrends: any[]): string {
     return `
     <div class="chart-container">
       <h2>⚡ Review Performance (Last 30 Days)</h2>
@@ -205,11 +205,12 @@ export class DashboardGenerator {
   /**
    * Build findings distribution chart HTML
    */
-  private buildFindingsDistributionChart(stats: any): string {
-    const recent = stats.reviews.slice(-100); // Last 100 reviews
-    const critical = recent.reduce((sum: number, r: any) => sum + r.criticalCount, 0);
-    const major = recent.reduce((sum: number, r: any) => sum + r.majorCount, 0);
-    const minor = recent.reduce((sum: number, r: any) => sum + r.minorCount, 0);
+  private buildFindingsDistributionChart(_stats: any): string {
+    // TODO: Actually use the stats data
+    // const recent = stats.reviews.slice(-100); // Last 100 reviews
+    // const critical = recent.reduce((sum: number, r: any) => sum + r.criticalCount, 0);
+    // const major = recent.reduce((sum: number, r: any) => sum + r.majorCount, 0);
+    // const minor = recent.reduce((sum: number, r: any) => sum + r.minorCount, 0);
 
     return `
     <div class="chart-container">
@@ -222,7 +223,7 @@ export class DashboardGenerator {
   /**
    * Build provider success chart HTML
    */
-  private buildProviderSuccessChart(stats: any): string {
+  private buildProviderSuccessChart(_stats: any): string {
     return `
     <div class="chart-container">
       <h2>🤖 Provider Success Rate</h2>
