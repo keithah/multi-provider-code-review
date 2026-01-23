@@ -159,6 +159,13 @@ export class GitReader {
    * Parse git diff output into FileChange objects
    */
   private parseDiff(diff: string): FileChange[] {
+    // Limit diff size to prevent ReDoS attacks
+    const MAX_DIFF_SIZE = 10 * 1024 * 1024; // 10MB
+    if (diff.length > MAX_DIFF_SIZE) {
+      logger.warn(`Diff size ${diff.length} exceeds max ${MAX_DIFF_SIZE}, truncating`);
+      diff = diff.substring(0, MAX_DIFF_SIZE);
+    }
+
     const files: FileChange[] = [];
     const statsRegex = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
 

@@ -12,10 +12,10 @@
             {
               "id": "RULE-1",
               "shortDescription": {
-                "text": "LLM issue"
+                "text": "LLM finding"
               },
               "fullDescription": {
-                "text": "From LLM"
+                "text": "llm"
               },
               "defaultConfiguration": {
                 "level": "warning"
@@ -41,16 +41,16 @@
           "ruleId": "RULE-1",
           "level": "warning",
           "message": {
-            "text": "From LLM"
+            "text": "llm"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/index.ts"
+                  "uri": "src/app.ts"
                 },
                 "region": {
-                  "startLine": 15
+                  "startLine": 5
                 }
               }
             }
@@ -66,7 +66,7 @@
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/index.ts"
+                  "uri": "src/app.ts"
                 },
                 "region": {
                   "startLine": 2
