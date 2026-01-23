@@ -19,8 +19,12 @@ describe('FeedbackTracker', () => {
       lastAggregation: Date.now(),
     };
 
-    mockStorage.read.mockResolvedValue(JSON.stringify(mockData));
-    mockStorage.write.mockResolvedValue();
+    // Make read return the data that was last written
+    let currentData = mockData;
+    mockStorage.read.mockImplementation(async () => JSON.stringify(currentData));
+    mockStorage.write.mockImplementation(async (_key, data) => {
+      currentData = JSON.parse(data);
+    });
   });
 
   describe('recordReaction', () => {

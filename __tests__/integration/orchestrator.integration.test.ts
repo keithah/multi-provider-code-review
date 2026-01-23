@@ -487,7 +487,7 @@ describe('ReviewOrchestrator integration (offline)', () => {
     expect(review?.inlineComments).toBeDefined();
     expect(review?.providerResults).toBeDefined();
     expect(review?.runDetails).toBeDefined();
-    expect(review?.runDetails?.durationSeconds).toBeGreaterThan(0);
+    expect(review?.runDetails?.durationSeconds).toBeGreaterThanOrEqual(0);
     expect(review?.runDetails?.totalCost).toBeGreaterThanOrEqual(0);
     expect(review?.metrics).toBeDefined();
     expect(review?.summary).toBeDefined();

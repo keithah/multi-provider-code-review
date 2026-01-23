@@ -311,8 +311,19 @@ export class CodeGraphBuilder {
       buildTime
     );
 
-    // Copy data to final graph
-    Object.assign(finalGraph, graph);
+    // Copy Maps from working graph to final graph
+    // @ts-expect-error - accessing private fields for copying
+    finalGraph.definitions = graph.definitions;
+    // @ts-expect-error
+    finalGraph.imports = graph.imports;
+    // @ts-expect-error
+    finalGraph.exports = graph.exports;
+    // @ts-expect-error
+    finalGraph.calls = graph.calls;
+    // @ts-expect-error
+    finalGraph.callers = graph.callers;
+    // @ts-expect-error
+    finalGraph.fileSymbols = graph.fileSymbols;
 
     logger.info(`Code graph built in ${buildTime}ms: ${graph.getStats().definitions} definitions, ${graph.getStats().imports} imports`);
 
