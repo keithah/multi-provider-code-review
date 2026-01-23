@@ -56,7 +56,7 @@ export class OpenRouterProvider extends Provider {
           retryOn: error => {
             const err = error as Error;
             if (err instanceof RateLimitError) return false;
-            if (err.name === 'AbortError') return true;
+            if (err.name === 'AbortError') return false;
             return true;
           },
         }
@@ -69,7 +69,8 @@ export class OpenRouterProvider extends Provider {
       if (!response.ok) {
         if (response.status === 429) {
           const retryAfter = response.headers.get('retry-after');
-          const minutes = retryAfter ? Math.ceil(parseInt(retryAfter, 10) / 60) : 60;
+          const seconds = retryAfter ? parseInt(retryAfter, 10) : NaN;
+          const minutes = !isNaN(seconds) && seconds > 0 ? Math.ceil(seconds / 60) : 60;
           await this.rateLimiter.markRateLimited(this.name, minutes, 'HTTP 429 from OpenRouter');
           throw new RateLimitError(`Rate limited: ${this.name}`, minutes * 60);
         }

@@ -52,9 +52,12 @@ async function run(): Promise<void> {
     const orchestrator = new ReviewOrchestrator(components);
 
     const prInput = core.getInput('PR_NUMBER') || process.env.PR_NUMBER;
-    const prNumber = prInput ? parseInt(prInput, 10) : undefined;
-    if (!prNumber || Number.isNaN(prNumber)) {
+    if (!prInput) {
       throw new Error('PR_NUMBER is required');
+    }
+    const prNumber = parseInt(prInput, 10);
+    if (Number.isNaN(prNumber) || prNumber <= 0) {
+      throw new Error(`Invalid PR_NUMBER: ${prInput}. Must be a positive integer.`);
     }
 
     core.info(`Starting review for PR #${prNumber}`);

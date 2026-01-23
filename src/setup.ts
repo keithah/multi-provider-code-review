@@ -9,7 +9,6 @@ import { TestCoverageAnalyzer } from './analysis/test-coverage';
 import { ASTAnalyzer } from './analysis/ast/analyzer';
 import { CacheManager } from './cache/manager';
 import { PricingService } from './cost/pricing';
-import { CostEstimator } from './cost/estimator';
 import { CostTracker } from './cost/tracker';
 import { SecurityScanner } from './security/scanner';
 import { RuleLoader } from './rules/loader';
@@ -39,7 +38,6 @@ export function createComponents(config: ReviewConfig, githubToken: string): Rev
   const astAnalyzer = new ASTAnalyzer();
   const cache = new CacheManager();
   const pricing = new PricingService(process.env.OPENROUTER_API_KEY);
-  const costEstimator = new CostEstimator(pricing);
   const costTracker = new CostTracker(pricing);
   const security = new SecurityScanner();
   const rules = RuleLoader.load();
