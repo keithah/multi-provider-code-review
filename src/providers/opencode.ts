@@ -22,6 +22,7 @@ export class OpenCodeProvider extends Provider {
 
     // Write prompt to temp file to avoid command line length limits
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'opencode-'));
+    await fs.chmod(tmpDir, 0o700);
     const promptFile = path.join(tmpDir, `prompt-${crypto.randomBytes(8).toString('hex')}.txt`);
     await fs.writeFile(promptFile, prompt, { encoding: 'utf8', mode: 0o600 });
 

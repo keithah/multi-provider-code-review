@@ -16,7 +16,7 @@ export class SynthesisEngine {
     const metrics = this.buildMetrics(findings);
     const summary = this.buildSummary(pr, findings, metrics, testHints, aiAnalysis, providerResults, impactAnalysis);
     const inlineComments = this.buildInlineComments(findings);
-    const actionItems = this.buildActionItems(findings, testHints);
+    const actionItems = this.buildActionItems(findings);
 
     return {
       summary,
@@ -106,7 +106,7 @@ export class SynthesisEngine {
     return parts.join('\n');
   }
 
-  private buildActionItems(findings: Finding[], hints?: TestCoverageHint[]): string[] {
+  private buildActionItems(findings: Finding[]): string[] {
     const items = findings
       .filter(f => f.severity !== 'minor')
       .slice(0, 5)
