@@ -15,6 +15,10 @@ export interface ReviewConfig {
   providerMaxParallel: number;
   quietModeEnabled?: boolean;
   quietMinConfidence?: number;
+  quietUseLearning?: boolean;
+  learningEnabled?: boolean;
+  learningMinFeedbackCount?: number;
+  learningLookbackDays?: number;
 
   inlineMaxComments: number;
   inlineMinSeverity: Severity;
@@ -39,6 +43,11 @@ export interface ReviewConfig {
 
   incrementalEnabled: boolean;
   incrementalCacheTtlDays: number;
+
+  graphEnabled?: boolean;
+  graphCacheEnabled?: boolean;
+  graphMaxDepth?: number;
+  graphTimeoutSeconds?: number;
 
   dryRun: boolean;
 }

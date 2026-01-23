@@ -11,6 +11,10 @@ export const ReviewConfigSchema = z.object({
   provider_max_parallel: z.number().int().min(1).optional(),
   quiet_mode_enabled: z.boolean().optional(),
   quiet_min_confidence: z.number().min(0).max(1).optional(),
+  quiet_use_learning: z.boolean().optional(),
+  learning_enabled: z.boolean().optional(),
+  learning_min_feedback_count: z.number().int().min(1).optional(),
+  learning_lookback_days: z.number().int().min(1).optional(),
 
   inline_max_comments: z.number().int().min(0).optional(),
   inline_min_severity: z.enum(['critical', 'major', 'minor']).optional(),
@@ -35,6 +39,11 @@ export const ReviewConfigSchema = z.object({
 
   incremental_enabled: z.boolean().optional(),
   incremental_cache_ttl_days: z.number().int().min(1).max(30).optional(),
+
+  graph_enabled: z.boolean().optional(),
+  graph_cache_enabled: z.boolean().optional(),
+  graph_max_depth: z.number().int().min(1).max(10).optional(),
+  graph_timeout_seconds: z.number().int().min(1).max(60).optional(),
 
   dry_run: z.boolean().optional(),
 });

@@ -21,6 +21,10 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   providerMaxParallel: 3,
   quietModeEnabled: false,
   quietMinConfidence: 0.5,
+  quietUseLearning: true,
+  learningEnabled: true,
+  learningMinFeedbackCount: 5,
+  learningLookbackDays: 30,
 
   inlineMaxComments: 5,
   inlineMinSeverity: 'major',
@@ -45,6 +49,11 @@ export const DEFAULT_CONFIG: ReviewConfig = {
 
   incrementalEnabled: true,
   incrementalCacheTtlDays: 7,
+
+  graphEnabled: true,
+  graphCacheEnabled: true,
+  graphMaxDepth: 5,
+  graphTimeoutSeconds: 10,
 
   dryRun: false,
 };

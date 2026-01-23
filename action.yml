@@ -100,6 +100,34 @@ inputs:
     description: "Days to keep incremental review cache"
     required: false
     default: "7"
+  LEARNING_ENABLED:
+    description: "Enable feedback learning system"
+    required: false
+    default: "true"
+  LEARNING_MIN_FEEDBACK_COUNT:
+    description: "Minimum feedback count before adjusting confidence"
+    required: false
+    default: "5"
+  QUIET_USE_LEARNING:
+    description: "Use learned confidence thresholds in quiet mode"
+    required: false
+    default: "true"
+  GRAPH_ENABLED:
+    description: "Enable code graph for dependency tracking"
+    required: false
+    default: "true"
+  GRAPH_CACHE_ENABLED:
+    description: "Cache code graph between runs"
+    required: false
+    default: "true"
+  GRAPH_MAX_DEPTH:
+    description: "Maximum depth for dependency traversal"
+    required: false
+    default: "5"
+  GRAPH_TIMEOUT_SECONDS:
+    description: "Timeout for graph building in seconds"
+    required: false
+    default: "10"
   REPORT_BASENAME:
     description: "Base name for JSON/SARIF reports"
     required: false
