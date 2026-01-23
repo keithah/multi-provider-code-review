@@ -13,12 +13,12 @@ describe('GitReader', () => {
 
   describe('isGitRepo', () => {
     it('returns true when in a git repository', () => {
-      (childProcess.execSync as jest.Mock).mockReturnValue('');
+      (childProcess.execFileSync as jest.Mock).mockReturnValue('');
       expect(reader.isGitRepo()).toBe(true);
     });
 
     it('returns false when not in a git repository', () => {
-      (childProcess.execSync as jest.Mock).mockImplementation(() => {
+      (childProcess.execFileSync as jest.Mock).mockImplementation(() => {
         throw new Error('not a git repository');
       });
       expect(reader.isGitRepo()).toBe(false);
@@ -27,12 +27,12 @@ describe('GitReader', () => {
 
   describe('getCurrentBranch', () => {
     it('returns current branch name', () => {
-      (childProcess.execSync as jest.Mock).mockReturnValue('feature-branch\n');
+      (childProcess.execFileSync as jest.Mock).mockReturnValue('feature-branch\n');
       expect(reader.getCurrentBranch()).toBe('feature-branch');
     });
 
     it('throws error on failure', () => {
-      (childProcess.execSync as jest.Mock).mockImplementation(() => {
+      (childProcess.execFileSync as jest.Mock).mockImplementation(() => {
         throw new Error('git error');
       });
       expect(() => reader.getCurrentBranch()).toThrow('Failed to get current branch');
@@ -41,8 +41,15 @@ describe('GitReader', () => {
 
   describe('getCurrentCommit', () => {
     it('returns current commit SHA', () => {
-      (childProcess.execSync as jest.Mock).mockReturnValue('abc123def456\n');
+      (childProcess.execFileSync as jest.Mock).mockReturnValue('abc123def456\n');
       expect(reader.getCurrentCommit()).toBe('abc123def456');
+    });
+
+    it('returns null for repo with no commits', () => {
+      (childProcess.execFileSync as jest.Mock).mockImplementation(() => {
+        throw new Error('fatal: ambiguous argument \'HEAD\'');
+      });
+      expect(reader.getCurrentCommit()).toBe(null);
     });
   });
 
@@ -132,8 +139,10 @@ index ghi789..jkl012 100644
 
   describe('getUncommittedChanges', () => {
     it('returns PR context for uncommitted changes', async () => {
-      // Mock execution order matches implementation: diff, branch, commit, user
-      (childProcess.execSync as jest.Mock)
+      // Mock execution order matches implementation: branch, commit, diff, user
+      (childProcess.execFileSync as jest.Mock)
+        .mockReturnValueOnce('feature-branch\n') // getCurrentBranch
+        .mockReturnValueOnce('abc123\n') // getCurrentCommit
         .mockReturnValueOnce(`diff --git a/src/test.ts b/src/test.ts
 index abc123..def456 100644
 --- a/src/test.ts
@@ -142,9 +151,7 @@ index abc123..def456 100644
  const x = 1;
 +const y = 2;
  console.log(x);
-`) // git diff HEAD (called first)
-        .mockReturnValueOnce('feature-branch\n') // getCurrentBranch
-        .mockReturnValueOnce('abc123\n') // getCurrentCommit
+`) // git diff HEAD
         .mockReturnValueOnce('Test User\n'); // git user.name
 
       const pr = await reader.getUncommittedChanges();
@@ -155,12 +162,38 @@ index abc123..def456 100644
       expect(pr.files[0].filename).toBe('src/test.ts');
       expect(pr.additions).toBe(1);
       expect(pr.headSha).toBe('working-directory');
+      expect(pr.baseSha).toBe('abc123');
+    });
+
+    it('handles repo with no commits using empty tree', async () => {
+      // Mock execution order: branch, commit (throws), diff, user
+      (childProcess.execFileSync as jest.Mock)
+        .mockReturnValueOnce('main\n') // getCurrentBranch
+        .mockImplementationOnce(() => {
+          throw new Error('fatal: ambiguous argument \'HEAD\'');
+        }) // getCurrentCommit throws
+        .mockReturnValueOnce(`diff --git a/src/new.ts b/src/new.ts
+new file mode 100644
+index 0000000..abc123
+--- /dev/null
++++ b/src/new.ts
+@@ -0,0 +1,1 @@
++const x = 1;
+`) // git diff empty-tree
+        .mockReturnValueOnce('Test User\n'); // git user.name
+
+      const pr = await reader.getUncommittedChanges();
+
+      expect(pr.number).toBe(0);
+      expect(pr.files).toHaveLength(1);
+      expect(pr.baseSha).toBe('4b825dc642cb6eb9a060e54bf8d69288fbee4904'); // empty tree SHA
+      expect(pr.headSha).toBe('working-directory');
     });
   });
 
   describe('getCommitChanges', () => {
     it('returns PR context for specific commit', async () => {
-      (childProcess.execSync as jest.Mock)
+      (childProcess.execFileSync as jest.Mock)
         .mockReturnValueOnce('abc123def456\n') // resolve commit
         .mockReturnValueOnce('parent123\n') // resolve parent
         .mockReturnValueOnce(`diff --git a/src/test.ts b/src/test.ts
@@ -188,7 +221,7 @@ index abc123..def456 100644
 
   describe('getBranchChanges', () => {
     it('returns PR context for branch comparison', async () => {
-      (childProcess.execSync as jest.Mock)
+      (childProcess.execFileSync as jest.Mock)
         .mockReturnValueOnce('main-sha\n') // resolve base
         .mockReturnValueOnce('head-sha\n') // resolve head
         .mockReturnValueOnce(`diff --git a/src/test.ts b/src/test.ts

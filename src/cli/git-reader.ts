@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { PRContext, FileChange } from '../types';
 import { logger } from '../utils/logger';
 
@@ -6,25 +6,30 @@ import { logger } from '../utils/logger';
  * Reads git diffs from local repository for CLI mode
  */
 export class GitReader {
+  // Git's empty tree SHA for repos with no commits
+  private static readonly EMPTY_TREE_SHA = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
+  private static readonly MAX_BUFFER = 10 * 1024 * 1024; // 10MB
+
   /**
    * Get current branch name
    */
   getCurrentBranch(): string {
     try {
-      return execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
+      return execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { encoding: 'utf8' }).trim();
     } catch (error) {
       throw new Error(`Failed to get current branch: ${error}`);
     }
   }
 
   /**
-   * Get current commit SHA
+   * Get current commit SHA, or null if no commits exist yet
    */
-  getCurrentCommit(): string {
+  getCurrentCommit(): string | null {
     try {
-      return execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+      return execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
     } catch (error) {
-      throw new Error(`Failed to get current commit: ${error}`);
+      // HEAD doesn't exist in brand-new repos with no commits
+      return null;
     }
   }
 
@@ -35,12 +40,12 @@ export class GitReader {
     try {
       if (target) {
         // If target specified (e.g., HEAD~1, main), resolve it
-        return execSync(`git rev-parse ${target}`, { encoding: 'utf8' }).trim();
+        return execFileSync('git', ['rev-parse', target], { encoding: 'utf8' }).trim();
       }
 
       // Default: compare against main/master branch
       const defaultBranch = this.getDefaultBranch();
-      return execSync(`git rev-parse ${defaultBranch}`, { encoding: 'utf8' }).trim();
+      return execFileSync('git', ['rev-parse', defaultBranch], { encoding: 'utf8' }).trim();
     } catch (error) {
       throw new Error(`Failed to get base commit: ${error}`);
     }
@@ -52,12 +57,12 @@ export class GitReader {
   private getDefaultBranch(): string {
     try {
       // Try to get remote default branch
-      const result = execSync('git symbolic-ref refs/remotes/origin/HEAD', { encoding: 'utf8' }).trim();
+      const result = execFileSync('git', ['symbolic-ref', 'refs/remotes/origin/HEAD'], { encoding: 'utf8' }).trim();
       return result.replace('refs/remotes/origin/', '');
     } catch {
       // Fallback: check if main exists, otherwise use master
       try {
-        execSync('git rev-parse --verify main', { encoding: 'utf8' });
+        execFileSync('git', ['rev-parse', '--verify', 'main'], { encoding: 'utf8' });
         return 'main';
       } catch {
         return 'master';
@@ -71,12 +76,19 @@ export class GitReader {
   async getUncommittedChanges(): Promise<PRContext> {
     logger.info('Reading uncommitted changes');
 
-    // Get diff for uncommitted changes
-    const diff = execSync('git diff HEAD', { encoding: 'utf8' });
-    const files = this.parseDiff(diff);
-
     const currentBranch = this.getCurrentBranch();
     const currentCommit = this.getCurrentCommit();
+
+    // Handle repos with no commits - diff against empty tree
+    const baseSha = currentCommit || GitReader.EMPTY_TREE_SHA;
+    const diffTarget = currentCommit ? 'HEAD' : GitReader.EMPTY_TREE_SHA;
+
+    // Get diff for uncommitted changes
+    const diff = execFileSync('git', ['diff', diffTarget], {
+      encoding: 'utf8',
+      maxBuffer: GitReader.MAX_BUFFER,
+    });
+    const files = this.parseDiff(diff);
 
     return {
       number: 0, // CLI mode has no PR number
@@ -89,7 +101,7 @@ export class GitReader {
       diff,
       additions: files.reduce((sum, f) => sum + f.additions, 0),
       deletions: files.reduce((sum, f) => sum + f.deletions, 0),
-      baseSha: currentCommit,
+      baseSha,
       headSha: 'working-directory',
     };
   }
@@ -100,15 +112,18 @@ export class GitReader {
   async getCommitChanges(commitRef: string): Promise<PRContext> {
     logger.info(`Reading changes for commit ${commitRef}`);
 
-    const commitSha = execSync(`git rev-parse ${commitRef}`, { encoding: 'utf8' }).trim();
-    const parentSha = execSync(`git rev-parse ${commitRef}^`, { encoding: 'utf8' }).trim();
+    const commitSha = execFileSync('git', ['rev-parse', commitRef], { encoding: 'utf8' }).trim();
+    const parentSha = execFileSync('git', ['rev-parse', `${commitRef}^`], { encoding: 'utf8' }).trim();
 
     // Get diff for this commit
-    const diff = execSync(`git diff ${parentSha} ${commitSha}`, { encoding: 'utf8' });
+    const diff = execFileSync('git', ['diff', parentSha, commitSha], {
+      encoding: 'utf8',
+      maxBuffer: GitReader.MAX_BUFFER,
+    });
     const files = this.parseDiff(diff);
 
     // Get commit message
-    const message = execSync(`git log -1 --pretty=%B ${commitSha}`, { encoding: 'utf8' }).trim();
+    const message = execFileSync('git', ['log', '-1', '--pretty=%B', commitSha], { encoding: 'utf8' }).trim();
 
     return {
       number: 0,
@@ -131,12 +146,17 @@ export class GitReader {
    */
   async getBranchChanges(base: string, head?: string): Promise<PRContext> {
     const baseSha = this.getBaseCommit(base);
-    const headSha = head ? execSync(`git rev-parse ${head}`, { encoding: 'utf8' }).trim() : this.getCurrentCommit();
+    const headSha = head
+      ? execFileSync('git', ['rev-parse', head], { encoding: 'utf8' }).trim()
+      : this.getCurrentCommit() || GitReader.EMPTY_TREE_SHA;
 
     logger.info(`Reading changes from ${baseSha.substring(0, 7)} to ${headSha.substring(0, 7)}`);
 
     // Get diff between commits
-    const diff = execSync(`git diff ${baseSha} ${headSha}`, { encoding: 'utf8' });
+    const diff = execFileSync('git', ['diff', baseSha, headSha], {
+      encoding: 'utf8',
+      maxBuffer: GitReader.MAX_BUFFER,
+    });
     const files = this.parseDiff(diff);
 
     return {
@@ -223,7 +243,7 @@ export class GitReader {
    */
   private getGitUser(): string {
     try {
-      return execSync('git config user.name', { encoding: 'utf8' }).trim();
+      return execFileSync('git', ['config', 'user.name'], { encoding: 'utf8' }).trim();
     } catch {
       return 'unknown';
     }
@@ -234,7 +254,7 @@ export class GitReader {
    */
   isGitRepo(): boolean {
     try {
-      execSync('git rev-parse --git-dir', { encoding: 'utf8' });
+      execFileSync('git', ['rev-parse', '--git-dir'], { encoding: 'utf8' });
       return true;
     } catch {
       return false;

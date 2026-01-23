@@ -27,8 +27,8 @@ describe('CLI', () => {
       getExitCode: jest.fn().mockReturnValue(0),
     } as any;
 
-    (GitReader as jest.Mock).mockImplementation(() => mockGitReader);
-    (TerminalFormatter as jest.Mock).mockImplementation(() => mockFormatter);
+    (GitReader as unknown as jest.Mock).mockImplementation(() => mockGitReader);
+    (TerminalFormatter as unknown as jest.Mock).mockImplementation(() => mockFormatter);
 
     cli = new CLI();
   });

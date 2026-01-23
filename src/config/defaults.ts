@@ -8,10 +8,6 @@ export const DEFAULT_CONFIG: ReviewConfig = {
     'openrouter/qwen/qwen-2.5-coder-32b-instruct:free',
     'openrouter/deepseek/deepseek-r1-distill-llama-70b:free',
     'openrouter/meta-llama/llama-3.1-70b-instruct:free',
-    'opencode/big-pickle',
-    'opencode/grok-code',
-    'opencode/glm-4.7',
-    'opencode/qwen3-coder',
   ],
   synthesisModel: 'openrouter/google/gemini-2.0-flash-exp:free',
   fallbackProviders: [
