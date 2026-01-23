@@ -1,4 +1,5 @@
 import { execFileSync } from 'child_process';
+import { createHash } from 'crypto';
 import { PRContext, FileChange } from '../types';
 import { logger } from '../utils/logger';
 
@@ -87,8 +88,11 @@ export class GitReader {
     const diff = this.executeGitDiff(['diff', diffTarget]);
     const files = this.parseDiff(diff);
 
+    // Generate stable ID from branch + base commit for incremental cache
+    const contextId = this.generateContextId(`uncommitted:${currentBranch}:${baseSha}`);
+
     return {
-      number: 0, // CLI mode has no PR number
+      number: contextId,
       title: `Local changes on ${currentBranch}`,
       body: 'Uncommitted changes',
       author: this.getGitUser(),
@@ -132,8 +136,11 @@ export class GitReader {
     // Get commit message
     const message = execFileSync('git', ['log', '-1', '--pretty=%B', commitSha], { encoding: 'utf8' }).trim();
 
+    // Generate stable ID from commit SHA for incremental cache
+    const contextId = this.generateContextId(`commit:${commitSha}`);
+
     return {
-      number: 0,
+      number: contextId,
       title: `Commit ${commitSha.substring(0, 7)}${isInitialCommit ? ' (initial)' : ''}`,
       body: message,
       author: this.getGitUser(),
@@ -163,8 +170,11 @@ export class GitReader {
     const diff = this.executeGitDiff(['diff', baseSha, headSha]);
     const files = this.parseDiff(diff);
 
+    // Generate stable ID from base and head SHAs for incremental cache
+    const contextId = this.generateContextId(`range:${baseSha}:${headSha}`);
+
     return {
-      number: 0,
+      number: contextId,
       title: `Changes from ${base} to ${head || 'HEAD'}`,
       body: `Comparing ${base}..${head || 'HEAD'}`,
       author: this.getGitUser(),
@@ -272,6 +282,29 @@ export class GitReader {
     } catch {
       return 'unknown';
     }
+  }
+
+  /**
+   * Get git repository root path
+   */
+  private getRepoRoot(): string {
+    try {
+      return execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
+    } catch {
+      return process.cwd();
+    }
+  }
+
+  /**
+   * Generate a stable numeric ID for CLI contexts
+   * Uses hash of repo path + target identifier to avoid collisions with incremental cache
+   */
+  private generateContextId(identifier: string): number {
+    const repoRoot = this.getRepoRoot();
+    const input = `${repoRoot}:${identifier}`;
+    const hash = createHash('sha256').update(input).digest('hex');
+    // Convert first 8 hex chars to positive integer (0 to 4294967295)
+    return parseInt(hash.substring(0, 8), 16);
   }
 
   /**

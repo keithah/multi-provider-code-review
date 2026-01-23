@@ -156,7 +156,7 @@ index abc123..def456 100644
 
       const pr = await reader.getUncommittedChanges();
 
-      expect(pr.number).toBe(0);
+      expect(pr.number).toBeGreaterThan(0); // Generated hash-based ID
       expect(pr.title).toContain('feature-branch');
       expect(pr.files).toHaveLength(1);
       expect(pr.files[0].filename).toBe('src/test.ts');
@@ -184,7 +184,7 @@ index 0000000..abc123
 
       const pr = await reader.getUncommittedChanges();
 
-      expect(pr.number).toBe(0);
+      expect(pr.number).toBeGreaterThan(0); // Generated hash-based ID
       expect(pr.files).toHaveLength(1);
       expect(pr.baseSha).toBe('4b825dc642cb6eb9a060e54bf8d69288fbee4904'); // empty tree SHA
       expect(pr.headSha).toBe('working-directory');
@@ -210,7 +210,7 @@ index abc123..def456 100644
 
       const pr = await reader.getCommitChanges('HEAD~1');
 
-      expect(pr.number).toBe(0);
+      expect(pr.number).toBeGreaterThan(0); // Generated hash-based ID
       expect(pr.title).toContain('abc123d');
       expect(pr.body).toContain('Fix bug');
       expect(pr.files).toHaveLength(1);
@@ -237,7 +237,7 @@ index abc123..def456 100644
 
       const pr = await reader.getBranchChanges('main', 'feature');
 
-      expect(pr.number).toBe(0);
+      expect(pr.number).toBeGreaterThan(0); // Generated hash-based ID
       expect(pr.title).toBe('Changes from main to feature');
       expect(pr.files).toHaveLength(1);
       expect(pr.baseSha).toBe('main-sha');

@@ -23,7 +23,7 @@ import { RulesEngine } from '../rules/engine';
 import { ContextRetriever } from '../analysis/context';
 import { EvidenceScorer } from '../analysis/evidence';
 import { ImpactAnalyzer } from '../analysis/impact';
-import { ReviewConfig, Review, PRContext, RunDetails, Finding, FileChange, UnchangedContext } from '../types';
+import { ReviewConfig, Review, PRContext, RunDetails, Finding, FileChange, UnchangedContext, ProviderResult } from '../types';
 import { logger } from '../utils/logger';
 import { mapAddedLines } from '../utils/diff';
 import * as fs from 'fs/promises';
@@ -83,25 +83,37 @@ export class ReviewOrchestrator {
 
     const cachedFindings = config.enableCaching ? await this.components.cache.load(pr) : null;
 
+    // Skip LLM execution if no files to review (incremental with no changes)
+    let llmFindings: Finding[] = [];
+    let providerResults: ProviderResult[] = [];
+    let aiAnalysis: ReturnType<typeof summarizeAIDetection> | undefined;
     const providers = await this.components.providerRegistry.createProviders(config);
-    // Create a PR context for the files to review
-    const reviewPR: PRContext = useIncremental ? { ...pr, files: filesToReview } : pr;
-    const prompt = this.components.promptBuilder.build(reviewPR);
 
-    await this.ensureBudget(config);
+    if (filesToReview.length === 0) {
+      logger.info('No files to review in incremental update, using cached findings only');
+    } else {
+
+      // Create a PR context for the files to review with filtered diff
+      const reviewPR: PRContext = useIncremental
+        ? { ...pr, files: filesToReview, diff: this.filterDiffByFiles(pr.diff, filesToReview) }
+        : pr;
+      const prompt = this.components.promptBuilder.build(reviewPR);
+
+      await this.ensureBudget(config);
+
+      providerResults = await this.components.llmExecutor.execute(providers, prompt);
+      llmFindings = extractFindings(providerResults);
+      aiAnalysis = config.enableAiDetection ? summarizeAIDetection(providerResults) : undefined;
+
+      for (const result of providerResults) {
+        await this.components.costTracker.record(result.name, result.result?.usage);
+      }
+    }
 
     const astFindings = config.enableAstAnalysis ? this.components.astAnalyzer.analyze(filesToReview) : [];
     const ruleFindings = this.components.rules.run(filesToReview);
     const securityFindings = config.enableSecurity ? this.components.security.scan(filesToReview) : [];
     const context = this.components.contextRetriever.findRelatedContext(filesToReview);
-
-    const providerResults = await this.components.llmExecutor.execute(providers, prompt);
-    const llmFindings = extractFindings(providerResults);
-    const aiAnalysis = config.enableAiDetection ? summarizeAIDetection(providerResults) : undefined;
-
-    for (const result of providerResults) {
-      await this.components.costTracker.record(result.name, result.result?.usage);
-    }
 
     const combinedFindings = [
       ...astFindings,
@@ -261,6 +273,32 @@ export class ReviewOrchestrator {
 
   private estimateTokens(text: string): number {
     return Math.ceil(Buffer.byteLength(text, 'utf8') / 4);
+  }
+
+  /**
+   * Filter diff to only include files that changed
+   * Used for incremental reviews to send only relevant diffs to LLMs
+   */
+  private filterDiffByFiles(diff: string, files: FileChange[]): string {
+    if (files.length === 0) return '';
+
+    const fileNames = new Set(files.map(f => f.filename));
+    const diffChunks: string[] = [];
+    const chunks = diff.split(/^diff --git /m).filter(Boolean);
+
+    for (const chunk of chunks) {
+      // Extract filename from chunk (format: "a/file.ts b/file.ts")
+      const firstLine = chunk.split('\n')[0];
+      const bIndex = firstLine.indexOf(' b/');
+      if (bIndex !== -1) {
+        const filename = firstLine.substring(bIndex + 3).trim();
+        if (fileNames.has(filename)) {
+          diffChunks.push('diff --git ' + chunk);
+        }
+      }
+    }
+
+    return diffChunks.join('');
   }
 
   private enrichFinding(
