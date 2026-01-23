@@ -1,7 +1,7 @@
 import { PRContext, Finding, Review, FileChange } from '../types';
 import { CacheStorage } from './storage';
 import { logger } from '../utils/logger';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 
 interface IncrementalCacheData {
   prNumber: number;
@@ -116,13 +116,11 @@ export class IncrementalReviewer {
       }
 
       // Get the diff between last reviewed commit and current HEAD
-      const diffCommand = `git diff --name-status ${lastCommit}...${pr.headSha}`;
-      logger.debug(`Running: ${diffCommand}`);
+      logger.debug(`Running git diff --name-status ${lastCommit.substring(0, 7)}...${pr.headSha.substring(0, 7)}`);
 
-      const output = execSync(diffCommand, {
+      const output = execFileSync('git', ['diff', '--name-status', `${lastCommit}...${pr.headSha}`], {
         encoding: 'utf8',
         cwd: process.cwd(),
-        stdio: ['pipe', 'pipe', 'pipe'],
       });
 
       const changedFiles: FileChange[] = [];
@@ -146,6 +144,7 @@ export class IncrementalReviewer {
       return changedFiles;
     } catch (error) {
       logger.error('Failed to get changed files from git diff', error as Error);
+      logger.warn(`Falling back to full review (${pr.files.length} files) due to git diff failure`);
       // On error, return all PR files (fallback to full review)
       return pr.files;
     }

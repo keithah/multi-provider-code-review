@@ -2,7 +2,7 @@ name: Multi-Provider Code Review
 
 on:
   pull_request:
-  push:
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
     inputs:
       pr_number:
@@ -54,7 +54,7 @@ jobs:
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.resolve-pr.outputs.pr }}
-          REVIEW_PROVIDERS: openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free,openrouter/xiaomi/mimo-v2-flash:free
-          FALLBACK_PROVIDERS: opencode/minimax-m2.1-free,opencode/big-pickle,opencode/grok-code,opencode/glm-4.7-free
+          REVIEW_PROVIDERS: openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free,openrouter/xiaomi/mimo-v2-flash:free,openrouter/qwen/qwen-2.5-coder-32b-instruct:free,openrouter/deepseek/deepseek-r1-distill-llama-70b:free,openrouter/meta-llama/llama-3.1-70b-instruct:free
+          FALLBACK_PROVIDERS: openrouter/microsoft/phi-4:free,openrouter/nvidia/llama-3.1-nemotron-70b-instruct:free
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}

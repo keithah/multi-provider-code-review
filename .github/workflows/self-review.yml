@@ -1,7 +1,8 @@
-name: Self Review
+name: Self Review (Disabled - Use multi-provider-review.yml instead)
 
 on:
-  pull_request:
+  # Disabled to prevent duplicate runs
+  # pull_request:
   workflow_dispatch:
     inputs:
       pr_number:
