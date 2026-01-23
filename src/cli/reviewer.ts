@@ -8,6 +8,14 @@ import { logger } from '../utils/logger';
  *
  * Note: For MVP, we're using a simplified approach.
  * Future enhancement: Implement full CLI-optimized pipeline
+ *
+ * TODO: Complete CLI review pipeline implementation
+ *   - Connect to LLM providers
+ *   - Run security scanner
+ *   - Run AST analysis
+ *   - Apply consensus filtering
+ *   - Generate synthesis
+ *   See src/core/orchestrator.ts:execute() for full pipeline
  */
 export class CLIReviewer {
   constructor(private components: ReviewComponents) {}
@@ -15,7 +23,8 @@ export class CLIReviewer {
   /**
    * Run review on local changes
    *
-   * For MVP: Creates a minimal mock orchestrator to reuse the core review logic
+   * For MVP: Returns empty review structure
+   * TODO: Implement full review pipeline (see orchestrator.ts for reference)
    */
   async review(pr: PRContext): Promise<Review> {
     logger.info('Starting CLI review', {
@@ -24,8 +33,9 @@ export class CLIReviewer {
       deletions: pr.deletions,
     });
 
-    // For MVP: Return a basic review structure
-    // In production, this would call the full orchestrator pipeline
+    // TODO: Replace with actual review pipeline
+    // Current status: MVP skeleton for CLI infrastructure
+    // Next step: Wire up components from ReviewComponents
     const findings: Finding[] = [];
 
     // Placeholder: In a real implementation, we'd run providers here

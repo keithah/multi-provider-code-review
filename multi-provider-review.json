@@ -2,11 +2,11 @@
   "summary": "Review for PR #1: Test PR\nFiles: 1 (+2/-0) • Providers: 1/1 succeeded • Findings: 2 (C0/M1/m1) • Impact: low",
   "findings": [
     {
-      "file": "src/app.ts",
-      "line": 5,
+      "file": "src/index.ts",
+      "line": 15,
       "severity": "major",
-      "title": "LLM finding",
-      "message": "llm",
+      "title": "LLM issue",
+      "message": "From LLM",
       "provider": "fake/model",
       "providers": [
         "fake/model"
@@ -23,10 +23,10 @@
         ],
         "relatedSnippets": [
           {
-            "filename": "src/app.ts",
+            "filename": "src/index.ts",
             "startLine": 2,
             "endLine": 2,
-            "code": "console.log(x);"
+            "code": "console.log(a);"
           }
         ],
         "providerAgreement": 1,
@@ -35,7 +35,7 @@
       }
     },
     {
-      "file": "src/app.ts",
+      "file": "src/index.ts",
       "line": 2,
       "severity": "minor",
       "title": "Console logging left in code",
@@ -56,10 +56,10 @@
         ],
         "relatedSnippets": [
           {
-            "filename": "src/app.ts",
+            "filename": "src/index.ts",
             "startLine": 2,
             "endLine": 2,
-            "code": "console.log(x);"
+            "code": "console.log(a);"
           }
         ],
         "providerAgreement": 1,
@@ -70,20 +70,14 @@
   ],
   "inlineComments": [
     {
-      "path": "src/app.ts",
-      "line": 5,
+      "path": "src/index.ts",
+      "line": 15,
       "side": "RIGHT",
-      "body": "**LLM finding**\nllm"
-    },
-    {
-      "path": "src/app.ts",
-      "line": 2,
-      "side": "RIGHT",
-      "body": "**Console logging left in code**\nRemove debug logging before merging."
+      "body": "**LLM issue**\nFrom LLM"
     }
   ],
   "actionItems": [
-    "src/app.ts:5 — LLM finding"
+    "src/index.ts:15 — LLM issue"
   ],
   "metrics": {
     "totalFindings": 2,
@@ -95,7 +89,7 @@
     "providersFailed": 0,
     "totalTokens": 0,
     "totalCost": 0,
-    "durationSeconds": 0.021,
+    "durationSeconds": 0,
     "cached": false
   },
   "providerResults": [
@@ -106,11 +100,11 @@
         "content": "ok",
         "findings": [
           {
-            "file": "src/app.ts",
-            "line": 5,
+            "file": "src/index.ts",
+            "line": 15,
             "severity": "major",
-            "title": "LLM finding",
-            "message": "llm"
+            "title": "LLM issue",
+            "message": "From LLM"
           }
         ]
       },
@@ -127,21 +121,21 @@
     ],
     "totalCost": 0,
     "totalTokens": 0,
-    "durationSeconds": 0.021,
+    "durationSeconds": 0,
     "cacheHit": false,
     "synthesisModel": "fake/model",
     "providerPoolSize": 1
   },
   "impactAnalysis": {
-    "file": "src/app.ts",
+    "file": "src/index.ts",
     "totalAffected": 2,
     "callers": [],
     "consumers": [
       {
-        "filename": "src/app.ts",
+        "filename": "src/index.ts",
         "startLine": 2,
         "endLine": 2,
-        "code": "console.log(x);"
+        "code": "console.log(a);"
       }
     ],
     "derived": [],
@@ -149,5 +143,5 @@
     "impactLevel": "low",
     "summary": "Touched 1 files with 1 related contexts; impact is low."
   },
-  "mermaidDiagram": "graph TD\nsrc_app_ts[\"src/app.ts\"]\nsrc_app_ts_1[\"src/app.ts\"]"
+  "mermaidDiagram": "graph TD\nsrc_index_ts[\"src/index.ts\"]\nsrc_index_ts_1[\"src/index.ts\"]"
 }

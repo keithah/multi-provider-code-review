@@ -132,10 +132,8 @@ index ghi789..jkl012 100644
 
   describe('getUncommittedChanges', () => {
     it('returns PR context for uncommitted changes', async () => {
+      // Mock execution order matches implementation: diff, branch, commit, user
       (childProcess.execSync as jest.Mock)
-        .mockReturnValueOnce('feature-branch\n') // getCurrentBranch
-        .mockReturnValueOnce('abc123\n') // getCurrentCommit
-        .mockReturnValueOnce('Test User\n') // git user.name
         .mockReturnValueOnce(`diff --git a/src/test.ts b/src/test.ts
 index abc123..def456 100644
 --- a/src/test.ts
@@ -144,7 +142,10 @@ index abc123..def456 100644
  const x = 1;
 +const y = 2;
  console.log(x);
-`); // git diff HEAD
+`) // git diff HEAD (called first)
+        .mockReturnValueOnce('feature-branch\n') // getCurrentBranch
+        .mockReturnValueOnce('abc123\n') // getCurrentCommit
+        .mockReturnValueOnce('Test User\n'); // git user.name
 
       const pr = await reader.getUncommittedChanges();
 

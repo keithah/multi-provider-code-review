@@ -19,6 +19,7 @@ export interface IncrementalConfig {
 export class IncrementalReviewer {
   private static readonly CACHE_KEY_PREFIX = 'incremental-review-pr-';
   private static readonly DEFAULT_TTL_DAYS = 7;
+  private static readonly MS_PER_DAY = 24 * 60 * 60 * 1000;
 
   constructor(
     private readonly storage = new CacheStorage(),
@@ -42,9 +43,10 @@ export class IncrementalReviewer {
 
     // Check if cache is expired
     const ageMs = Date.now() - lastReview.timestamp;
-    const ttlMs = this.config.cacheTtlDays * 24 * 60 * 60 * 1000;
+    const ttlMs = this.config.cacheTtlDays * IncrementalReviewer.MS_PER_DAY;
     if (ageMs > ttlMs) {
-      logger.debug(`Cache expired (age: ${Math.round(ageMs / 1000 / 60)} minutes, TTL: ${this.config.cacheTtlDays} days)`);
+      const ageMinutes = Math.round(ageMs / 1000 / 60);
+      logger.debug(`Cache expired (age: ${ageMinutes} minutes, TTL: ${this.config.cacheTtlDays} days)`);
       return false;
     }
 
@@ -93,10 +95,26 @@ export class IncrementalReviewer {
   }
 
   /**
+   * Validate that a string is a valid git SHA
+   */
+  private isValidSha(sha: string): boolean {
+    // Git SHAs are 4-40 character hex strings (git allows short SHAs)
+    return /^[a-f0-9]{4,40}$/i.test(sha);
+  }
+
+  /**
    * Get list of files changed since the last review
    */
   async getChangedFilesSince(pr: PRContext, lastCommit: string): Promise<FileChange[]> {
     try {
+      // Validate SHAs to prevent command injection
+      if (!this.isValidSha(lastCommit)) {
+        throw new Error(`Invalid commit SHA: ${lastCommit}`);
+      }
+      if (!this.isValidSha(pr.headSha)) {
+        throw new Error(`Invalid PR head SHA: ${pr.headSha}`);
+      }
+
       // Get the diff between last reviewed commit and current HEAD
       const diffCommand = `git diff --name-status ${lastCommit}...${pr.headSha}`;
       logger.debug(`Running: ${diffCommand}`);

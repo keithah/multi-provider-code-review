@@ -160,7 +160,6 @@ export class GitReader {
    */
   private parseDiff(diff: string): FileChange[] {
     const files: FileChange[] = [];
-    const fileRegex = /^diff --git a\/(.*?) b\/(.*?)$/gm;
     const statsRegex = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
 
     const patches = diff.split(/^diff --git /m).filter(Boolean);
@@ -168,6 +167,8 @@ export class GitReader {
     for (const patch of patches) {
       const lines = patch.split('\n');
       const firstLine = `diff --git ${lines[0]}`;
+      // Create new regex for each patch to avoid state issues
+      const fileRegex = /^diff --git a\/(.*?) b\/(.*?)$/;
       const match = fileRegex.exec(firstLine);
 
       if (!match) continue;
