@@ -49,6 +49,9 @@ export interface ReviewConfig {
   graphMaxDepth?: number;
   graphTimeoutSeconds?: number;
 
+  generateFixPrompts?: boolean;
+  fixPromptFormat?: string;
+
   dryRun: boolean;
 }
 

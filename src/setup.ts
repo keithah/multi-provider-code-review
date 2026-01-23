@@ -25,6 +25,11 @@ import { EvidenceScorer } from './analysis/evidence';
 import { MermaidGenerator } from './output/mermaid';
 import { FeedbackFilter } from './github/feedback';
 import { ConfigLoader } from './config/loader';
+import { FeedbackTracker } from './learning/feedback-tracker';
+import { QuietModeFilter } from './learning/quiet-mode';
+import { CodeGraphBuilder } from './analysis/context/graph-builder';
+import { PromptGenerator } from './autofix/prompt-generator';
+import { ReliabilityTracker } from './providers/reliability-tracker';
 
 export interface SetupOptions {
   cliMode?: boolean;
@@ -87,6 +92,25 @@ function createComponentsForCLI(config: ReviewConfig): ReviewComponents {
   const evidenceScorer = new EvidenceScorer();
   const mermaidGenerator = new MermaidGenerator();
 
+  // Learning and auto-fix components
+  const cacheStorage = new CacheStorage();
+  const feedbackTracker = config.learningEnabled ? new FeedbackTracker(cacheStorage, config.learningMinFeedbackCount) : undefined;
+  const quietModeFilter = config.quietModeEnabled
+    ? new QuietModeFilter(
+        {
+          enabled: config.quietModeEnabled,
+          minConfidence: config.quietMinConfidence || 0.5,
+          useLearning: config.quietUseLearning || false,
+        },
+        feedbackTracker
+      )
+    : undefined;
+  const graphBuilder = config.graphEnabled
+    ? new CodeGraphBuilder(config.graphMaxDepth || 5, (config.graphTimeoutSeconds || 10) * 1000)
+    : undefined;
+  const promptGenerator = new PromptGenerator('plain');
+  const reliabilityTracker = new ReliabilityTracker(cacheStorage);
+
   // Mock GitHub components for CLI mode
   const mockGitHubClient = {} as GitHubClient;
   const prLoader = new PullRequestLoader(mockGitHubClient);
@@ -117,6 +141,11 @@ function createComponentsForCLI(config: ReviewConfig): ReviewComponents {
     evidenceScorer,
     mermaidGenerator,
     feedbackFilter,
+    feedbackTracker,
+    quietModeFilter,
+    graphBuilder,
+    promptGenerator,
+    reliabilityTracker,
   };
 }
 
@@ -152,6 +181,25 @@ export function createComponents(config: ReviewConfig, githubToken: string): Rev
   const mermaidGenerator = new MermaidGenerator();
   const feedbackFilter = new FeedbackFilter(githubClient);
 
+  // Learning and auto-fix components
+  const cacheStorage = new CacheStorage();
+  const feedbackTracker = config.learningEnabled ? new FeedbackTracker(cacheStorage, config.learningMinFeedbackCount) : undefined;
+  const quietModeFilter = config.quietModeEnabled
+    ? new QuietModeFilter(
+        {
+          enabled: config.quietModeEnabled,
+          minConfidence: config.quietMinConfidence || 0.5,
+          useLearning: config.quietUseLearning || false,
+        },
+        feedbackTracker
+      )
+    : undefined;
+  const graphBuilder = config.graphEnabled
+    ? new CodeGraphBuilder(config.graphMaxDepth || 5, (config.graphTimeoutSeconds || 10) * 1000)
+    : undefined;
+  const promptGenerator = new PromptGenerator('plain');
+  const reliabilityTracker = new ReliabilityTracker(cacheStorage);
+
   return {
     config,
     providerRegistry,
@@ -175,5 +223,10 @@ export function createComponents(config: ReviewConfig, githubToken: string): Rev
     evidenceScorer,
     mermaidGenerator,
     feedbackFilter,
+    feedbackTracker,
+    quietModeFilter,
+    graphBuilder,
+    promptGenerator,
+    reliabilityTracker,
   };
 }

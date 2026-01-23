@@ -55,5 +55,8 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   graphMaxDepth: 5,
   graphTimeoutSeconds: 10,
 
+  generateFixPrompts: false,
+  fixPromptFormat: 'plain',
+
   dryRun: false,
 };
