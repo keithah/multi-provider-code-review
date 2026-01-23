@@ -84,10 +84,7 @@ export class GitReader {
     const diffTarget = currentCommit ? 'HEAD' : GitReader.EMPTY_TREE_SHA;
 
     // Get diff for uncommitted changes
-    const diff = execFileSync('git', ['diff', diffTarget], {
-      encoding: 'utf8',
-      maxBuffer: GitReader.MAX_BUFFER,
-    });
+    const diff = this.executeGitDiff(['diff', diffTarget]);
     const files = this.parseDiff(diff);
 
     return {
@@ -129,10 +126,7 @@ export class GitReader {
 
     // Get diff for this commit
     // For initial commits, diff against empty tree
-    const diff = execFileSync('git', ['diff', parentSha, commitSha], {
-      encoding: 'utf8',
-      maxBuffer: GitReader.MAX_BUFFER,
-    });
+    const diff = this.executeGitDiff(['diff', parentSha, commitSha]);
     const files = this.parseDiff(diff);
 
     // Get commit message
@@ -166,10 +160,7 @@ export class GitReader {
     logger.info(`Reading changes from ${baseSha.substring(0, 7)} to ${headSha.substring(0, 7)}`);
 
     // Get diff between commits
-    const diff = execFileSync('git', ['diff', baseSha, headSha], {
-      encoding: 'utf8',
-      maxBuffer: GitReader.MAX_BUFFER,
-    });
+    const diff = this.executeGitDiff(['diff', baseSha, headSha]);
     const files = this.parseDiff(diff);
 
     return {
@@ -186,6 +177,27 @@ export class GitReader {
       baseSha,
       headSha,
     };
+  }
+
+  /**
+   * Execute git diff command with proper error handling for large diffs
+   */
+  private executeGitDiff(args: string[]): string {
+    try {
+      return execFileSync('git', args, {
+        encoding: 'utf8',
+        maxBuffer: GitReader.MAX_BUFFER,
+      });
+    } catch (error: any) {
+      if (error.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') {
+        const sizeInMB = Math.round(GitReader.MAX_BUFFER / 1024 / 1024);
+        throw new Error(
+          `Diff exceeds maximum size of ${sizeInMB}MB. ` +
+          `Consider reviewing smaller changes or increasing MAX_BUFFER.`
+        );
+      }
+      throw error;
+    }
   }
 
   /**

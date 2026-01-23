@@ -77,8 +77,16 @@ async shouldUseIncremental(pr: PRContext): boolean {
 
 ```typescript
 async getChangedFilesSince(pr: PRContext, lastCommit: string): FileChange[] {
+  // Validate SHAs to prevent command injection
+  if (!this.isValidSha(lastCommit) || !this.isValidSha(pr.headSha)) {
+    throw new Error('Invalid commit SHA');
+  }
+
   // Run: git diff --name-status <last>...<current>
-  const output = execSync(`git diff --name-status ${lastCommit}...${pr.headSha}`);
+  // Use execFileSync with array args (secure, prevents shell injection)
+  const output = execFileSync('git', ['diff', '--name-status', `${lastCommit}...${pr.headSha}`], {
+    encoding: 'utf8',
+  });
 
   // Parse output:
   // M    src/file1.ts

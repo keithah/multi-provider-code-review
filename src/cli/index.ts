@@ -65,6 +65,8 @@ export class CLI {
    * Run code review
    */
   private async runReview(target?: string, options: Record<string, unknown> = {}): Promise<number> {
+    let components: any = null;
+
     try {
       console.log(this.formatter.formatMessage('Starting code review...', 'info'));
       console.log('');
@@ -97,7 +99,7 @@ export class CLI {
       console.log('');
 
       // Setup components (CLI mode)
-      const components = await setupComponents({
+      components = await setupComponents({
         cliMode: true,
         dryRun: options.dryRun as boolean || false,
       });
@@ -117,6 +119,11 @@ export class CLI {
     } catch (error) {
       logger.error('Review failed', { error: String(error) });
       throw error;
+    } finally {
+      // Clean up resources to prevent memory leaks
+      if (components?.costTracker) {
+        components.costTracker.reset();
+      }
     }
   }
 
