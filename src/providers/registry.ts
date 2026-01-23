@@ -79,12 +79,7 @@ export class ProviderRegistry {
     const list: Provider[] = [];
 
     for (const name of names) {
-      if (!Provider.validate(name)) {
-        logger.warn(`Skipping invalid provider name: ${name}`);
-        continue;
-      }
-
-      // Check if provider is provided by a plugin
+      // Check if provider is provided by a plugin first (before validation)
       if (this.pluginLoader?.hasProvider(name)) {
         const apiKey = process.env.PLUGIN_API_KEY || '';
         const provider = this.pluginLoader.createProvider(name, apiKey);
@@ -95,6 +90,12 @@ export class ProviderRegistry {
           logger.warn(`Failed to create provider ${name} from plugin`);
           continue;
         }
+      }
+
+      // Validate built-in providers (opencode/, openrouter/)
+      if (!Provider.validate(name)) {
+        logger.warn(`Skipping invalid provider name: ${name}`);
+        continue;
       }
 
       if (name.startsWith('openrouter/')) {

@@ -1,4 +1,4 @@
-import { FileChange } from '../../types';
+import { FileChange, CodeSnippet, ImpactAnalysis } from '../../types';
 import { logger } from '../../utils/logger';
 import Parser from 'tree-sitter';
 import TypeScriptParser from 'tree-sitter-typescript';
@@ -182,6 +182,60 @@ export class CodeGraph {
       }
     }
     return dependents;
+  }
+
+  /**
+   * Find all symbols called by a given symbol (callees)
+   * Required by CodeGraph interface
+   */
+  findCallees(symbol: string): CodeSnippet[] {
+    const callees = this.calls.get(symbol) || [];
+    return callees.map((callee) => ({
+      file: '',
+      startLine: 0,
+      endLine: 0,
+      content: callee,
+      relevance: 'related' as const,
+    }));
+  }
+
+  /**
+   * Find all classes that inherit from a given class
+   * Required by CodeGraph interface - currently a stub
+   */
+  findDerivedClasses(_className: string): CodeSnippet[] {
+    // TODO: Implement class inheritance tracking
+    return [];
+  }
+
+  /**
+   * Find all dependencies (imports) for a file
+   * Required by CodeGraph interface - wraps getDependencies
+   */
+  findDependencies(file: string): CodeSnippet[] {
+    const deps = this.getDependencies(file);
+    return deps.map((dep) => ({
+      file: dep,
+      startLine: 0,
+      endLine: 0,
+      content: dep,
+      relevance: 'related' as const,
+    }));
+  }
+
+  /**
+   * Analyze the impact radius of changes to a file
+   * Required by CodeGraph interface - currently a stub
+   */
+  findImpactRadius(file: string): ImpactAnalysis {
+    // TODO: Implement full impact analysis
+    return {
+      file,
+      totalAffected: 0,
+      callers: [],
+      consumers: [],
+      derived: [],
+    };
   }
 
   /**
