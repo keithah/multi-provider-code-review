@@ -5,6 +5,7 @@ import { ReviewConfig } from '../types';
 import { DEFAULT_CONFIG } from './defaults';
 import { ReviewConfigSchema, ReviewConfigFile } from './schema';
 import { validateConfig, ValidationError } from '../utils/validation';
+import { logger } from '../utils/logger';
 
 export class ConfigLoader {
   private static readonly CONFIG_PATHS = [
@@ -49,11 +50,11 @@ export class ConfigLoader {
         return this.normalizeKeys(validated);
       } catch (error) {
         const err = error as Error;
-        console.warn(`⚠️  Failed to load config from ${relPath}: ${err.message}`);
+        logger.warn(`⚠️  Failed to load config from ${relPath}: ${err.message}`);
         if (err.message.includes('YAMLException')) {
-          console.warn('💡 Check for YAML syntax errors (indentation, colons, quotes)');
+          logger.warn('💡 Check for YAML syntax errors (indentation, colons, quotes)');
         } else if (err.message.includes('parse')) {
-          console.warn('💡 Check that all values match expected types');
+          logger.warn('💡 Check that all values match expected types');
         }
       }
     }
@@ -96,6 +97,8 @@ export class ConfigLoader {
       enableCaching: this.parseBoolean(env.ENABLE_CACHING),
       enableTestHints: this.parseBoolean(env.ENABLE_TEST_HINTS),
       enableAiDetection: this.parseBoolean(env.ENABLE_AI_DETECTION),
+
+      dryRun: this.parseBoolean(env.DRY_RUN),
     };
   }
 
@@ -127,6 +130,7 @@ export class ConfigLoader {
       enableCaching: config.enable_caching,
       enableTestHints: config.enable_test_hints,
       enableAiDetection: config.enable_ai_detection,
+      dryRun: config.dry_run,
     };
   }
 

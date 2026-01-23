@@ -96,6 +96,10 @@ inputs:
     description: "Base name for JSON/SARIF reports"
     required: false
     default: "multi-provider-review"
+  DRY_RUN:
+    description: "Preview mode - run review without posting to GitHub"
+    required: false
+    default: "false"
   OPENROUTER_API_KEY:
     description: "API key for OpenRouter"
     required: false

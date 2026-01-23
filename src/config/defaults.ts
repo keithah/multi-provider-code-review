@@ -37,4 +37,6 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   enableCaching: true,
   enableTestHints: true,
   enableAiDetection: true,
+
+  dryRun: false,
 };

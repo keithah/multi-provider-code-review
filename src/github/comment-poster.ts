@@ -7,10 +7,24 @@ import { withRetry } from '../utils/retry';
 export class CommentPoster {
   private static readonly MAX_COMMENT_SIZE = 60_000;
 
-  constructor(private readonly client: GitHubClient) {}
+  constructor(
+    private readonly client: GitHubClient,
+    private readonly dryRun: boolean = false
+  ) {}
 
   async postSummary(prNumber: number, body: string): Promise<void> {
     const chunks = this.chunk(body);
+
+    if (this.dryRun) {
+      logger.info(`[DRY RUN] Would post ${chunks.length} summary comment(s) to PR #${prNumber}`);
+      for (let i = 0; i < chunks.length; i++) {
+        const header = chunks.length > 1 ? `## Review Summary (Part ${i + 1}/${chunks.length})\n\n` : '';
+        const content = header + chunks[i];
+        logger.info(`[DRY RUN] Summary comment ${i + 1}:\n${content.substring(0, 500)}...`);
+      }
+      return;
+    }
+
     const { octokit, owner, repo } = this.client;
 
     for (let i = 0; i < chunks.length; i++) {
@@ -50,6 +64,14 @@ export class CommentPoster {
 
     if (apiComments.length === 0) {
       logger.info('No inline comments with valid diff positions to post');
+      return;
+    }
+
+    if (this.dryRun) {
+      logger.info(`[DRY RUN] Would post ${apiComments.length} inline comment(s) to PR #${prNumber}`);
+      for (const comment of apiComments) {
+        logger.info(`[DRY RUN] Inline comment at ${comment.path}:${comment.position}:\n${comment.body.substring(0, 200)}...`);
+      }
       return;
     }
 

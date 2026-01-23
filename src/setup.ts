@@ -43,7 +43,7 @@ export function createComponents(config: ReviewConfig, githubToken: string): Rev
   const rules = RuleLoader.load();
   const githubClient = new GitHubClient(githubToken);
   const prLoader = new PullRequestLoader(githubClient);
-  const commentPoster = new CommentPoster(githubClient);
+  const commentPoster = new CommentPoster(githubClient, config.dryRun);
   const formatter = new MarkdownFormatter();
   const contextRetriever = new ContextRetriever();
   const impactAnalyzer = new ImpactAnalyzer();

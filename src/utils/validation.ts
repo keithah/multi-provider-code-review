@@ -2,6 +2,8 @@
  * Validation utilities with helpful error messages
  */
 
+import { logger } from './logger';
+
 export class ValidationError extends Error {
   constructor(
     message: string,
@@ -170,7 +172,7 @@ export function validateModelId(modelId: string): void {
   const hasValidPrefix = validPrefixes.some(prefix => modelId.startsWith(prefix));
 
   if (!hasValidPrefix && !modelId.includes('/')) {
-    console.warn(
+    logger.warn(
       `Model ID "${modelId}" doesn't have a recognized provider prefix. ` +
       `Consider using: ${validPrefixes.map(p => p + 'model-name').join(', ')}`
     );
@@ -209,7 +211,7 @@ export function validateTimeout(timeoutMs: number): void {
   }
 
   if (timeoutMs > 600000) {
-    console.warn(
+    logger.warn(
       `Timeout of ${timeoutMs}ms (${Math.round(timeoutMs / 1000)}s) is very long. ` +
       'Consider using a shorter timeout to avoid blocking.'
     );
@@ -292,7 +294,7 @@ export function validateConfig(config: Record<string, unknown>): void {
   if (config.inlineMaxComments !== undefined) {
     const maxComments = validateNonNegativeNumber(config.inlineMaxComments, 'inlineMaxComments');
     if (maxComments > 100) {
-      console.warn(
+      logger.warn(
         `inlineMaxComments is set to ${maxComments}. ` +
         'Very high values may cause rate limiting on GitHub API.'
       );
@@ -302,7 +304,7 @@ export function validateConfig(config: Record<string, unknown>): void {
   if (config.budgetMaxUsd !== undefined) {
     const budget = validateNonNegativeNumber(config.budgetMaxUsd, 'budgetMaxUsd');
     if (budget > 100) {
-      console.warn(
+      logger.warn(
         `budgetMaxUsd is set to $${budget}. ` +
         'This is unusually high. Make sure this is intentional.'
       );

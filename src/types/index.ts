@@ -36,6 +36,8 @@ export interface ReviewConfig {
   enableCaching: boolean;
   enableTestHints: boolean;
   enableAiDetection: boolean;
+
+  dryRun: boolean;
 }
 
 export interface TokenUsage {

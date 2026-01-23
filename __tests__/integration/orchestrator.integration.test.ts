@@ -142,6 +142,7 @@ describe('ReviewOrchestrator integration (offline)', () => {
     enableCaching: false,
     enableTestHints: false,
     enableAiDetection: false,
+    dryRun: false,
   };
 
   it('merges AST/security/static with LLM findings and respects inline limit only for inline comments', async () => {

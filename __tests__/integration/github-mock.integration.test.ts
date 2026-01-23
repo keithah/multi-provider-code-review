@@ -82,6 +82,7 @@ describe('GitHub integration mock (no network)', () => {
     enableCaching: false,
     enableTestHints: false,
     enableAiDetection: false,
+    dryRun: false,
   };
 
   it('uses fake octokit client to post summary and inline comments', async () => {

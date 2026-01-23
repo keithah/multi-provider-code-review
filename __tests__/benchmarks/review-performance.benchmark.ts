@@ -206,6 +206,7 @@ async function runBenchmark(
     enableCaching: !!cache,
     enableTestHints: false,
     enableAiDetection: false,
+    dryRun: false,
   };
 
   const components: ReviewComponents = {

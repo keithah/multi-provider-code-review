@@ -29,6 +29,7 @@ function syncEnvFromInputs(): void {
     'ENABLE_TEST_HINTS',
     'ENABLE_AI_DETECTION',
     'REPORT_BASENAME',
+    'DRY_RUN',
   ];
 
   for (const key of inputKeys) {
@@ -54,6 +55,10 @@ async function run(): Promise<void> {
     validateRequired(prInput, 'PR_NUMBER');
 
     const prNumber = validatePositiveInteger(prInput, 'PR_NUMBER');
+
+    if (config.dryRun) {
+      core.info('🔍 DRY RUN MODE - Review will run but no comments will be posted');
+    }
 
     core.info(`Starting review for PR #${prNumber}`);
     const review = await orchestrator.execute(prNumber);
