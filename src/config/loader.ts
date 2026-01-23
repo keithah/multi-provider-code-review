@@ -4,6 +4,7 @@ import * as yaml from 'js-yaml';
 import { ReviewConfig } from '../types';
 import { DEFAULT_CONFIG } from './defaults';
 import { ReviewConfigSchema, ReviewConfigFile } from './schema';
+import { validateConfig, ValidationError } from '../utils/validation';
 
 export class ConfigLoader {
   private static readonly CONFIG_PATHS = [
@@ -17,7 +18,23 @@ export class ConfigLoader {
     const fileConfig = this.loadFromFile();
     const envConfig = this.loadFromEnv();
 
-    return this.merge(DEFAULT_CONFIG, fileConfig, envConfig);
+    const merged = this.merge(DEFAULT_CONFIG, fileConfig, envConfig);
+
+    // Validate final configuration
+    try {
+      validateConfig(merged as unknown as Record<string, unknown>);
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        throw new ValidationError(
+          `Invalid configuration: ${error.message}`,
+          error.field,
+          error.hint
+        );
+      }
+      throw error;
+    }
+
+    return merged;
   }
 
   private static loadFromFile(): Partial<ReviewConfig> {
@@ -31,7 +48,13 @@ export class ConfigLoader {
         const validated = ReviewConfigSchema.parse(parsed);
         return this.normalizeKeys(validated);
       } catch (error) {
-        console.warn(`Failed to read config ${relPath}:`, error);
+        const err = error as Error;
+        console.warn(`⚠️  Failed to load config from ${relPath}: ${err.message}`);
+        if (err.message.includes('YAMLException')) {
+          console.warn('💡 Check for YAML syntax errors (indentation, colons, quotes)');
+        } else if (err.message.includes('parse')) {
+          console.warn('💡 Check that all values match expected types');
+        }
       }
     }
 
