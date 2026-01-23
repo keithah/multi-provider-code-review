@@ -27,10 +27,16 @@ export class PromptBuilder {
       fileList.push(`  (${excludedCount} additional file(s) truncated)`);
     }
 
-    return [
+    const instructions = [
       'You are a senior engineer performing a pull request review.',
       'Identify critical, major, and minor issues. Include actionable suggestions when possible.',
       'Return JSON with findings: [{file, line, severity, title, message, suggestion?}] and optional ai_likelihood/ai_reasoning.',
+      '',
+      'IMPORTANT RULES:',
+      '- ONLY review files that have diffs shown below',
+      '- DO NOT report "missing file" issues - all files listed are intentionally included',
+      '- DO NOT report issues about files being "referenced but not in diff"',
+      '- Focus on actual code quality, security, and correctness issues in the provided diffs',
       '',
       `PR #${pr.number}: ${pr.title}`,
       `Author: ${pr.author}`,
@@ -39,6 +45,8 @@ export class PromptBuilder {
       '',
       'Diff:',
       diff,
-    ].join('\n');
+    ];
+
+    return instructions.join('\n');
   }
 }

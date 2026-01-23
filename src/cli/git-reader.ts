@@ -113,9 +113,22 @@ export class GitReader {
     logger.info(`Reading changes for commit ${commitRef}`);
 
     const commitSha = execFileSync('git', ['rev-parse', commitRef], { encoding: 'utf8' }).trim();
-    const parentSha = execFileSync('git', ['rev-parse', `${commitRef}^`], { encoding: 'utf8' }).trim();
+
+    // Try to get parent commit - initial commits have no parent
+    let parentSha: string;
+    let isInitialCommit = false;
+
+    try {
+      parentSha = execFileSync('git', ['rev-parse', `${commitRef}^`], { encoding: 'utf8' }).trim();
+    } catch (error) {
+      // No parent - this is the initial commit
+      parentSha = GitReader.EMPTY_TREE_SHA;
+      isInitialCommit = true;
+      logger.debug('Processing initial commit (no parent)');
+    }
 
     // Get diff for this commit
+    // For initial commits, diff against empty tree
     const diff = execFileSync('git', ['diff', parentSha, commitSha], {
       encoding: 'utf8',
       maxBuffer: GitReader.MAX_BUFFER,
@@ -127,7 +140,7 @@ export class GitReader {
 
     return {
       number: 0,
-      title: `Commit ${commitSha.substring(0, 7)}`,
+      title: `Commit ${commitSha.substring(0, 7)}${isInitialCommit ? ' (initial)' : ''}`,
       body: message,
       author: this.getGitUser(),
       draft: false,

@@ -9,6 +9,7 @@ import { TestCoverageAnalyzer } from './analysis/test-coverage';
 import { ASTAnalyzer } from './analysis/ast/analyzer';
 import { CacheManager } from './cache/manager';
 import { IncrementalReviewer } from './cache/incremental';
+import { CacheStorage } from './cache/storage';
 import { PricingService } from './cost/pricing';
 import { CostTracker } from './cost/tracker';
 import { SecurityScanner } from './security/scanner';
@@ -73,7 +74,7 @@ function createComponentsForCLI(config: ReviewConfig): ReviewComponents {
   const testCoverage = new TestCoverageAnalyzer();
   const astAnalyzer = new ASTAnalyzer();
   const cache = new CacheManager();
-  const incrementalReviewer = new IncrementalReviewer(undefined, {
+  const incrementalReviewer = new IncrementalReviewer(new CacheStorage(), {
     enabled: config.incrementalEnabled,
     cacheTtlDays: config.incrementalCacheTtlDays,
   });
@@ -133,7 +134,7 @@ export function createComponents(config: ReviewConfig, githubToken: string): Rev
   const testCoverage = new TestCoverageAnalyzer();
   const astAnalyzer = new ASTAnalyzer();
   const cache = new CacheManager();
-  const incrementalReviewer = new IncrementalReviewer(undefined, {
+  const incrementalReviewer = new IncrementalReviewer(new CacheStorage(), {
     enabled: config.incrementalEnabled,
     cacheTtlDays: config.incrementalCacheTtlDays,
   });

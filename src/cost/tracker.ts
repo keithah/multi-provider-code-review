@@ -27,4 +27,13 @@ export class CostTracker {
       breakdown: this.breakdown,
     };
   }
+
+  /**
+   * Reset accumulated cost data
+   */
+  reset(): void {
+    this.totalCost = 0;
+    this.totalTokens = 0;
+    this.breakdown = {};
+  }
 }

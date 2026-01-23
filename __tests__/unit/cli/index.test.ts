@@ -154,11 +154,12 @@ describe('CLI', () => {
   describe('showVersion', () => {
     it('displays version', () => {
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const pkg = require('../../../package.json');
 
       (cli as any).showVersion();
 
       expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('multi-provider-code-review'));
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('2.0.0'));
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining(pkg.version));
 
       consoleSpy.mockRestore();
     });

@@ -2,8 +2,13 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { logger } from '../utils/logger';
 
+interface Lock {
+  promise: Promise<void>;
+  resolve: () => void;
+}
+
 export class CacheStorage {
-  private readonly locks = new Map<string, Promise<void>>();
+  private readonly locks = new Map<string, Lock>();
 
   constructor(private readonly baseDir = path.join(process.cwd(), '.mpr-cache')) {}
 
@@ -34,19 +39,26 @@ export class CacheStorage {
     // If there's an existing lock, wait for it
     const existingLock = this.locks.get(key);
     if (existingLock) {
-      await existingLock;
+      await existingLock.promise;
     }
 
-    // Create a new lock promise
-    let releaseLock: () => void;
+    // Create a new lock with both promise and resolver
+    let resolver!: () => void;
     const lockPromise = new Promise<void>(resolve => {
-      releaseLock = resolve;
+      resolver = resolve;
     });
 
-    this.locks.set(key, lockPromise);
+    this.locks.set(key, {
+      promise: lockPromise,
+      resolve: resolver,
+    });
   }
 
   private releaseLock(key: string): void {
-    this.locks.delete(key);
+    const lock = this.locks.get(key);
+    if (lock) {
+      lock.resolve(); // Resolve the promise to unblock waiters
+      this.locks.delete(key);
+    }
   }
 }
