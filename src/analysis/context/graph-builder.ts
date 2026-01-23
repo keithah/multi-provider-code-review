@@ -26,7 +26,7 @@ export interface CallInfo {
   line: number;
 }
 
-export interface CodeSnippet {
+export interface GraphCodeSnippet {
   file: string;
   line: number;
   code: string;
@@ -101,9 +101,9 @@ export class CodeGraph {
   /**
    * Find all places where a symbol is called/used
    */
-  findCallers(symbol: string): CodeSnippet[] {
+  findCallers(symbol: string): GraphCodeSnippet[] {
     const callerList = this.callers.get(symbol) || [];
-    const snippets: CodeSnippet[] = [];
+    const snippets: GraphCodeSnippet[] = [];
 
     for (const caller of callerList) {
       // Find the definition of the caller
@@ -125,8 +125,8 @@ export class CodeGraph {
   /**
    * Find all files that import/depend on a given file
    */
-  findConsumers(file: string): CodeSnippet[] {
-    const consumers: CodeSnippet[] = [];
+  findConsumers(file: string): GraphCodeSnippet[] {
+    const consumers: GraphCodeSnippet[] = [];
 
     for (const [fromFile, toFiles] of this.imports) {
       if (toFiles.includes(file)) {
@@ -191,11 +191,10 @@ export class CodeGraph {
   findCallees(symbol: string): CodeSnippet[] {
     const callees = this.calls.get(symbol) || [];
     return callees.map((callee) => ({
-      file: '',
+      filename: '',
       startLine: 0,
       endLine: 0,
-      content: callee,
-      relevance: 'related' as const,
+      code: callee,
     }));
   }
 
@@ -215,11 +214,10 @@ export class CodeGraph {
   findDependencies(file: string): CodeSnippet[] {
     const deps = this.getDependencies(file);
     return deps.map((dep) => ({
-      file: dep,
+      filename: dep,
       startLine: 0,
       endLine: 0,
-      content: dep,
-      relevance: 'related' as const,
+      code: dep,
     }));
   }
 
@@ -235,6 +233,8 @@ export class CodeGraph {
       callers: [],
       consumers: [],
       derived: [],
+      impactLevel: 'low',
+      summary: 'Impact analysis not yet implemented',
     };
   }
 

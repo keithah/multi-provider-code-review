@@ -11,7 +11,7 @@
  */
 
 import { ReviewOrchestrator, ReviewComponents } from '../../src/core/orchestrator';
-import { ReviewConfig, PRContext, Finding, ProviderResult, FileChange } from '../../src/types';
+import { ReviewConfig, PRContext, Finding, ProviderResult, FileChange, ReviewResult } from '../../src/types';
 import { ConsensusEngine } from '../../src/analysis/consensus';
 import { Deduplicator } from '../../src/analysis/deduplicator';
 import { SynthesisEngine } from '../../src/analysis/synthesis';
@@ -39,21 +39,38 @@ interface BenchmarkResult {
   cacheHit: boolean;
 }
 
+class MockPricingService {
+  cache = new Map();
+  cacheExpiry = 0;
+
+  async getPricing() {
+    return { modelId: 'mock', promptPrice: 0.001, completionPrice: 0.002, isFree: false };
+  }
+
+  async refresh() {
+    // No-op for mock
+  }
+}
+
 class MockProvider extends Provider {
   constructor(name: string, private readonly latencyMs: number) {
     super(name);
   }
 
-  async review(): Promise<{
-    content: string;
-    findings: Array<{ file: string; line: number; severity: string; title: string; message: string }>;
-    durationSeconds: number;
-  }> {
+  async review(_prompt: string, _timeoutMs: number): Promise<ReviewResult> {
     await new Promise(resolve => setTimeout(resolve, this.latencyMs));
     return {
       content: 'Review complete',
       findings: [
-        { file: 'src/test.ts', line: 10, severity: 'major', title: 'Issue', message: 'Found issue' },
+        {
+          file: 'src/test.ts',
+          line: 10,
+          severity: 'major' as const,
+          title: 'Issue',
+          message: 'Found issue',
+          category: 'test',
+          evidence: { confidence: 0.8, reasoning: 'mock', badge: 'test' },
+        },
       ],
       durationSeconds: this.latencyMs / 1000,
     };
@@ -222,9 +239,7 @@ async function runBenchmark(
     testCoverage: new TestCoverageAnalyzer(),
     astAnalyzer: new ASTAnalyzer(),
     cache: cache || new NoopCache(),
-    costTracker: new CostTracker({
-      getPricing: async () => ({ modelId: 'mock', promptPrice: 0.001, completionPrice: 0.002, isFree: false }),
-    } as ReviewComponents['costTracker']['rateLimiter']),
+    costTracker: new CostTracker(new MockPricingService() as any),
     security: new SecurityScanner(),
     rules: new RulesEngine([]),
     prLoader: new BenchmarkPRLoader(prContext) as unknown as ReviewComponents['prLoader'],

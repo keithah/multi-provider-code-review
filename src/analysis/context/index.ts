@@ -4,5 +4,5 @@ export {
   type Definition,
   type ImportInfo,
   type CallInfo,
-  type CodeSnippet,
+  type GraphCodeSnippet,
 } from './graph-builder';

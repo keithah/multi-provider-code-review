@@ -34543,11 +34543,10 @@ var CodeGraph = class {
   findCallees(symbol) {
     const callees = this.calls.get(symbol) || [];
     return callees.map((callee) => ({
-      file: "",
+      filename: "",
       startLine: 0,
       endLine: 0,
-      content: callee,
-      relevance: "related"
+      code: callee
     }));
   }
   /**
@@ -34564,11 +34563,10 @@ var CodeGraph = class {
   findDependencies(file) {
     const deps = this.getDependencies(file);
     return deps.map((dep) => ({
-      file: dep,
+      filename: dep,
       startLine: 0,
       endLine: 0,
-      content: dep,
-      relevance: "related"
+      code: dep
     }));
   }
   /**
@@ -34581,7 +34579,9 @@ var CodeGraph = class {
       totalAffected: 0,
       callers: [],
       consumers: [],
-      derived: []
+      derived: [],
+      impactLevel: "low",
+      summary: "Impact analysis not yet implemented"
     };
   }
   /**
