@@ -37,6 +37,9 @@ export interface ReviewConfig {
   enableTestHints: boolean;
   enableAiDetection: boolean;
 
+  incrementalEnabled: boolean;
+  incrementalCacheTtlDays: number;
+
   dryRun: boolean;
 }
 

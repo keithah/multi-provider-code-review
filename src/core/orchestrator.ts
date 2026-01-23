@@ -16,6 +16,7 @@ import { FeedbackFilter } from '../github/feedback';
 import { buildJson } from '../output/json';
 import { buildSarif } from '../output/sarif';
 import { CacheManager } from '../cache/manager';
+import { IncrementalReviewer } from '../cache/incremental';
 import { CostTracker } from '../cost/tracker';
 import { SecurityScanner } from '../security/scanner';
 import { RulesEngine } from '../rules/engine';
@@ -39,6 +40,7 @@ export interface ReviewComponents {
   testCoverage: TestCoverageAnalyzer;
   astAnalyzer: ASTAnalyzer;
   cache: CacheManager;
+  incrementalReviewer: IncrementalReviewer;
   costTracker: CostTracker;
   security: SecurityScanner;
   rules: RulesEngine;
@@ -66,17 +68,50 @@ export class ReviewOrchestrator {
       return null;
     }
 
+    // Check for incremental review
+    const useIncremental = await this.components.incrementalReviewer.shouldUseIncremental(pr);
+    let filesToReview: FileChange[] = pr.files;
+    let previousReview: Review | null = null;
+
+    if (useIncremental) {
+      const lastReview = await this.components.incrementalReviewer.getLastReview(pr.number);
+      if (lastReview) {
+        filesToReview = await this.components.incrementalReviewer.getChangedFilesSince(pr, lastReview.lastReviewedCommit);
+        previousReview = {
+          summary: lastReview.reviewSummary,
+          findings: lastReview.findings,
+          inlineComments: [],
+          actionItems: [],
+          metrics: {
+            totalFindings: lastReview.findings.length,
+            critical: lastReview.findings.filter(f => f.severity === 'critical').length,
+            major: lastReview.findings.filter(f => f.severity === 'major').length,
+            minor: lastReview.findings.filter(f => f.severity === 'minor').length,
+            providersUsed: 0,
+            providersSuccess: 0,
+            providersFailed: 0,
+            totalTokens: 0,
+            totalCost: 0,
+            durationSeconds: 0,
+          },
+        };
+        logger.info(`Incremental review: reviewing ${filesToReview.length} changed files`);
+      }
+    }
+
     const cachedFindings = config.enableCaching ? await this.components.cache.load(pr) : null;
 
     const providers = await this.components.providerRegistry.createProviders(config);
-    const prompt = this.components.promptBuilder.build(pr);
+    // Create a PR context for the files to review
+    const reviewPR: PRContext = useIncremental ? { ...pr, files: filesToReview } : pr;
+    const prompt = this.components.promptBuilder.build(reviewPR);
 
     await this.ensureBudget(config);
 
-    const astFindings = config.enableAstAnalysis ? this.components.astAnalyzer.analyze(pr.files) : [];
-    const ruleFindings = this.components.rules.run(pr.files);
-    const securityFindings = config.enableSecurity ? this.components.security.scan(pr.files) : [];
-    const context = this.components.contextRetriever.findRelatedContext(pr.files);
+    const astFindings = config.enableAstAnalysis ? this.components.astAnalyzer.analyze(filesToReview) : [];
+    const ruleFindings = this.components.rules.run(filesToReview);
+    const securityFindings = config.enableSecurity ? this.components.security.scan(filesToReview) : [];
+    const context = this.components.contextRetriever.findRelatedContext(filesToReview);
 
     const providerResults = await this.components.llmExecutor.execute(providers, prompt);
     const llmFindings = extractFindings(providerResults);
@@ -125,7 +160,7 @@ export class ReviewOrchestrator {
 
     const review = this.components.synthesis.synthesize(
       quietFiltered,
-      pr,
+      reviewPR,
       testHints,
       aiAnalysis,
       providerResults,
@@ -133,6 +168,36 @@ export class ReviewOrchestrator {
       impactAnalysis,
       mermaidDiagram
     );
+
+    // Merge with previous review if incremental
+    if (useIncremental && previousReview) {
+      const lastReview = await this.components.incrementalReviewer.getLastReview(pr.number);
+      if (lastReview) {
+        // Merge findings: keep findings from unchanged files, add new findings
+        review.findings = this.components.incrementalReviewer.mergeFindings(
+          lastReview.findings,
+          review.findings,
+          filesToReview
+        );
+
+        // Update summary with incremental note
+        review.summary = this.components.incrementalReviewer.generateIncrementalSummary(
+          lastReview.reviewSummary,
+          review.summary,
+          filesToReview,
+          lastReview.lastReviewedCommit,
+          pr.headSha
+        );
+
+        // Update metrics to reflect total findings
+        review.metrics.totalFindings = review.findings.length;
+        review.metrics.critical = review.findings.filter(f => f.severity === 'critical').length;
+        review.metrics.major = review.findings.filter(f => f.severity === 'major').length;
+        review.metrics.minor = review.findings.filter(f => f.severity === 'minor').length;
+
+        logger.info(`Incremental review completed: ${review.findings.length} total findings after merge`);
+      }
+    }
 
     review.metrics.totalCost = costSummary.totalCost;
     review.metrics.totalTokens = costSummary.totalTokens;
@@ -149,11 +214,17 @@ export class ReviewOrchestrator {
       await this.components.cache.save(pr, review);
     }
 
+    // Save incremental review data
+    if (config.incrementalEnabled) {
+      await this.components.incrementalReviewer.saveReview(pr, review);
+    }
+
     const markdown = this.components.formatter.format(review);
     const suppressed = await this.components.feedbackFilter.loadSuppressed(pr.number);
     const inlineFiltered = review.inlineComments.filter(c => this.components.feedbackFilter.shouldPost(c, suppressed));
 
-    await this.components.commentPoster.postSummary(pr.number, markdown);
+    // Update existing comment for incremental reviews
+    await this.components.commentPoster.postSummary(pr.number, markdown, useIncremental);
     await this.components.commentPoster.postInline(pr.number, inlineFiltered, pr.files);
 
     await this.writeReports(review);

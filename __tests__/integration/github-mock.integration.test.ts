@@ -82,6 +82,8 @@ describe('GitHub integration mock (no network)', () => {
     enableCaching: false,
     enableTestHints: false,
     enableAiDetection: false,
+    incrementalEnabled: false,
+    incrementalCacheTtlDays: 7,
     dryRun: false,
   };
 
@@ -140,6 +142,14 @@ describe('GitHub integration mock (no network)', () => {
       testCoverage: new TestCoverageAnalyzer(),
       astAnalyzer: new ASTAnalyzer(),
       cache: new CacheManager(),
+      incrementalReviewer: {
+        shouldUseIncremental: async () => false,
+        getLastReview: async () => null,
+        saveReview: async () => {},
+        getChangedFilesSince: async () => [],
+        mergeFindings: (prev: any, curr: any) => curr,
+        generateIncrementalSummary: () => '',
+      } as any,
       costTracker: new CostTracker({ getPricing: async () => ({ modelId: 'fake', promptPrice: 0, completionPrice: 0, isFree: true }) } as any),
       security: new SecurityScanner(),
       rules: new RulesEngine([]),

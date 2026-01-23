@@ -28,6 +28,8 @@ function syncEnvFromInputs(): void {
     'ENABLE_CACHING',
     'ENABLE_TEST_HINTS',
     'ENABLE_AI_DETECTION',
+    'INCREMENTAL_ENABLED',
+    'INCREMENTAL_CACHE_TTL_DAYS',
     'REPORT_BASENAME',
     'DRY_RUN',
   ];

@@ -98,6 +98,9 @@ export class ConfigLoader {
       enableTestHints: this.parseBoolean(env.ENABLE_TEST_HINTS),
       enableAiDetection: this.parseBoolean(env.ENABLE_AI_DETECTION),
 
+      incrementalEnabled: this.parseBoolean(env.INCREMENTAL_ENABLED),
+      incrementalCacheTtlDays: this.parseNumber(env.INCREMENTAL_CACHE_TTL_DAYS),
+
       dryRun: this.parseBoolean(env.DRY_RUN),
     };
   }
@@ -130,6 +133,8 @@ export class ConfigLoader {
       enableCaching: config.enable_caching,
       enableTestHints: config.enable_test_hints,
       enableAiDetection: config.enable_ai_detection,
+      incrementalEnabled: config.incremental_enabled,
+      incrementalCacheTtlDays: config.incremental_cache_ttl_days,
       dryRun: config.dry_run,
     };
   }

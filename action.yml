@@ -92,6 +92,14 @@ inputs:
     description: "Enable AI-generated code detection"
     required: false
     default: "true"
+  INCREMENTAL_ENABLED:
+    description: "Enable incremental review (only review changed files on PR updates)"
+    required: false
+    default: "true"
+  INCREMENTAL_CACHE_TTL_DAYS:
+    description: "Days to keep incremental review cache"
+    required: false
+    default: "7"
   REPORT_BASENAME:
     description: "Base name for JSON/SARIF reports"
     required: false

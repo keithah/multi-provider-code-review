@@ -8,6 +8,7 @@ import { SynthesisEngine } from './analysis/synthesis';
 import { TestCoverageAnalyzer } from './analysis/test-coverage';
 import { ASTAnalyzer } from './analysis/ast/analyzer';
 import { CacheManager } from './cache/manager';
+import { IncrementalReviewer } from './cache/incremental';
 import { PricingService } from './cost/pricing';
 import { CostTracker } from './cost/tracker';
 import { SecurityScanner } from './security/scanner';
@@ -37,6 +38,10 @@ export function createComponents(config: ReviewConfig, githubToken: string): Rev
   const testCoverage = new TestCoverageAnalyzer();
   const astAnalyzer = new ASTAnalyzer();
   const cache = new CacheManager();
+  const incrementalReviewer = new IncrementalReviewer(undefined, {
+    enabled: config.incrementalEnabled,
+    cacheTtlDays: config.incrementalCacheTtlDays,
+  });
   const pricing = new PricingService(process.env.OPENROUTER_API_KEY);
   const costTracker = new CostTracker(pricing);
   const security = new SecurityScanner();
@@ -62,6 +67,7 @@ export function createComponents(config: ReviewConfig, githubToken: string): Rev
     testCoverage,
     astAnalyzer,
     cache,
+    incrementalReviewer,
     costTracker,
     security,
     rules,

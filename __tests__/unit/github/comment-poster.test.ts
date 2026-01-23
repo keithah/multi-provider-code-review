@@ -41,14 +41,19 @@ describe('CommentPoster', () => {
       const poster = new CommentPoster(mockClient, false);
       const body = 'Test summary';
 
-      await poster.postSummary(123, body);
+      await poster.postSummary(123, body, false); // Don't update existing
 
       expect(mockOctokit.rest.issues.createComment).toHaveBeenCalledWith({
         owner: 'test-owner',
         repo: 'test-repo',
         issue_number: 123,
-        body: 'Test summary',
+        body: expect.stringContaining('Test summary'),
       });
+      expect(mockOctokit.rest.issues.createComment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: expect.stringContaining('<!-- multi-provider-code-review-bot -->'),
+        })
+      );
     });
 
     it('posts inline comments', async () => {

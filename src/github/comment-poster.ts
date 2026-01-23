@@ -6,13 +6,14 @@ import { withRetry } from '../utils/retry';
 
 export class CommentPoster {
   private static readonly MAX_COMMENT_SIZE = 60_000;
+  private static readonly BOT_COMMENT_MARKER = '<!-- multi-provider-code-review-bot -->';
 
   constructor(
     private readonly client: GitHubClient,
     private readonly dryRun: boolean = false
   ) {}
 
-  async postSummary(prNumber: number, body: string): Promise<void> {
+  async postSummary(prNumber: number, body: string, updateExisting = true): Promise<void> {
     const chunks = this.chunk(body);
 
     if (this.dryRun) {
@@ -27,16 +28,62 @@ export class CommentPoster {
 
     const { octokit, owner, repo } = this.client;
 
+    // Try to find and update existing comment if incremental review
+    if (updateExisting) {
+      const existingComment = await this.findBotComment(prNumber);
+      if (existingComment) {
+        logger.info(`Found existing review comment ${existingComment.id}, updating it`);
+        const markedBody = CommentPoster.BOT_COMMENT_MARKER + '\n\n' + chunks[0];
+        await withRetry(
+          () => octokit.rest.issues.updateComment({
+            owner,
+            repo,
+            comment_id: existingComment.id,
+            body: markedBody,
+          }),
+          { retries: 2, minTimeout: 1000, maxTimeout: 5000 }
+        );
+        return;
+      }
+    }
+
+    // Create new comment(s)
     for (let i = 0; i < chunks.length; i++) {
       const header = chunks.length > 1 ? `## Review Summary (Part ${i + 1}/${chunks.length})\n\n` : '';
-      const content = header + chunks[i];
+      const markedBody = CommentPoster.BOT_COMMENT_MARKER + '\n\n' + header + chunks[i];
       await withRetry(
-        () => octokit.rest.issues.createComment({ owner, repo, issue_number: prNumber, body: content }),
+        () => octokit.rest.issues.createComment({ owner, repo, issue_number: prNumber, body: markedBody }),
         { retries: 2, minTimeout: 1000, maxTimeout: 5000 }
       );
       if (i < chunks.length - 1) {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
+    }
+  }
+
+  /**
+   * Find the bot's review comment on a PR
+   */
+  private async findBotComment(prNumber: number): Promise<{ id: number; body: string } | null> {
+    const { octokit, owner, repo } = this.client;
+
+    try {
+      const comments = await withRetry(
+        () => octokit.rest.issues.listComments({ owner, repo, issue_number: prNumber, per_page: 100 }),
+        { retries: 2, minTimeout: 1000, maxTimeout: 5000 }
+      );
+
+      // Find comment with our marker
+      for (const comment of comments.data) {
+        if (comment.body?.includes(CommentPoster.BOT_COMMENT_MARKER)) {
+          return { id: comment.id, body: comment.body };
+        }
+      }
+
+      return null;
+    } catch (error) {
+      logger.warn('Failed to find existing bot comment', error as Error);
+      return null;
     }
   }
 
