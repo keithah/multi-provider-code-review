@@ -157,6 +157,7 @@ export class GitReader {
 
   /**
    * Parse git diff output into FileChange objects
+   * Uses string operations instead of complex regex to avoid ReDoS
    */
   private parseDiff(diff: string): FileChange[] {
     // Limit diff size to prevent ReDoS attacks
@@ -167,30 +168,31 @@ export class GitReader {
     }
 
     const files: FileChange[] = [];
-    const statsRegex = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
-
     const patches = diff.split(/^diff --git /m).filter(Boolean);
 
     for (const patch of patches) {
       const lines = patch.split('\n');
-      const firstLine = `diff --git ${lines[0]}`;
-      // Create new regex for each patch to avoid state issues
-      const fileRegex = /^diff --git a\/(.*?) b\/(.*?)$/;
-      const match = fileRegex.exec(firstLine);
+      if (lines.length === 0) continue;
 
-      if (!match) continue;
+      // Parse filename using string operations instead of regex to avoid ReDoS
+      const firstLine = lines[0];
+      const aIndex = firstLine.indexOf('a/');
+      const bIndex = firstLine.indexOf(' b/', aIndex);
 
-      const filename = match[2];
+      if (aIndex === -1 || bIndex === -1) continue;
+
+      const filename = firstLine.substring(bIndex + 3).trim();
       let status: FileChange['status'] = 'modified';
       let additions = 0;
       let deletions = 0;
 
-      // Detect file status
-      if (patch.includes('new file mode')) {
+      // Detect file status using simple string checks
+      const patchText = patch;
+      if (patchText.includes('new file mode')) {
         status = 'added';
-      } else if (patch.includes('deleted file mode')) {
+      } else if (patchText.includes('deleted file mode')) {
         status = 'removed';
-      } else if (patch.includes('rename from')) {
+      } else if (patchText.includes('rename from')) {
         status = 'renamed';
       }
 

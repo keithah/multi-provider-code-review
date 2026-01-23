@@ -22,8 +22,12 @@ const colors = {
 
 /**
  * Check if terminal supports colors
+ * Respects NO_COLOR environment variable (https://no-color.org/)
  */
 function supportsColor(): boolean {
+  if (process.env.NO_COLOR !== undefined) {
+    return false;
+  }
   return process.stdout.isTTY && process.env.TERM !== 'dumb';
 }
 

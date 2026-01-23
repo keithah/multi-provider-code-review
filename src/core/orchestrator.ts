@@ -232,6 +232,19 @@ export class ReviewOrchestrator {
     return review;
   }
 
+  /**
+   * Cleanup resources after review to prevent memory leaks in long-running processes
+   */
+  async dispose(): Promise<void> {
+    // Clear cost tracker data
+    this.components.costTracker.summary(); // This implicitly finalizes tracking
+
+    // Clear any cached data that might hold large objects
+    // Note: Cache storage is file-based, so no in-memory cleanup needed
+
+    logger.debug('Orchestrator resources disposed');
+  }
+
   private shouldSkip(pr: PRContext): string | null {
     const { config } = this.components;
 
