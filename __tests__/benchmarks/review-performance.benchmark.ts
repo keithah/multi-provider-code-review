@@ -206,6 +206,8 @@ async function runBenchmark(
     enableCaching: !!cache,
     enableTestHints: false,
     enableAiDetection: false,
+    incrementalEnabled: false,
+    incrementalCacheTtlDays: 7,
     dryRun: false,
   };
 
@@ -233,6 +235,7 @@ async function runBenchmark(
     evidenceScorer: new EvidenceScorer(),
     mermaidGenerator: new MermaidGenerator(),
     feedbackFilter: new NoopFeedbackFilter() as unknown as ReviewComponents['feedbackFilter'],
+    incrementalReviewer: {} as any,
   };
 
   const orchestrator = new ReviewOrchestrator(components);

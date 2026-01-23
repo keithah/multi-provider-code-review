@@ -50,7 +50,7 @@ async function run(): Promise<void> {
     validateRequired(token, 'GITHUB_TOKEN');
 
     const config = ConfigLoader.load();
-    const components = createComponents(config, token!);
+    const components = await createComponents(config, token!);
     const orchestrator = new ReviewOrchestrator(components);
 
     const prInput = core.getInput('PR_NUMBER') || process.env.PR_NUMBER;

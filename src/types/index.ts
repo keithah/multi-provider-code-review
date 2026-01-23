@@ -52,6 +52,14 @@ export interface ReviewConfig {
   generateFixPrompts?: boolean;
   fixPromptFormat?: string;
 
+  analyticsEnabled?: boolean;
+  analyticsMaxReviews?: number;
+
+  pluginsEnabled?: boolean;
+  pluginDir?: string;
+  pluginAllowlist?: string[];
+  pluginBlocklist?: string[];
+
   dryRun: boolean;
 }
 

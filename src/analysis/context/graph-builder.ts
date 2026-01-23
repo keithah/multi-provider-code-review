@@ -1,6 +1,6 @@
 import { FileChange } from '../../types';
 import { logger } from '../../utils/logger';
-import * as Parser from 'tree-sitter';
+import Parser from 'tree-sitter';
 import TypeScriptParser from 'tree-sitter-typescript';
 import PythonParser from 'tree-sitter-python';
 

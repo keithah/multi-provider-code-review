@@ -28,6 +28,7 @@ import { QuietModeFilter } from '../learning/quiet-mode';
 import { CodeGraphBuilder, CodeGraph } from '../analysis/context/graph-builder';
 import { PromptGenerator } from '../autofix/prompt-generator';
 import { ReliabilityTracker } from '../providers/reliability-tracker';
+import { MetricsCollector } from '../analytics/metrics-collector';
 import { ReviewConfig, Review, PRContext, RunDetails, Finding, FileChange, UnchangedContext, ProviderResult } from '../types';
 import { logger } from '../utils/logger';
 import { mapAddedLines } from '../utils/diff';
@@ -62,6 +63,7 @@ export interface ReviewComponents {
   graphBuilder?: CodeGraphBuilder;
   promptGenerator?: PromptGenerator;
   reliabilityTracker?: ReliabilityTracker;
+  metricsCollector?: MetricsCollector;
 }
 
 export class ReviewOrchestrator {
@@ -277,6 +279,16 @@ export class ReviewOrchestrator {
     // Save incremental review data
     if (config.incrementalEnabled) {
       await this.components.incrementalReviewer.saveReview(pr, review);
+    }
+
+    // Record review metrics for analytics
+    if (config.analyticsEnabled && this.components.metricsCollector) {
+      try {
+        await this.components.metricsCollector.recordReview(review, pr.number);
+        logger.debug(`Recorded review metrics for PR #${pr.number}`);
+      } catch (error) {
+        logger.warn('Failed to record review metrics', error as Error);
+      }
     }
 
     const markdown = this.components.formatter.format(review);

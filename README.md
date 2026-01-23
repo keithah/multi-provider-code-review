@@ -1,20 +1,31 @@
-# Multi-Provider Code Review (TypeScript v2.0)
+# Multi-Provider Code Review (TypeScript v2.1)
 
-**Status:** Phase 1 Complete ✅ | Production Ready
+**Status:** All Phases Complete ✅ | Production Ready | Enterprise Features
 
-Hybrid AST + LLM GitHub Action that fuses multiple AI providers with consensus filtering, cost tracking, and security scanning. Now with incremental review (6x faster) and CLI mode for local development.
+Hybrid AST + LLM GitHub Action that fuses multiple AI providers with consensus filtering, cost tracking, and security scanning. Now with incremental review (6x faster), CLI mode, analytics dashboard, and self-hosted deployment.
 
 ## Features
+
+### Core Capabilities
 - **Multi-provider execution** with rotation, retries, and rate-limit awareness
 - **Hybrid analysis:** fast AST heuristics + deep LLM prompts
 - **Consensus-based inline comments** with severity thresholds
 - **Cost estimation/tracking** and budget guardrails
-- **Incremental review** (6x faster, 80% cheaper on PR updates) ⚡ NEW
-- **CLI mode** for local development workflows 🚀 NEW
+- **Incremental review** (6x faster, 80% cheaper on PR updates)
+- **CLI mode** for local development workflows
 - **Dry-run mode** for previewing reviews without posting
 - Chunked GitHub comment posting with JSON + SARIF report output
 - Optional test coverage hints, AI code detection, and secrets scanning
 - 85%+ test coverage with comprehensive benchmarks
+
+### Advanced Features ⚡ NEW v2.1
+- **📊 Analytics Dashboard** - Track costs, performance, and ROI with HTML/CSV/JSON reports
+- **🤖 Feedback Learning** - Improves over time based on 👍/👎 reactions
+- **🔍 Code Graph Analysis** - AST-based dependency tracking for better context
+- **⚙️ Auto-Fix Prompts** - Generate fix suggestions for AI IDEs (Cursor, Copilot)
+- **📈 Provider Reliability** - Track and rank providers by success rate and cost
+- **🐳 Self-Hosted Deployment** - Docker & webhook server for enterprise use
+- **🔌 Plugin System** - Add custom LLM providers without modifying core code
 
 ## Quick Start
 
@@ -55,7 +66,29 @@ mpr review main..feature
 
 # Preview without running (dry-run)
 mpr review --dry-run
+
+# Generate analytics dashboard
+mpr analytics generate
+
+# View analytics summary
+mpr analytics summary
 ```
+
+### Self-Hosted (Enterprise)
+```bash
+# Using Docker Compose
+docker-compose up -d
+
+# Or standalone Docker
+docker run -d \
+  --name mpr-review \
+  -e GITHUB_TOKEN=your_token \
+  -e OPENROUTER_API_KEY=your_key \
+  -v mpr-cache:/app/.cache \
+  multi-provider-review:latest
+```
+
+See [Self-Hosted Deployment Guide](docs/self-hosted.md) for details.
 
 ## Key Inputs
 
@@ -89,6 +122,20 @@ mpr review --dry-run
 - `ENABLE_TEST_HINTS` (default: `true`): Test coverage hints
 - `ENABLE_AI_DETECTION` (default: `true`): AI-generated code detection
 - `ENABLE_CACHING` (default: `true`): Cache findings for faster reviews
+
+### Advanced Features (v2.1)
+- `ANALYTICS_ENABLED` (default: `true`): Track costs and performance
+- `ANALYTICS_MAX_REVIEWS` (default: `1000`): Max reviews to store
+- `LEARNING_ENABLED` (default: `true`): Learn from feedback reactions
+- `LEARNING_MIN_FEEDBACK_COUNT` (default: `5`): Min feedback before learning
+- `QUIET_MODE_ENABLED` (default: `false`): Filter low-confidence findings
+- `QUIET_MIN_CONFIDENCE` (default: `0.5`): Confidence threshold for quiet mode
+- `GRAPH_ENABLED` (default: `true`): Enable code graph analysis
+- `GRAPH_MAX_DEPTH` (default: `5`): Max dependency depth
+- `GENERATE_FIX_PROMPTS` (default: `false`): Generate auto-fix suggestions
+- `FIX_PROMPT_FORMAT` (default: `plain`): Format for fix prompts (cursor, copilot, plain)
+- `PLUGINS_ENABLED` (default: `false`): Enable custom provider plugins
+- `PLUGIN_DIR` (default: `./plugins`): Plugin directory path
 
 ### Output
 - `REPORT_BASENAME` (default: `multi-provider-review`): Base name for `*.json` and `*.sarif` files
@@ -136,20 +183,33 @@ Skip with: `git commit --no-verify`
 - **Performance:** All benchmarks exceed targets by 10-100x
 - **DX:** Pre-commit hooks, dry-run mode, structured logging
 
-### ⚠️ Phase 2 In Progress (Weeks 5-10)
-- Feedback learning system (basic filtering exists)
-- Code graph with dependency tracking (not started)
-- Auto-fix prompts (not started)
-- Provider reliability tracking (not started)
+### ✅ Phase 2 Complete (Weeks 5-10)
+- **Feedback Learning:** Learns from 👍/👎 reactions, adjusts confidence thresholds
+- **Code Graph:** AST-based dependency tracking with O(1) lookups
+- **Quiet Mode:** Filters low-confidence findings using learned thresholds
+- **Auto-Fix Prompts:** Generates fix suggestions for AI IDEs (Cursor, Copilot, Plain)
+- **Provider Reliability:** Tracks success rates, false positives, and cost per provider
+- **40+ Tests:** Comprehensive test coverage for all Phase 2 features
 
-### 📋 Phase 3 Planned (Weeks 11-14)
-- Analytics dashboard
-- Self-hosted deployment
-- Enterprise features
+### ✅ Phase 3 Complete (Weeks 11-14)
+- **Analytics Dashboard:** HTML/CSV/JSON reports with cost trends, ROI calculation
+- **Self-Hosted Deployment:** Docker + docker-compose with webhook server
+- **Plugin System:** Load custom LLM providers dynamically
+- **Enterprise Features:** Webhook server, health checks, graceful shutdown
+- **Documentation:** Complete guides for self-hosting, plugins, and analytics
 
-See `DEVELOPMENT_PLAN_V2.1.md` for detailed roadmap.
+**100% Complete** - All 14 weeks of v2.1 development plan delivered.
+
+See [DEVELOPMENT_PLAN_V2.1.md](./DEVELOPMENT_PLAN_V2.1.md) for detailed roadmap.
 
 ## Documentation
+
+### Getting Started
+- **[Self-Hosted Deployment](./docs/self-hosted.md)** - Docker deployment and webhook setup
+- **[Plugin Development](./docs/plugins.md)** - Create custom LLM provider plugins
+- **[Analytics Guide](./docs/analytics.md)** - Track costs, performance, and ROI
+
+### Development
 - **[DEVELOPMENT_PLAN_V2.1.md](./DEVELOPMENT_PLAN_V2.1.md)** - Complete development roadmap and status
 - **[INCREMENTAL_REVIEW.md](./INCREMENTAL_REVIEW.md)** - Incremental review system documentation
 - **[scripts/README.md](./scripts/README.md)** - Development scripts and hooks

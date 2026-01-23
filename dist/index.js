@@ -66,8 +66,7 @@ var require_command = __commonJS({
   "node_modules/@actions/core/lib/command.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
-      if (k2 === void 0)
-        k2 = k;
+      if (k2 === void 0) k2 = k;
       var desc = Object.getOwnPropertyDescriptor(m, k);
       if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
         desc = { enumerable: true, get: function() {
@@ -76,8 +75,7 @@ var require_command = __commonJS({
       }
       Object.defineProperty(o, k2, desc);
     } : function(o, m, k, k2) {
-      if (k2 === void 0)
-        k2 = k;
+      if (k2 === void 0) k2 = k;
       o[k2] = m[k];
     });
     var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? function(o, v) {
@@ -86,13 +84,10 @@ var require_command = __commonJS({
       o["default"] = v;
     });
     var __importStar = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule)
-        return mod;
+      if (mod && mod.__esModule) return mod;
       var result = {};
       if (mod != null) {
-        for (var k in mod)
-          if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
-            __createBinding(result, mod, k);
+        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
       }
       __setModuleDefault(result, mod);
       return result;
@@ -157,8 +152,7 @@ var require_file_command = __commonJS({
   "node_modules/@actions/core/lib/file-command.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
-      if (k2 === void 0)
-        k2 = k;
+      if (k2 === void 0) k2 = k;
       var desc = Object.getOwnPropertyDescriptor(m, k);
       if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
         desc = { enumerable: true, get: function() {
@@ -167,8 +161,7 @@ var require_file_command = __commonJS({
       }
       Object.defineProperty(o, k2, desc);
     } : function(o, m, k, k2) {
-      if (k2 === void 0)
-        k2 = k;
+      if (k2 === void 0) k2 = k;
       o[k2] = m[k];
     });
     var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? function(o, v) {
@@ -177,13 +170,10 @@ var require_file_command = __commonJS({
       o["default"] = v;
     });
     var __importStar = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule)
-        return mod;
+      if (mod && mod.__esModule) return mod;
       var result = {};
       if (mod != null) {
-        for (var k in mod)
-          if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
-            __createBinding(result, mod, k);
+        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
       }
       __setModuleDefault(result, mod);
       return result;
@@ -191,7 +181,7 @@ var require_file_command = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.prepareKeyValueMessage = exports2.issueFileCommand = void 0;
     var crypto3 = __importStar(require("crypto"));
-    var fs7 = __importStar(require("fs"));
+    var fs8 = __importStar(require("fs"));
     var os3 = __importStar(require("os"));
     var utils_1 = require_utils();
     function issueFileCommand(command, message) {
@@ -199,10 +189,10 @@ var require_file_command = __commonJS({
       if (!filePath) {
         throw new Error(`Unable to find environment variable for file command ${command}`);
       }
-      if (!fs7.existsSync(filePath)) {
+      if (!fs8.existsSync(filePath)) {
         throw new Error(`Missing file at path: ${filePath}`);
       }
-      fs7.appendFileSync(filePath, `${(0, utils_1.toCommandValue)(message)}${os3.EOL}`, {
+      fs8.appendFileSync(filePath, `${(0, utils_1.toCommandValue)(message)}${os3.EOL}`, {
         encoding: "utf8"
       });
     }
@@ -314,7 +304,7 @@ var require_tunnel = __commonJS({
     var https = require("https");
     var events = require("events");
     var assert = require("assert");
-    var util2 = require("util");
+    var util3 = require("util");
     exports2.httpOverHttp = httpOverHttp;
     exports2.httpsOverHttp = httpsOverHttp;
     exports2.httpOverHttps = httpOverHttps;
@@ -364,7 +354,7 @@ var require_tunnel = __commonJS({
         self.removeSocket(socket);
       });
     }
-    util2.inherits(TunnelingAgent, events.EventEmitter);
+    util3.inherits(TunnelingAgent, events.EventEmitter);
     TunnelingAgent.prototype.addRequest = function addRequest(req, host, port, localAddress) {
       var self = this;
       var options = mergeOptions({ request: req }, self.options, toOptions(host, port, localAddress));
@@ -1005,14 +995,14 @@ var require_util = __commonJS({
         }
         const port = url.port != null ? url.port : url.protocol === "https:" ? 443 : 80;
         let origin = url.origin != null ? url.origin : `${url.protocol}//${url.hostname}:${port}`;
-        let path7 = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
+        let path8 = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
         if (origin.endsWith("/")) {
           origin = origin.substring(0, origin.length - 1);
         }
-        if (path7 && !path7.startsWith("/")) {
-          path7 = `/${path7}`;
+        if (path8 && !path8.startsWith("/")) {
+          path8 = `/${path8}`;
         }
-        url = new URL(origin + path7);
+        url = new URL(origin + path8);
       }
       return url;
     }
@@ -1030,8 +1020,7 @@ var require_util = __commonJS({
         return host.substring(1, idx2);
       }
       const idx = host.indexOf(":");
-      if (idx === -1)
-        return host;
+      if (idx === -1) return host;
       return host.substring(0, idx);
     }
     function getServerName(host) {
@@ -1101,8 +1090,7 @@ var require_util = __commonJS({
       return headerNameLowerCasedRecord[value] || value.toLowerCase();
     }
     function parseHeaders(headers, obj = {}) {
-      if (!Array.isArray(headers))
-        return headers;
+      if (!Array.isArray(headers)) return headers;
       for (let i = 0; i < headers.length; i += 2) {
         const key = headers[i].toString().toLowerCase();
         let val = obj[key];
@@ -1129,9 +1117,9 @@ var require_util = __commonJS({
       const ret = [];
       let hasContentLength = false;
       let contentDispositionIdx = -1;
-      for (let n = 0; n < headers.length; n += 2) {
-        const key = headers[n + 0].toString();
-        const val = headers[n + 1].toString("utf8");
+      for (let n2 = 0; n2 < headers.length; n2 += 2) {
+        const key = headers[n2 + 0].toString();
+        const val = headers[n2 + 1].toString("utf8");
         if (key.length === 14 && (key === "content-length" || key.toLowerCase() === "content-length")) {
           ret.push(key, val);
           hasContentLength = true;
@@ -1276,8 +1264,7 @@ var require_util = __commonJS({
       return `${val}`;
     }
     function parseRangeHeader(range) {
-      if (range == null || range === "")
-        return { start: 0, end: null, size: null };
+      if (range == null || range === "") return { start: 0, end: null, size: null };
       const m = range ? range.match(/^bytes (\d+)-(\d+)\/(\d+)?$/) : null;
       return m ? {
         start: parseInt(m[1]),
@@ -1556,7 +1543,7 @@ var require_PartStream = __commonJS({
       ReadableStream.call(this, opts);
     }
     inherits(PartStream, ReadableStream);
-    PartStream.prototype._read = function(n) {
+    PartStream.prototype._read = function(n2) {
     };
     module2.exports = PartStream;
   }
@@ -1843,7 +1830,7 @@ var require_Dicer = __commonJS({
       }
       if (!this._part) {
         this._part = new PartStream(this._partOpts);
-        this._part._read = function(n) {
+        this._part._read = function(n2) {
           self._unpause();
         };
         if (this._isPreamble && this.listenerCount("preamble") !== 0) {
@@ -1936,6 +1923,7 @@ var require_decodeText = __commonJS({
             return decoders.utf8;
           case "latin1":
           case "ascii":
+          // TODO: Make these a separate, strict decoder?
           case "us-ascii":
           case "iso-8859-1":
           case "iso8859-1":
@@ -2628,19 +2616,20 @@ var require_parseParams = __commonJS({
 var require_basename = __commonJS({
   "node_modules/@fastify/busboy/lib/utils/basename.js"(exports2, module2) {
     "use strict";
-    module2.exports = function basename2(path7) {
-      if (typeof path7 !== "string") {
+    module2.exports = function basename2(path8) {
+      if (typeof path8 !== "string") {
         return "";
       }
-      for (var i = path7.length - 1; i >= 0; --i) {
-        switch (path7.charCodeAt(i)) {
+      for (var i = path8.length - 1; i >= 0; --i) {
+        switch (path8.charCodeAt(i)) {
           case 47:
+          // '/'
           case 92:
-            path7 = path7.slice(i + 1);
-            return path7 === ".." || path7 === "." ? "" : path7;
+            path8 = path8.slice(i + 1);
+            return path8 === ".." || path8 === "." ? "" : path8;
         }
       }
-      return path7 === ".." || path7 === "." ? "" : path7;
+      return path8 === ".." || path8 === "." ? "" : path8;
     };
   }
 });
@@ -2810,7 +2799,7 @@ var require_multipart = __commonJS({
                 cb();
               }
             });
-            file._read = function(n) {
+            file._read = function(n2) {
               if (!self._pause) {
                 return;
               }
@@ -2919,7 +2908,7 @@ var require_multipart = __commonJS({
       this.truncated = false;
     }
     inherits(FileStream, Readable);
-    FileStream.prototype._read = function(n) {
+    FileStream.prototype._read = function(n2) {
     };
     module2.exports = Multipart;
   }
@@ -3869,7 +3858,21 @@ var require_util2 = __commonJS({
           return referrerOrigin;
         }
         case "strict-origin":
+        // eslint-disable-line
+        /**
+           * 1. If referrerURL is a potentially trustworthy URL and
+           * request’s current URL is not a potentially trustworthy URL,
+           * then return no referrer.
+           * 2. Return referrerOrigin
+          */
         case "no-referrer-when-downgrade":
+        // eslint-disable-line
+        /**
+         * 1. If referrerURL is a potentially trustworthy URL and
+         * request’s current URL is not a potentially trustworthy URL,
+         * then return no referrer.
+         * 2. Return referrerOrigin
+        */
         default:
           return isNonPotentiallyTrustWorthy ? "no-referrer" : referrerOrigin;
       }
@@ -3895,14 +3898,11 @@ var require_util2 = __commonJS({
       if (url.href === "about:blank" || url.href === "about:srcdoc") {
         return true;
       }
-      if (url.protocol === "data:")
-        return true;
-      if (url.protocol === "file:")
-        return true;
+      if (url.protocol === "data:") return true;
+      if (url.protocol === "file:") return true;
       return isOriginPotentiallyTrustworthy(url.origin);
       function isOriginPotentiallyTrustworthy(origin) {
-        if (origin == null || origin === "null")
-          return false;
+        if (origin == null || origin === "null") return false;
         const originAsURL = new URL(origin);
         if (originAsURL.protocol === "https:" || originAsURL.protocol === "wss:") {
           return true;
@@ -4022,8 +4022,8 @@ var require_util2 = __commonJS({
     function createDeferredPromise() {
       let res;
       let rej;
-      const promise = new Promise((resolve, reject) => {
-        res = resolve;
+      const promise = new Promise((resolve2, reject) => {
+        res = resolve2;
         rej = reject;
       });
       return { promise, resolve: res, reject: rej };
@@ -4379,9 +4379,9 @@ var require_webidl = __commonJS({
       }
       return x;
     };
-    webidl.util.IntegerPart = function(n) {
-      const r = Math.floor(Math.abs(n));
-      if (n < 0) {
+    webidl.util.IntegerPart = function(n2) {
+      const r = Math.floor(Math.abs(n2));
+      if (n2 < 0) {
         return -1 * r;
       }
       return r;
@@ -4872,12 +4872,10 @@ var require_dataURL = __commonJS({
       let lead = 0;
       let trail = str2.length - 1;
       if (leading) {
-        for (; lead < str2.length && isHTTPWhiteSpace(str2[lead]); lead++)
-          ;
+        for (; lead < str2.length && isHTTPWhiteSpace(str2[lead]); lead++) ;
       }
       if (trailing) {
-        for (; trail > 0 && isHTTPWhiteSpace(str2[trail]); trail--)
-          ;
+        for (; trail > 0 && isHTTPWhiteSpace(str2[trail]); trail--) ;
       }
       return str2.slice(lead, trail + 1);
     }
@@ -4888,12 +4886,10 @@ var require_dataURL = __commonJS({
       let lead = 0;
       let trail = str2.length - 1;
       if (leading) {
-        for (; lead < str2.length && isASCIIWhitespace(str2[lead]); lead++)
-          ;
+        for (; lead < str2.length && isASCIIWhitespace(str2[lead]); lead++) ;
       }
       if (trailing) {
-        for (; trail > 0 && isASCIIWhitespace(str2[trail]); trail--)
-          ;
+        for (; trail > 0 && isASCIIWhitespace(str2[trail]); trail--) ;
       }
       return str2.slice(lead, trail + 1);
     }
@@ -4928,7 +4924,7 @@ var require_file = __commonJS({
         fileBits = webidl.converters["sequence<BlobPart>"](fileBits);
         fileName = webidl.converters.USVString(fileName);
         options = webidl.converters.FilePropertyBag(options);
-        const n = fileName;
+        const n2 = fileName;
         let t = options.type;
         let d;
         substep: {
@@ -4944,7 +4940,7 @@ var require_file = __commonJS({
         }
         super(processBlobParts(fileBits, options), { type: t });
         this[kState] = {
-          name: n,
+          name: n2,
           lastModified: d,
           type: t
         };
@@ -4964,12 +4960,12 @@ var require_file = __commonJS({
     };
     var FileLike = class _FileLike {
       constructor(blobLike, fileName, options = {}) {
-        const n = fileName;
+        const n2 = fileName;
         const t = options.type;
         const d = options.lastModified ?? Date.now();
         this[kState] = {
           blobLike,
-          name: n,
+          name: n2,
           type: t,
           lastModified: d
         };
@@ -5257,7 +5253,7 @@ var require_body = __commonJS({
   "node_modules/undici/lib/fetch/body.js"(exports2, module2) {
     "use strict";
     var Busboy = require_main();
-    var util2 = require_util();
+    var util3 = require_util();
     var {
       ReadableStreamFrom,
       isBlobLike,
@@ -5325,7 +5321,7 @@ var require_body = __commonJS({
         source = new Uint8Array(object.slice());
       } else if (ArrayBuffer.isView(object)) {
         source = new Uint8Array(object.buffer.slice(object.byteOffset, object.byteOffset + object.byteLength));
-      } else if (util2.isFormDataLike(object)) {
+      } else if (util3.isFormDataLike(object)) {
         const boundary = `----formdata-undici-0${`${random(1e11)}`.padStart(11, "0")}`;
         const prefix = `--${boundary}\r
 Content-Disposition: form-data`;
@@ -5383,14 +5379,14 @@ Content-Type: ${value.type || "application/octet-stream"}\r
         if (keepalive) {
           throw new TypeError("keepalive");
         }
-        if (util2.isDisturbed(object) || object.locked) {
+        if (util3.isDisturbed(object) || object.locked) {
           throw new TypeError(
             "Response body object should not be disturbed or locked"
           );
         }
         stream = object instanceof ReadableStream ? object : ReadableStreamFrom(object);
       }
-      if (typeof source === "string" || util2.isBuffer(source)) {
+      if (typeof source === "string" || util3.isBuffer(source)) {
         length = Buffer.byteLength(source);
       }
       if (action != null) {
@@ -5426,7 +5422,7 @@ Content-Type: ${value.type || "application/octet-stream"}\r
         ReadableStream = require("stream/web").ReadableStream;
       }
       if (object instanceof ReadableStream) {
-        assert(!util2.isDisturbed(object), "The body has already been consumed.");
+        assert(!util3.isDisturbed(object), "The body has already been consumed.");
         assert(!object.locked, "The stream is locked.");
       }
       return extractBody(object, keepalive);
@@ -5448,7 +5444,7 @@ Content-Type: ${value.type || "application/octet-stream"}\r
           yield body;
         } else {
           const stream = body.stream;
-          if (util2.isDisturbed(stream)) {
+          if (util3.isDisturbed(stream)) {
             throw new TypeError("The body has already been consumed.");
           }
           if (stream.locked) {
@@ -5494,8 +5490,7 @@ Content-Type: ${value.type || "application/octet-stream"}\r
           const contentType = this.headers.get("Content-Type");
           if (/multipart\/form-data/.test(contentType)) {
             const headers = {};
-            for (const [key, value] of this.headers)
-              headers[key.toLowerCase()] = value;
+            for (const [key, value] of this.headers) headers[key.toLowerCase()] = value;
             const responseFormData = new FormData();
             let busboy;
             try {
@@ -5532,13 +5527,11 @@ Content-Type: ${value.type || "application/octet-stream"}\r
                 });
               }
             });
-            const busboyResolve = new Promise((resolve, reject) => {
-              busboy.on("finish", resolve);
+            const busboyResolve = new Promise((resolve2, reject) => {
+              busboy.on("finish", resolve2);
               busboy.on("error", (err) => reject(new TypeError(err)));
             });
-            if (this.body !== null)
-              for await (const chunk of consumeBody(this[kState].body))
-                busboy.write(chunk);
+            if (this.body !== null) for await (const chunk of consumeBody(this[kState].body)) busboy.write(chunk);
             busboy.end();
             await busboyResolve;
             return responseFormData;
@@ -5601,7 +5594,7 @@ Content-Type: ${value.type || "application/octet-stream"}\r
       return promise.promise;
     }
     function bodyUnusable(body) {
-      return body != null && (body.stream.locked || util2.isDisturbed(body.stream));
+      return body != null && (body.stream.locked || util3.isDisturbed(body.stream));
     }
     function utf8DecodeBytes(buffer) {
       if (buffer.length === 0) {
@@ -5643,7 +5636,7 @@ var require_request = __commonJS({
     } = require_errors();
     var assert = require("assert");
     var { kHTTP2BuildRequest, kHTTP2CopyHeaders, kHTTP1BuildRequest } = require_symbols();
-    var util2 = require_util();
+    var util3 = require_util();
     var tokenRegExp = /^[\^_`a-zA-Z\-0-9!#$%&'*+.|~]+$/;
     var headerCharRegex = /[^\t\x20-\x7e\x80-\xff]/;
     var invalidPathRegex = /[^\u0021-\u00ff]/;
@@ -5666,7 +5659,7 @@ var require_request = __commonJS({
     }
     var Request = class _Request {
       constructor(origin, {
-        path: path7,
+        path: path8,
         method,
         body,
         headers,
@@ -5680,11 +5673,11 @@ var require_request = __commonJS({
         throwOnError,
         expectContinue
       }, handler) {
-        if (typeof path7 !== "string") {
+        if (typeof path8 !== "string") {
           throw new InvalidArgumentError("path must be a string");
-        } else if (path7[0] !== "/" && !(path7.startsWith("http://") || path7.startsWith("https://")) && method !== "CONNECT") {
+        } else if (path8[0] !== "/" && !(path8.startsWith("http://") || path8.startsWith("https://")) && method !== "CONNECT") {
           throw new InvalidArgumentError("path must be an absolute URL or start with a slash");
-        } else if (invalidPathRegex.exec(path7) !== null) {
+        } else if (invalidPathRegex.exec(path8) !== null) {
           throw new InvalidArgumentError("invalid request path");
         }
         if (typeof method !== "string") {
@@ -5714,12 +5707,12 @@ var require_request = __commonJS({
         this.abort = null;
         if (body == null) {
           this.body = null;
-        } else if (util2.isStream(body)) {
+        } else if (util3.isStream(body)) {
           this.body = body;
           const rState = this.body._readableState;
           if (!rState || !rState.autoDestroy) {
             this.endHandler = function autoDestroy() {
-              util2.destroy(this);
+              util3.destroy(this);
             };
             this.body.on("end", this.endHandler);
           }
@@ -5731,7 +5724,7 @@ var require_request = __commonJS({
             }
           };
           this.body.on("error", this.errorHandler);
-        } else if (util2.isBuffer(body)) {
+        } else if (util3.isBuffer(body)) {
           this.body = body.byteLength ? body : null;
         } else if (ArrayBuffer.isView(body)) {
           this.body = body.buffer.byteLength ? Buffer.from(body.buffer, body.byteOffset, body.byteLength) : null;
@@ -5739,7 +5732,7 @@ var require_request = __commonJS({
           this.body = body.byteLength ? Buffer.from(body) : null;
         } else if (typeof body === "string") {
           this.body = body.length ? Buffer.from(body) : null;
-        } else if (util2.isFormDataLike(body) || util2.isIterable(body) || util2.isBlobLike(body)) {
+        } else if (util3.isFormDataLike(body) || util3.isIterable(body) || util3.isBlobLike(body)) {
           this.body = body;
         } else {
           throw new InvalidArgumentError("body must be a string, a Buffer, a Readable stream, an iterable, or an async iterable");
@@ -5747,7 +5740,7 @@ var require_request = __commonJS({
         this.completed = false;
         this.aborted = false;
         this.upgrade = upgrade || null;
-        this.path = query ? util2.buildURL(path7, query) : path7;
+        this.path = query ? util3.buildURL(path8, query) : path8;
         this.origin = origin;
         this.idempotent = idempotent == null ? method === "HEAD" || method === "GET" : idempotent;
         this.blocking = blocking == null ? false : blocking;
@@ -5773,8 +5766,8 @@ var require_request = __commonJS({
         } else if (headers != null) {
           throw new InvalidArgumentError("headers must be an object or an array");
         }
-        if (util2.isFormDataLike(this.body)) {
-          if (util2.nodeMajor < 16 || util2.nodeMajor === 16 && util2.nodeMinor < 8) {
+        if (util3.isFormDataLike(this.body)) {
+          if (util3.nodeMajor < 16 || util3.nodeMajor === 16 && util3.nodeMinor < 8) {
             throw new InvalidArgumentError("Form-Data bodies are only supported in node v16.8 and newer.");
           }
           if (!extractBody) {
@@ -5788,13 +5781,13 @@ var require_request = __commonJS({
           }
           this.body = bodyStream.stream;
           this.contentLength = bodyStream.length;
-        } else if (util2.isBlobLike(body) && this.contentType == null && body.type) {
+        } else if (util3.isBlobLike(body) && this.contentType == null && body.type) {
           this.contentType = body.type;
           this.headers += `content-type: ${body.type}\r
 `;
         }
-        util2.validateHandler(handler, method, upgrade);
-        this.servername = util2.getServerName(this.host);
+        util3.validateHandler(handler, method, upgrade);
+        this.servername = util3.getServerName(this.host);
         this[kHandler] = handler;
         if (channels.create.hasSubscribers) {
           channels.create.publish({ request: this });
@@ -5928,12 +5921,9 @@ var require_request = __commonJS({
         const headers = {};
         for (const header of rawHeaders) {
           const [key, value] = header.split(": ");
-          if (value == null || value.length === 0)
-            continue;
-          if (headers[key])
-            headers[key] += `,${value}`;
-          else
-            headers[key] = value;
+          if (value == null || value.length === 0) continue;
+          if (headers[key]) headers[key] += `,${value}`;
+          else headers[key] = value;
         }
         return headers;
       }
@@ -5967,10 +5957,8 @@ var require_request = __commonJS({
         }
       } else if (request.contentType === null && key.length === 12 && key.toLowerCase() === "content-type") {
         request.contentType = val;
-        if (skipAppend)
-          request.headers[key] = processHeaderValue(key, val, skipAppend);
-        else
-          request.headers += processHeaderValue(key, val);
+        if (skipAppend) request.headers[key] = processHeaderValue(key, val, skipAppend);
+        else request.headers += processHeaderValue(key, val);
       } else if (key.length === 17 && key.toLowerCase() === "transfer-encoding") {
         throw new InvalidArgumentError("invalid transfer-encoding header");
       } else if (key.length === 10 && key.toLowerCase() === "connection") {
@@ -5992,19 +5980,15 @@ var require_request = __commonJS({
         if (Array.isArray(val)) {
           for (let i = 0; i < val.length; i++) {
             if (skipAppend) {
-              if (request.headers[key])
-                request.headers[key] += `,${processHeaderValue(key, val[i], skipAppend)}`;
-              else
-                request.headers[key] = processHeaderValue(key, val[i], skipAppend);
+              if (request.headers[key]) request.headers[key] += `,${processHeaderValue(key, val[i], skipAppend)}`;
+              else request.headers[key] = processHeaderValue(key, val[i], skipAppend);
             } else {
               request.headers += processHeaderValue(key, val[i]);
             }
           }
         } else {
-          if (skipAppend)
-            request.headers[key] = processHeaderValue(key, val, skipAppend);
-          else
-            request.headers += processHeaderValue(key, val);
+          if (skipAppend) request.headers[key] = processHeaderValue(key, val, skipAppend);
+          else request.headers += processHeaderValue(key, val);
         }
       }
     }
@@ -6078,9 +6062,9 @@ var require_dispatcher_base = __commonJS({
       }
       close(callback) {
         if (callback === void 0) {
-          return new Promise((resolve, reject) => {
+          return new Promise((resolve2, reject) => {
             this.close((err, data) => {
-              return err ? reject(err) : resolve(data);
+              return err ? reject(err) : resolve2(data);
             });
           });
         }
@@ -6118,12 +6102,12 @@ var require_dispatcher_base = __commonJS({
           err = null;
         }
         if (callback === void 0) {
-          return new Promise((resolve, reject) => {
+          return new Promise((resolve2, reject) => {
             this.destroy(err, (err2, data) => {
               return err2 ? (
                 /* istanbul ignore next: should never error */
                 reject(err2)
-              ) : resolve(data);
+              ) : resolve2(data);
             });
           });
         }
@@ -6201,7 +6185,7 @@ var require_connect = __commonJS({
     "use strict";
     var net = require("net");
     var assert = require("assert");
-    var util2 = require_util();
+    var util3 = require_util();
     var { InvalidArgumentError, ConnectTimeoutError } = require_errors();
     var tls;
     var SessionCache;
@@ -6267,7 +6251,7 @@ var require_connect = __commonJS({
           if (!tls) {
             tls = require("tls");
           }
-          servername = servername || options.servername || util2.getServerName(host) || null;
+          servername = servername || options.servername || util3.getServerName(host) || null;
           const sessionKey = servername || hostname;
           const session = sessionCache.get(sessionKey) || null;
           assert(sessionKey);
@@ -6345,7 +6329,7 @@ var require_connect = __commonJS({
       };
     }
     function onConnectTimeout(socket) {
-      util2.destroy(socket, new ConnectTimeoutError());
+      util3.destroy(socket, new ConnectTimeoutError());
     }
     module2.exports = buildConnector;
   }
@@ -6696,7 +6680,7 @@ var require_constants3 = __commonJS({
 var require_RedirectHandler = __commonJS({
   "node_modules/undici/lib/handler/RedirectHandler.js"(exports2, module2) {
     "use strict";
-    var util2 = require_util();
+    var util3 = require_util();
     var { kBodyUsed } = require_symbols();
     var assert = require("assert");
     var { InvalidArgumentError } = require_errors();
@@ -6719,7 +6703,7 @@ var require_RedirectHandler = __commonJS({
         if (maxRedirections != null && (!Number.isInteger(maxRedirections) || maxRedirections < 0)) {
           throw new InvalidArgumentError("maxRedirections must be a positive number");
         }
-        util2.validateHandler(handler, opts.method, opts.upgrade);
+        util3.validateHandler(handler, opts.method, opts.upgrade);
         this.dispatch = dispatch;
         this.location = null;
         this.abort = null;
@@ -6727,8 +6711,8 @@ var require_RedirectHandler = __commonJS({
         this.maxRedirections = maxRedirections;
         this.handler = handler;
         this.history = [];
-        if (util2.isStream(this.opts.body)) {
-          if (util2.bodyLength(this.opts.body) === 0) {
+        if (util3.isStream(this.opts.body)) {
+          if (util3.bodyLength(this.opts.body) === 0) {
             this.opts.body.on("data", function() {
               assert(false);
             });
@@ -6741,7 +6725,7 @@ var require_RedirectHandler = __commonJS({
           }
         } else if (this.opts.body && typeof this.opts.body.pipeTo === "function") {
           this.opts.body = new BodyAsyncIterable(this.opts.body);
-        } else if (this.opts.body && typeof this.opts.body !== "string" && !ArrayBuffer.isView(this.opts.body) && util2.isIterable(this.opts.body)) {
+        } else if (this.opts.body && typeof this.opts.body !== "string" && !ArrayBuffer.isView(this.opts.body) && util3.isIterable(this.opts.body)) {
           this.opts.body = new BodyAsyncIterable(this.opts.body);
         }
       }
@@ -6756,17 +6740,17 @@ var require_RedirectHandler = __commonJS({
         this.handler.onError(error2);
       }
       onHeaders(statusCode, headers, resume, statusText) {
-        this.location = this.history.length >= this.maxRedirections || util2.isDisturbed(this.opts.body) ? null : parseLocation(statusCode, headers);
+        this.location = this.history.length >= this.maxRedirections || util3.isDisturbed(this.opts.body) ? null : parseLocation(statusCode, headers);
         if (this.opts.origin) {
           this.history.push(new URL(this.opts.path, this.opts.origin));
         }
         if (!this.location) {
           return this.handler.onHeaders(statusCode, headers, resume, statusText);
         }
-        const { origin, pathname, search } = util2.parseURL(new URL(this.location, this.opts.origin && new URL(this.opts.path, this.opts.origin)));
-        const path7 = search ? `${pathname}${search}` : pathname;
+        const { origin, pathname, search } = util3.parseURL(new URL(this.location, this.opts.origin && new URL(this.opts.path, this.opts.origin)));
+        const path8 = search ? `${pathname}${search}` : pathname;
         this.opts.headers = cleanRequestHeaders(this.opts.headers, statusCode === 303, this.opts.origin !== origin);
-        this.opts.path = path7;
+        this.opts.path = path8;
         this.opts.origin = origin;
         this.opts.maxRedirections = 0;
         this.opts.query = null;
@@ -6808,13 +6792,13 @@ var require_RedirectHandler = __commonJS({
     }
     function shouldRemoveHeader(header, removeContent, unknownOrigin) {
       if (header.length === 4) {
-        return util2.headerNameToString(header) === "host";
+        return util3.headerNameToString(header) === "host";
       }
-      if (removeContent && util2.headerNameToString(header).startsWith("content-")) {
+      if (removeContent && util3.headerNameToString(header).startsWith("content-")) {
         return true;
       }
       if (unknownOrigin && (header.length === 13 || header.length === 6 || header.length === 19)) {
-        const name = util2.headerNameToString(header);
+        const name = util3.headerNameToString(header);
         return name === "authorization" || name === "cookie" || name === "proxy-authorization";
       }
       return false;
@@ -6886,7 +6870,7 @@ var require_client = __commonJS({
     var net = require("net");
     var http = require("http");
     var { pipeline } = require("stream");
-    var util2 = require_util();
+    var util3 = require_util();
     var timers = require_timers();
     var Request = require_request();
     var DispatcherBase = require_dispatcher_base();
@@ -7097,12 +7081,12 @@ var require_client = __commonJS({
             allowH2,
             socketPath,
             timeout: connectTimeout,
-            ...util2.nodeHasAutoSelectFamily && autoSelectFamily ? { autoSelectFamily, autoSelectFamilyAttemptTimeout } : void 0,
+            ...util3.nodeHasAutoSelectFamily && autoSelectFamily ? { autoSelectFamily, autoSelectFamilyAttemptTimeout } : void 0,
             ...connect2
           });
         }
         this[kInterceptors] = interceptors && interceptors.Client && Array.isArray(interceptors.Client) ? interceptors.Client : [createRedirectInterceptor({ maxRedirections })];
-        this[kUrl] = util2.parseOrigin(url);
+        this[kUrl] = util3.parseOrigin(url);
         this[kConnector] = connect2;
         this[kSocket] = null;
         this[kPipelining] = pipelining != null ? pipelining : 1;
@@ -7171,7 +7155,7 @@ var require_client = __commonJS({
         const request = this[kHTTPConnVersion] === "h2" ? Request[kHTTP2BuildRequest](origin, opts, handler) : Request[kHTTP1BuildRequest](origin, opts, handler);
         this[kQueue].push(request);
         if (this[kResuming]) {
-        } else if (util2.bodyLength(request.body) == null && util2.isIterable(request.body)) {
+        } else if (util3.bodyLength(request.body) == null && util3.isIterable(request.body)) {
           this[kResuming] = 1;
           process.nextTick(resume, this);
         } else {
@@ -7183,16 +7167,16 @@ var require_client = __commonJS({
         return this[kNeedDrain] < 2;
       }
       async [kClose]() {
-        return new Promise((resolve) => {
+        return new Promise((resolve2) => {
           if (!this[kSize]) {
-            resolve(null);
+            resolve2(null);
           } else {
-            this[kClosedResolve] = resolve;
+            this[kClosedResolve] = resolve2;
           }
         });
       }
       async [kDestroy](err) {
-        return new Promise((resolve) => {
+        return new Promise((resolve2) => {
           const requests = this[kQueue].splice(this[kPendingIdx]);
           for (let i = 0; i < requests.length; i++) {
             const request = requests[i];
@@ -7203,17 +7187,17 @@ var require_client = __commonJS({
               this[kClosedResolve]();
               this[kClosedResolve] = null;
             }
-            resolve();
+            resolve2();
           };
           if (this[kHTTP2Session] != null) {
-            util2.destroy(this[kHTTP2Session], err);
+            util3.destroy(this[kHTTP2Session], err);
             this[kHTTP2Session] = null;
             this[kHTTP2SessionState] = null;
           }
           if (!this[kSocket]) {
             queueMicrotask(callback);
           } else {
-            util2.destroy(this[kSocket].on("close", callback), err);
+            util3.destroy(this[kSocket].on("close", callback), err);
           }
           resume(this);
         });
@@ -7224,16 +7208,16 @@ var require_client = __commonJS({
       this[kSocket][kError] = err;
       onError(this[kClient], err);
     }
-    function onHttp2FrameError(type2, code, id) {
+    function onHttp2FrameError(type2, code, id2) {
       const err = new InformationalError(`HTTP/2: "frameError" received - type ${type2}, code ${code}`);
-      if (id === 0) {
+      if (id2 === 0) {
         this[kSocket][kError] = err;
         onError(this[kClient], err);
       }
     }
     function onHttp2SessionEnd() {
-      util2.destroy(this, new SocketError("other side closed"));
-      util2.destroy(this[kSocket], new SocketError("other side closed"));
+      util3.destroy(this, new SocketError("other side closed"));
+      util3.destroy(this[kSocket], new SocketError("other side closed"));
     }
     function onHTTP2GoAway(code) {
       const client = this[kClient];
@@ -7325,7 +7309,7 @@ var require_client = __commonJS({
     var TIMEOUT_HEADERS = 1;
     var TIMEOUT_BODY = 2;
     var TIMEOUT_IDLE = 3;
-    var Parser = class {
+    var Parser3 = class {
       constructor(client, socket, { exports: exports3 }) {
         assert(Number.isFinite(client[kMaxHeadersSize]) && client[kMaxHeadersSize] > 0);
         this.llhttp = exports3;
@@ -7436,7 +7420,7 @@ var require_client = __commonJS({
             throw new HTTPParserError(message, constants.ERROR[ret], data.slice(offset));
           }
         } catch (err) {
-          util2.destroy(socket, err);
+          util3.destroy(socket, err);
         }
       }
       destroy() {
@@ -7493,7 +7477,7 @@ var require_client = __commonJS({
       trackHeader(len) {
         this.headersSize += len;
         if (this.headersSize >= this.headersMaxSize) {
-          util2.destroy(this.socket, new HeadersOverflowError());
+          util3.destroy(this.socket, new HeadersOverflowError());
         }
       }
       onUpgrade(head) {
@@ -7523,7 +7507,7 @@ var require_client = __commonJS({
         try {
           request.onUpgrade(statusCode, headers, socket);
         } catch (err) {
-          util2.destroy(socket, err);
+          util3.destroy(socket, err);
         }
         resume(client);
       }
@@ -7539,11 +7523,11 @@ var require_client = __commonJS({
         assert(!this.upgrade);
         assert(this.statusCode < 200);
         if (statusCode === 100) {
-          util2.destroy(socket, new SocketError("bad response", util2.getSocketInfo(socket)));
+          util3.destroy(socket, new SocketError("bad response", util3.getSocketInfo(socket)));
           return -1;
         }
         if (upgrade && !request.upgrade) {
-          util2.destroy(socket, new SocketError("bad upgrade", util2.getSocketInfo(socket)));
+          util3.destroy(socket, new SocketError("bad upgrade", util3.getSocketInfo(socket)));
           return -1;
         }
         assert.strictEqual(this.timeoutType, TIMEOUT_HEADERS);
@@ -7572,7 +7556,7 @@ var require_client = __commonJS({
         this.headers = [];
         this.headersSize = 0;
         if (this.shouldKeepAlive && client[kPipelining]) {
-          const keepAliveTimeout = this.keepAlive ? util2.parseKeepAliveTimeout(this.keepAlive) : null;
+          const keepAliveTimeout = this.keepAlive ? util3.parseKeepAliveTimeout(this.keepAlive) : null;
           if (keepAliveTimeout != null) {
             const timeout = Math.min(
               keepAliveTimeout - client[kKeepAliveTimeoutThreshold],
@@ -7620,7 +7604,7 @@ var require_client = __commonJS({
         }
         assert(statusCode >= 200);
         if (maxResponseSize > -1 && this.bytesRead + buf.length > maxResponseSize) {
-          util2.destroy(socket, new ResponseExceededMaxSizeError());
+          util3.destroy(socket, new ResponseExceededMaxSizeError());
           return -1;
         }
         this.bytesRead += buf.length;
@@ -7652,20 +7636,20 @@ var require_client = __commonJS({
           return;
         }
         if (request.method !== "HEAD" && contentLength && bytesRead !== parseInt(contentLength, 10)) {
-          util2.destroy(socket, new ResponseContentLengthMismatchError());
+          util3.destroy(socket, new ResponseContentLengthMismatchError());
           return -1;
         }
         request.onComplete(headers);
         client[kQueue][client[kRunningIdx]++] = null;
         if (socket[kWriting]) {
           assert.strictEqual(client[kRunning], 0);
-          util2.destroy(socket, new InformationalError("reset"));
+          util3.destroy(socket, new InformationalError("reset"));
           return constants.ERROR.PAUSED;
         } else if (!shouldKeepAlive) {
-          util2.destroy(socket, new InformationalError("reset"));
+          util3.destroy(socket, new InformationalError("reset"));
           return constants.ERROR.PAUSED;
         } else if (socket[kReset] && client[kRunning] === 0) {
-          util2.destroy(socket, new InformationalError("reset"));
+          util3.destroy(socket, new InformationalError("reset"));
           return constants.ERROR.PAUSED;
         } else if (client[kPipelining] === 1) {
           setImmediate(resume, client);
@@ -7679,15 +7663,15 @@ var require_client = __commonJS({
       if (timeoutType === TIMEOUT_HEADERS) {
         if (!socket[kWriting] || socket.writableNeedDrain || client[kRunning] > 1) {
           assert(!parser.paused, "cannot be paused while waiting for headers");
-          util2.destroy(socket, new HeadersTimeoutError());
+          util3.destroy(socket, new HeadersTimeoutError());
         }
       } else if (timeoutType === TIMEOUT_BODY) {
         if (!parser.paused) {
-          util2.destroy(socket, new BodyTimeoutError());
+          util3.destroy(socket, new BodyTimeoutError());
         }
       } else if (timeoutType === TIMEOUT_IDLE) {
         assert(client[kRunning] === 0 && client[kKeepAliveTimeoutValue]);
-        util2.destroy(socket, new InformationalError("socket idle timeout"));
+        util3.destroy(socket, new InformationalError("socket idle timeout"));
       }
     }
     function onSocketReadable() {
@@ -7727,7 +7711,7 @@ var require_client = __commonJS({
           return;
         }
       }
-      util2.destroy(this, new SocketError("other side closed", util2.getSocketInfo(this)));
+      util3.destroy(this, new SocketError("other side closed", util3.getSocketInfo(this)));
     }
     function onSocketClose() {
       const { [kClient]: client, [kParser]: parser } = this;
@@ -7738,7 +7722,7 @@ var require_client = __commonJS({
         this[kParser].destroy();
         this[kParser] = null;
       }
-      const err = this[kError] || new SocketError("closed", util2.getSocketInfo(this));
+      const err = this[kError] || new SocketError("closed", util3.getSocketInfo(this));
       client[kSocket] = null;
       if (client.destroyed) {
         assert(client[kPending] === 0);
@@ -7783,7 +7767,7 @@ var require_client = __commonJS({
         });
       }
       try {
-        const socket = await new Promise((resolve, reject) => {
+        const socket = await new Promise((resolve2, reject) => {
           client[kConnector]({
             host,
             hostname,
@@ -7795,12 +7779,12 @@ var require_client = __commonJS({
             if (err) {
               reject(err);
             } else {
-              resolve(socket2);
+              resolve2(socket2);
             }
           });
         });
         if (client.destroyed) {
-          util2.destroy(socket.on("error", () => {
+          util3.destroy(socket.on("error", () => {
           }), new ClientDestroyedError());
           return;
         }
@@ -7838,7 +7822,7 @@ var require_client = __commonJS({
           socket[kWriting] = false;
           socket[kReset] = false;
           socket[kBlocking] = false;
-          socket[kParser] = new Parser(client, socket, llhttpInstance);
+          socket[kParser] = new Parser3(client, socket, llhttpInstance);
         }
         socket[kCounter] = 0;
         socket[kMaxRequests] = client[kMaxRequests];
@@ -7968,7 +7952,7 @@ var require_client = __commonJS({
           }
           client[kServerName] = request.servername;
           if (socket && socket.servername !== request.servername) {
-            util2.destroy(socket, new InformationalError("servername changed"));
+            util3.destroy(socket, new InformationalError("servername changed"));
             return;
           }
         }
@@ -7988,7 +7972,7 @@ var require_client = __commonJS({
         if (client[kRunning] > 0 && (request.upgrade || request.method === "CONNECT")) {
           return;
         }
-        if (client[kRunning] > 0 && util2.bodyLength(request.body) !== 0 && (util2.isStream(request.body) || util2.isAsyncIterable(request.body))) {
+        if (client[kRunning] > 0 && util3.bodyLength(request.body) !== 0 && (util3.isStream(request.body) || util3.isAsyncIterable(request.body))) {
           return;
         }
         if (!request.aborted && write(client, request)) {
@@ -8006,12 +7990,12 @@ var require_client = __commonJS({
         writeH2(client, client[kHTTP2Session], request);
         return;
       }
-      const { body, method, path: path7, host, upgrade, headers, blocking, reset } = request;
+      const { body, method, path: path8, host, upgrade, headers, blocking, reset } = request;
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH";
       if (body && typeof body.read === "function") {
         body.read(0);
       }
-      const bodyLength = util2.bodyLength(body);
+      const bodyLength = util3.bodyLength(body);
       let contentLength = bodyLength;
       if (contentLength === null) {
         contentLength = request.contentLength;
@@ -8033,7 +8017,7 @@ var require_client = __commonJS({
             return;
           }
           errorRequest(client, request, err || new RequestAbortedError());
-          util2.destroy(socket, new InformationalError("aborted"));
+          util3.destroy(socket, new InformationalError("aborted"));
         });
       } catch (err) {
         errorRequest(client, request, err);
@@ -8056,7 +8040,7 @@ var require_client = __commonJS({
       if (blocking) {
         socket[kBlocking] = true;
       }
-      let header = `${method} ${path7} HTTP/1.1\r
+      let header = `${method} ${path8} HTTP/1.1\r
 `;
       if (typeof host === "string") {
         header += `host: ${host}\r
@@ -8090,7 +8074,7 @@ upgrade: ${upgrade}\r
 `, "latin1");
         }
         request.onRequestSent();
-      } else if (util2.isBuffer(body)) {
+      } else if (util3.isBuffer(body)) {
         assert(contentLength === body.byteLength, "buffer body must have content length");
         socket.cork();
         socket.write(`${header}content-length: ${contentLength}\r
@@ -8103,15 +8087,15 @@ upgrade: ${upgrade}\r
         if (!expectsPayload) {
           socket[kReset] = true;
         }
-      } else if (util2.isBlobLike(body)) {
+      } else if (util3.isBlobLike(body)) {
         if (typeof body.stream === "function") {
           writeIterable({ body: body.stream(), client, request, socket, contentLength, header, expectsPayload });
         } else {
           writeBlob({ body, client, request, socket, contentLength, header, expectsPayload });
         }
-      } else if (util2.isStream(body)) {
+      } else if (util3.isStream(body)) {
         writeStream({ body, client, request, socket, contentLength, header, expectsPayload });
-      } else if (util2.isIterable(body)) {
+      } else if (util3.isIterable(body)) {
         writeIterable({ body, client, request, socket, contentLength, header, expectsPayload });
       } else {
         assert(false);
@@ -8119,12 +8103,10 @@ upgrade: ${upgrade}\r
       return true;
     }
     function writeH2(client, session, request) {
-      const { body, method, path: path7, host, upgrade, expectContinue, signal, headers: reqHeaders } = request;
+      const { body, method, path: path8, host, upgrade, expectContinue, signal, headers: reqHeaders } = request;
       let headers;
-      if (typeof reqHeaders === "string")
-        headers = Request[kHTTP2CopyHeaders](reqHeaders.trim());
-      else
-        headers = reqHeaders;
+      if (typeof reqHeaders === "string") headers = Request[kHTTP2CopyHeaders](reqHeaders.trim());
+      else headers = reqHeaders;
       if (upgrade) {
         errorRequest(client, request, new Error("Upgrade not supported for H2"));
         return false;
@@ -8160,18 +8142,17 @@ upgrade: ${upgrade}\r
         }
         stream.once("close", () => {
           h2State.openStreams -= 1;
-          if (h2State.openStreams === 0)
-            session.unref();
+          if (h2State.openStreams === 0) session.unref();
         });
         return true;
       }
-      headers[HTTP2_HEADER_PATH] = path7;
+      headers[HTTP2_HEADER_PATH] = path8;
       headers[HTTP2_HEADER_SCHEME] = "https";
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH";
       if (body && typeof body.read === "function") {
         body.read(0);
       }
-      let contentLength = util2.bodyLength(body);
+      let contentLength = util3.bodyLength(body);
       if (contentLength == null) {
         contentLength = request.contentLength;
       }
@@ -8226,7 +8207,7 @@ upgrade: ${upgrade}\r
       stream.once("error", function(err) {
         if (client[kHTTP2Session] && !client[kHTTP2Session].destroyed && !this.closed && !this.destroyed) {
           h2State.streams -= 1;
-          util2.destroy(stream, err);
+          util3.destroy(stream, err);
         }
       });
       stream.once("frameError", (type2, code) => {
@@ -8234,14 +8215,14 @@ upgrade: ${upgrade}\r
         errorRequest(client, request, err);
         if (client[kHTTP2Session] && !client[kHTTP2Session].destroyed && !this.closed && !this.destroyed) {
           h2State.streams -= 1;
-          util2.destroy(stream, err);
+          util3.destroy(stream, err);
         }
       });
       return true;
       function writeBodyH2() {
         if (!body) {
           request.onRequestSent();
-        } else if (util2.isBuffer(body)) {
+        } else if (util3.isBuffer(body)) {
           assert(contentLength === body.byteLength, "buffer body must have content length");
           stream.cork();
           stream.write(body);
@@ -8249,7 +8230,7 @@ upgrade: ${upgrade}\r
           stream.end();
           request.onBodySent(body);
           request.onRequestSent();
-        } else if (util2.isBlobLike(body)) {
+        } else if (util3.isBlobLike(body)) {
           if (typeof body.stream === "function") {
             writeIterable({
               client,
@@ -8273,7 +8254,7 @@ upgrade: ${upgrade}\r
               socket: client[kSocket]
             });
           }
-        } else if (util2.isStream(body)) {
+        } else if (util3.isStream(body)) {
           writeStream({
             body,
             client,
@@ -8284,7 +8265,7 @@ upgrade: ${upgrade}\r
             h2stream: stream,
             header: ""
           });
-        } else if (util2.isIterable(body)) {
+        } else if (util3.isIterable(body)) {
           writeIterable({
             body,
             client,
@@ -8311,8 +8292,8 @@ upgrade: ${upgrade}\r
           h2stream,
           (err) => {
             if (err) {
-              util2.destroy(body, err);
-              util2.destroy(h2stream, err);
+              util3.destroy(body, err);
+              util3.destroy(h2stream, err);
             } else {
               request.onRequestSent();
             }
@@ -8321,7 +8302,7 @@ upgrade: ${upgrade}\r
         pipe.on("data", onPipeData);
         pipe.once("end", () => {
           pipe.removeListener("data", onPipeData);
-          util2.destroy(pipe);
+          util3.destroy(pipe);
         });
         return;
       }
@@ -8336,7 +8317,7 @@ upgrade: ${upgrade}\r
             this.pause();
           }
         } catch (err) {
-          util2.destroy(this, err);
+          util3.destroy(this, err);
         }
       };
       const onDrain = function() {
@@ -8371,9 +8352,9 @@ upgrade: ${upgrade}\r
         }
         writer.destroy(err);
         if (err && (err.code !== "UND_ERR_INFO" || err.message !== "reset")) {
-          util2.destroy(body, err);
+          util3.destroy(body, err);
         } else {
-          util2.destroy(body);
+          util3.destroy(body);
         }
       };
       body.on("data", onData).on("end", onFinished).on("error", onFinished).on("close", onAbort);
@@ -8409,7 +8390,7 @@ upgrade: ${upgrade}\r
         }
         resume(client);
       } catch (err) {
-        util2.destroy(isH2 ? h2stream : socket, err);
+        util3.destroy(isH2 ? h2stream : socket, err);
       }
     }
     async function writeIterable({ h2stream, body, client, request, socket, contentLength, header, expectsPayload }) {
@@ -8422,12 +8403,12 @@ upgrade: ${upgrade}\r
           cb();
         }
       }
-      const waitForDrain = () => new Promise((resolve, reject) => {
+      const waitForDrain = () => new Promise((resolve2, reject) => {
         assert(callback === null);
         if (socket[kError]) {
           reject(socket[kError]);
         } else {
-          callback = resolve;
+          callback = resolve2;
         }
       });
       if (client[kHTTPConnVersion] === "h2") {
@@ -8572,7 +8553,7 @@ ${len.toString(16)}\r
         socket[kWriting] = false;
         if (err) {
           assert(client[kRunning] <= 1, "pipeline should only contain this request");
-          util2.destroy(socket, err);
+          util3.destroy(socket, err);
         }
       }
     };
@@ -8772,8 +8753,8 @@ var require_pool_base = __commonJS({
         if (this[kQueue].isEmpty()) {
           return Promise.all(this[kClients].map((c) => c.close()));
         } else {
-          return new Promise((resolve) => {
-            this[kClosedResolve] = resolve;
+          return new Promise((resolve2) => {
+            this[kClosedResolve] = resolve2;
           });
         }
       }
@@ -8847,7 +8828,7 @@ var require_pool = __commonJS({
     var {
       InvalidArgumentError
     } = require_errors();
-    var util2 = require_util();
+    var util3 = require_util();
     var { kUrl, kInterceptors } = require_symbols();
     var buildConnector = require_connect();
     var kOptions = Symbol("options");
@@ -8887,14 +8868,14 @@ var require_pool = __commonJS({
             allowH2,
             socketPath,
             timeout: connectTimeout,
-            ...util2.nodeHasAutoSelectFamily && autoSelectFamily ? { autoSelectFamily, autoSelectFamilyAttemptTimeout } : void 0,
+            ...util3.nodeHasAutoSelectFamily && autoSelectFamily ? { autoSelectFamily, autoSelectFamilyAttemptTimeout } : void 0,
             ...connect
           });
         }
         this[kInterceptors] = options.interceptors && options.interceptors.Pool && Array.isArray(options.interceptors.Pool) ? options.interceptors.Pool : [];
         this[kConnections] = connections || null;
-        this[kUrl] = util2.parseOrigin(origin);
-        this[kOptions] = { ...util2.deepClone(options), connect, allowH2 };
+        this[kUrl] = util3.parseOrigin(origin);
+        this[kOptions] = { ...util3.deepClone(options), connect, allowH2 };
         this[kOptions].interceptors = options.interceptors ? { ...options.interceptors } : void 0;
         this[kFactory] = factory;
         this.on("connectionError", (origin2, targets, error2) => {
@@ -8950,8 +8931,7 @@ var require_balanced_pool = __commonJS({
     var kMaxWeightPerServer = Symbol("kMaxWeightPerServer");
     var kErrorPenalty = Symbol("kErrorPenalty");
     function getGreatestCommonDivisor(a, b) {
-      if (b === 0)
-        return a;
+      if (b === 0) return a;
       return getGreatestCommonDivisor(b, a % b);
     }
     function defaultFactory(origin, opts) {
@@ -9109,7 +9089,7 @@ var require_agent = __commonJS({
     var DispatcherBase = require_dispatcher_base();
     var Pool = require_pool();
     var Client = require_client();
-    var util2 = require_util();
+    var util3 = require_util();
     var createRedirectInterceptor = require_redirectInterceptor();
     var { WeakRef: WeakRef2, FinalizationRegistry } = require_dispatcher_weakref()();
     var kOnConnect = Symbol("onConnect");
@@ -9139,7 +9119,7 @@ var require_agent = __commonJS({
           connect = { ...connect };
         }
         this[kInterceptors] = options.interceptors && options.interceptors.Agent && Array.isArray(options.interceptors.Agent) ? options.interceptors.Agent : [createRedirectInterceptor({ maxRedirections })];
-        this[kOptions] = { ...util2.deepClone(options), connect };
+        this[kOptions] = { ...util3.deepClone(options), connect };
         this[kOptions].interceptors = options.interceptors ? { ...options.interceptors } : void 0;
         this[kMaxRedirections] = maxRedirections;
         this[kFactory] = factory;
@@ -9225,7 +9205,7 @@ var require_readable = __commonJS({
     var assert = require("assert");
     var { Readable } = require("stream");
     var { RequestAbortedError, NotSupportedError, InvalidArgumentError } = require_errors();
-    var util2 = require_util();
+    var util3 = require_util();
     var { ReadableStreamFrom, toUSVString } = require_util();
     var Blob2;
     var kConsume = Symbol("kConsume");
@@ -9323,7 +9303,7 @@ var require_readable = __commonJS({
       }
       // https://fetch.spec.whatwg.org/#dom-body-bodyused
       get bodyUsed() {
-        return util2.isDisturbed(this);
+        return util3.isDisturbed(this);
       }
       // https://fetch.spec.whatwg.org/#dom-body-body
       get body() {
@@ -9344,7 +9324,7 @@ var require_readable = __commonJS({
             if (typeof signal !== "object" || !("aborted" in signal)) {
               throw new InvalidArgumentError("signal must be an AbortSignal");
             }
-            util2.throwIfAborted(signal);
+            util3.throwIfAborted(signal);
           } catch (err) {
             return Promise.reject(err);
           }
@@ -9352,8 +9332,8 @@ var require_readable = __commonJS({
         if (this.closed) {
           return Promise.resolve(null);
         }
-        return new Promise((resolve, reject) => {
-          const signalListenerCleanup = signal ? util2.addAbortListener(signal, () => {
+        return new Promise((resolve2, reject) => {
+          const signalListenerCleanup = signal ? util3.addAbortListener(signal, () => {
             this.destroy();
           }) : noop;
           this.on("close", function() {
@@ -9361,7 +9341,7 @@ var require_readable = __commonJS({
             if (signal && signal.aborted) {
               reject(signal.reason || Object.assign(new Error("The operation was aborted"), { name: "AbortError" }));
             } else {
-              resolve(null);
+              resolve2(null);
             }
           }).on("error", noop).on("data", function(chunk) {
             limit -= chunk.length;
@@ -9376,18 +9356,18 @@ var require_readable = __commonJS({
       return self[kBody] && self[kBody].locked === true || self[kConsume];
     }
     function isUnusable(self) {
-      return util2.isDisturbed(self) || isLocked(self);
+      return util3.isDisturbed(self) || isLocked(self);
     }
     async function consume(stream, type2) {
       if (isUnusable(stream)) {
         throw new TypeError("unusable");
       }
       assert(!stream[kConsume]);
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve2, reject) => {
         stream[kConsume] = {
           type: type2,
           stream,
-          resolve,
+          resolve: resolve2,
           reject,
           length: 0,
           body: []
@@ -9422,12 +9402,12 @@ var require_readable = __commonJS({
       }
     }
     function consumeEnd(consume2) {
-      const { type: type2, body, resolve, stream, length } = consume2;
+      const { type: type2, body, resolve: resolve2, stream, length } = consume2;
       try {
         if (type2 === "text") {
-          resolve(toUSVString(Buffer.concat(body)));
+          resolve2(toUSVString(Buffer.concat(body)));
         } else if (type2 === "json") {
-          resolve(JSON.parse(Buffer.concat(body)));
+          resolve2(JSON.parse(Buffer.concat(body)));
         } else if (type2 === "arrayBuffer") {
           const dst = new Uint8Array(length);
           let pos = 0;
@@ -9435,12 +9415,12 @@ var require_readable = __commonJS({
             dst.set(buf, pos);
             pos += buf.byteLength;
           }
-          resolve(dst.buffer);
+          resolve2(dst.buffer);
         } else if (type2 === "blob") {
           if (!Blob2) {
             Blob2 = require("buffer").Blob;
           }
-          resolve(new Blob2(body, { type: stream[kContentType] }));
+          resolve2(new Blob2(body, { type: stream[kContentType] }));
         }
         consumeFinish(consume2);
       } catch (err) {
@@ -9571,7 +9551,7 @@ var require_api_request = __commonJS({
       InvalidArgumentError,
       RequestAbortedError
     } = require_errors();
-    var util2 = require_util();
+    var util3 = require_util();
     var { getResolveErrorBodyCallback } = require_util3();
     var { AsyncResource } = require("async_hooks");
     var { addSignal, removeSignal } = require_abort_signal();
@@ -9599,8 +9579,8 @@ var require_api_request = __commonJS({
           }
           super("UNDICI_REQUEST");
         } catch (err) {
-          if (util2.isStream(body)) {
-            util2.destroy(body.on("error", util2.nop), err);
+          if (util3.isStream(body)) {
+            util3.destroy(body.on("error", util3.nop), err);
           }
           throw err;
         }
@@ -9615,7 +9595,7 @@ var require_api_request = __commonJS({
         this.onInfo = onInfo || null;
         this.throwOnError = throwOnError;
         this.highWaterMark = highWaterMark;
-        if (util2.isStream(body)) {
+        if (util3.isStream(body)) {
           body.on("error", (err) => {
             this.onError(err);
           });
@@ -9631,14 +9611,14 @@ var require_api_request = __commonJS({
       }
       onHeaders(statusCode, rawHeaders, resume, statusMessage) {
         const { callback, opaque, abort, context: context2, responseHeaders, highWaterMark } = this;
-        const headers = responseHeaders === "raw" ? util2.parseRawHeaders(rawHeaders) : util2.parseHeaders(rawHeaders);
+        const headers = responseHeaders === "raw" ? util3.parseRawHeaders(rawHeaders) : util3.parseHeaders(rawHeaders);
         if (statusCode < 200) {
           if (this.onInfo) {
             this.onInfo({ statusCode, headers });
           }
           return;
         }
-        const parsedHeaders = responseHeaders === "raw" ? util2.parseHeaders(rawHeaders) : headers;
+        const parsedHeaders = responseHeaders === "raw" ? util3.parseHeaders(rawHeaders) : headers;
         const contentType = parsedHeaders["content-type"];
         const body = new Readable({ resume, abort, contentType, highWaterMark });
         this.callback = null;
@@ -9669,7 +9649,7 @@ var require_api_request = __commonJS({
       onComplete(trailers) {
         const { res } = this;
         removeSignal(this);
-        util2.parseHeaders(trailers, this.trailers);
+        util3.parseHeaders(trailers, this.trailers);
         res.push(null);
       }
       onError(err) {
@@ -9684,20 +9664,20 @@ var require_api_request = __commonJS({
         if (res) {
           this.res = null;
           queueMicrotask(() => {
-            util2.destroy(res, err);
+            util3.destroy(res, err);
           });
         }
         if (body) {
           this.body = null;
-          util2.destroy(body, err);
+          util3.destroy(body, err);
         }
       }
     };
     function request(opts, callback) {
       if (callback === void 0) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           request.call(this, opts, (err, data) => {
-            return err ? reject(err) : resolve(data);
+            return err ? reject(err) : resolve2(data);
           });
         });
       }
@@ -9726,7 +9706,7 @@ var require_api_stream = __commonJS({
       InvalidReturnValueError,
       RequestAbortedError
     } = require_errors();
-    var util2 = require_util();
+    var util3 = require_util();
     var { getResolveErrorBodyCallback } = require_util3();
     var { AsyncResource } = require("async_hooks");
     var { addSignal, removeSignal } = require_abort_signal();
@@ -9754,8 +9734,8 @@ var require_api_stream = __commonJS({
           }
           super("UNDICI_STREAM");
         } catch (err) {
-          if (util2.isStream(body)) {
-            util2.destroy(body.on("error", util2.nop), err);
+          if (util3.isStream(body)) {
+            util3.destroy(body.on("error", util3.nop), err);
           }
           throw err;
         }
@@ -9770,7 +9750,7 @@ var require_api_stream = __commonJS({
         this.body = body;
         this.onInfo = onInfo || null;
         this.throwOnError = throwOnError || false;
-        if (util2.isStream(body)) {
+        if (util3.isStream(body)) {
           body.on("error", (err) => {
             this.onError(err);
           });
@@ -9786,7 +9766,7 @@ var require_api_stream = __commonJS({
       }
       onHeaders(statusCode, rawHeaders, resume, statusMessage) {
         const { factory, opaque, context: context2, callback, responseHeaders } = this;
-        const headers = responseHeaders === "raw" ? util2.parseRawHeaders(rawHeaders) : util2.parseHeaders(rawHeaders);
+        const headers = responseHeaders === "raw" ? util3.parseRawHeaders(rawHeaders) : util3.parseHeaders(rawHeaders);
         if (statusCode < 200) {
           if (this.onInfo) {
             this.onInfo({ statusCode, headers });
@@ -9796,7 +9776,7 @@ var require_api_stream = __commonJS({
         this.factory = null;
         let res;
         if (this.throwOnError && statusCode >= 400) {
-          const parsedHeaders = responseHeaders === "raw" ? util2.parseHeaders(rawHeaders) : headers;
+          const parsedHeaders = responseHeaders === "raw" ? util3.parseHeaders(rawHeaders) : headers;
           const contentType = parsedHeaders["content-type"];
           res = new PassThrough();
           this.callback = null;
@@ -9822,7 +9802,7 @@ var require_api_stream = __commonJS({
             const { callback: callback2, res: res2, opaque: opaque2, trailers, abort } = this;
             this.res = null;
             if (err || !res2.readable) {
-              util2.destroy(res2, err);
+              util3.destroy(res2, err);
             }
             this.callback = null;
             this.runInAsyncScope(callback2, null, err || null, { opaque: opaque2, trailers });
@@ -9846,7 +9826,7 @@ var require_api_stream = __commonJS({
         if (!res) {
           return;
         }
-        this.trailers = util2.parseHeaders(trailers);
+        this.trailers = util3.parseHeaders(trailers);
         res.end();
       }
       onError(err) {
@@ -9855,7 +9835,7 @@ var require_api_stream = __commonJS({
         this.factory = null;
         if (res) {
           this.res = null;
-          util2.destroy(res, err);
+          util3.destroy(res, err);
         } else if (callback) {
           this.callback = null;
           queueMicrotask(() => {
@@ -9864,15 +9844,15 @@ var require_api_stream = __commonJS({
         }
         if (body) {
           this.body = null;
-          util2.destroy(body, err);
+          util3.destroy(body, err);
         }
       }
     };
     function stream(opts, factory, callback) {
       if (callback === void 0) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           stream.call(this, opts, factory, (err, data) => {
-            return err ? reject(err) : resolve(data);
+            return err ? reject(err) : resolve2(data);
           });
         });
       }
@@ -9904,7 +9884,7 @@ var require_api_pipeline = __commonJS({
       InvalidReturnValueError,
       RequestAbortedError
     } = require_errors();
-    var util2 = require_util();
+    var util3 = require_util();
     var { AsyncResource } = require("async_hooks");
     var { addSignal, removeSignal } = require_abort_signal();
     var assert = require("assert");
@@ -9966,7 +9946,7 @@ var require_api_pipeline = __commonJS({
         this.abort = null;
         this.context = null;
         this.onInfo = onInfo || null;
-        this.req = new PipelineRequest().on("error", util2.nop);
+        this.req = new PipelineRequest().on("error", util3.nop);
         this.ret = new Duplex({
           readableObjectMode: opts.objectMode,
           autoDestroy: true,
@@ -9992,9 +9972,9 @@ var require_api_pipeline = __commonJS({
             if (abort && err) {
               abort();
             }
-            util2.destroy(body, err);
-            util2.destroy(req, err);
-            util2.destroy(res, err);
+            util3.destroy(body, err);
+            util3.destroy(req, err);
+            util3.destroy(res, err);
             removeSignal(this);
             callback(err);
           }
@@ -10018,7 +9998,7 @@ var require_api_pipeline = __commonJS({
         const { opaque, handler, context: context2 } = this;
         if (statusCode < 200) {
           if (this.onInfo) {
-            const headers = this.responseHeaders === "raw" ? util2.parseRawHeaders(rawHeaders) : util2.parseHeaders(rawHeaders);
+            const headers = this.responseHeaders === "raw" ? util3.parseRawHeaders(rawHeaders) : util3.parseHeaders(rawHeaders);
             this.onInfo({ statusCode, headers });
           }
           return;
@@ -10027,7 +10007,7 @@ var require_api_pipeline = __commonJS({
         let body;
         try {
           this.handler = null;
-          const headers = this.responseHeaders === "raw" ? util2.parseRawHeaders(rawHeaders) : util2.parseHeaders(rawHeaders);
+          const headers = this.responseHeaders === "raw" ? util3.parseRawHeaders(rawHeaders) : util3.parseHeaders(rawHeaders);
           body = this.runInAsyncScope(handler, null, {
             statusCode,
             headers,
@@ -10036,7 +10016,7 @@ var require_api_pipeline = __commonJS({
             context: context2
           });
         } catch (err) {
-          this.res.on("error", util2.nop);
+          this.res.on("error", util3.nop);
           throw err;
         }
         if (!body || typeof body.on !== "function") {
@@ -10049,14 +10029,14 @@ var require_api_pipeline = __commonJS({
           }
         }).on("error", (err) => {
           const { ret } = this;
-          util2.destroy(ret, err);
+          util3.destroy(ret, err);
         }).on("end", () => {
           const { ret } = this;
           ret.push(null);
         }).on("close", () => {
           const { ret } = this;
           if (!ret._readableState.ended) {
-            util2.destroy(ret, new RequestAbortedError());
+            util3.destroy(ret, new RequestAbortedError());
           }
         });
         this.body = body;
@@ -10072,7 +10052,7 @@ var require_api_pipeline = __commonJS({
       onError(err) {
         const { ret } = this;
         this.handler = null;
-        util2.destroy(ret, err);
+        util3.destroy(ret, err);
       }
     };
     function pipeline(opts, handler) {
@@ -10094,7 +10074,7 @@ var require_api_upgrade = __commonJS({
     "use strict";
     var { InvalidArgumentError, RequestAbortedError, SocketError } = require_errors();
     var { AsyncResource } = require("async_hooks");
-    var util2 = require_util();
+    var util3 = require_util();
     var { addSignal, removeSignal } = require_abort_signal();
     var assert = require("assert");
     var UpgradeHandler = class extends AsyncResource {
@@ -10132,7 +10112,7 @@ var require_api_upgrade = __commonJS({
         assert.strictEqual(statusCode, 101);
         removeSignal(this);
         this.callback = null;
-        const headers = this.responseHeaders === "raw" ? util2.parseRawHeaders(rawHeaders) : util2.parseHeaders(rawHeaders);
+        const headers = this.responseHeaders === "raw" ? util3.parseRawHeaders(rawHeaders) : util3.parseHeaders(rawHeaders);
         this.runInAsyncScope(callback, null, null, {
           headers,
           socket,
@@ -10153,9 +10133,9 @@ var require_api_upgrade = __commonJS({
     };
     function upgrade(opts, callback) {
       if (callback === void 0) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           upgrade.call(this, opts, (err, data) => {
-            return err ? reject(err) : resolve(data);
+            return err ? reject(err) : resolve2(data);
           });
         });
       }
@@ -10184,7 +10164,7 @@ var require_api_connect = __commonJS({
     "use strict";
     var { AsyncResource } = require("async_hooks");
     var { InvalidArgumentError, RequestAbortedError, SocketError } = require_errors();
-    var util2 = require_util();
+    var util3 = require_util();
     var { addSignal, removeSignal } = require_abort_signal();
     var ConnectHandler = class extends AsyncResource {
       constructor(opts, callback) {
@@ -10221,7 +10201,7 @@ var require_api_connect = __commonJS({
         this.callback = null;
         let headers = rawHeaders;
         if (headers != null) {
-          headers = this.responseHeaders === "raw" ? util2.parseRawHeaders(rawHeaders) : util2.parseHeaders(rawHeaders);
+          headers = this.responseHeaders === "raw" ? util3.parseRawHeaders(rawHeaders) : util3.parseHeaders(rawHeaders);
         }
         this.runInAsyncScope(callback, null, null, {
           statusCode,
@@ -10244,9 +10224,9 @@ var require_api_connect = __commonJS({
     };
     function connect(opts, callback) {
       if (callback === void 0) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           connect.call(this, opts, (err, data) => {
-            return err ? reject(err) : resolve(data);
+            return err ? reject(err) : resolve2(data);
           });
         });
       }
@@ -10406,20 +10386,20 @@ var require_mock_utils = __commonJS({
       }
       return true;
     }
-    function safeUrl(path7) {
-      if (typeof path7 !== "string") {
-        return path7;
+    function safeUrl(path8) {
+      if (typeof path8 !== "string") {
+        return path8;
       }
-      const pathSegments = path7.split("?");
+      const pathSegments = path8.split("?");
       if (pathSegments.length !== 2) {
-        return path7;
+        return path8;
       }
       const qp = new URLSearchParams(pathSegments.pop());
       qp.sort();
       return [...pathSegments, qp.toString()].join("?");
     }
-    function matchKey(mockDispatch2, { path: path7, method, body, headers }) {
-      const pathMatch = matchValue(mockDispatch2.path, path7);
+    function matchKey(mockDispatch2, { path: path8, method, body, headers }) {
+      const pathMatch = matchValue(mockDispatch2.path, path8);
       const methodMatch = matchValue(mockDispatch2.method, method);
       const bodyMatch = typeof mockDispatch2.body !== "undefined" ? matchValue(mockDispatch2.body, body) : true;
       const headersMatch = matchHeaders(mockDispatch2, headers);
@@ -10437,7 +10417,7 @@ var require_mock_utils = __commonJS({
     function getMockDispatch(mockDispatches, key) {
       const basePath = key.query ? buildURL(key.path, key.query) : key.path;
       const resolvedPath = typeof basePath === "string" ? safeUrl(basePath) : basePath;
-      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path: path7 }) => matchValue(safeUrl(path7), resolvedPath));
+      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path: path8 }) => matchValue(safeUrl(path8), resolvedPath));
       if (matchedMockDispatches.length === 0) {
         throw new MockNotMatchedError(`Mock dispatch not matched for path '${resolvedPath}'`);
       }
@@ -10474,9 +10454,9 @@ var require_mock_utils = __commonJS({
       }
     }
     function buildKey(opts) {
-      const { path: path7, method, body, headers, query } = opts;
+      const { path: path8, method, body, headers, query } = opts;
       return {
-        path: path7,
+        path: path8,
         method,
         body,
         headers,
@@ -10925,10 +10905,10 @@ var require_pending_interceptors_formatter = __commonJS({
       }
       format(pendingInterceptors) {
         const withPrettyHeaders = pendingInterceptors.map(
-          ({ method, path: path7, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
+          ({ method, path: path8, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
             Method: method,
             Origin: origin,
-            Path: path7,
+            Path: path8,
             "Status code": statusCode,
             Persistent: persist ? "\u2705" : "\u274C",
             Invocations: timesInvoked,
@@ -11323,8 +11303,7 @@ var require_RetryHandler = __commonJS({
         }
       }
       onBodySent(chunk) {
-        if (this.handler.onBodySent)
-          return this.handler.onBodySent(chunk);
+        if (this.handler.onBodySent) return this.handler.onBodySent(chunk);
       }
       static [kRetryHandlerDefaultRetry](err, { state, opts }, cb) {
         const { statusCode, code, headers } = err;
@@ -11577,7 +11556,7 @@ var require_headers = __commonJS({
       isValidHeaderName,
       isValidHeaderValue
     } = require_util2();
-    var util2 = require("util");
+    var util3 = require("util");
     var { webidl } = require_webidl();
     var assert = require("assert");
     var kHeadersMap = Symbol("headers map");
@@ -11588,10 +11567,8 @@ var require_headers = __commonJS({
     function headerValueNormalize(potentialValue) {
       let i = 0;
       let j = potentialValue.length;
-      while (j > i && isHTTPWhiteSpaceCharCode(potentialValue.charCodeAt(j - 1)))
-        --j;
-      while (j > i && isHTTPWhiteSpaceCharCode(potentialValue.charCodeAt(i)))
-        ++i;
+      while (j > i && isHTTPWhiteSpaceCharCode(potentialValue.charCodeAt(j - 1))) --j;
+      while (j > i && isHTTPWhiteSpaceCharCode(potentialValue.charCodeAt(i))) ++i;
       return i === 0 && j === potentialValue.length ? potentialValue : potentialValue.substring(i, j);
     }
     function fill(headers, object) {
@@ -11932,7 +11909,7 @@ var require_headers = __commonJS({
         value: "Headers",
         configurable: true
       },
-      [util2.inspect.custom]: {
+      [util3.inspect.custom]: {
         enumerable: false
       }
     });
@@ -11963,8 +11940,8 @@ var require_response = __commonJS({
     "use strict";
     var { Headers, HeadersList, fill } = require_headers();
     var { extractBody, cloneBody, mixinBody } = require_body();
-    var util2 = require_util();
-    var { kEnumerableProperty } = util2;
+    var util3 = require_util();
+    var { kEnumerableProperty } = util3;
     var {
       isValidReasonPhrase,
       isCancelled,
@@ -12110,7 +12087,7 @@ var require_response = __commonJS({
       }
       get bodyUsed() {
         webidl.brandCheck(this, _Response);
-        return !!this[kState].body && util2.isDisturbed(this[kState].body.stream);
+        return !!this[kState].body && util3.isDisturbed(this[kState].body.stream);
       }
       // Returns a clone of response.
       clone() {
@@ -12292,7 +12269,7 @@ var require_response = __commonJS({
       if (types.isArrayBuffer(V) || types.isTypedArray(V) || types.isDataView(V)) {
         return webidl.converters.BufferSource(V);
       }
-      if (util2.isFormDataLike(V)) {
+      if (util3.isFormDataLike(V)) {
         return webidl.converters.FormData(V, { strict: false });
       }
       if (V instanceof URLSearchParams) {
@@ -12343,7 +12320,7 @@ var require_request2 = __commonJS({
     var { extractBody, mixinBody, cloneBody } = require_body();
     var { Headers, fill: fillHeaders, HeadersList } = require_headers();
     var { FinalizationRegistry } = require_dispatcher_weakref()();
-    var util2 = require_util();
+    var util3 = require_util();
     var {
       isValidHTTPToken,
       sameOrigin,
@@ -12361,7 +12338,7 @@ var require_request2 = __commonJS({
       requestCache,
       requestDuplex
     } = require_constants2();
-    var { kEnumerableProperty } = util2;
+    var { kEnumerableProperty } = util3;
     var { kHeaders, kSignal, kState, kGuard, kRealm } = require_symbols2();
     var { webidl } = require_webidl();
     var { getGlobalOrigin } = require_global();
@@ -12416,15 +12393,15 @@ var require_request2 = __commonJS({
           signal = input[kSignal];
         }
         const origin = this[kRealm].settingsObject.origin;
-        let window = "client";
+        let window2 = "client";
         if (request.window?.constructor?.name === "EnvironmentSettingsObject" && sameOrigin(request.window, origin)) {
-          window = request.window;
+          window2 = request.window;
         }
         if (init.window != null) {
-          throw new TypeError(`'window' option '${window}' must be null`);
+          throw new TypeError(`'window' option '${window2}' must be null`);
         }
         if ("window" in init) {
-          window = "no-window";
+          window2 = "no-window";
         }
         request = makeRequest({
           // URL request’s URL.
@@ -12439,7 +12416,7 @@ var require_request2 = __commonJS({
           // client This’s relevant settings object.
           client: this[kRealm].settingsObject,
           // window window.
-          window,
+          window: window2,
           // priority request’s priority.
           priority: request.priority,
           // origin request’s origin. The propagation of the origin is only significant for navigation requests
@@ -12581,7 +12558,7 @@ var require_request2 = __commonJS({
               }
             } catch {
             }
-            util2.addAbortListener(signal, abort);
+            util3.addAbortListener(signal, abort);
             requestFinalizer.register(ac, { signal, abort });
           }
         }
@@ -12639,7 +12616,7 @@ var require_request2 = __commonJS({
         }
         let finalBody = inputOrInitBody;
         if (initBody == null && inputBody != null) {
-          if (util2.isDisturbed(inputBody.stream) || inputBody.stream.locked) {
+          if (util3.isDisturbed(inputBody.stream) || inputBody.stream.locked) {
             throw new TypeError(
               "Cannot construct a Request with a Request object that has already been used."
             );
@@ -12768,7 +12745,7 @@ var require_request2 = __commonJS({
       }
       get bodyUsed() {
         webidl.brandCheck(this, _Request);
-        return !!this[kState].body && util2.isDisturbed(this[kState].body.stream);
+        return !!this[kState].body && util3.isDisturbed(this[kState].body.stream);
       }
       get duplex() {
         webidl.brandCheck(this, _Request);
@@ -12792,7 +12769,7 @@ var require_request2 = __commonJS({
         if (this.signal.aborted) {
           ac.abort(this.signal.reason);
         } else {
-          util2.addAbortListener(
+          util3.addAbortListener(
             this.signal,
             () => {
               ac.abort(this.signal.reason);
@@ -13871,7 +13848,7 @@ var require_fetch = __commonJS({
       async function dispatch({ body }) {
         const url = requestCurrentURL(request);
         const agent = fetchParams.controller.dispatcher;
-        return new Promise((resolve, reject) => agent.dispatch(
+        return new Promise((resolve2, reject) => agent.dispatch(
           {
             path: url.pathname + url.search,
             origin: url.origin,
@@ -13901,9 +13878,9 @@ var require_fetch = __commonJS({
               let location = "";
               const headers = new Headers();
               if (Array.isArray(headersList)) {
-                for (let n = 0; n < headersList.length; n += 2) {
-                  const key = headersList[n + 0].toString("latin1");
-                  const val = headersList[n + 1].toString("latin1");
+                for (let n2 = 0; n2 < headersList.length; n2 += 2) {
+                  const key = headersList[n2 + 0].toString("latin1");
+                  const val = headersList[n2 + 1].toString("latin1");
                   if (key.toLowerCase() === "content-encoding") {
                     codings = val.toLowerCase().split(",").map((x) => x.trim());
                   } else if (key.toLowerCase() === "location") {
@@ -13947,7 +13924,7 @@ var require_fetch = __commonJS({
                   }
                 }
               }
-              resolve({
+              resolve2({
                 status,
                 statusText,
                 headersList: headers[kHeadersList],
@@ -13985,12 +13962,12 @@ var require_fetch = __commonJS({
                 return;
               }
               const headers = new Headers();
-              for (let n = 0; n < headersList.length; n += 2) {
-                const key = headersList[n + 0].toString("latin1");
-                const val = headersList[n + 1].toString("latin1");
+              for (let n2 = 0; n2 < headersList.length; n2 += 2) {
+                const key = headersList[n2 + 0].toString("latin1");
+                const val = headersList[n2 + 1].toString("latin1");
                 headers[kHeadersList].append(key, val);
               }
-              resolve({
+              resolve2({
                 status,
                 statusText: STATUS_CODES[status],
                 headersList: headers[kHeadersList],
@@ -14909,8 +14886,7 @@ var require_cache = __commonJS({
       }
       async matchAll(request = void 0, options = {}) {
         webidl.brandCheck(this, _Cache);
-        if (request !== void 0)
-          request = webidl.converters.RequestInfo(request);
+        if (request !== void 0) request = webidl.converters.RequestInfo(request);
         options = webidl.converters.CacheQueryOptions(options);
         let r = null;
         if (request !== void 0) {
@@ -15179,8 +15155,7 @@ var require_cache = __commonJS({
        */
       async keys(request = void 0, options = {}) {
         webidl.brandCheck(this, _Cache);
-        if (request !== void 0)
-          request = webidl.converters.RequestInfo(request);
+        if (request !== void 0) request = webidl.converters.RequestInfo(request);
         options = webidl.converters.CacheQueryOptions(options);
         let r = null;
         if (request !== void 0) {
@@ -15553,8 +15528,8 @@ var require_util6 = __commonJS({
         }
       }
     }
-    function validateCookiePath(path7) {
-      for (const char of path7) {
+    function validateCookiePath(path8) {
+      for (const char of path8) {
         const code = char.charCodeAt(0);
         if (code < 33 || char === ";") {
           throw new Error("Invalid cookie path");
@@ -16704,34 +16679,34 @@ var require_receiver = __commonJS({
        * @param {number} n
        * @returns {Buffer|null}
        */
-      consume(n) {
-        if (n > this.#byteOffset) {
+      consume(n2) {
+        if (n2 > this.#byteOffset) {
           return null;
-        } else if (n === 0) {
+        } else if (n2 === 0) {
           return emptyBuffer;
         }
-        if (this.#buffers[0].length === n) {
+        if (this.#buffers[0].length === n2) {
           this.#byteOffset -= this.#buffers[0].length;
           return this.#buffers.shift();
         }
-        const buffer = Buffer.allocUnsafe(n);
+        const buffer = Buffer.allocUnsafe(n2);
         let offset = 0;
-        while (offset !== n) {
+        while (offset !== n2) {
           const next = this.#buffers[0];
           const { length } = next;
-          if (length + offset === n) {
+          if (length + offset === n2) {
             buffer.set(this.#buffers.shift(), offset);
             break;
-          } else if (length + offset > n) {
-            buffer.set(next.subarray(0, n - offset), offset);
-            this.#buffers[0] = next.subarray(n - offset);
+          } else if (length + offset > n2) {
+            buffer.set(next.subarray(0, n2 - offset), offset);
+            this.#buffers[0] = next.subarray(n2 - offset);
             break;
           } else {
             buffer.set(this.#buffers.shift(), offset);
             offset += next.length;
           }
         }
-        this.#byteOffset -= n;
+        this.#byteOffset -= n2;
         return buffer;
       }
       parseCloseBody(onlyCode, data) {
@@ -17184,7 +17159,7 @@ var require_undici = __commonJS({
     var Pool = require_pool();
     var BalancedPool = require_balanced_pool();
     var Agent = require_agent();
-    var util2 = require_util();
+    var util3 = require_util();
     var { InvalidArgumentError } = errors;
     var api = require_api();
     var buildConnector = require_connect();
@@ -17234,16 +17209,16 @@ var require_undici = __commonJS({
           if (typeof opts.path !== "string") {
             throw new InvalidArgumentError("invalid opts.path");
           }
-          let path7 = opts.path;
+          let path8 = opts.path;
           if (!opts.path.startsWith("/")) {
-            path7 = `/${path7}`;
+            path8 = `/${path8}`;
           }
-          url = new URL(util2.parseOrigin(url).origin + path7);
+          url = new URL(util3.parseOrigin(url).origin + path8);
         } else {
           if (!opts) {
             opts = typeof url === "object" ? url : {};
           }
-          url = util2.parseURL(url);
+          url = util3.parseURL(url);
         }
         const { agent, dispatcher = getGlobalDispatcher() } = opts;
         if (agent) {
@@ -17259,7 +17234,7 @@ var require_undici = __commonJS({
     }
     module2.exports.setGlobalDispatcher = setGlobalDispatcher;
     module2.exports.getGlobalDispatcher = getGlobalDispatcher;
-    if (util2.nodeMajor > 16 || util2.nodeMajor === 16 && util2.nodeMinor >= 8) {
+    if (util3.nodeMajor > 16 || util3.nodeMajor === 16 && util3.nodeMinor >= 8) {
       let fetchImpl = null;
       module2.exports.fetch = async function fetch2(resource) {
         if (!fetchImpl) {
@@ -17287,7 +17262,7 @@ var require_undici = __commonJS({
       const { kConstruct } = require_symbols4();
       module2.exports.caches = new CacheStorage2(kConstruct);
     }
-    if (util2.nodeMajor >= 16) {
+    if (util3.nodeMajor >= 16) {
       const { deleteCookie, getCookies, getSetCookies, setCookie } = require_cookies();
       module2.exports.deleteCookie = deleteCookie;
       module2.exports.getCookies = getCookies;
@@ -17297,7 +17272,7 @@ var require_undici = __commonJS({
       module2.exports.parseMIMEType = parseMIMEType;
       module2.exports.serializeAMimeType = serializeAMimeType;
     }
-    if (util2.nodeMajor >= 18 && hasCrypto) {
+    if (util3.nodeMajor >= 18 && hasCrypto) {
       const { WebSocket } = require_websocket();
       module2.exports.WebSocket = WebSocket;
     }
@@ -17318,8 +17293,7 @@ var require_lib = __commonJS({
   "node_modules/@actions/http-client/lib/index.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
-      if (k2 === void 0)
-        k2 = k;
+      if (k2 === void 0) k2 = k;
       var desc = Object.getOwnPropertyDescriptor(m, k);
       if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
         desc = { enumerable: true, get: function() {
@@ -17328,8 +17302,7 @@ var require_lib = __commonJS({
       }
       Object.defineProperty(o, k2, desc);
     } : function(o, m, k, k2) {
-      if (k2 === void 0)
-        k2 = k;
+      if (k2 === void 0) k2 = k;
       o[k2] = m[k];
     });
     var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? function(o, v) {
@@ -17338,24 +17311,21 @@ var require_lib = __commonJS({
       o["default"] = v;
     });
     var __importStar = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule)
-        return mod;
+      if (mod && mod.__esModule) return mod;
       var result = {};
       if (mod != null) {
-        for (var k in mod)
-          if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
-            __createBinding(result, mod, k);
+        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
       }
       __setModuleDefault(result, mod);
       return result;
     };
     var __awaiter = exports2 && exports2.__awaiter || function(thisArg, _arguments, P, generator) {
       function adopt(value) {
-        return value instanceof P ? value : new P(function(resolve) {
-          resolve(value);
+        return value instanceof P ? value : new P(function(resolve2) {
+          resolve2(value);
         });
       }
-      return new (P || (P = Promise))(function(resolve, reject) {
+      return new (P || (P = Promise))(function(resolve2, reject) {
         function fulfilled(value) {
           try {
             step(generator.next(value));
@@ -17371,7 +17341,7 @@ var require_lib = __commonJS({
           }
         }
         function step(result) {
-          result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+          result.done ? resolve2(result.value) : adopt(result.value).then(fulfilled, rejected);
         }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
       });
@@ -17457,26 +17427,26 @@ var require_lib = __commonJS({
       }
       readBody() {
         return __awaiter(this, void 0, void 0, function* () {
-          return new Promise((resolve) => __awaiter(this, void 0, void 0, function* () {
+          return new Promise((resolve2) => __awaiter(this, void 0, void 0, function* () {
             let output = Buffer.alloc(0);
             this.message.on("data", (chunk) => {
               output = Buffer.concat([output, chunk]);
             });
             this.message.on("end", () => {
-              resolve(output.toString());
+              resolve2(output.toString());
             });
           }));
         });
       }
       readBodyBuffer() {
         return __awaiter(this, void 0, void 0, function* () {
-          return new Promise((resolve) => __awaiter(this, void 0, void 0, function* () {
+          return new Promise((resolve2) => __awaiter(this, void 0, void 0, function* () {
             const chunks = [];
             this.message.on("data", (chunk) => {
               chunks.push(chunk);
             });
             this.message.on("end", () => {
-              resolve(Buffer.concat(chunks));
+              resolve2(Buffer.concat(chunks));
             });
           }));
         });
@@ -17685,14 +17655,14 @@ var require_lib = __commonJS({
        */
       requestRaw(info2, data) {
         return __awaiter(this, void 0, void 0, function* () {
-          return new Promise((resolve, reject) => {
+          return new Promise((resolve2, reject) => {
             function callbackForResult(err, res) {
               if (err) {
                 reject(err);
               } else if (!res) {
                 reject(new Error("Unknown error"));
               } else {
-                resolve(res);
+                resolve2(res);
               }
             }
             this.requestRawWithCallback(info2, data, callbackForResult);
@@ -17874,12 +17844,12 @@ var require_lib = __commonJS({
         return __awaiter(this, void 0, void 0, function* () {
           retryNumber = Math.min(ExponentialBackoffCeiling, retryNumber);
           const ms = ExponentialBackoffTimeSlice * Math.pow(2, retryNumber);
-          return new Promise((resolve) => setTimeout(() => resolve(), ms));
+          return new Promise((resolve2) => setTimeout(() => resolve2(), ms));
         });
       }
       _processResponse(res, options) {
         return __awaiter(this, void 0, void 0, function* () {
-          return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
+          return new Promise((resolve2, reject) => __awaiter(this, void 0, void 0, function* () {
             const statusCode = res.message.statusCode || 0;
             const response = {
               statusCode,
@@ -17887,7 +17857,7 @@ var require_lib = __commonJS({
               headers: {}
             };
             if (statusCode === HttpCodes.NotFound) {
-              resolve(response);
+              resolve2(response);
             }
             function dateTimeDeserializer(key, value) {
               if (typeof value === "string") {
@@ -17926,7 +17896,7 @@ var require_lib = __commonJS({
               err.result = response.result;
               reject(err);
             } else {
-              resolve(response);
+              resolve2(response);
             }
           }));
         });
@@ -17943,11 +17913,11 @@ var require_auth = __commonJS({
     "use strict";
     var __awaiter = exports2 && exports2.__awaiter || function(thisArg, _arguments, P, generator) {
       function adopt(value) {
-        return value instanceof P ? value : new P(function(resolve) {
-          resolve(value);
+        return value instanceof P ? value : new P(function(resolve2) {
+          resolve2(value);
         });
       }
-      return new (P || (P = Promise))(function(resolve, reject) {
+      return new (P || (P = Promise))(function(resolve2, reject) {
         function fulfilled(value) {
           try {
             step(generator.next(value));
@@ -17963,7 +17933,7 @@ var require_auth = __commonJS({
           }
         }
         function step(result) {
-          result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+          result.done ? resolve2(result.value) : adopt(result.value).then(fulfilled, rejected);
         }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
       });
@@ -18047,11 +18017,11 @@ var require_oidc_utils = __commonJS({
     "use strict";
     var __awaiter = exports2 && exports2.__awaiter || function(thisArg, _arguments, P, generator) {
       function adopt(value) {
-        return value instanceof P ? value : new P(function(resolve) {
-          resolve(value);
+        return value instanceof P ? value : new P(function(resolve2) {
+          resolve2(value);
         });
       }
-      return new (P || (P = Promise))(function(resolve, reject) {
+      return new (P || (P = Promise))(function(resolve2, reject) {
         function fulfilled(value) {
           try {
             step(generator.next(value));
@@ -18067,7 +18037,7 @@ var require_oidc_utils = __commonJS({
           }
         }
         function step(result) {
-          result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+          result.done ? resolve2(result.value) : adopt(result.value).then(fulfilled, rejected);
         }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
       });
@@ -18145,11 +18115,11 @@ var require_summary = __commonJS({
     "use strict";
     var __awaiter = exports2 && exports2.__awaiter || function(thisArg, _arguments, P, generator) {
       function adopt(value) {
-        return value instanceof P ? value : new P(function(resolve) {
-          resolve(value);
+        return value instanceof P ? value : new P(function(resolve2) {
+          resolve2(value);
         });
       }
-      return new (P || (P = Promise))(function(resolve, reject) {
+      return new (P || (P = Promise))(function(resolve2, reject) {
         function fulfilled(value) {
           try {
             step(generator.next(value));
@@ -18165,7 +18135,7 @@ var require_summary = __commonJS({
           }
         }
         function step(result) {
-          result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+          result.done ? resolve2(result.value) : adopt(result.value).then(fulfilled, rejected);
         }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
       });
@@ -18174,7 +18144,7 @@ var require_summary = __commonJS({
     exports2.summary = exports2.markdownSummary = exports2.SUMMARY_DOCS_URL = exports2.SUMMARY_ENV_VAR = void 0;
     var os_1 = require("os");
     var fs_1 = require("fs");
-    var { access, appendFile, writeFile: writeFile5 } = fs_1.promises;
+    var { access: access2, appendFile, writeFile: writeFile5 } = fs_1.promises;
     exports2.SUMMARY_ENV_VAR = "GITHUB_STEP_SUMMARY";
     exports2.SUMMARY_DOCS_URL = "https://docs.github.com/actions/using-workflows/workflow-commands-for-github-actions#adding-a-job-summary";
     var Summary = class {
@@ -18197,7 +18167,7 @@ var require_summary = __commonJS({
             throw new Error(`Unable to find environment variable for $${exports2.SUMMARY_ENV_VAR}. Check if your runtime environment supports job summaries.`);
           }
           try {
-            yield access(pathFromEnv, fs_1.constants.R_OK | fs_1.constants.W_OK);
+            yield access2(pathFromEnv, fs_1.constants.R_OK | fs_1.constants.W_OK);
           } catch (_a) {
             throw new Error(`Unable to access summary file: '${pathFromEnv}'. Check if the file has correct read/write permissions.`);
           }
@@ -18438,8 +18408,7 @@ var require_path_utils = __commonJS({
   "node_modules/@actions/core/lib/path-utils.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
-      if (k2 === void 0)
-        k2 = k;
+      if (k2 === void 0) k2 = k;
       var desc = Object.getOwnPropertyDescriptor(m, k);
       if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
         desc = { enumerable: true, get: function() {
@@ -18448,8 +18417,7 @@ var require_path_utils = __commonJS({
       }
       Object.defineProperty(o, k2, desc);
     } : function(o, m, k, k2) {
-      if (k2 === void 0)
-        k2 = k;
+      if (k2 === void 0) k2 = k;
       o[k2] = m[k];
     });
     var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? function(o, v) {
@@ -18458,20 +18426,17 @@ var require_path_utils = __commonJS({
       o["default"] = v;
     });
     var __importStar = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule)
-        return mod;
+      if (mod && mod.__esModule) return mod;
       var result = {};
       if (mod != null) {
-        for (var k in mod)
-          if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
-            __createBinding(result, mod, k);
+        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
       }
       __setModuleDefault(result, mod);
       return result;
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.toPlatformPath = exports2.toWin32Path = exports2.toPosixPath = void 0;
-    var path7 = __importStar(require("path"));
+    var path8 = __importStar(require("path"));
     function toPosixPath(pth) {
       return pth.replace(/[\\]/g, "/");
     }
@@ -18481,7 +18446,7 @@ var require_path_utils = __commonJS({
     }
     exports2.toWin32Path = toWin32Path;
     function toPlatformPath(pth) {
-      return pth.replace(/[/\\]/g, path7.sep);
+      return pth.replace(/[/\\]/g, path8.sep);
     }
     exports2.toPlatformPath = toPlatformPath;
   }
@@ -18492,14 +18457,12 @@ var require_io_util = __commonJS({
   "node_modules/@actions/io/lib/io-util.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
-      if (k2 === void 0)
-        k2 = k;
+      if (k2 === void 0) k2 = k;
       Object.defineProperty(o, k2, { enumerable: true, get: function() {
         return m[k];
       } });
     } : function(o, m, k, k2) {
-      if (k2 === void 0)
-        k2 = k;
+      if (k2 === void 0) k2 = k;
       o[k2] = m[k];
     });
     var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? function(o, v) {
@@ -18508,24 +18471,21 @@ var require_io_util = __commonJS({
       o["default"] = v;
     });
     var __importStar = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule)
-        return mod;
+      if (mod && mod.__esModule) return mod;
       var result = {};
       if (mod != null) {
-        for (var k in mod)
-          if (k !== "default" && Object.hasOwnProperty.call(mod, k))
-            __createBinding(result, mod, k);
+        for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
       }
       __setModuleDefault(result, mod);
       return result;
     };
     var __awaiter = exports2 && exports2.__awaiter || function(thisArg, _arguments, P, generator) {
       function adopt(value) {
-        return value instanceof P ? value : new P(function(resolve) {
-          resolve(value);
+        return value instanceof P ? value : new P(function(resolve2) {
+          resolve2(value);
         });
       }
-      return new (P || (P = Promise))(function(resolve, reject) {
+      return new (P || (P = Promise))(function(resolve2, reject) {
         function fulfilled(value) {
           try {
             step(generator.next(value));
@@ -18541,7 +18501,7 @@ var require_io_util = __commonJS({
           }
         }
         function step(result) {
-          result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+          result.done ? resolve2(result.value) : adopt(result.value).then(fulfilled, rejected);
         }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
       });
@@ -18549,12 +18509,12 @@ var require_io_util = __commonJS({
     var _a;
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.getCmdPath = exports2.tryGetExecutablePath = exports2.isRooted = exports2.isDirectory = exports2.exists = exports2.READONLY = exports2.UV_FS_O_EXLOCK = exports2.IS_WINDOWS = exports2.unlink = exports2.symlink = exports2.stat = exports2.rmdir = exports2.rm = exports2.rename = exports2.readlink = exports2.readdir = exports2.open = exports2.mkdir = exports2.lstat = exports2.copyFile = exports2.chmod = void 0;
-    var fs7 = __importStar(require("fs"));
-    var path7 = __importStar(require("path"));
-    _a = fs7.promises, exports2.chmod = _a.chmod, exports2.copyFile = _a.copyFile, exports2.lstat = _a.lstat, exports2.mkdir = _a.mkdir, exports2.open = _a.open, exports2.readdir = _a.readdir, exports2.readlink = _a.readlink, exports2.rename = _a.rename, exports2.rm = _a.rm, exports2.rmdir = _a.rmdir, exports2.stat = _a.stat, exports2.symlink = _a.symlink, exports2.unlink = _a.unlink;
+    var fs8 = __importStar(require("fs"));
+    var path8 = __importStar(require("path"));
+    _a = fs8.promises, exports2.chmod = _a.chmod, exports2.copyFile = _a.copyFile, exports2.lstat = _a.lstat, exports2.mkdir = _a.mkdir, exports2.open = _a.open, exports2.readdir = _a.readdir, exports2.readlink = _a.readlink, exports2.rename = _a.rename, exports2.rm = _a.rm, exports2.rmdir = _a.rmdir, exports2.stat = _a.stat, exports2.symlink = _a.symlink, exports2.unlink = _a.unlink;
     exports2.IS_WINDOWS = process.platform === "win32";
     exports2.UV_FS_O_EXLOCK = 268435456;
-    exports2.READONLY = fs7.constants.O_RDONLY;
+    exports2.READONLY = fs8.constants.O_RDONLY;
     function exists(fsPath) {
       return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -18599,7 +18559,7 @@ var require_io_util = __commonJS({
         }
         if (stats && stats.isFile()) {
           if (exports2.IS_WINDOWS) {
-            const upperExt = path7.extname(filePath).toUpperCase();
+            const upperExt = path8.extname(filePath).toUpperCase();
             if (extensions.some((validExt) => validExt.toUpperCase() === upperExt)) {
               return filePath;
             }
@@ -18623,11 +18583,11 @@ var require_io_util = __commonJS({
           if (stats && stats.isFile()) {
             if (exports2.IS_WINDOWS) {
               try {
-                const directory = path7.dirname(filePath);
-                const upperName = path7.basename(filePath).toUpperCase();
+                const directory = path8.dirname(filePath);
+                const upperName = path8.basename(filePath).toUpperCase();
                 for (const actualName of yield exports2.readdir(directory)) {
                   if (upperName === actualName.toUpperCase()) {
-                    filePath = path7.join(directory, actualName);
+                    filePath = path8.join(directory, actualName);
                     break;
                   }
                 }
@@ -18670,14 +18630,12 @@ var require_io = __commonJS({
   "node_modules/@actions/io/lib/io.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
-      if (k2 === void 0)
-        k2 = k;
+      if (k2 === void 0) k2 = k;
       Object.defineProperty(o, k2, { enumerable: true, get: function() {
         return m[k];
       } });
     } : function(o, m, k, k2) {
-      if (k2 === void 0)
-        k2 = k;
+      if (k2 === void 0) k2 = k;
       o[k2] = m[k];
     });
     var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? function(o, v) {
@@ -18686,24 +18644,21 @@ var require_io = __commonJS({
       o["default"] = v;
     });
     var __importStar = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule)
-        return mod;
+      if (mod && mod.__esModule) return mod;
       var result = {};
       if (mod != null) {
-        for (var k in mod)
-          if (k !== "default" && Object.hasOwnProperty.call(mod, k))
-            __createBinding(result, mod, k);
+        for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
       }
       __setModuleDefault(result, mod);
       return result;
     };
     var __awaiter = exports2 && exports2.__awaiter || function(thisArg, _arguments, P, generator) {
       function adopt(value) {
-        return value instanceof P ? value : new P(function(resolve) {
-          resolve(value);
+        return value instanceof P ? value : new P(function(resolve2) {
+          resolve2(value);
         });
       }
-      return new (P || (P = Promise))(function(resolve, reject) {
+      return new (P || (P = Promise))(function(resolve2, reject) {
         function fulfilled(value) {
           try {
             step(generator.next(value));
@@ -18719,7 +18674,7 @@ var require_io = __commonJS({
           }
         }
         function step(result) {
-          result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+          result.done ? resolve2(result.value) : adopt(result.value).then(fulfilled, rejected);
         }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
       });
@@ -18727,7 +18682,7 @@ var require_io = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.findInPath = exports2.which = exports2.mkdirP = exports2.rmRF = exports2.mv = exports2.cp = void 0;
     var assert_1 = require("assert");
-    var path7 = __importStar(require("path"));
+    var path8 = __importStar(require("path"));
     var ioUtil = __importStar(require_io_util());
     function cp(source, dest, options = {}) {
       return __awaiter(this, void 0, void 0, function* () {
@@ -18736,7 +18691,7 @@ var require_io = __commonJS({
         if (destStat && destStat.isFile() && !force) {
           return;
         }
-        const newDest = destStat && destStat.isDirectory() && copySourceDirectory ? path7.join(dest, path7.basename(source)) : dest;
+        const newDest = destStat && destStat.isDirectory() && copySourceDirectory ? path8.join(dest, path8.basename(source)) : dest;
         if (!(yield ioUtil.exists(source))) {
           throw new Error(`no such file or directory: ${source}`);
         }
@@ -18748,7 +18703,7 @@ var require_io = __commonJS({
             yield cpDirRecursive(source, newDest, 0, force);
           }
         } else {
-          if (path7.relative(source, newDest) === "") {
+          if (path8.relative(source, newDest) === "") {
             throw new Error(`'${newDest}' and '${source}' are the same file`);
           }
           yield copyFile(source, newDest, force);
@@ -18761,7 +18716,7 @@ var require_io = __commonJS({
         if (yield ioUtil.exists(dest)) {
           let destExists = true;
           if (yield ioUtil.isDirectory(dest)) {
-            dest = path7.join(dest, path7.basename(source));
+            dest = path8.join(dest, path8.basename(source));
             destExists = yield ioUtil.exists(dest);
           }
           if (destExists) {
@@ -18772,7 +18727,7 @@ var require_io = __commonJS({
             }
           }
         }
-        yield mkdirP(path7.dirname(dest));
+        yield mkdirP(path8.dirname(dest));
         yield ioUtil.rename(source, dest);
       });
     }
@@ -18835,7 +18790,7 @@ var require_io = __commonJS({
         }
         const extensions = [];
         if (ioUtil.IS_WINDOWS && process.env["PATHEXT"]) {
-          for (const extension of process.env["PATHEXT"].split(path7.delimiter)) {
+          for (const extension of process.env["PATHEXT"].split(path8.delimiter)) {
             if (extension) {
               extensions.push(extension);
             }
@@ -18848,12 +18803,12 @@ var require_io = __commonJS({
           }
           return [];
         }
-        if (tool.includes(path7.sep)) {
+        if (tool.includes(path8.sep)) {
           return [];
         }
         const directories = [];
         if (process.env.PATH) {
-          for (const p of process.env.PATH.split(path7.delimiter)) {
+          for (const p of process.env.PATH.split(path8.delimiter)) {
             if (p) {
               directories.push(p);
             }
@@ -18861,7 +18816,7 @@ var require_io = __commonJS({
         }
         const matches = [];
         for (const directory of directories) {
-          const filePath = yield ioUtil.tryGetExecutablePath(path7.join(directory, tool), extensions);
+          const filePath = yield ioUtil.tryGetExecutablePath(path8.join(directory, tool), extensions);
           if (filePath) {
             matches.push(filePath);
           }
@@ -18923,14 +18878,12 @@ var require_toolrunner = __commonJS({
   "node_modules/@actions/exec/lib/toolrunner.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
-      if (k2 === void 0)
-        k2 = k;
+      if (k2 === void 0) k2 = k;
       Object.defineProperty(o, k2, { enumerable: true, get: function() {
         return m[k];
       } });
     } : function(o, m, k, k2) {
-      if (k2 === void 0)
-        k2 = k;
+      if (k2 === void 0) k2 = k;
       o[k2] = m[k];
     });
     var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? function(o, v) {
@@ -18939,24 +18892,21 @@ var require_toolrunner = __commonJS({
       o["default"] = v;
     });
     var __importStar = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule)
-        return mod;
+      if (mod && mod.__esModule) return mod;
       var result = {};
       if (mod != null) {
-        for (var k in mod)
-          if (k !== "default" && Object.hasOwnProperty.call(mod, k))
-            __createBinding(result, mod, k);
+        for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
       }
       __setModuleDefault(result, mod);
       return result;
     };
     var __awaiter = exports2 && exports2.__awaiter || function(thisArg, _arguments, P, generator) {
       function adopt(value) {
-        return value instanceof P ? value : new P(function(resolve) {
-          resolve(value);
+        return value instanceof P ? value : new P(function(resolve2) {
+          resolve2(value);
         });
       }
-      return new (P || (P = Promise))(function(resolve, reject) {
+      return new (P || (P = Promise))(function(resolve2, reject) {
         function fulfilled(value) {
           try {
             step(generator.next(value));
@@ -18972,7 +18922,7 @@ var require_toolrunner = __commonJS({
           }
         }
         function step(result) {
-          result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+          result.done ? resolve2(result.value) : adopt(result.value).then(fulfilled, rejected);
         }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
       });
@@ -18982,7 +18932,7 @@ var require_toolrunner = __commonJS({
     var os3 = __importStar(require("os"));
     var events = __importStar(require("events"));
     var child = __importStar(require("child_process"));
-    var path7 = __importStar(require("path"));
+    var path8 = __importStar(require("path"));
     var io = __importStar(require_io());
     var ioUtil = __importStar(require_io_util());
     var timers_1 = require("timers");
@@ -19034,12 +18984,12 @@ var require_toolrunner = __commonJS({
       _processLineBuffer(data, strBuffer, onLine) {
         try {
           let s = strBuffer + data.toString();
-          let n = s.indexOf(os3.EOL);
-          while (n > -1) {
-            const line = s.substring(0, n);
+          let n2 = s.indexOf(os3.EOL);
+          while (n2 > -1) {
+            const line = s.substring(0, n2);
             onLine(line);
-            s = s.substring(n + os3.EOL.length);
-            n = s.indexOf(os3.EOL);
+            s = s.substring(n2 + os3.EOL.length);
+            n2 = s.indexOf(os3.EOL);
           }
           return s;
         } catch (err) {
@@ -19197,10 +19147,10 @@ var require_toolrunner = __commonJS({
       exec() {
         return __awaiter(this, void 0, void 0, function* () {
           if (!ioUtil.isRooted(this.toolPath) && (this.toolPath.includes("/") || IS_WINDOWS && this.toolPath.includes("\\"))) {
-            this.toolPath = path7.resolve(process.cwd(), this.options.cwd || process.cwd(), this.toolPath);
+            this.toolPath = path8.resolve(process.cwd(), this.options.cwd || process.cwd(), this.toolPath);
           }
           this.toolPath = yield io.which(this.toolPath, true);
-          return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
+          return new Promise((resolve2, reject) => __awaiter(this, void 0, void 0, function* () {
             this._debug(`exec tool: ${this.toolPath}`);
             this._debug("arguments:");
             for (const arg of this.args) {
@@ -19283,7 +19233,7 @@ var require_toolrunner = __commonJS({
               if (error2) {
                 reject(error2);
               } else {
-                resolve(exitCode);
+                resolve2(exitCode);
               }
             });
             if (this.options.input) {
@@ -19412,14 +19362,12 @@ var require_exec = __commonJS({
   "node_modules/@actions/exec/lib/exec.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
-      if (k2 === void 0)
-        k2 = k;
+      if (k2 === void 0) k2 = k;
       Object.defineProperty(o, k2, { enumerable: true, get: function() {
         return m[k];
       } });
     } : function(o, m, k, k2) {
-      if (k2 === void 0)
-        k2 = k;
+      if (k2 === void 0) k2 = k;
       o[k2] = m[k];
     });
     var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? function(o, v) {
@@ -19428,24 +19376,21 @@ var require_exec = __commonJS({
       o["default"] = v;
     });
     var __importStar = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule)
-        return mod;
+      if (mod && mod.__esModule) return mod;
       var result = {};
       if (mod != null) {
-        for (var k in mod)
-          if (k !== "default" && Object.hasOwnProperty.call(mod, k))
-            __createBinding(result, mod, k);
+        for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
       }
       __setModuleDefault(result, mod);
       return result;
     };
     var __awaiter = exports2 && exports2.__awaiter || function(thisArg, _arguments, P, generator) {
       function adopt(value) {
-        return value instanceof P ? value : new P(function(resolve) {
-          resolve(value);
+        return value instanceof P ? value : new P(function(resolve2) {
+          resolve2(value);
         });
       }
-      return new (P || (P = Promise))(function(resolve, reject) {
+      return new (P || (P = Promise))(function(resolve2, reject) {
         function fulfilled(value) {
           try {
             step(generator.next(value));
@@ -19461,7 +19406,7 @@ var require_exec = __commonJS({
           }
         }
         function step(result) {
-          result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+          result.done ? resolve2(result.value) : adopt(result.value).then(fulfilled, rejected);
         }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
       });
@@ -19524,8 +19469,7 @@ var require_platform = __commonJS({
   "node_modules/@actions/core/lib/platform.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
-      if (k2 === void 0)
-        k2 = k;
+      if (k2 === void 0) k2 = k;
       var desc = Object.getOwnPropertyDescriptor(m, k);
       if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
         desc = { enumerable: true, get: function() {
@@ -19534,8 +19478,7 @@ var require_platform = __commonJS({
       }
       Object.defineProperty(o, k2, desc);
     } : function(o, m, k, k2) {
-      if (k2 === void 0)
-        k2 = k;
+      if (k2 === void 0) k2 = k;
       o[k2] = m[k];
     });
     var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? function(o, v) {
@@ -19544,24 +19487,21 @@ var require_platform = __commonJS({
       o["default"] = v;
     });
     var __importStar = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule)
-        return mod;
+      if (mod && mod.__esModule) return mod;
       var result = {};
       if (mod != null) {
-        for (var k in mod)
-          if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
-            __createBinding(result, mod, k);
+        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
       }
       __setModuleDefault(result, mod);
       return result;
     };
     var __awaiter = exports2 && exports2.__awaiter || function(thisArg, _arguments, P, generator) {
       function adopt(value) {
-        return value instanceof P ? value : new P(function(resolve) {
-          resolve(value);
+        return value instanceof P ? value : new P(function(resolve2) {
+          resolve2(value);
         });
       }
-      return new (P || (P = Promise))(function(resolve, reject) {
+      return new (P || (P = Promise))(function(resolve2, reject) {
         function fulfilled(value) {
           try {
             step(generator.next(value));
@@ -19577,7 +19517,7 @@ var require_platform = __commonJS({
           }
         }
         function step(result) {
-          result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+          result.done ? resolve2(result.value) : adopt(result.value).then(fulfilled, rejected);
         }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
       });
@@ -19648,8 +19588,7 @@ var require_core = __commonJS({
   "node_modules/@actions/core/lib/core.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
-      if (k2 === void 0)
-        k2 = k;
+      if (k2 === void 0) k2 = k;
       var desc = Object.getOwnPropertyDescriptor(m, k);
       if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
         desc = { enumerable: true, get: function() {
@@ -19658,8 +19597,7 @@ var require_core = __commonJS({
       }
       Object.defineProperty(o, k2, desc);
     } : function(o, m, k, k2) {
-      if (k2 === void 0)
-        k2 = k;
+      if (k2 === void 0) k2 = k;
       o[k2] = m[k];
     });
     var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? function(o, v) {
@@ -19668,24 +19606,21 @@ var require_core = __commonJS({
       o["default"] = v;
     });
     var __importStar = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule)
-        return mod;
+      if (mod && mod.__esModule) return mod;
       var result = {};
       if (mod != null) {
-        for (var k in mod)
-          if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
-            __createBinding(result, mod, k);
+        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
       }
       __setModuleDefault(result, mod);
       return result;
     };
     var __awaiter = exports2 && exports2.__awaiter || function(thisArg, _arguments, P, generator) {
       function adopt(value) {
-        return value instanceof P ? value : new P(function(resolve) {
-          resolve(value);
+        return value instanceof P ? value : new P(function(resolve2) {
+          resolve2(value);
         });
       }
-      return new (P || (P = Promise))(function(resolve, reject) {
+      return new (P || (P = Promise))(function(resolve2, reject) {
         function fulfilled(value) {
           try {
             step(generator.next(value));
@@ -19701,7 +19636,7 @@ var require_core = __commonJS({
           }
         }
         function step(result) {
-          result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+          result.done ? resolve2(result.value) : adopt(result.value).then(fulfilled, rejected);
         }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
       });
@@ -19712,7 +19647,7 @@ var require_core = __commonJS({
     var file_command_1 = require_file_command();
     var utils_1 = require_utils();
     var os3 = __importStar(require("os"));
-    var path7 = __importStar(require("path"));
+    var path8 = __importStar(require("path"));
     var oidc_utils_1 = require_oidc_utils();
     var ExitCode;
     (function(ExitCode2) {
@@ -19740,7 +19675,7 @@ var require_core = __commonJS({
       } else {
         (0, command_1.issueCommand)("add-path", {}, inputPath);
       }
-      process.env["PATH"] = `${inputPath}${path7.delimiter}${process.env["PATH"]}`;
+      process.env["PATH"] = `${inputPath}${path8.delimiter}${process.env["PATH"]}`;
     }
     exports2.addPath = addPath;
     function getInput2(name, options) {
@@ -20115,8 +20050,7 @@ var require_eventemitter3 = __commonJS({
     }
     if (Object.create) {
       Events.prototype = /* @__PURE__ */ Object.create(null);
-      if (!new Events().__proto__)
-        prefix = false;
+      if (!new Events().__proto__) prefix = false;
     }
     function EE(fn, context2, once) {
       this.fn = fn;
@@ -20128,19 +20062,14 @@ var require_eventemitter3 = __commonJS({
         throw new TypeError("The listener must be a function");
       }
       var listener = new EE(fn, context2 || emitter, once), evt = prefix ? prefix + event : event;
-      if (!emitter._events[evt])
-        emitter._events[evt] = listener, emitter._eventsCount++;
-      else if (!emitter._events[evt].fn)
-        emitter._events[evt].push(listener);
-      else
-        emitter._events[evt] = [emitter._events[evt], listener];
+      if (!emitter._events[evt]) emitter._events[evt] = listener, emitter._eventsCount++;
+      else if (!emitter._events[evt].fn) emitter._events[evt].push(listener);
+      else emitter._events[evt] = [emitter._events[evt], listener];
       return emitter;
     }
     function clearEvent(emitter, evt) {
-      if (--emitter._eventsCount === 0)
-        emitter._events = new Events();
-      else
-        delete emitter._events[evt];
+      if (--emitter._eventsCount === 0) emitter._events = new Events();
+      else delete emitter._events[evt];
     }
     function EventEmitter2() {
       this._events = new Events();
@@ -20148,11 +20077,9 @@ var require_eventemitter3 = __commonJS({
     }
     EventEmitter2.prototype.eventNames = function eventNames() {
       var names = [], events, name;
-      if (this._eventsCount === 0)
-        return names;
+      if (this._eventsCount === 0) return names;
       for (name in events = this._events) {
-        if (has.call(events, name))
-          names.push(prefix ? name.slice(1) : name);
+        if (has.call(events, name)) names.push(prefix ? name.slice(1) : name);
       }
       if (Object.getOwnPropertySymbols) {
         return names.concat(Object.getOwnPropertySymbols(events));
@@ -20161,10 +20088,8 @@ var require_eventemitter3 = __commonJS({
     };
     EventEmitter2.prototype.listeners = function listeners(event) {
       var evt = prefix ? prefix + event : event, handlers = this._events[evt];
-      if (!handlers)
-        return [];
-      if (handlers.fn)
-        return [handlers.fn];
+      if (!handlers) return [];
+      if (handlers.fn) return [handlers.fn];
       for (var i = 0, l = handlers.length, ee = new Array(l); i < l; i++) {
         ee[i] = handlers[i].fn;
       }
@@ -20172,20 +20097,16 @@ var require_eventemitter3 = __commonJS({
     };
     EventEmitter2.prototype.listenerCount = function listenerCount(event) {
       var evt = prefix ? prefix + event : event, listeners = this._events[evt];
-      if (!listeners)
-        return 0;
-      if (listeners.fn)
-        return 1;
+      if (!listeners) return 0;
+      if (listeners.fn) return 1;
       return listeners.length;
     };
     EventEmitter2.prototype.emit = function emit(event, a1, a2, a3, a4, a5) {
       var evt = prefix ? prefix + event : event;
-      if (!this._events[evt])
-        return false;
+      if (!this._events[evt]) return false;
       var listeners = this._events[evt], len = arguments.length, args, i;
       if (listeners.fn) {
-        if (listeners.once)
-          this.removeListener(event, listeners.fn, void 0, true);
+        if (listeners.once) this.removeListener(event, listeners.fn, void 0, true);
         switch (len) {
           case 1:
             return listeners.fn.call(listeners.context), true;
@@ -20207,8 +20128,7 @@ var require_eventemitter3 = __commonJS({
       } else {
         var length = listeners.length, j;
         for (i = 0; i < length; i++) {
-          if (listeners[i].once)
-            this.removeListener(event, listeners[i].fn, void 0, true);
+          if (listeners[i].once) this.removeListener(event, listeners[i].fn, void 0, true);
           switch (len) {
             case 1:
               listeners[i].fn.call(listeners[i].context);
@@ -20223,10 +20143,9 @@ var require_eventemitter3 = __commonJS({
               listeners[i].fn.call(listeners[i].context, a1, a2, a3);
               break;
             default:
-              if (!args)
-                for (j = 1, args = new Array(len - 1); j < len; j++) {
-                  args[j - 1] = arguments[j];
-                }
+              if (!args) for (j = 1, args = new Array(len - 1); j < len; j++) {
+                args[j - 1] = arguments[j];
+              }
               listeners[i].fn.apply(listeners[i].context, args);
           }
         }
@@ -20241,8 +20160,7 @@ var require_eventemitter3 = __commonJS({
     };
     EventEmitter2.prototype.removeListener = function removeListener(event, fn, context2, once) {
       var evt = prefix ? prefix + event : event;
-      if (!this._events[evt])
-        return this;
+      if (!this._events[evt]) return this;
       if (!fn) {
         clearEvent(this, evt);
         return this;
@@ -20258,10 +20176,8 @@ var require_eventemitter3 = __commonJS({
             events.push(listeners[i]);
           }
         }
-        if (events.length)
-          this._events[evt] = events.length === 1 ? events[0] : events;
-        else
-          clearEvent(this, evt);
+        if (events.length) this._events[evt] = events.length === 1 ? events[0] : events;
+        else clearEvent(this, evt);
       }
       return this;
     };
@@ -20269,8 +20185,7 @@ var require_eventemitter3 = __commonJS({
       var evt;
       if (event) {
         evt = prefix ? prefix + event : event;
-        if (this._events[evt])
-          clearEvent(this, evt);
+        if (this._events[evt]) clearEvent(this, evt);
       } else {
         this._events = new Events();
         this._eventsCount = 0;
@@ -20306,8 +20221,8 @@ var require_context = __commonJS({
           if ((0, fs_1.existsSync)(process.env.GITHUB_EVENT_PATH)) {
             this.payload = JSON.parse((0, fs_1.readFileSync)(process.env.GITHUB_EVENT_PATH, { encoding: "utf8" }));
           } else {
-            const path7 = process.env.GITHUB_EVENT_PATH;
-            process.stdout.write(`GITHUB_EVENT_PATH ${path7} does not exist${os_1.EOL}`);
+            const path8 = process.env.GITHUB_EVENT_PATH;
+            process.stdout.write(`GITHUB_EVENT_PATH ${path8} does not exist${os_1.EOL}`);
           }
         }
         this.eventName = process.env.GITHUB_EVENT_NAME;
@@ -20351,8 +20266,7 @@ var require_utils3 = __commonJS({
   "node_modules/@actions/github/lib/internal/utils.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
-      if (k2 === void 0)
-        k2 = k;
+      if (k2 === void 0) k2 = k;
       var desc = Object.getOwnPropertyDescriptor(m, k);
       if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
         desc = { enumerable: true, get: function() {
@@ -20361,8 +20275,7 @@ var require_utils3 = __commonJS({
       }
       Object.defineProperty(o, k2, desc);
     } : function(o, m, k, k2) {
-      if (k2 === void 0)
-        k2 = k;
+      if (k2 === void 0) k2 = k;
       o[k2] = m[k];
     });
     var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? function(o, v) {
@@ -20371,24 +20284,21 @@ var require_utils3 = __commonJS({
       o["default"] = v;
     });
     var __importStar = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule)
-        return mod;
+      if (mod && mod.__esModule) return mod;
       var result = {};
       if (mod != null) {
-        for (var k in mod)
-          if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
-            __createBinding(result, mod, k);
+        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
       }
       __setModuleDefault(result, mod);
       return result;
     };
     var __awaiter = exports2 && exports2.__awaiter || function(thisArg, _arguments, P, generator) {
       function adopt(value) {
-        return value instanceof P ? value : new P(function(resolve) {
-          resolve(value);
+        return value instanceof P ? value : new P(function(resolve2) {
+          resolve2(value);
         });
       }
-      return new (P || (P = Promise))(function(resolve, reject) {
+      return new (P || (P = Promise))(function(resolve2, reject) {
         function fulfilled(value) {
           try {
             step(generator.next(value));
@@ -20404,7 +20314,7 @@ var require_utils3 = __commonJS({
           }
         }
         function step(result) {
-          result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+          result.done ? resolve2(result.value) : adopt(result.value).then(fulfilled, rejected);
         }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
       });
@@ -20874,7 +20784,7 @@ var require_dist_node2 = __commonJS({
         return template.replace(/\/$/, "");
       }
     }
-    function parse(options) {
+    function parse2(options) {
       let method = options.method.toUpperCase();
       let url = (options.url || "/").replace(/:([a-z]\w+)/g, "{$1}");
       let headers = Object.assign({}, options.headers);
@@ -20938,7 +20848,7 @@ var require_dist_node2 = __commonJS({
       );
     }
     function endpointWithDefaults(defaults, route, options) {
-      return parse(merge2(defaults, route, options));
+      return parse2(merge2(defaults, route, options));
     }
     function withDefaults(oldDefaults, newDefaults) {
       const DEFAULTS2 = merge2(oldDefaults, newDefaults);
@@ -20947,7 +20857,7 @@ var require_dist_node2 = __commonJS({
         DEFAULTS: DEFAULTS2,
         defaults: withDefaults.bind(null, DEFAULTS2),
         merge: merge2.bind(null, DEFAULTS2),
-        parse
+        parse: parse2
       });
     }
     var endpoint = withDefaults(null, DEFAULTS);
@@ -20977,8 +20887,7 @@ var require_wrappy = __commonJS({
   "node_modules/wrappy/wrappy.js"(exports2, module2) {
     module2.exports = wrappy;
     function wrappy(fn, cb) {
-      if (fn && cb)
-        return wrappy(fn)(cb);
+      if (fn && cb) return wrappy(fn)(cb);
       if (typeof fn !== "function")
         throw new TypeError("need wrapper function");
       Object.keys(fn).forEach(function(k) {
@@ -21025,8 +20934,7 @@ var require_once = __commonJS({
     });
     function once(fn) {
       var f = function() {
-        if (f.called)
-          return f.value;
+        if (f.called) return f.value;
         f.called = true;
         return f.value = fn.apply(this, arguments);
       };
@@ -21420,8 +21328,7 @@ var require_dist_node6 = __commonJS({
           );
         }
         for (const key in options) {
-          if (!FORBIDDEN_VARIABLE_OPTIONS.includes(key))
-            continue;
+          if (!FORBIDDEN_VARIABLE_OPTIONS.includes(key)) continue;
           return Promise.reject(
             new Error(
               `[@octokit/graphql] "${key}" cannot be used as variable name`
@@ -24265,8 +24172,7 @@ var require_utils4 = __commonJS({
   "node_modules/@actions/github/lib/utils.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
-      if (k2 === void 0)
-        k2 = k;
+      if (k2 === void 0) k2 = k;
       var desc = Object.getOwnPropertyDescriptor(m, k);
       if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
         desc = { enumerable: true, get: function() {
@@ -24275,8 +24181,7 @@ var require_utils4 = __commonJS({
       }
       Object.defineProperty(o, k2, desc);
     } : function(o, m, k, k2) {
-      if (k2 === void 0)
-        k2 = k;
+      if (k2 === void 0) k2 = k;
       o[k2] = m[k];
     });
     var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? function(o, v) {
@@ -24285,13 +24190,10 @@ var require_utils4 = __commonJS({
       o["default"] = v;
     });
     var __importStar = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule)
-        return mod;
+      if (mod && mod.__esModule) return mod;
       var result = {};
       if (mod != null) {
-        for (var k in mod)
-          if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
-            __createBinding(result, mod, k);
+        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
       }
       __setModuleDefault(result, mod);
       return result;
@@ -24330,8 +24232,7 @@ var require_github = __commonJS({
   "node_modules/@actions/github/lib/github.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
-      if (k2 === void 0)
-        k2 = k;
+      if (k2 === void 0) k2 = k;
       var desc = Object.getOwnPropertyDescriptor(m, k);
       if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
         desc = { enumerable: true, get: function() {
@@ -24340,8 +24241,7 @@ var require_github = __commonJS({
       }
       Object.defineProperty(o, k2, desc);
     } : function(o, m, k, k2) {
-      if (k2 === void 0)
-        k2 = k;
+      if (k2 === void 0) k2 = k;
       o[k2] = m[k];
     });
     var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? function(o, v) {
@@ -24350,13 +24250,10 @@ var require_github = __commonJS({
       o["default"] = v;
     });
     var __importStar = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule)
-        return mod;
+      if (mod && mod.__esModule) return mod;
       var result = {};
       if (mod != null) {
-        for (var k in mod)
-          if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
-            __createBinding(result, mod, k);
+        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
       }
       __setModuleDefault(result, mod);
       return result;
@@ -24371,6 +24268,17288 @@ var require_github = __commonJS({
       return new GitHubWithPlugins((0, utils_1.getOctokitOptions)(token, options));
     }
     exports2.getOctokit = getOctokit2;
+  }
+});
+
+// node_modules/node-gyp-build/node-gyp-build.js
+var require_node_gyp_build = __commonJS({
+  "node_modules/node-gyp-build/node-gyp-build.js"(exports2, module2) {
+    var fs8 = require("fs");
+    var path8 = require("path");
+    var os3 = require("os");
+    var runtimeRequire = typeof __webpack_require__ === "function" ? __non_webpack_require__ : require;
+    var vars = process.config && process.config.variables || {};
+    var prebuildsOnly = !!process.env.PREBUILDS_ONLY;
+    var abi = process.versions.modules;
+    var runtime = isElectron() ? "electron" : isNwjs() ? "node-webkit" : "node";
+    var arch = process.env.npm_config_arch || os3.arch();
+    var platform = process.env.npm_config_platform || os3.platform();
+    var libc = process.env.LIBC || (isAlpine(platform) ? "musl" : "glibc");
+    var armv = process.env.ARM_VERSION || (arch === "arm64" ? "8" : vars.arm_version) || "";
+    var uv = (process.versions.uv || "").split(".")[0];
+    module2.exports = load2;
+    function load2(dir) {
+      return runtimeRequire(load2.resolve(dir));
+    }
+    load2.resolve = load2.path = function(dir) {
+      dir = path8.resolve(dir || ".");
+      try {
+        var name = runtimeRequire(path8.join(dir, "package.json")).name.toUpperCase().replace(/-/g, "_");
+        if (process.env[name + "_PREBUILD"]) dir = process.env[name + "_PREBUILD"];
+      } catch (err) {
+      }
+      if (!prebuildsOnly) {
+        var release = getFirst(path8.join(dir, "build/Release"), matchBuild);
+        if (release) return release;
+        var debug2 = getFirst(path8.join(dir, "build/Debug"), matchBuild);
+        if (debug2) return debug2;
+      }
+      var prebuild = resolve2(dir);
+      if (prebuild) return prebuild;
+      var nearby = resolve2(path8.dirname(process.execPath));
+      if (nearby) return nearby;
+      var target = [
+        "platform=" + platform,
+        "arch=" + arch,
+        "runtime=" + runtime,
+        "abi=" + abi,
+        "uv=" + uv,
+        armv ? "armv=" + armv : "",
+        "libc=" + libc,
+        "node=" + process.versions.node,
+        process.versions.electron ? "electron=" + process.versions.electron : "",
+        typeof __webpack_require__ === "function" ? "webpack=true" : ""
+        // eslint-disable-line
+      ].filter(Boolean).join(" ");
+      throw new Error("No native build was found for " + target + "\n    loaded from: " + dir + "\n");
+      function resolve2(dir2) {
+        var tuples = readdirSync(path8.join(dir2, "prebuilds")).map(parseTuple);
+        var tuple = tuples.filter(matchTuple(platform, arch)).sort(compareTuples)[0];
+        if (!tuple) return;
+        var prebuilds = path8.join(dir2, "prebuilds", tuple.name);
+        var parsed = readdirSync(prebuilds).map(parseTags);
+        var candidates = parsed.filter(matchTags(runtime, abi));
+        var winner = candidates.sort(compareTags(runtime))[0];
+        if (winner) return path8.join(prebuilds, winner.file);
+      }
+    };
+    function readdirSync(dir) {
+      try {
+        return fs8.readdirSync(dir);
+      } catch (err) {
+        return [];
+      }
+    }
+    function getFirst(dir, filter) {
+      var files = readdirSync(dir).filter(filter);
+      return files[0] && path8.join(dir, files[0]);
+    }
+    function matchBuild(name) {
+      return /\.node$/.test(name);
+    }
+    function parseTuple(name) {
+      var arr = name.split("-");
+      if (arr.length !== 2) return;
+      var platform2 = arr[0];
+      var architectures = arr[1].split("+");
+      if (!platform2) return;
+      if (!architectures.length) return;
+      if (!architectures.every(Boolean)) return;
+      return { name, platform: platform2, architectures };
+    }
+    function matchTuple(platform2, arch2) {
+      return function(tuple) {
+        if (tuple == null) return false;
+        if (tuple.platform !== platform2) return false;
+        return tuple.architectures.includes(arch2);
+      };
+    }
+    function compareTuples(a, b) {
+      return a.architectures.length - b.architectures.length;
+    }
+    function parseTags(file) {
+      var arr = file.split(".");
+      var extension = arr.pop();
+      var tags = { file, specificity: 0 };
+      if (extension !== "node") return;
+      for (var i = 0; i < arr.length; i++) {
+        var tag = arr[i];
+        if (tag === "node" || tag === "electron" || tag === "node-webkit") {
+          tags.runtime = tag;
+        } else if (tag === "napi") {
+          tags.napi = true;
+        } else if (tag.slice(0, 3) === "abi") {
+          tags.abi = tag.slice(3);
+        } else if (tag.slice(0, 2) === "uv") {
+          tags.uv = tag.slice(2);
+        } else if (tag.slice(0, 4) === "armv") {
+          tags.armv = tag.slice(4);
+        } else if (tag === "glibc" || tag === "musl") {
+          tags.libc = tag;
+        } else {
+          continue;
+        }
+        tags.specificity++;
+      }
+      return tags;
+    }
+    function matchTags(runtime2, abi2) {
+      return function(tags) {
+        if (tags == null) return false;
+        if (tags.runtime && tags.runtime !== runtime2 && !runtimeAgnostic(tags)) return false;
+        if (tags.abi && tags.abi !== abi2 && !tags.napi) return false;
+        if (tags.uv && tags.uv !== uv) return false;
+        if (tags.armv && tags.armv !== armv) return false;
+        if (tags.libc && tags.libc !== libc) return false;
+        return true;
+      };
+    }
+    function runtimeAgnostic(tags) {
+      return tags.runtime === "node" && tags.napi;
+    }
+    function compareTags(runtime2) {
+      return function(a, b) {
+        if (a.runtime !== b.runtime) {
+          return a.runtime === runtime2 ? -1 : 1;
+        } else if (a.abi !== b.abi) {
+          return a.abi ? -1 : 1;
+        } else if (a.specificity !== b.specificity) {
+          return a.specificity > b.specificity ? -1 : 1;
+        } else {
+          return 0;
+        }
+      };
+    }
+    function isNwjs() {
+      return !!(process.versions && process.versions.nw);
+    }
+    function isElectron() {
+      if (process.versions && process.versions.electron) return true;
+      if (process.env.ELECTRON_RUN_AS_NODE) return true;
+      return typeof window !== "undefined" && window.process && window.process.type === "renderer";
+    }
+    function isAlpine(platform2) {
+      return platform2 === "linux" && fs8.existsSync("/etc/alpine-release");
+    }
+    load2.parseTags = parseTags;
+    load2.matchTags = matchTags;
+    load2.compareTags = compareTags;
+    load2.parseTuple = parseTuple;
+    load2.matchTuple = matchTuple;
+    load2.compareTuples = compareTuples;
+  }
+});
+
+// node_modules/node-gyp-build/index.js
+var require_node_gyp_build2 = __commonJS({
+  "node_modules/node-gyp-build/index.js"(exports2, module2) {
+    var runtimeRequire = typeof __webpack_require__ === "function" ? __non_webpack_require__ : require;
+    if (typeof runtimeRequire.addon === "function") {
+      module2.exports = runtimeRequire.addon.bind(runtimeRequire);
+    } else {
+      module2.exports = require_node_gyp_build();
+    }
+  }
+});
+
+// node_modules/tree-sitter/index.js
+var require_tree_sitter = __commonJS({
+  "node_modules/tree-sitter/index.js"(exports, module) {
+    var binding = require_node_gyp_build2()(__dirname);
+    var { Query, Parser, NodeMethods, Tree, TreeCursor, LookaheadIterator } = binding;
+    var util = require("util");
+    var { rootNode, rootNodeWithOffset, edit } = Tree.prototype;
+    Object.defineProperty(Tree.prototype, "rootNode", {
+      get() {
+        if (this instanceof Tree && rootNode) {
+          return unmarshalNode(rootNode.call(this), this);
+        }
+      },
+      // Jest worker pool may attempt to override property due to race condition,
+      // we don't want to error on this
+      configurable: true
+    });
+    Tree.prototype.rootNodeWithOffset = function(offset_bytes, offset_extent) {
+      return unmarshalNode(rootNodeWithOffset.call(this, offset_bytes, offset_extent.row, offset_extent.column), this);
+    };
+    Tree.prototype.edit = function(arg) {
+      if (this instanceof Tree && edit) {
+        edit.call(
+          this,
+          arg.startPosition.row,
+          arg.startPosition.column,
+          arg.oldEndPosition.row,
+          arg.oldEndPosition.column,
+          arg.newEndPosition.row,
+          arg.newEndPosition.column,
+          arg.startIndex,
+          arg.oldEndIndex,
+          arg.newEndIndex
+        );
+      }
+    };
+    Tree.prototype.walk = function() {
+      return this.rootNode.walk();
+    };
+    var SyntaxNode = class {
+      constructor(tree) {
+        this.tree = tree;
+      }
+      [util.inspect.custom]() {
+        return this.constructor.name + " {\n  type: " + this.type + ",\n  startPosition: " + pointToString(this.startPosition) + ",\n  endPosition: " + pointToString(this.endPosition) + ",\n  childCount: " + this.childCount + ",\n}";
+      }
+      get id() {
+        marshalNode(this);
+        return NodeMethods.id(this.tree);
+      }
+      get typeId() {
+        marshalNode(this);
+        return NodeMethods.typeId(this.tree);
+      }
+      get grammarId() {
+        marshalNode(this);
+        return NodeMethods.grammarId(this.tree);
+      }
+      get type() {
+        marshalNode(this);
+        return NodeMethods.type(this.tree);
+      }
+      get grammarType() {
+        marshalNode(this);
+        return NodeMethods.grammarType(this.tree);
+      }
+      get isExtra() {
+        marshalNode(this);
+        return NodeMethods.isExtra(this.tree);
+      }
+      get isNamed() {
+        marshalNode(this);
+        return NodeMethods.isNamed(this.tree);
+      }
+      get isMissing() {
+        marshalNode(this);
+        return NodeMethods.isMissing(this.tree);
+      }
+      get hasChanges() {
+        marshalNode(this);
+        return NodeMethods.hasChanges(this.tree);
+      }
+      get hasError() {
+        marshalNode(this);
+        return NodeMethods.hasError(this.tree);
+      }
+      get isError() {
+        marshalNode(this);
+        return NodeMethods.isError(this.tree);
+      }
+      get text() {
+        return this.tree.getText(this);
+      }
+      get startPosition() {
+        marshalNode(this);
+        NodeMethods.startPosition(this.tree);
+        return unmarshalPoint();
+      }
+      get endPosition() {
+        marshalNode(this);
+        NodeMethods.endPosition(this.tree);
+        return unmarshalPoint();
+      }
+      get startIndex() {
+        marshalNode(this);
+        return NodeMethods.startIndex(this.tree);
+      }
+      get endIndex() {
+        marshalNode(this);
+        return NodeMethods.endIndex(this.tree);
+      }
+      get parent() {
+        marshalNode(this);
+        return unmarshalNode(NodeMethods.parent(this.tree), this.tree);
+      }
+      get children() {
+        marshalNode(this);
+        return unmarshalNodes(NodeMethods.children(this.tree), this.tree);
+      }
+      get namedChildren() {
+        marshalNode(this);
+        return unmarshalNodes(NodeMethods.namedChildren(this.tree), this.tree);
+      }
+      get childCount() {
+        marshalNode(this);
+        return NodeMethods.childCount(this.tree);
+      }
+      get namedChildCount() {
+        marshalNode(this);
+        return NodeMethods.namedChildCount(this.tree);
+      }
+      get firstChild() {
+        marshalNode(this);
+        return unmarshalNode(NodeMethods.firstChild(this.tree), this.tree);
+      }
+      get firstNamedChild() {
+        marshalNode(this);
+        return unmarshalNode(NodeMethods.firstNamedChild(this.tree), this.tree);
+      }
+      get lastChild() {
+        marshalNode(this);
+        return unmarshalNode(NodeMethods.lastChild(this.tree), this.tree);
+      }
+      get lastNamedChild() {
+        marshalNode(this);
+        return unmarshalNode(NodeMethods.lastNamedChild(this.tree), this.tree);
+      }
+      get nextSibling() {
+        marshalNode(this);
+        return unmarshalNode(NodeMethods.nextSibling(this.tree), this.tree);
+      }
+      get nextNamedSibling() {
+        marshalNode(this);
+        return unmarshalNode(NodeMethods.nextNamedSibling(this.tree), this.tree);
+      }
+      get previousSibling() {
+        marshalNode(this);
+        return unmarshalNode(NodeMethods.previousSibling(this.tree), this.tree);
+      }
+      get previousNamedSibling() {
+        marshalNode(this);
+        return unmarshalNode(NodeMethods.previousNamedSibling(this.tree), this.tree);
+      }
+      get parseState() {
+        marshalNode(this);
+        return NodeMethods.parseState(this.tree);
+      }
+      get nextParseState() {
+        marshalNode(this);
+        return NodeMethods.nextParseState(this.tree);
+      }
+      get descendantCount() {
+        marshalNode(this);
+        return NodeMethods.descendantCount(this.tree);
+      }
+      toString() {
+        marshalNode(this);
+        return NodeMethods.toString(this.tree);
+      }
+      child(index) {
+        marshalNode(this);
+        return unmarshalNode(NodeMethods.child(this.tree, index), this.tree);
+      }
+      namedChild(index) {
+        marshalNode(this);
+        return unmarshalNode(NodeMethods.namedChild(this.tree, index), this.tree);
+      }
+      childForFieldName(fieldName) {
+        marshalNode(this);
+        return unmarshalNode(NodeMethods.childForFieldName(this.tree, fieldName), this.tree);
+      }
+      childForFieldId(fieldId) {
+        marshalNode(this);
+        return unmarshalNode(NodeMethods.childForFieldId(this.tree, fieldId), this.tree);
+      }
+      fieldNameForChild(childIndex) {
+        marshalNode(this);
+        return NodeMethods.fieldNameForChild(this.tree, childIndex);
+      }
+      childrenForFieldName(fieldName) {
+        marshalNode(this);
+        return unmarshalNodes(NodeMethods.childrenForFieldName(this.tree, fieldName), this.tree);
+      }
+      childrenForFieldId(fieldId) {
+        marshalNode(this);
+        return unmarshalNodes(NodeMethods.childrenForFieldId(this.tree, fieldId), this.tree);
+      }
+      firstChildForIndex(index) {
+        marshalNode(this);
+        return unmarshalNode(NodeMethods.firstChildForIndex(this.tree, index), this.tree);
+      }
+      firstNamedChildForIndex(index) {
+        marshalNode(this);
+        return unmarshalNode(NodeMethods.firstNamedChildForIndex(this.tree, index), this.tree);
+      }
+      namedDescendantForIndex(start, end) {
+        marshalNode(this);
+        if (end == null) end = start;
+        return unmarshalNode(NodeMethods.namedDescendantForIndex(this.tree, start, end), this.tree);
+      }
+      descendantForIndex(start, end) {
+        marshalNode(this);
+        if (end == null) end = start;
+        return unmarshalNode(NodeMethods.descendantForIndex(this.tree, start, end), this.tree);
+      }
+      descendantsOfType(types, start, end) {
+        marshalNode(this);
+        if (typeof types === "string") types = [types];
+        return unmarshalNodes(NodeMethods.descendantsOfType(this.tree, types, start, end), this.tree);
+      }
+      namedDescendantForPosition(start, end) {
+        marshalNode(this);
+        if (end == null) end = start;
+        return unmarshalNode(NodeMethods.namedDescendantForPosition(this.tree, start, end), this.tree);
+      }
+      descendantForPosition(start, end) {
+        marshalNode(this);
+        if (end == null) end = start;
+        return unmarshalNode(NodeMethods.descendantForPosition(this.tree, start, end), this.tree);
+      }
+      closest(types) {
+        marshalNode(this);
+        if (typeof types === "string") types = [types];
+        return unmarshalNode(NodeMethods.closest(this.tree, types), this.tree);
+      }
+      walk() {
+        marshalNode(this);
+        const cursor = NodeMethods.walk(this.tree);
+        cursor.tree = this.tree;
+        unmarshalNode(cursor.currentNode, this.tree);
+        return cursor;
+      }
+    };
+    var { parse, setLanguage } = Parser.prototype;
+    var languageSymbol = Symbol("parser.language");
+    Parser.prototype.setLanguage = function(language2) {
+      if (this instanceof Parser && setLanguage) {
+        setLanguage.call(this, language2);
+      }
+      this[languageSymbol] = language2;
+      if (!language2.nodeSubclasses) {
+        initializeLanguageNodeClasses(language2);
+      }
+      return this;
+    };
+    Parser.prototype.getLanguage = function(_language) {
+      return this[languageSymbol] || null;
+    };
+    Parser.prototype.parse = function(input, oldTree, { bufferSize, includedRanges } = {}) {
+      let getText, treeInput = input;
+      if (typeof input === "string") {
+        const inputString = input;
+        input = (offset, _position) => inputString.slice(offset);
+        getText = getTextFromString;
+      } else {
+        getText = getTextFromFunction;
+      }
+      const tree = this instanceof Parser && parse ? parse.call(
+        this,
+        input,
+        oldTree,
+        bufferSize,
+        includedRanges
+      ) : void 0;
+      if (tree) {
+        tree.input = treeInput;
+        tree.getText = getText;
+        tree.language = this.getLanguage();
+      }
+      return tree;
+    };
+    var { startPosition, endPosition, currentNode } = TreeCursor.prototype;
+    Object.defineProperties(TreeCursor.prototype, {
+      currentNode: {
+        get() {
+          if (this instanceof TreeCursor && currentNode) {
+            return unmarshalNode(currentNode.call(this), this.tree);
+          }
+        },
+        configurable: true
+      },
+      startPosition: {
+        get() {
+          if (this instanceof TreeCursor && startPosition) {
+            startPosition.call(this);
+            return unmarshalPoint();
+          }
+        },
+        configurable: true
+      },
+      endPosition: {
+        get() {
+          if (this instanceof TreeCursor && endPosition) {
+            endPosition.call(this);
+            return unmarshalPoint();
+          }
+        },
+        configurable: true
+      },
+      nodeText: {
+        get() {
+          return this.tree.getText(this);
+        },
+        configurable: true
+      }
+    });
+    var { _matches, _captures } = Query.prototype;
+    var PREDICATE_STEP_TYPE = {
+      DONE: 0,
+      CAPTURE: 1,
+      STRING: 2
+    };
+    var ZERO_POINT = { row: 0, column: 0 };
+    Query.prototype._init = function() {
+      const predicateDescriptions = this._getPredicates();
+      const patternCount = predicateDescriptions.length;
+      const setProperties = new Array(patternCount);
+      const assertedProperties = new Array(patternCount);
+      const refutedProperties = new Array(patternCount);
+      const predicates = new Array(patternCount);
+      const FIRST = 0;
+      const SECOND = 2;
+      const THIRD = 4;
+      for (let i = 0; i < predicateDescriptions.length; i++) {
+        predicates[i] = [];
+        for (let j = 0; j < predicateDescriptions[i].length; j++) {
+          const steps = predicateDescriptions[i][j];
+          const stepsLength = steps.length / 2;
+          if (steps[FIRST] !== PREDICATE_STEP_TYPE.STRING) {
+            throw new Error("Predicates must begin with a literal value");
+          }
+          const operator = steps[FIRST + 1];
+          let isPositive = true;
+          let matchAll = true;
+          let captureName;
+          switch (operator) {
+            case "any-not-eq?":
+            case "not-eq?":
+              isPositive = false;
+            case "any-eq?":
+            case "eq?":
+              if (stepsLength !== 3) throw new Error(
+                `Wrong number of arguments to \`#eq?\` predicate. Expected 2, got ${stepsLength - 1}`
+              );
+              if (steps[SECOND] !== PREDICATE_STEP_TYPE.CAPTURE) throw new Error(
+                `First argument of \`#eq?\` predicate must be a capture. Got "${steps[SECOND + 1]}"`
+              );
+              matchAll = !operator.startsWith("any-");
+              if (steps[THIRD] === PREDICATE_STEP_TYPE.CAPTURE) {
+                const captureName1 = steps[SECOND + 1];
+                const captureName2 = steps[THIRD + 1];
+                predicates[i].push(function(captures) {
+                  let nodes_1 = [];
+                  let nodes_2 = [];
+                  for (const c of captures) {
+                    if (c.name === captureName1) nodes_1.push(c.node);
+                    if (c.name === captureName2) nodes_2.push(c.node);
+                  }
+                  let compare = (n1, n2, positive) => {
+                    return positive ? n1.text === n2.text : n1.text !== n2.text;
+                  };
+                  return matchAll ? nodes_1.every((n1) => nodes_2.some((n2) => compare(n1, n2, isPositive))) : nodes_1.some((n1) => nodes_2.some((n2) => compare(n1, n2, isPositive)));
+                });
+              } else {
+                captureName = steps[SECOND + 1];
+                const stringValue = steps[THIRD + 1];
+                let matches = (n2) => n2.text === stringValue;
+                let doesNotMatch = (n2) => n2.text !== stringValue;
+                predicates[i].push(function(captures) {
+                  let nodes = [];
+                  for (const c of captures) {
+                    if (c.name === captureName) nodes.push(c.node);
+                  }
+                  let test = isPositive ? matches : doesNotMatch;
+                  return matchAll ? nodes.every(test) : nodes.some(test);
+                });
+              }
+              break;
+            case "any-not-match?":
+            case "not-match?":
+              isPositive = false;
+            case "any-match?":
+            case "match?":
+              if (stepsLength !== 3) throw new Error(
+                `Wrong number of arguments to \`#match?\` predicate. Expected 2, got ${stepsLength - 1}.`
+              );
+              if (steps[SECOND] !== PREDICATE_STEP_TYPE.CAPTURE) throw new Error(
+                `First argument of \`#match?\` predicate must be a capture. Got "${steps[SECOND + 1]}".`
+              );
+              if (steps[THIRD] !== PREDICATE_STEP_TYPE.STRING) throw new Error(
+                `Second argument of \`#match?\` predicate must be a string. Got @${steps[THIRD + 1]}.`
+              );
+              captureName = steps[SECOND + 1];
+              const regex = new RegExp(steps[THIRD + 1]);
+              matchAll = !operator.startsWith("any-");
+              predicates[i].push(function(captures) {
+                const nodes = [];
+                for (const c of captures) {
+                  if (c.name === captureName) nodes.push(c.node.text);
+                }
+                let test = (text, positive) => {
+                  return positive ? regex.test(text) : !regex.test(text);
+                };
+                if (nodes.length === 0) return !isPositive;
+                return matchAll ? nodes.every((text) => test(text, isPositive)) : nodes.some((text) => test(text, isPositive));
+              });
+              break;
+            case "set!":
+              if (stepsLength < 2 || stepsLength > 3) throw new Error(
+                `Wrong number of arguments to \`#set!\` predicate. Expected 1 or 2. Got ${stepsLength - 1}.`
+              );
+              if (steps.some((s, i2) => i2 % 2 !== 1 && s !== PREDICATE_STEP_TYPE.STRING)) throw new Error(
+                `Arguments to \`#set!\` predicate must be a strings.".`
+              );
+              if (!setProperties[i]) setProperties[i] = {};
+              setProperties[i][steps[SECOND + 1]] = steps[THIRD] ? steps[THIRD + 1] : null;
+              break;
+            case "is?":
+            case "is-not?":
+              if (stepsLength < 2 || stepsLength > 3) throw new Error(
+                `Wrong number of arguments to \`#${operator}\` predicate. Expected 1 or 2. Got ${stepsLength - 1}.`
+              );
+              if (steps.some((s, i2) => i2 % 2 !== 1 && s !== PREDICATE_STEP_TYPE.STRING)) throw new Error(
+                `Arguments to \`#${operator}\` predicate must be a strings.".`
+              );
+              const properties = operator === "is?" ? assertedProperties : refutedProperties;
+              if (!properties[i]) properties[i] = {};
+              properties[i][steps[SECOND + 1]] = steps[THIRD] ? steps[THIRD + 1] : null;
+              break;
+            case "not-any-of?":
+              isPositive = false;
+            case "any-of?":
+              if (stepsLength < 2) throw new Error(
+                `Wrong number of arguments to \`#${operator}\` predicate. Expected at least 1. Got ${stepsLength - 1}.`
+              );
+              if (steps[SECOND] !== PREDICATE_STEP_TYPE.CAPTURE) throw new Error(
+                `First argument of \`#${operator}\` predicate must be a capture. Got "${steps[1].value}".`
+              );
+              stringValues = [];
+              for (let k = THIRD; k < 2 * stepsLength; k += 2) {
+                if (steps[k] !== PREDICATE_STEP_TYPE.STRING) throw new Error(
+                  `Arguments to \`#${operator}\` predicate must be a strings.".`
+                );
+                stringValues.push(steps[k + 1]);
+              }
+              captureName = steps[SECOND + 1];
+              predicates[i].push(function(captures) {
+                const nodes = [];
+                for (const c of captures) {
+                  if (c.name === captureName) nodes.push(c.node.text);
+                }
+                if (nodes.length === 0) return !isPositive;
+                return nodes.every((text) => stringValues.includes(text)) === isPositive;
+              });
+              break;
+            default:
+              throw new Error(`Unknown query predicate \`#${steps[FIRST + 1]}\``);
+          }
+        }
+      }
+      this.predicates = Object.freeze(predicates);
+      this.setProperties = Object.freeze(setProperties);
+      this.assertedProperties = Object.freeze(assertedProperties);
+      this.refutedProperties = Object.freeze(refutedProperties);
+    };
+    Query.prototype.matches = function(node, {
+      startPosition: startPosition2 = ZERO_POINT,
+      endPosition: endPosition2 = ZERO_POINT,
+      startIndex = 0,
+      endIndex = 0,
+      matchLimit = 4294967295,
+      maxStartDepth = 4294967295
+    } = {}) {
+      marshalNode(node);
+      const [returnedMatches, returnedNodes] = _matches.call(
+        this,
+        node.tree,
+        startPosition2.row,
+        startPosition2.column,
+        endPosition2.row,
+        endPosition2.column,
+        startIndex,
+        endIndex,
+        matchLimit,
+        maxStartDepth
+      );
+      const nodes = unmarshalNodes(returnedNodes, node.tree);
+      const results = [];
+      let i = 0;
+      let nodeIndex = 0;
+      while (i < returnedMatches.length) {
+        const patternIndex = returnedMatches[i++];
+        const captures = [];
+        while (i < returnedMatches.length && typeof returnedMatches[i] === "string") {
+          const captureName = returnedMatches[i++];
+          captures.push({
+            name: captureName,
+            node: nodes[nodeIndex++]
+          });
+        }
+        if (this.predicates[patternIndex].every((p) => p(captures))) {
+          const result = { pattern: patternIndex, captures };
+          const setProperties = this.setProperties[patternIndex];
+          const assertedProperties = this.assertedProperties[patternIndex];
+          const refutedProperties = this.refutedProperties[patternIndex];
+          if (setProperties) result.setProperties = setProperties;
+          if (assertedProperties) result.assertedProperties = assertedProperties;
+          if (refutedProperties) result.refutedProperties = refutedProperties;
+          results.push(result);
+        }
+      }
+      return results;
+    };
+    Query.prototype.captures = function(node, {
+      startPosition: startPosition2 = ZERO_POINT,
+      endPosition: endPosition2 = ZERO_POINT,
+      startIndex = 0,
+      endIndex = 0,
+      matchLimit = 4294967295,
+      maxStartDepth = 4294967295
+    } = {}) {
+      marshalNode(node);
+      const [returnedMatches, returnedNodes] = _captures.call(
+        this,
+        node.tree,
+        startPosition2.row,
+        startPosition2.column,
+        endPosition2.row,
+        endPosition2.column,
+        startIndex,
+        endIndex,
+        matchLimit,
+        maxStartDepth
+      );
+      const nodes = unmarshalNodes(returnedNodes, node.tree);
+      const results = [];
+      let i = 0;
+      let nodeIndex = 0;
+      while (i < returnedMatches.length) {
+        const patternIndex = returnedMatches[i++];
+        const captureIndex = returnedMatches[i++];
+        const captures = [];
+        while (i < returnedMatches.length && typeof returnedMatches[i] === "string") {
+          const captureName = returnedMatches[i++];
+          captures.push({
+            name: captureName,
+            node: nodes[nodeIndex++]
+          });
+        }
+        if (this.predicates[patternIndex].every((p) => p(captures))) {
+          const result = captures[captureIndex];
+          const setProperties = this.setProperties[patternIndex];
+          const assertedProperties = this.assertedProperties[patternIndex];
+          const refutedProperties = this.refutedProperties[patternIndex];
+          if (setProperties) result.setProperties = setProperties;
+          if (assertedProperties) result.assertedProperties = assertedProperties;
+          if (refutedProperties) result.refutedProperties = refutedProperties;
+          results.push(result);
+        }
+      }
+      return results;
+    };
+    LookaheadIterator.prototype[Symbol.iterator] = function() {
+      const self = this;
+      return {
+        next() {
+          if (self._next()) {
+            return { done: false, value: self.currentType };
+          }
+          return { done: true, value: "" };
+        }
+      };
+    };
+    function getTextFromString(node) {
+      return this.input.substring(node.startIndex, node.endIndex);
+    }
+    function getTextFromFunction({ startIndex, endIndex }) {
+      const { input } = this;
+      let result = "";
+      const goalLength = endIndex - startIndex;
+      while (result.length < goalLength) {
+        const text = input(startIndex + result.length);
+        result += text;
+      }
+      return result.slice(0, goalLength);
+    }
+    var { pointTransferArray } = binding;
+    var NODE_FIELD_COUNT = 6;
+    var ERROR_TYPE_ID = 65535;
+    function getID(buffer, offset) {
+      const low = BigInt(buffer[offset]);
+      const high = BigInt(buffer[offset + 1]);
+      return (high << 32n) + low;
+    }
+    function unmarshalNode(value, tree, offset = 0, cache = null) {
+      if (typeof value === "object") {
+        const node = value;
+        return node;
+      }
+      const nodeTypeId = value;
+      const NodeClass = nodeTypeId === ERROR_TYPE_ID ? SyntaxNode : tree.language.nodeSubclasses[nodeTypeId];
+      const { nodeTransferArray } = binding;
+      const id2 = getID(nodeTransferArray, offset);
+      if (id2 === 0n) {
+        return null;
+      }
+      let cachedResult;
+      if (cache && (cachedResult = cache.get(id2)))
+        return cachedResult;
+      const result = new NodeClass(tree);
+      for (let i = 0; i < NODE_FIELD_COUNT; i++) {
+        result[i] = nodeTransferArray[offset + i];
+      }
+      if (cache)
+        cache.set(id2, result);
+      else
+        tree._cacheNode(result);
+      return result;
+    }
+    function unmarshalNodes(nodes, tree) {
+      const cache = /* @__PURE__ */ new Map();
+      let offset = 0;
+      for (let i = 0, { length } = nodes; i < length; i++) {
+        const node = unmarshalNode(nodes[i], tree, offset, cache);
+        if (node !== nodes[i]) {
+          nodes[i] = node;
+          offset += NODE_FIELD_COUNT;
+        }
+      }
+      tree._cacheNodes(Array.from(cache.values()));
+      return nodes;
+    }
+    function marshalNode(node) {
+      if (!(node.tree instanceof Tree)) {
+        throw new TypeError("SyntaxNode must belong to a Tree");
+      }
+      const { nodeTransferArray } = binding;
+      for (let i = 0; i < NODE_FIELD_COUNT; i++) {
+        nodeTransferArray[i] = node[i];
+      }
+    }
+    function unmarshalPoint() {
+      return { row: pointTransferArray[0], column: pointTransferArray[1] };
+    }
+    function pointToString(point) {
+      return `{row: ${point.row}, column: ${point.column}}`;
+    }
+    function initializeLanguageNodeClasses(language) {
+      const nodeTypeNamesById = binding.getNodeTypeNamesById(language);
+      const nodeFieldNamesById = binding.getNodeFieldNamesById(language);
+      const nodeTypeInfo = language.nodeTypeInfo || [];
+      const nodeSubclasses = [];
+      for (let id = 0, n = nodeTypeNamesById.length; id < n; id++) {
+        nodeSubclasses[id] = SyntaxNode;
+        const typeName = nodeTypeNamesById[id];
+        if (!typeName) continue;
+        const typeInfo = nodeTypeInfo.find((info2) => info2.named && info2.type === typeName);
+        if (!typeInfo) continue;
+        const fieldNames = [];
+        let classBody = "\n";
+        if (typeInfo.fields) {
+          for (const fieldName in typeInfo.fields) {
+            const fieldId = nodeFieldNamesById.indexOf(fieldName);
+            if (fieldId === -1) continue;
+            if (typeInfo.fields[fieldName].multiple) {
+              const getterName = camelCase(fieldName) + "Nodes";
+              fieldNames.push(getterName);
+              classBody += `
+            get ${getterName}() {
+              marshalNode(this);
+              return unmarshalNodes(NodeMethods.childNodesForFieldId(this.tree, ${fieldId}), this.tree);
+            }
+          `.replace(/\s+/g, " ") + "\n";
+            } else {
+              const getterName = camelCase(fieldName, false) + "Node";
+              fieldNames.push(getterName);
+              classBody += `
+            get ${getterName}() {
+              marshalNode(this);
+              return unmarshalNode(NodeMethods.childNodeForFieldId(this.tree, ${fieldId}), this.tree);
+            }
+          `.replace(/\s+/g, " ") + "\n";
+            }
+          }
+        }
+        const className = camelCase(typeName, true) + "Node";
+        const nodeSubclass = eval(`class ${className} extends SyntaxNode {${classBody}}; ${className}`);
+        nodeSubclass.prototype.type = typeName;
+        nodeSubclass.prototype.fields = Object.freeze(fieldNames.sort());
+        nodeSubclasses[id] = nodeSubclass;
+      }
+      language.nodeSubclasses = nodeSubclasses;
+    }
+    function camelCase(name, upperCase) {
+      name = name.replace(/_(\w)/g, (_match, letter) => letter.toUpperCase());
+      if (upperCase) name = name[0].toUpperCase() + name.slice(1);
+      return name;
+    }
+    module.exports = Parser;
+    module.exports.Query = Query;
+    module.exports.Tree = Tree;
+    module.exports.SyntaxNode = SyntaxNode;
+    module.exports.TreeCursor = TreeCursor;
+    module.exports.LookaheadIterator = LookaheadIterator;
+  }
+});
+
+// node_modules/tree-sitter-typescript/typescript/src/node-types.json
+var require_node_types = __commonJS({
+  "node_modules/tree-sitter-typescript/typescript/src/node-types.json"(exports2, module2) {
+    module2.exports = [
+      {
+        type: "declaration",
+        named: true,
+        subtypes: [
+          {
+            type: "abstract_class_declaration",
+            named: true
+          },
+          {
+            type: "ambient_declaration",
+            named: true
+          },
+          {
+            type: "class_declaration",
+            named: true
+          },
+          {
+            type: "enum_declaration",
+            named: true
+          },
+          {
+            type: "function_declaration",
+            named: true
+          },
+          {
+            type: "function_signature",
+            named: true
+          },
+          {
+            type: "generator_function_declaration",
+            named: true
+          },
+          {
+            type: "import_alias",
+            named: true
+          },
+          {
+            type: "interface_declaration",
+            named: true
+          },
+          {
+            type: "internal_module",
+            named: true
+          },
+          {
+            type: "lexical_declaration",
+            named: true
+          },
+          {
+            type: "module",
+            named: true
+          },
+          {
+            type: "type_alias_declaration",
+            named: true
+          },
+          {
+            type: "variable_declaration",
+            named: true
+          }
+        ]
+      },
+      {
+        type: "expression",
+        named: true,
+        subtypes: [
+          {
+            type: "as_expression",
+            named: true
+          },
+          {
+            type: "assignment_expression",
+            named: true
+          },
+          {
+            type: "augmented_assignment_expression",
+            named: true
+          },
+          {
+            type: "await_expression",
+            named: true
+          },
+          {
+            type: "binary_expression",
+            named: true
+          },
+          {
+            type: "glimmer_template",
+            named: true
+          },
+          {
+            type: "instantiation_expression",
+            named: true
+          },
+          {
+            type: "internal_module",
+            named: true
+          },
+          {
+            type: "new_expression",
+            named: true
+          },
+          {
+            type: "primary_expression",
+            named: true
+          },
+          {
+            type: "satisfies_expression",
+            named: true
+          },
+          {
+            type: "ternary_expression",
+            named: true
+          },
+          {
+            type: "type_assertion",
+            named: true
+          },
+          {
+            type: "unary_expression",
+            named: true
+          },
+          {
+            type: "update_expression",
+            named: true
+          },
+          {
+            type: "yield_expression",
+            named: true
+          }
+        ]
+      },
+      {
+        type: "pattern",
+        named: true,
+        subtypes: [
+          {
+            type: "array_pattern",
+            named: true
+          },
+          {
+            type: "identifier",
+            named: true
+          },
+          {
+            type: "member_expression",
+            named: true
+          },
+          {
+            type: "non_null_expression",
+            named: true
+          },
+          {
+            type: "object_pattern",
+            named: true
+          },
+          {
+            type: "rest_pattern",
+            named: true
+          },
+          {
+            type: "subscript_expression",
+            named: true
+          },
+          {
+            type: "undefined",
+            named: true
+          }
+        ]
+      },
+      {
+        type: "primary_expression",
+        named: true,
+        subtypes: [
+          {
+            type: "array",
+            named: true
+          },
+          {
+            type: "arrow_function",
+            named: true
+          },
+          {
+            type: "call_expression",
+            named: true
+          },
+          {
+            type: "class",
+            named: true
+          },
+          {
+            type: "false",
+            named: true
+          },
+          {
+            type: "function_expression",
+            named: true
+          },
+          {
+            type: "generator_function",
+            named: true
+          },
+          {
+            type: "identifier",
+            named: true
+          },
+          {
+            type: "member_expression",
+            named: true
+          },
+          {
+            type: "meta_property",
+            named: true
+          },
+          {
+            type: "non_null_expression",
+            named: true
+          },
+          {
+            type: "null",
+            named: true
+          },
+          {
+            type: "number",
+            named: true
+          },
+          {
+            type: "object",
+            named: true
+          },
+          {
+            type: "parenthesized_expression",
+            named: true
+          },
+          {
+            type: "regex",
+            named: true
+          },
+          {
+            type: "string",
+            named: true
+          },
+          {
+            type: "subscript_expression",
+            named: true
+          },
+          {
+            type: "super",
+            named: true
+          },
+          {
+            type: "template_string",
+            named: true
+          },
+          {
+            type: "this",
+            named: true
+          },
+          {
+            type: "true",
+            named: true
+          },
+          {
+            type: "undefined",
+            named: true
+          }
+        ]
+      },
+      {
+        type: "primary_type",
+        named: true,
+        subtypes: [
+          {
+            type: "array_type",
+            named: true
+          },
+          {
+            type: "conditional_type",
+            named: true
+          },
+          {
+            type: "const",
+            named: false
+          },
+          {
+            type: "existential_type",
+            named: true
+          },
+          {
+            type: "flow_maybe_type",
+            named: true
+          },
+          {
+            type: "generic_type",
+            named: true
+          },
+          {
+            type: "index_type_query",
+            named: true
+          },
+          {
+            type: "intersection_type",
+            named: true
+          },
+          {
+            type: "literal_type",
+            named: true
+          },
+          {
+            type: "lookup_type",
+            named: true
+          },
+          {
+            type: "nested_type_identifier",
+            named: true
+          },
+          {
+            type: "object_type",
+            named: true
+          },
+          {
+            type: "parenthesized_type",
+            named: true
+          },
+          {
+            type: "predefined_type",
+            named: true
+          },
+          {
+            type: "template_literal_type",
+            named: true
+          },
+          {
+            type: "this_type",
+            named: true
+          },
+          {
+            type: "tuple_type",
+            named: true
+          },
+          {
+            type: "type_identifier",
+            named: true
+          },
+          {
+            type: "type_query",
+            named: true
+          },
+          {
+            type: "union_type",
+            named: true
+          }
+        ]
+      },
+      {
+        type: "statement",
+        named: true,
+        subtypes: [
+          {
+            type: "break_statement",
+            named: true
+          },
+          {
+            type: "continue_statement",
+            named: true
+          },
+          {
+            type: "debugger_statement",
+            named: true
+          },
+          {
+            type: "declaration",
+            named: true
+          },
+          {
+            type: "do_statement",
+            named: true
+          },
+          {
+            type: "empty_statement",
+            named: true
+          },
+          {
+            type: "export_statement",
+            named: true
+          },
+          {
+            type: "expression_statement",
+            named: true
+          },
+          {
+            type: "for_in_statement",
+            named: true
+          },
+          {
+            type: "for_statement",
+            named: true
+          },
+          {
+            type: "if_statement",
+            named: true
+          },
+          {
+            type: "import_statement",
+            named: true
+          },
+          {
+            type: "labeled_statement",
+            named: true
+          },
+          {
+            type: "return_statement",
+            named: true
+          },
+          {
+            type: "statement_block",
+            named: true
+          },
+          {
+            type: "switch_statement",
+            named: true
+          },
+          {
+            type: "throw_statement",
+            named: true
+          },
+          {
+            type: "try_statement",
+            named: true
+          },
+          {
+            type: "while_statement",
+            named: true
+          },
+          {
+            type: "with_statement",
+            named: true
+          }
+        ]
+      },
+      {
+        type: "type",
+        named: true,
+        subtypes: [
+          {
+            type: "call_expression",
+            named: true
+          },
+          {
+            type: "constructor_type",
+            named: true
+          },
+          {
+            type: "function_type",
+            named: true
+          },
+          {
+            type: "infer_type",
+            named: true
+          },
+          {
+            type: "member_expression",
+            named: true
+          },
+          {
+            type: "primary_type",
+            named: true
+          },
+          {
+            type: "readonly_type",
+            named: true
+          }
+        ]
+      },
+      {
+        type: "abstract_class_declaration",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "class_body",
+                named: true
+              }
+            ]
+          },
+          decorator: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "decorator",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type_identifier",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: false,
+          required: false,
+          types: [
+            {
+              type: "class_heritage",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "abstract_method_signature",
+        named: true,
+        fields: {
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "computed_property_name",
+                named: true
+              },
+              {
+                type: "number",
+                named: true
+              },
+              {
+                type: "private_property_identifier",
+                named: true
+              },
+              {
+                type: "property_identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          },
+          parameters: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "formal_parameters",
+                named: true
+              }
+            ]
+          },
+          return_type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "asserts_annotation",
+                named: true
+              },
+              {
+                type: "type_annotation",
+                named: true
+              },
+              {
+                type: "type_predicate_annotation",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "accessibility_modifier",
+              named: true
+            },
+            {
+              type: "override_modifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "accessibility_modifier",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "adding_type_annotation",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "ambient_declaration",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "declaration",
+              named: true
+            },
+            {
+              type: "property_identifier",
+              named: true
+            },
+            {
+              type: "statement_block",
+              named: true
+            },
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "arguments",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "spread_element",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "array",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "spread_element",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "array_pattern",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "assignment_pattern",
+              named: true
+            },
+            {
+              type: "pattern",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "array_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "primary_type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "arrow_function",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              },
+              {
+                type: "statement_block",
+                named: true
+              }
+            ]
+          },
+          parameter: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              }
+            ]
+          },
+          parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "formal_parameters",
+                named: true
+              }
+            ]
+          },
+          return_type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "asserts_annotation",
+                named: true
+              },
+              {
+                type: "type_annotation",
+                named: true
+              },
+              {
+                type: "type_predicate_annotation",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "as_expression",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "asserts",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "identifier",
+              named: true
+            },
+            {
+              type: "this",
+              named: true
+            },
+            {
+              type: "type_predicate",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "asserts_annotation",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "asserts",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "assignment_expression",
+        named: true,
+        fields: {
+          left: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "array_pattern",
+                named: true
+              },
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "member_expression",
+                named: true
+              },
+              {
+                type: "non_null_expression",
+                named: true
+              },
+              {
+                type: "object_pattern",
+                named: true
+              },
+              {
+                type: "parenthesized_expression",
+                named: true
+              },
+              {
+                type: "subscript_expression",
+                named: true
+              },
+              {
+                type: "undefined",
+                named: true
+              }
+            ]
+          },
+          right: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "assignment_pattern",
+        named: true,
+        fields: {
+          left: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "pattern",
+                named: true
+              }
+            ]
+          },
+          right: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "augmented_assignment_expression",
+        named: true,
+        fields: {
+          left: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "member_expression",
+                named: true
+              },
+              {
+                type: "non_null_expression",
+                named: true
+              },
+              {
+                type: "parenthesized_expression",
+                named: true
+              },
+              {
+                type: "subscript_expression",
+                named: true
+              }
+            ]
+          },
+          operator: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "%=",
+                named: false
+              },
+              {
+                type: "&&=",
+                named: false
+              },
+              {
+                type: "&=",
+                named: false
+              },
+              {
+                type: "**=",
+                named: false
+              },
+              {
+                type: "*=",
+                named: false
+              },
+              {
+                type: "+=",
+                named: false
+              },
+              {
+                type: "-=",
+                named: false
+              },
+              {
+                type: "/=",
+                named: false
+              },
+              {
+                type: "<<=",
+                named: false
+              },
+              {
+                type: ">>=",
+                named: false
+              },
+              {
+                type: ">>>=",
+                named: false
+              },
+              {
+                type: "??=",
+                named: false
+              },
+              {
+                type: "^=",
+                named: false
+              },
+              {
+                type: "|=",
+                named: false
+              },
+              {
+                type: "||=",
+                named: false
+              }
+            ]
+          },
+          right: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "await_expression",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "binary_expression",
+        named: true,
+        fields: {
+          left: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              },
+              {
+                type: "private_property_identifier",
+                named: true
+              }
+            ]
+          },
+          operator: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "!=",
+                named: false
+              },
+              {
+                type: "!==",
+                named: false
+              },
+              {
+                type: "%",
+                named: false
+              },
+              {
+                type: "&",
+                named: false
+              },
+              {
+                type: "&&",
+                named: false
+              },
+              {
+                type: "*",
+                named: false
+              },
+              {
+                type: "**",
+                named: false
+              },
+              {
+                type: "+",
+                named: false
+              },
+              {
+                type: "-",
+                named: false
+              },
+              {
+                type: "/",
+                named: false
+              },
+              {
+                type: "<",
+                named: false
+              },
+              {
+                type: "<<",
+                named: false
+              },
+              {
+                type: "<=",
+                named: false
+              },
+              {
+                type: "==",
+                named: false
+              },
+              {
+                type: "===",
+                named: false
+              },
+              {
+                type: ">",
+                named: false
+              },
+              {
+                type: ">=",
+                named: false
+              },
+              {
+                type: ">>",
+                named: false
+              },
+              {
+                type: ">>>",
+                named: false
+              },
+              {
+                type: "??",
+                named: false
+              },
+              {
+                type: "^",
+                named: false
+              },
+              {
+                type: "in",
+                named: false
+              },
+              {
+                type: "instanceof",
+                named: false
+              },
+              {
+                type: "|",
+                named: false
+              },
+              {
+                type: "||",
+                named: false
+              }
+            ]
+          },
+          right: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "break_statement",
+        named: true,
+        fields: {
+          label: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "statement_identifier",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "call_expression",
+        named: true,
+        fields: {
+          arguments: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "arguments",
+                named: true
+              },
+              {
+                type: "template_string",
+                named: true
+              }
+            ]
+          },
+          function: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              },
+              {
+                type: "import",
+                named: true
+              }
+            ]
+          },
+          type_arguments: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_arguments",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "call_signature",
+        named: true,
+        fields: {
+          parameters: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "formal_parameters",
+                named: true
+              }
+            ]
+          },
+          return_type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "asserts_annotation",
+                named: true
+              },
+              {
+                type: "type_annotation",
+                named: true
+              },
+              {
+                type: "type_predicate_annotation",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "catch_clause",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement_block",
+                named: true
+              }
+            ]
+          },
+          parameter: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "array_pattern",
+                named: true
+              },
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "object_pattern",
+                named: true
+              }
+            ]
+          },
+          type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_annotation",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "class",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "class_body",
+                named: true
+              }
+            ]
+          },
+          decorator: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "decorator",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_identifier",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: false,
+          required: false,
+          types: [
+            {
+              type: "class_heritage",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "class_body",
+        named: true,
+        fields: {
+          decorator: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "decorator",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "abstract_method_signature",
+              named: true
+            },
+            {
+              type: "class_static_block",
+              named: true
+            },
+            {
+              type: "index_signature",
+              named: true
+            },
+            {
+              type: "method_definition",
+              named: true
+            },
+            {
+              type: "method_signature",
+              named: true
+            },
+            {
+              type: "public_field_definition",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "class_declaration",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "class_body",
+                named: true
+              }
+            ]
+          },
+          decorator: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "decorator",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type_identifier",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: false,
+          required: false,
+          types: [
+            {
+              type: "class_heritage",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "class_heritage",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "extends_clause",
+              named: true
+            },
+            {
+              type: "implements_clause",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "class_static_block",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement_block",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "computed_property_name",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "conditional_type",
+        named: true,
+        fields: {
+          alternative: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type",
+                named: true
+              }
+            ]
+          },
+          consequence: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type",
+                named: true
+              }
+            ]
+          },
+          left: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type",
+                named: true
+              }
+            ]
+          },
+          right: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "constraint",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "construct_signature",
+        named: true,
+        fields: {
+          parameters: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "formal_parameters",
+                named: true
+              }
+            ]
+          },
+          type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_annotation",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "constructor_type",
+        named: true,
+        fields: {
+          parameters: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "formal_parameters",
+                named: true
+              }
+            ]
+          },
+          type: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "continue_statement",
+        named: true,
+        fields: {
+          label: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "statement_identifier",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "debugger_statement",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "decorator",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "call_expression",
+              named: true
+            },
+            {
+              type: "identifier",
+              named: true
+            },
+            {
+              type: "member_expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "default_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "do_statement",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement",
+                named: true
+              }
+            ]
+          },
+          condition: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "parenthesized_expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "else_clause",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "statement",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "empty_statement",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "enum_assignment",
+        named: true,
+        fields: {
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "computed_property_name",
+                named: true
+              },
+              {
+                type: "number",
+                named: true
+              },
+              {
+                type: "private_property_identifier",
+                named: true
+              },
+              {
+                type: "property_identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "enum_body",
+        named: true,
+        fields: {
+          name: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "computed_property_name",
+                named: true
+              },
+              {
+                type: "number",
+                named: true
+              },
+              {
+                type: "private_property_identifier",
+                named: true
+              },
+              {
+                type: "property_identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "enum_assignment",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "enum_declaration",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "enum_body",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "existential_type",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "export_clause",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "export_specifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "export_specifier",
+        named: true,
+        fields: {
+          alias: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "export_statement",
+        named: true,
+        fields: {
+          declaration: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "declaration",
+                named: true
+              }
+            ]
+          },
+          decorator: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "decorator",
+                named: true
+              }
+            ]
+          },
+          source: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: false,
+          required: false,
+          types: [
+            {
+              type: "export_clause",
+              named: true
+            },
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "identifier",
+              named: true
+            },
+            {
+              type: "namespace_export",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "expression_statement",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "sequence_expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "extends_clause",
+        named: true,
+        fields: {
+          type_arguments: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "type_arguments",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: true,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "extends_type_clause",
+        named: true,
+        fields: {
+          type: {
+            multiple: true,
+            required: true,
+            types: [
+              {
+                type: "generic_type",
+                named: true
+              },
+              {
+                type: "nested_type_identifier",
+                named: true
+              },
+              {
+                type: "type_identifier",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "finally_clause",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement_block",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "flow_maybe_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "primary_type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "for_in_statement",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement",
+                named: true
+              }
+            ]
+          },
+          kind: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "const",
+                named: false
+              },
+              {
+                type: "let",
+                named: false
+              },
+              {
+                type: "var",
+                named: false
+              }
+            ]
+          },
+          left: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "array_pattern",
+                named: true
+              },
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "member_expression",
+                named: true
+              },
+              {
+                type: "non_null_expression",
+                named: true
+              },
+              {
+                type: "object_pattern",
+                named: true
+              },
+              {
+                type: "parenthesized_expression",
+                named: true
+              },
+              {
+                type: "subscript_expression",
+                named: true
+              },
+              {
+                type: "undefined",
+                named: true
+              }
+            ]
+          },
+          operator: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "in",
+                named: false
+              },
+              {
+                type: "of",
+                named: false
+              }
+            ]
+          },
+          right: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              },
+              {
+                type: "sequence_expression",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "for_statement",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement",
+                named: true
+              }
+            ]
+          },
+          condition: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "empty_statement",
+                named: true
+              },
+              {
+                type: "expression_statement",
+                named: true
+              }
+            ]
+          },
+          increment: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "expression",
+                named: true
+              },
+              {
+                type: "sequence_expression",
+                named: true
+              }
+            ]
+          },
+          initializer: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "empty_statement",
+                named: true
+              },
+              {
+                type: "expression_statement",
+                named: true
+              },
+              {
+                type: "lexical_declaration",
+                named: true
+              },
+              {
+                type: "variable_declaration",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "formal_parameters",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "optional_parameter",
+              named: true
+            },
+            {
+              type: "required_parameter",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "function_declaration",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement_block",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              }
+            ]
+          },
+          parameters: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "formal_parameters",
+                named: true
+              }
+            ]
+          },
+          return_type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "asserts_annotation",
+                named: true
+              },
+              {
+                type: "type_annotation",
+                named: true
+              },
+              {
+                type: "type_predicate_annotation",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "function_expression",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement_block",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              }
+            ]
+          },
+          parameters: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "formal_parameters",
+                named: true
+              }
+            ]
+          },
+          return_type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "asserts_annotation",
+                named: true
+              },
+              {
+                type: "type_annotation",
+                named: true
+              },
+              {
+                type: "type_predicate_annotation",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "function_signature",
+        named: true,
+        fields: {
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              }
+            ]
+          },
+          parameters: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "formal_parameters",
+                named: true
+              }
+            ]
+          },
+          return_type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "asserts_annotation",
+                named: true
+              },
+              {
+                type: "type_annotation",
+                named: true
+              },
+              {
+                type: "type_predicate_annotation",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "function_type",
+        named: true,
+        fields: {
+          parameters: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "formal_parameters",
+                named: true
+              }
+            ]
+          },
+          return_type: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "asserts",
+                named: true
+              },
+              {
+                type: "type",
+                named: true
+              },
+              {
+                type: "type_predicate",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "generator_function",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement_block",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              }
+            ]
+          },
+          parameters: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "formal_parameters",
+                named: true
+              }
+            ]
+          },
+          return_type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "asserts_annotation",
+                named: true
+              },
+              {
+                type: "type_annotation",
+                named: true
+              },
+              {
+                type: "type_predicate_annotation",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "generator_function_declaration",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement_block",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              }
+            ]
+          },
+          parameters: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "formal_parameters",
+                named: true
+              }
+            ]
+          },
+          return_type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "asserts_annotation",
+                named: true
+              },
+              {
+                type: "type_annotation",
+                named: true
+              },
+              {
+                type: "type_predicate_annotation",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "generic_type",
+        named: true,
+        fields: {
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "nested_type_identifier",
+                named: true
+              },
+              {
+                type: "type_identifier",
+                named: true
+              }
+            ]
+          },
+          type_arguments: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type_arguments",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "glimmer_template",
+        named: true,
+        fields: {
+          close_tag: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "glimmer_closing_tag",
+                named: true
+              }
+            ]
+          },
+          open_tag: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "glimmer_opening_tag",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "identifier",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "if_statement",
+        named: true,
+        fields: {
+          alternative: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "else_clause",
+                named: true
+              }
+            ]
+          },
+          condition: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "parenthesized_expression",
+                named: true
+              }
+            ]
+          },
+          consequence: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "implements_clause",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "import",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "import_alias",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "identifier",
+              named: true
+            },
+            {
+              type: "nested_identifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "import_attribute",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "object",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "import_clause",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "identifier",
+              named: true
+            },
+            {
+              type: "named_imports",
+              named: true
+            },
+            {
+              type: "namespace_import",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "import_require_clause",
+        named: true,
+        fields: {
+          source: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "identifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "import_specifier",
+        named: true,
+        fields: {
+          alias: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "import_statement",
+        named: true,
+        fields: {
+          source: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "import_attribute",
+              named: true
+            },
+            {
+              type: "import_clause",
+              named: true
+            },
+            {
+              type: "import_require_clause",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "index_signature",
+        named: true,
+        fields: {
+          index_type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              }
+            ]
+          },
+          sign: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "+",
+                named: false
+              },
+              {
+                type: "-",
+                named: false
+              }
+            ]
+          },
+          type: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "adding_type_annotation",
+                named: true
+              },
+              {
+                type: "omitting_type_annotation",
+                named: true
+              },
+              {
+                type: "opting_type_annotation",
+                named: true
+              },
+              {
+                type: "type_annotation",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: false,
+          required: false,
+          types: [
+            {
+              type: "mapped_type_clause",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "index_type_query",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "primary_type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "infer_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            },
+            {
+              type: "type_identifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "instantiation_expression",
+        named: true,
+        fields: {
+          function: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "import",
+                named: true
+              },
+              {
+                type: "member_expression",
+                named: true
+              },
+              {
+                type: "subscript_expression",
+                named: true
+              }
+            ]
+          },
+          type_arguments: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type_arguments",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: false,
+          required: false,
+          types: [
+            {
+              type: "expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "interface_body",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "call_signature",
+              named: true
+            },
+            {
+              type: "construct_signature",
+              named: true
+            },
+            {
+              type: "export_statement",
+              named: true
+            },
+            {
+              type: "index_signature",
+              named: true
+            },
+            {
+              type: "method_signature",
+              named: true
+            },
+            {
+              type: "property_signature",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "interface_declaration",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "interface_body",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type_identifier",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: false,
+          required: false,
+          types: [
+            {
+              type: "extends_type_clause",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "internal_module",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "statement_block",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "nested_identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "intersection_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "jsx_attribute",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "jsx_element",
+              named: true
+            },
+            {
+              type: "jsx_expression",
+              named: true
+            },
+            {
+              type: "jsx_namespace_name",
+              named: true
+            },
+            {
+              type: "jsx_self_closing_element",
+              named: true
+            },
+            {
+              type: "property_identifier",
+              named: true
+            },
+            {
+              type: "string",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "jsx_closing_element",
+        named: true,
+        fields: {
+          name: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "jsx_namespace_name",
+                named: true
+              },
+              {
+                type: "member_expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "jsx_element",
+        named: true,
+        fields: {
+          close_tag: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "jsx_closing_element",
+                named: true
+              }
+            ]
+          },
+          open_tag: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "jsx_opening_element",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "html_character_reference",
+              named: true
+            },
+            {
+              type: "jsx_element",
+              named: true
+            },
+            {
+              type: "jsx_expression",
+              named: true
+            },
+            {
+              type: "jsx_self_closing_element",
+              named: true
+            },
+            {
+              type: "jsx_text",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "jsx_expression",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: false,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "sequence_expression",
+              named: true
+            },
+            {
+              type: "spread_element",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "jsx_namespace_name",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "identifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "jsx_opening_element",
+        named: true,
+        fields: {
+          attribute: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "jsx_attribute",
+                named: true
+              },
+              {
+                type: "jsx_expression",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "jsx_namespace_name",
+                named: true
+              },
+              {
+                type: "member_expression",
+                named: true
+              }
+            ]
+          },
+          type_arguments: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_arguments",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "jsx_self_closing_element",
+        named: true,
+        fields: {
+          attribute: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "jsx_attribute",
+                named: true
+              },
+              {
+                type: "jsx_expression",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "jsx_namespace_name",
+                named: true
+              },
+              {
+                type: "member_expression",
+                named: true
+              }
+            ]
+          },
+          type_arguments: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_arguments",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "jsx_text",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "labeled_statement",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement",
+                named: true
+              }
+            ]
+          },
+          label: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement_identifier",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "lexical_declaration",
+        named: true,
+        fields: {
+          kind: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "const",
+                named: false
+              },
+              {
+                type: "let",
+                named: false
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "variable_declarator",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "literal_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "false",
+              named: true
+            },
+            {
+              type: "null",
+              named: true
+            },
+            {
+              type: "number",
+              named: true
+            },
+            {
+              type: "string",
+              named: true
+            },
+            {
+              type: "true",
+              named: true
+            },
+            {
+              type: "unary_expression",
+              named: true
+            },
+            {
+              type: "undefined",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "lookup_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "mapped_type_clause",
+        named: true,
+        fields: {
+          alias: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type_identifier",
+                named: true
+              }
+            ]
+          },
+          type: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "member_expression",
+        named: true,
+        fields: {
+          object: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              },
+              {
+                type: "import",
+                named: true
+              }
+            ]
+          },
+          optional_chain: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "optional_chain",
+                named: true
+              }
+            ]
+          },
+          property: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "private_property_identifier",
+                named: true
+              },
+              {
+                type: "property_identifier",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "meta_property",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "method_definition",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement_block",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "computed_property_name",
+                named: true
+              },
+              {
+                type: "number",
+                named: true
+              },
+              {
+                type: "private_property_identifier",
+                named: true
+              },
+              {
+                type: "property_identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          },
+          parameters: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "formal_parameters",
+                named: true
+              }
+            ]
+          },
+          return_type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "asserts_annotation",
+                named: true
+              },
+              {
+                type: "type_annotation",
+                named: true
+              },
+              {
+                type: "type_predicate_annotation",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "accessibility_modifier",
+              named: true
+            },
+            {
+              type: "override_modifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "method_signature",
+        named: true,
+        fields: {
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "computed_property_name",
+                named: true
+              },
+              {
+                type: "number",
+                named: true
+              },
+              {
+                type: "private_property_identifier",
+                named: true
+              },
+              {
+                type: "property_identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          },
+          parameters: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "formal_parameters",
+                named: true
+              }
+            ]
+          },
+          return_type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "asserts_annotation",
+                named: true
+              },
+              {
+                type: "type_annotation",
+                named: true
+              },
+              {
+                type: "type_predicate_annotation",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "accessibility_modifier",
+              named: true
+            },
+            {
+              type: "override_modifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "module",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "statement_block",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "nested_identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "named_imports",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "import_specifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "namespace_export",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "identifier",
+              named: true
+            },
+            {
+              type: "string",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "namespace_import",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "identifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "nested_identifier",
+        named: true,
+        fields: {
+          object: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "member_expression",
+                named: true
+              }
+            ]
+          },
+          property: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "property_identifier",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "nested_type_identifier",
+        named: true,
+        fields: {
+          module: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "nested_identifier",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type_identifier",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "new_expression",
+        named: true,
+        fields: {
+          arguments: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "arguments",
+                named: true
+              }
+            ]
+          },
+          constructor: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "primary_expression",
+                named: true
+              }
+            ]
+          },
+          type_arguments: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_arguments",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "non_null_expression",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "object",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "method_definition",
+              named: true
+            },
+            {
+              type: "pair",
+              named: true
+            },
+            {
+              type: "shorthand_property_identifier",
+              named: true
+            },
+            {
+              type: "spread_element",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "object_assignment_pattern",
+        named: true,
+        fields: {
+          left: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "array_pattern",
+                named: true
+              },
+              {
+                type: "object_pattern",
+                named: true
+              },
+              {
+                type: "shorthand_property_identifier_pattern",
+                named: true
+              }
+            ]
+          },
+          right: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "object_pattern",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "object_assignment_pattern",
+              named: true
+            },
+            {
+              type: "pair_pattern",
+              named: true
+            },
+            {
+              type: "rest_pattern",
+              named: true
+            },
+            {
+              type: "shorthand_property_identifier_pattern",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "object_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "call_signature",
+              named: true
+            },
+            {
+              type: "construct_signature",
+              named: true
+            },
+            {
+              type: "export_statement",
+              named: true
+            },
+            {
+              type: "index_signature",
+              named: true
+            },
+            {
+              type: "method_signature",
+              named: true
+            },
+            {
+              type: "property_signature",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "omitting_type_annotation",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "opting_type_annotation",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "optional_chain",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "optional_parameter",
+        named: true,
+        fields: {
+          decorator: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "decorator",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              }
+            ]
+          },
+          pattern: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "pattern",
+                named: true
+              },
+              {
+                type: "this",
+                named: true
+              }
+            ]
+          },
+          type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_annotation",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "accessibility_modifier",
+              named: true
+            },
+            {
+              type: "override_modifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "optional_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "override_modifier",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "pair",
+        named: true,
+        fields: {
+          key: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "computed_property_name",
+                named: true
+              },
+              {
+                type: "number",
+                named: true
+              },
+              {
+                type: "private_property_identifier",
+                named: true
+              },
+              {
+                type: "property_identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "pair_pattern",
+        named: true,
+        fields: {
+          key: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "computed_property_name",
+                named: true
+              },
+              {
+                type: "number",
+                named: true
+              },
+              {
+                type: "private_property_identifier",
+                named: true
+              },
+              {
+                type: "property_identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "assignment_pattern",
+                named: true
+              },
+              {
+                type: "pattern",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "parenthesized_expression",
+        named: true,
+        fields: {
+          type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_annotation",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "sequence_expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "parenthesized_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "predefined_type",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "program",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "hash_bang_line",
+              named: true
+            },
+            {
+              type: "statement",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "property_signature",
+        named: true,
+        fields: {
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "computed_property_name",
+                named: true
+              },
+              {
+                type: "number",
+                named: true
+              },
+              {
+                type: "private_property_identifier",
+                named: true
+              },
+              {
+                type: "property_identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          },
+          type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_annotation",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "accessibility_modifier",
+              named: true
+            },
+            {
+              type: "override_modifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "public_field_definition",
+        named: true,
+        fields: {
+          decorator: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "decorator",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "computed_property_name",
+                named: true
+              },
+              {
+                type: "number",
+                named: true
+              },
+              {
+                type: "private_property_identifier",
+                named: true
+              },
+              {
+                type: "property_identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          },
+          type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_annotation",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "accessibility_modifier",
+              named: true
+            },
+            {
+              type: "override_modifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "readonly_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "regex",
+        named: true,
+        fields: {
+          flags: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "regex_flags",
+                named: true
+              }
+            ]
+          },
+          pattern: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "regex_pattern",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "required_parameter",
+        named: true,
+        fields: {
+          decorator: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "decorator",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "rest_pattern",
+                named: true
+              }
+            ]
+          },
+          pattern: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "pattern",
+                named: true
+              },
+              {
+                type: "this",
+                named: true
+              }
+            ]
+          },
+          type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_annotation",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "accessibility_modifier",
+              named: true
+            },
+            {
+              type: "override_modifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "rest_pattern",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "array_pattern",
+              named: true
+            },
+            {
+              type: "identifier",
+              named: true
+            },
+            {
+              type: "member_expression",
+              named: true
+            },
+            {
+              type: "non_null_expression",
+              named: true
+            },
+            {
+              type: "object_pattern",
+              named: true
+            },
+            {
+              type: "subscript_expression",
+              named: true
+            },
+            {
+              type: "undefined",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "rest_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "return_statement",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: false,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "sequence_expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "satisfies_expression",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "sequence_expression",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "spread_element",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "statement_block",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "statement",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "string",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "escape_sequence",
+              named: true
+            },
+            {
+              type: "html_character_reference",
+              named: true
+            },
+            {
+              type: "string_fragment",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "subscript_expression",
+        named: true,
+        fields: {
+          index: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              },
+              {
+                type: "number",
+                named: true
+              },
+              {
+                type: "predefined_type",
+                named: true
+              },
+              {
+                type: "sequence_expression",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          },
+          object: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          },
+          optional_chain: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "optional_chain",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "switch_body",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "switch_case",
+              named: true
+            },
+            {
+              type: "switch_default",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "switch_case",
+        named: true,
+        fields: {
+          body: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "statement",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              },
+              {
+                type: "sequence_expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "switch_default",
+        named: true,
+        fields: {
+          body: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "statement",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "switch_statement",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "switch_body",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "parenthesized_expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "template_literal_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "string_fragment",
+              named: true
+            },
+            {
+              type: "template_type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "template_string",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "escape_sequence",
+              named: true
+            },
+            {
+              type: "string_fragment",
+              named: true
+            },
+            {
+              type: "template_substitution",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "template_substitution",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "sequence_expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "template_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "infer_type",
+              named: true
+            },
+            {
+              type: "primary_type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "ternary_expression",
+        named: true,
+        fields: {
+          alternative: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          },
+          condition: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          },
+          consequence: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "throw_statement",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "sequence_expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "try_statement",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement_block",
+                named: true
+              }
+            ]
+          },
+          finalizer: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "finally_clause",
+                named: true
+              }
+            ]
+          },
+          handler: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "catch_clause",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "tuple_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "optional_parameter",
+              named: true
+            },
+            {
+              type: "optional_type",
+              named: true
+            },
+            {
+              type: "required_parameter",
+              named: true
+            },
+            {
+              type: "rest_type",
+              named: true
+            },
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "type_alias_declaration",
+        named: true,
+        fields: {
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type_identifier",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "type_annotation",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "type_arguments",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "type_assertion",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "type_arguments",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "type_parameter",
+        named: true,
+        fields: {
+          constraint: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "constraint",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type_identifier",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "default_type",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "type_parameters",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "type_parameter",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "type_predicate",
+        named: true,
+        fields: {
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "this",
+                named: true
+              }
+            ]
+          },
+          type: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "type_predicate_annotation",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "type_predicate",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "type_query",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "call_expression",
+              named: true
+            },
+            {
+              type: "identifier",
+              named: true
+            },
+            {
+              type: "instantiation_expression",
+              named: true
+            },
+            {
+              type: "member_expression",
+              named: true
+            },
+            {
+              type: "subscript_expression",
+              named: true
+            },
+            {
+              type: "this",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "unary_expression",
+        named: true,
+        fields: {
+          argument: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              },
+              {
+                type: "number",
+                named: true
+              }
+            ]
+          },
+          operator: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "!",
+                named: false
+              },
+              {
+                type: "+",
+                named: false
+              },
+              {
+                type: "-",
+                named: false
+              },
+              {
+                type: "delete",
+                named: false
+              },
+              {
+                type: "typeof",
+                named: false
+              },
+              {
+                type: "void",
+                named: false
+              },
+              {
+                type: "~",
+                named: false
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "union_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "update_expression",
+        named: true,
+        fields: {
+          argument: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          },
+          operator: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "++",
+                named: false
+              },
+              {
+                type: "--",
+                named: false
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "variable_declaration",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "variable_declarator",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "variable_declarator",
+        named: true,
+        fields: {
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "array_pattern",
+                named: true
+              },
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "object_pattern",
+                named: true
+              }
+            ]
+          },
+          type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_annotation",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "while_statement",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement",
+                named: true
+              }
+            ]
+          },
+          condition: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "parenthesized_expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "with_statement",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement",
+                named: true
+              }
+            ]
+          },
+          object: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "parenthesized_expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "yield_expression",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: false,
+          types: [
+            {
+              type: "expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "!",
+        named: false
+      },
+      {
+        type: "!=",
+        named: false
+      },
+      {
+        type: "!==",
+        named: false
+      },
+      {
+        type: '"',
+        named: false
+      },
+      {
+        type: "${",
+        named: false
+      },
+      {
+        type: "%",
+        named: false
+      },
+      {
+        type: "%=",
+        named: false
+      },
+      {
+        type: "&",
+        named: false
+      },
+      {
+        type: "&&",
+        named: false
+      },
+      {
+        type: "&&=",
+        named: false
+      },
+      {
+        type: "&=",
+        named: false
+      },
+      {
+        type: "'",
+        named: false
+      },
+      {
+        type: "(",
+        named: false
+      },
+      {
+        type: ")",
+        named: false
+      },
+      {
+        type: "*",
+        named: false
+      },
+      {
+        type: "**",
+        named: false
+      },
+      {
+        type: "**=",
+        named: false
+      },
+      {
+        type: "*=",
+        named: false
+      },
+      {
+        type: "+",
+        named: false
+      },
+      {
+        type: "++",
+        named: false
+      },
+      {
+        type: "+=",
+        named: false
+      },
+      {
+        type: "+?:",
+        named: false
+      },
+      {
+        type: ",",
+        named: false
+      },
+      {
+        type: "-",
+        named: false
+      },
+      {
+        type: "--",
+        named: false
+      },
+      {
+        type: "-=",
+        named: false
+      },
+      {
+        type: "-?:",
+        named: false
+      },
+      {
+        type: ".",
+        named: false
+      },
+      {
+        type: "...",
+        named: false
+      },
+      {
+        type: "/",
+        named: false
+      },
+      {
+        type: "/=",
+        named: false
+      },
+      {
+        type: "/>",
+        named: false
+      },
+      {
+        type: ":",
+        named: false
+      },
+      {
+        type: ";",
+        named: false
+      },
+      {
+        type: "<",
+        named: false
+      },
+      {
+        type: "</",
+        named: false
+      },
+      {
+        type: "<<",
+        named: false
+      },
+      {
+        type: "<<=",
+        named: false
+      },
+      {
+        type: "<=",
+        named: false
+      },
+      {
+        type: "=",
+        named: false
+      },
+      {
+        type: "==",
+        named: false
+      },
+      {
+        type: "===",
+        named: false
+      },
+      {
+        type: "=>",
+        named: false
+      },
+      {
+        type: ">",
+        named: false
+      },
+      {
+        type: ">=",
+        named: false
+      },
+      {
+        type: ">>",
+        named: false
+      },
+      {
+        type: ">>=",
+        named: false
+      },
+      {
+        type: ">>>",
+        named: false
+      },
+      {
+        type: ">>>=",
+        named: false
+      },
+      {
+        type: "?",
+        named: false
+      },
+      {
+        type: "?.",
+        named: false
+      },
+      {
+        type: "?:",
+        named: false
+      },
+      {
+        type: "??",
+        named: false
+      },
+      {
+        type: "??=",
+        named: false
+      },
+      {
+        type: "@",
+        named: false
+      },
+      {
+        type: "[",
+        named: false
+      },
+      {
+        type: "]",
+        named: false
+      },
+      {
+        type: "^",
+        named: false
+      },
+      {
+        type: "^=",
+        named: false
+      },
+      {
+        type: "`",
+        named: false
+      },
+      {
+        type: "abstract",
+        named: false
+      },
+      {
+        type: "accessor",
+        named: false
+      },
+      {
+        type: "any",
+        named: false
+      },
+      {
+        type: "as",
+        named: false
+      },
+      {
+        type: "asserts",
+        named: false
+      },
+      {
+        type: "async",
+        named: false
+      },
+      {
+        type: "await",
+        named: false
+      },
+      {
+        type: "boolean",
+        named: false
+      },
+      {
+        type: "break",
+        named: false
+      },
+      {
+        type: "case",
+        named: false
+      },
+      {
+        type: "catch",
+        named: false
+      },
+      {
+        type: "class",
+        named: false
+      },
+      {
+        type: "comment",
+        named: true
+      },
+      {
+        type: "const",
+        named: false
+      },
+      {
+        type: "continue",
+        named: false
+      },
+      {
+        type: "debugger",
+        named: false
+      },
+      {
+        type: "declare",
+        named: false
+      },
+      {
+        type: "default",
+        named: false
+      },
+      {
+        type: "delete",
+        named: false
+      },
+      {
+        type: "do",
+        named: false
+      },
+      {
+        type: "else",
+        named: false
+      },
+      {
+        type: "enum",
+        named: false
+      },
+      {
+        type: "escape_sequence",
+        named: true
+      },
+      {
+        type: "export",
+        named: false
+      },
+      {
+        type: "extends",
+        named: false
+      },
+      {
+        type: "false",
+        named: true
+      },
+      {
+        type: "finally",
+        named: false
+      },
+      {
+        type: "for",
+        named: false
+      },
+      {
+        type: "from",
+        named: false
+      },
+      {
+        type: "function",
+        named: false
+      },
+      {
+        type: "get",
+        named: false
+      },
+      {
+        type: "glimmer_closing_tag",
+        named: true
+      },
+      {
+        type: "glimmer_opening_tag",
+        named: true
+      },
+      {
+        type: "global",
+        named: false
+      },
+      {
+        type: "hash_bang_line",
+        named: true
+      },
+      {
+        type: "html_character_reference",
+        named: true
+      },
+      {
+        type: "html_comment",
+        named: true
+      },
+      {
+        type: "if",
+        named: false
+      },
+      {
+        type: "implements",
+        named: false
+      },
+      {
+        type: "import",
+        named: false
+      },
+      {
+        type: "in",
+        named: false
+      },
+      {
+        type: "infer",
+        named: false
+      },
+      {
+        type: "instanceof",
+        named: false
+      },
+      {
+        type: "interface",
+        named: false
+      },
+      {
+        type: "is",
+        named: false
+      },
+      {
+        type: "keyof",
+        named: false
+      },
+      {
+        type: "let",
+        named: false
+      },
+      {
+        type: "module",
+        named: false
+      },
+      {
+        type: "namespace",
+        named: false
+      },
+      {
+        type: "never",
+        named: false
+      },
+      {
+        type: "new",
+        named: false
+      },
+      {
+        type: "null",
+        named: true
+      },
+      {
+        type: "number",
+        named: true
+      },
+      {
+        type: "number",
+        named: false
+      },
+      {
+        type: "object",
+        named: false
+      },
+      {
+        type: "of",
+        named: false
+      },
+      {
+        type: "override",
+        named: false
+      },
+      {
+        type: "private",
+        named: false
+      },
+      {
+        type: "private_property_identifier",
+        named: true
+      },
+      {
+        type: "property_identifier",
+        named: true
+      },
+      {
+        type: "protected",
+        named: false
+      },
+      {
+        type: "public",
+        named: false
+      },
+      {
+        type: "readonly",
+        named: false
+      },
+      {
+        type: "regex_flags",
+        named: true
+      },
+      {
+        type: "regex_pattern",
+        named: true
+      },
+      {
+        type: "require",
+        named: false
+      },
+      {
+        type: "return",
+        named: false
+      },
+      {
+        type: "satisfies",
+        named: false
+      },
+      {
+        type: "set",
+        named: false
+      },
+      {
+        type: "shorthand_property_identifier",
+        named: true
+      },
+      {
+        type: "shorthand_property_identifier_pattern",
+        named: true
+      },
+      {
+        type: "statement_identifier",
+        named: true
+      },
+      {
+        type: "static",
+        named: false
+      },
+      {
+        type: "string",
+        named: false
+      },
+      {
+        type: "string_fragment",
+        named: true
+      },
+      {
+        type: "super",
+        named: true
+      },
+      {
+        type: "switch",
+        named: false
+      },
+      {
+        type: "symbol",
+        named: false
+      },
+      {
+        type: "target",
+        named: false
+      },
+      {
+        type: "this",
+        named: true
+      },
+      {
+        type: "this_type",
+        named: true
+      },
+      {
+        type: "throw",
+        named: false
+      },
+      {
+        type: "true",
+        named: true
+      },
+      {
+        type: "try",
+        named: false
+      },
+      {
+        type: "type",
+        named: false
+      },
+      {
+        type: "type_identifier",
+        named: true
+      },
+      {
+        type: "typeof",
+        named: false
+      },
+      {
+        type: "undefined",
+        named: true
+      },
+      {
+        type: "unique symbol",
+        named: false
+      },
+      {
+        type: "unknown",
+        named: false
+      },
+      {
+        type: "using",
+        named: false
+      },
+      {
+        type: "var",
+        named: false
+      },
+      {
+        type: "void",
+        named: false
+      },
+      {
+        type: "while",
+        named: false
+      },
+      {
+        type: "with",
+        named: false
+      },
+      {
+        type: "yield",
+        named: false
+      },
+      {
+        type: "{",
+        named: false
+      },
+      {
+        type: "{|",
+        named: false
+      },
+      {
+        type: "|",
+        named: false
+      },
+      {
+        type: "|=",
+        named: false
+      },
+      {
+        type: "||",
+        named: false
+      },
+      {
+        type: "||=",
+        named: false
+      },
+      {
+        type: "|}",
+        named: false
+      },
+      {
+        type: "}",
+        named: false
+      },
+      {
+        type: "~",
+        named: false
+      }
+    ];
+  }
+});
+
+// node_modules/tree-sitter-typescript/tsx/src/node-types.json
+var require_node_types2 = __commonJS({
+  "node_modules/tree-sitter-typescript/tsx/src/node-types.json"(exports2, module2) {
+    module2.exports = [
+      {
+        type: "declaration",
+        named: true,
+        subtypes: [
+          {
+            type: "abstract_class_declaration",
+            named: true
+          },
+          {
+            type: "ambient_declaration",
+            named: true
+          },
+          {
+            type: "class_declaration",
+            named: true
+          },
+          {
+            type: "enum_declaration",
+            named: true
+          },
+          {
+            type: "function_declaration",
+            named: true
+          },
+          {
+            type: "function_signature",
+            named: true
+          },
+          {
+            type: "generator_function_declaration",
+            named: true
+          },
+          {
+            type: "import_alias",
+            named: true
+          },
+          {
+            type: "interface_declaration",
+            named: true
+          },
+          {
+            type: "internal_module",
+            named: true
+          },
+          {
+            type: "lexical_declaration",
+            named: true
+          },
+          {
+            type: "module",
+            named: true
+          },
+          {
+            type: "type_alias_declaration",
+            named: true
+          },
+          {
+            type: "variable_declaration",
+            named: true
+          }
+        ]
+      },
+      {
+        type: "expression",
+        named: true,
+        subtypes: [
+          {
+            type: "as_expression",
+            named: true
+          },
+          {
+            type: "assignment_expression",
+            named: true
+          },
+          {
+            type: "augmented_assignment_expression",
+            named: true
+          },
+          {
+            type: "await_expression",
+            named: true
+          },
+          {
+            type: "binary_expression",
+            named: true
+          },
+          {
+            type: "glimmer_template",
+            named: true
+          },
+          {
+            type: "instantiation_expression",
+            named: true
+          },
+          {
+            type: "internal_module",
+            named: true
+          },
+          {
+            type: "jsx_element",
+            named: true
+          },
+          {
+            type: "jsx_self_closing_element",
+            named: true
+          },
+          {
+            type: "new_expression",
+            named: true
+          },
+          {
+            type: "primary_expression",
+            named: true
+          },
+          {
+            type: "satisfies_expression",
+            named: true
+          },
+          {
+            type: "ternary_expression",
+            named: true
+          },
+          {
+            type: "unary_expression",
+            named: true
+          },
+          {
+            type: "update_expression",
+            named: true
+          },
+          {
+            type: "yield_expression",
+            named: true
+          }
+        ]
+      },
+      {
+        type: "pattern",
+        named: true,
+        subtypes: [
+          {
+            type: "array_pattern",
+            named: true
+          },
+          {
+            type: "identifier",
+            named: true
+          },
+          {
+            type: "member_expression",
+            named: true
+          },
+          {
+            type: "non_null_expression",
+            named: true
+          },
+          {
+            type: "object_pattern",
+            named: true
+          },
+          {
+            type: "rest_pattern",
+            named: true
+          },
+          {
+            type: "subscript_expression",
+            named: true
+          },
+          {
+            type: "undefined",
+            named: true
+          }
+        ]
+      },
+      {
+        type: "primary_expression",
+        named: true,
+        subtypes: [
+          {
+            type: "array",
+            named: true
+          },
+          {
+            type: "arrow_function",
+            named: true
+          },
+          {
+            type: "call_expression",
+            named: true
+          },
+          {
+            type: "class",
+            named: true
+          },
+          {
+            type: "false",
+            named: true
+          },
+          {
+            type: "function_expression",
+            named: true
+          },
+          {
+            type: "generator_function",
+            named: true
+          },
+          {
+            type: "identifier",
+            named: true
+          },
+          {
+            type: "member_expression",
+            named: true
+          },
+          {
+            type: "meta_property",
+            named: true
+          },
+          {
+            type: "non_null_expression",
+            named: true
+          },
+          {
+            type: "null",
+            named: true
+          },
+          {
+            type: "number",
+            named: true
+          },
+          {
+            type: "object",
+            named: true
+          },
+          {
+            type: "parenthesized_expression",
+            named: true
+          },
+          {
+            type: "regex",
+            named: true
+          },
+          {
+            type: "string",
+            named: true
+          },
+          {
+            type: "subscript_expression",
+            named: true
+          },
+          {
+            type: "super",
+            named: true
+          },
+          {
+            type: "template_string",
+            named: true
+          },
+          {
+            type: "this",
+            named: true
+          },
+          {
+            type: "true",
+            named: true
+          },
+          {
+            type: "undefined",
+            named: true
+          }
+        ]
+      },
+      {
+        type: "primary_type",
+        named: true,
+        subtypes: [
+          {
+            type: "array_type",
+            named: true
+          },
+          {
+            type: "conditional_type",
+            named: true
+          },
+          {
+            type: "const",
+            named: false
+          },
+          {
+            type: "existential_type",
+            named: true
+          },
+          {
+            type: "flow_maybe_type",
+            named: true
+          },
+          {
+            type: "generic_type",
+            named: true
+          },
+          {
+            type: "index_type_query",
+            named: true
+          },
+          {
+            type: "intersection_type",
+            named: true
+          },
+          {
+            type: "literal_type",
+            named: true
+          },
+          {
+            type: "lookup_type",
+            named: true
+          },
+          {
+            type: "nested_type_identifier",
+            named: true
+          },
+          {
+            type: "object_type",
+            named: true
+          },
+          {
+            type: "parenthesized_type",
+            named: true
+          },
+          {
+            type: "predefined_type",
+            named: true
+          },
+          {
+            type: "template_literal_type",
+            named: true
+          },
+          {
+            type: "this_type",
+            named: true
+          },
+          {
+            type: "tuple_type",
+            named: true
+          },
+          {
+            type: "type_identifier",
+            named: true
+          },
+          {
+            type: "type_query",
+            named: true
+          },
+          {
+            type: "union_type",
+            named: true
+          }
+        ]
+      },
+      {
+        type: "statement",
+        named: true,
+        subtypes: [
+          {
+            type: "break_statement",
+            named: true
+          },
+          {
+            type: "continue_statement",
+            named: true
+          },
+          {
+            type: "debugger_statement",
+            named: true
+          },
+          {
+            type: "declaration",
+            named: true
+          },
+          {
+            type: "do_statement",
+            named: true
+          },
+          {
+            type: "empty_statement",
+            named: true
+          },
+          {
+            type: "export_statement",
+            named: true
+          },
+          {
+            type: "expression_statement",
+            named: true
+          },
+          {
+            type: "for_in_statement",
+            named: true
+          },
+          {
+            type: "for_statement",
+            named: true
+          },
+          {
+            type: "if_statement",
+            named: true
+          },
+          {
+            type: "import_statement",
+            named: true
+          },
+          {
+            type: "labeled_statement",
+            named: true
+          },
+          {
+            type: "return_statement",
+            named: true
+          },
+          {
+            type: "statement_block",
+            named: true
+          },
+          {
+            type: "switch_statement",
+            named: true
+          },
+          {
+            type: "throw_statement",
+            named: true
+          },
+          {
+            type: "try_statement",
+            named: true
+          },
+          {
+            type: "while_statement",
+            named: true
+          },
+          {
+            type: "with_statement",
+            named: true
+          }
+        ]
+      },
+      {
+        type: "type",
+        named: true,
+        subtypes: [
+          {
+            type: "call_expression",
+            named: true
+          },
+          {
+            type: "constructor_type",
+            named: true
+          },
+          {
+            type: "function_type",
+            named: true
+          },
+          {
+            type: "infer_type",
+            named: true
+          },
+          {
+            type: "member_expression",
+            named: true
+          },
+          {
+            type: "primary_type",
+            named: true
+          },
+          {
+            type: "readonly_type",
+            named: true
+          }
+        ]
+      },
+      {
+        type: "abstract_class_declaration",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "class_body",
+                named: true
+              }
+            ]
+          },
+          decorator: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "decorator",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type_identifier",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: false,
+          required: false,
+          types: [
+            {
+              type: "class_heritage",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "abstract_method_signature",
+        named: true,
+        fields: {
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "computed_property_name",
+                named: true
+              },
+              {
+                type: "number",
+                named: true
+              },
+              {
+                type: "private_property_identifier",
+                named: true
+              },
+              {
+                type: "property_identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          },
+          parameters: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "formal_parameters",
+                named: true
+              }
+            ]
+          },
+          return_type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "asserts_annotation",
+                named: true
+              },
+              {
+                type: "type_annotation",
+                named: true
+              },
+              {
+                type: "type_predicate_annotation",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "accessibility_modifier",
+              named: true
+            },
+            {
+              type: "override_modifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "accessibility_modifier",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "adding_type_annotation",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "ambient_declaration",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "declaration",
+              named: true
+            },
+            {
+              type: "property_identifier",
+              named: true
+            },
+            {
+              type: "statement_block",
+              named: true
+            },
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "arguments",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "spread_element",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "array",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "spread_element",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "array_pattern",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "assignment_pattern",
+              named: true
+            },
+            {
+              type: "pattern",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "array_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "primary_type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "arrow_function",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              },
+              {
+                type: "statement_block",
+                named: true
+              }
+            ]
+          },
+          parameter: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              }
+            ]
+          },
+          parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "formal_parameters",
+                named: true
+              }
+            ]
+          },
+          return_type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "asserts_annotation",
+                named: true
+              },
+              {
+                type: "type_annotation",
+                named: true
+              },
+              {
+                type: "type_predicate_annotation",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "as_expression",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "asserts",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "identifier",
+              named: true
+            },
+            {
+              type: "this",
+              named: true
+            },
+            {
+              type: "type_predicate",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "asserts_annotation",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "asserts",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "assignment_expression",
+        named: true,
+        fields: {
+          left: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "array_pattern",
+                named: true
+              },
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "member_expression",
+                named: true
+              },
+              {
+                type: "non_null_expression",
+                named: true
+              },
+              {
+                type: "object_pattern",
+                named: true
+              },
+              {
+                type: "parenthesized_expression",
+                named: true
+              },
+              {
+                type: "subscript_expression",
+                named: true
+              },
+              {
+                type: "undefined",
+                named: true
+              }
+            ]
+          },
+          right: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "assignment_pattern",
+        named: true,
+        fields: {
+          left: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "pattern",
+                named: true
+              }
+            ]
+          },
+          right: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "augmented_assignment_expression",
+        named: true,
+        fields: {
+          left: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "member_expression",
+                named: true
+              },
+              {
+                type: "non_null_expression",
+                named: true
+              },
+              {
+                type: "parenthesized_expression",
+                named: true
+              },
+              {
+                type: "subscript_expression",
+                named: true
+              }
+            ]
+          },
+          operator: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "%=",
+                named: false
+              },
+              {
+                type: "&&=",
+                named: false
+              },
+              {
+                type: "&=",
+                named: false
+              },
+              {
+                type: "**=",
+                named: false
+              },
+              {
+                type: "*=",
+                named: false
+              },
+              {
+                type: "+=",
+                named: false
+              },
+              {
+                type: "-=",
+                named: false
+              },
+              {
+                type: "/=",
+                named: false
+              },
+              {
+                type: "<<=",
+                named: false
+              },
+              {
+                type: ">>=",
+                named: false
+              },
+              {
+                type: ">>>=",
+                named: false
+              },
+              {
+                type: "??=",
+                named: false
+              },
+              {
+                type: "^=",
+                named: false
+              },
+              {
+                type: "|=",
+                named: false
+              },
+              {
+                type: "||=",
+                named: false
+              }
+            ]
+          },
+          right: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "await_expression",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "binary_expression",
+        named: true,
+        fields: {
+          left: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              },
+              {
+                type: "private_property_identifier",
+                named: true
+              }
+            ]
+          },
+          operator: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "!=",
+                named: false
+              },
+              {
+                type: "!==",
+                named: false
+              },
+              {
+                type: "%",
+                named: false
+              },
+              {
+                type: "&",
+                named: false
+              },
+              {
+                type: "&&",
+                named: false
+              },
+              {
+                type: "*",
+                named: false
+              },
+              {
+                type: "**",
+                named: false
+              },
+              {
+                type: "+",
+                named: false
+              },
+              {
+                type: "-",
+                named: false
+              },
+              {
+                type: "/",
+                named: false
+              },
+              {
+                type: "<",
+                named: false
+              },
+              {
+                type: "<<",
+                named: false
+              },
+              {
+                type: "<=",
+                named: false
+              },
+              {
+                type: "==",
+                named: false
+              },
+              {
+                type: "===",
+                named: false
+              },
+              {
+                type: ">",
+                named: false
+              },
+              {
+                type: ">=",
+                named: false
+              },
+              {
+                type: ">>",
+                named: false
+              },
+              {
+                type: ">>>",
+                named: false
+              },
+              {
+                type: "??",
+                named: false
+              },
+              {
+                type: "^",
+                named: false
+              },
+              {
+                type: "in",
+                named: false
+              },
+              {
+                type: "instanceof",
+                named: false
+              },
+              {
+                type: "|",
+                named: false
+              },
+              {
+                type: "||",
+                named: false
+              }
+            ]
+          },
+          right: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "break_statement",
+        named: true,
+        fields: {
+          label: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "statement_identifier",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "call_expression",
+        named: true,
+        fields: {
+          arguments: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "arguments",
+                named: true
+              },
+              {
+                type: "template_string",
+                named: true
+              }
+            ]
+          },
+          function: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              },
+              {
+                type: "import",
+                named: true
+              }
+            ]
+          },
+          type_arguments: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_arguments",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "call_signature",
+        named: true,
+        fields: {
+          parameters: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "formal_parameters",
+                named: true
+              }
+            ]
+          },
+          return_type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "asserts_annotation",
+                named: true
+              },
+              {
+                type: "type_annotation",
+                named: true
+              },
+              {
+                type: "type_predicate_annotation",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "catch_clause",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement_block",
+                named: true
+              }
+            ]
+          },
+          parameter: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "array_pattern",
+                named: true
+              },
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "object_pattern",
+                named: true
+              }
+            ]
+          },
+          type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_annotation",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "class",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "class_body",
+                named: true
+              }
+            ]
+          },
+          decorator: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "decorator",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_identifier",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: false,
+          required: false,
+          types: [
+            {
+              type: "class_heritage",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "class_body",
+        named: true,
+        fields: {
+          decorator: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "decorator",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "abstract_method_signature",
+              named: true
+            },
+            {
+              type: "class_static_block",
+              named: true
+            },
+            {
+              type: "index_signature",
+              named: true
+            },
+            {
+              type: "method_definition",
+              named: true
+            },
+            {
+              type: "method_signature",
+              named: true
+            },
+            {
+              type: "public_field_definition",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "class_declaration",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "class_body",
+                named: true
+              }
+            ]
+          },
+          decorator: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "decorator",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type_identifier",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: false,
+          required: false,
+          types: [
+            {
+              type: "class_heritage",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "class_heritage",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "extends_clause",
+              named: true
+            },
+            {
+              type: "implements_clause",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "class_static_block",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement_block",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "computed_property_name",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "conditional_type",
+        named: true,
+        fields: {
+          alternative: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type",
+                named: true
+              }
+            ]
+          },
+          consequence: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type",
+                named: true
+              }
+            ]
+          },
+          left: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type",
+                named: true
+              }
+            ]
+          },
+          right: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "constraint",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "construct_signature",
+        named: true,
+        fields: {
+          parameters: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "formal_parameters",
+                named: true
+              }
+            ]
+          },
+          type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_annotation",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "constructor_type",
+        named: true,
+        fields: {
+          parameters: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "formal_parameters",
+                named: true
+              }
+            ]
+          },
+          type: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "continue_statement",
+        named: true,
+        fields: {
+          label: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "statement_identifier",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "debugger_statement",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "decorator",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "call_expression",
+              named: true
+            },
+            {
+              type: "identifier",
+              named: true
+            },
+            {
+              type: "member_expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "default_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "do_statement",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement",
+                named: true
+              }
+            ]
+          },
+          condition: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "parenthesized_expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "else_clause",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "statement",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "empty_statement",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "enum_assignment",
+        named: true,
+        fields: {
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "computed_property_name",
+                named: true
+              },
+              {
+                type: "number",
+                named: true
+              },
+              {
+                type: "private_property_identifier",
+                named: true
+              },
+              {
+                type: "property_identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "enum_body",
+        named: true,
+        fields: {
+          name: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "computed_property_name",
+                named: true
+              },
+              {
+                type: "number",
+                named: true
+              },
+              {
+                type: "private_property_identifier",
+                named: true
+              },
+              {
+                type: "property_identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "enum_assignment",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "enum_declaration",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "enum_body",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "existential_type",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "export_clause",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "export_specifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "export_specifier",
+        named: true,
+        fields: {
+          alias: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "export_statement",
+        named: true,
+        fields: {
+          declaration: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "declaration",
+                named: true
+              }
+            ]
+          },
+          decorator: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "decorator",
+                named: true
+              }
+            ]
+          },
+          source: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: false,
+          required: false,
+          types: [
+            {
+              type: "export_clause",
+              named: true
+            },
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "identifier",
+              named: true
+            },
+            {
+              type: "namespace_export",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "expression_statement",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "sequence_expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "extends_clause",
+        named: true,
+        fields: {
+          type_arguments: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "type_arguments",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: true,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "extends_type_clause",
+        named: true,
+        fields: {
+          type: {
+            multiple: true,
+            required: true,
+            types: [
+              {
+                type: "generic_type",
+                named: true
+              },
+              {
+                type: "nested_type_identifier",
+                named: true
+              },
+              {
+                type: "type_identifier",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "finally_clause",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement_block",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "flow_maybe_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "primary_type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "for_in_statement",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement",
+                named: true
+              }
+            ]
+          },
+          kind: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "const",
+                named: false
+              },
+              {
+                type: "let",
+                named: false
+              },
+              {
+                type: "var",
+                named: false
+              }
+            ]
+          },
+          left: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "array_pattern",
+                named: true
+              },
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "member_expression",
+                named: true
+              },
+              {
+                type: "non_null_expression",
+                named: true
+              },
+              {
+                type: "object_pattern",
+                named: true
+              },
+              {
+                type: "parenthesized_expression",
+                named: true
+              },
+              {
+                type: "subscript_expression",
+                named: true
+              },
+              {
+                type: "undefined",
+                named: true
+              }
+            ]
+          },
+          operator: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "in",
+                named: false
+              },
+              {
+                type: "of",
+                named: false
+              }
+            ]
+          },
+          right: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              },
+              {
+                type: "sequence_expression",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "for_statement",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement",
+                named: true
+              }
+            ]
+          },
+          condition: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "empty_statement",
+                named: true
+              },
+              {
+                type: "expression_statement",
+                named: true
+              }
+            ]
+          },
+          increment: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "expression",
+                named: true
+              },
+              {
+                type: "sequence_expression",
+                named: true
+              }
+            ]
+          },
+          initializer: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "empty_statement",
+                named: true
+              },
+              {
+                type: "expression_statement",
+                named: true
+              },
+              {
+                type: "lexical_declaration",
+                named: true
+              },
+              {
+                type: "variable_declaration",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "formal_parameters",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "optional_parameter",
+              named: true
+            },
+            {
+              type: "required_parameter",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "function_declaration",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement_block",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              }
+            ]
+          },
+          parameters: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "formal_parameters",
+                named: true
+              }
+            ]
+          },
+          return_type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "asserts_annotation",
+                named: true
+              },
+              {
+                type: "type_annotation",
+                named: true
+              },
+              {
+                type: "type_predicate_annotation",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "function_expression",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement_block",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              }
+            ]
+          },
+          parameters: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "formal_parameters",
+                named: true
+              }
+            ]
+          },
+          return_type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "asserts_annotation",
+                named: true
+              },
+              {
+                type: "type_annotation",
+                named: true
+              },
+              {
+                type: "type_predicate_annotation",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "function_signature",
+        named: true,
+        fields: {
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              }
+            ]
+          },
+          parameters: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "formal_parameters",
+                named: true
+              }
+            ]
+          },
+          return_type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "asserts_annotation",
+                named: true
+              },
+              {
+                type: "type_annotation",
+                named: true
+              },
+              {
+                type: "type_predicate_annotation",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "function_type",
+        named: true,
+        fields: {
+          parameters: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "formal_parameters",
+                named: true
+              }
+            ]
+          },
+          return_type: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "asserts",
+                named: true
+              },
+              {
+                type: "type",
+                named: true
+              },
+              {
+                type: "type_predicate",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "generator_function",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement_block",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              }
+            ]
+          },
+          parameters: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "formal_parameters",
+                named: true
+              }
+            ]
+          },
+          return_type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "asserts_annotation",
+                named: true
+              },
+              {
+                type: "type_annotation",
+                named: true
+              },
+              {
+                type: "type_predicate_annotation",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "generator_function_declaration",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement_block",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              }
+            ]
+          },
+          parameters: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "formal_parameters",
+                named: true
+              }
+            ]
+          },
+          return_type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "asserts_annotation",
+                named: true
+              },
+              {
+                type: "type_annotation",
+                named: true
+              },
+              {
+                type: "type_predicate_annotation",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "generic_type",
+        named: true,
+        fields: {
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "nested_type_identifier",
+                named: true
+              },
+              {
+                type: "type_identifier",
+                named: true
+              }
+            ]
+          },
+          type_arguments: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type_arguments",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "glimmer_template",
+        named: true,
+        fields: {
+          close_tag: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "glimmer_closing_tag",
+                named: true
+              }
+            ]
+          },
+          open_tag: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "glimmer_opening_tag",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "identifier",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "if_statement",
+        named: true,
+        fields: {
+          alternative: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "else_clause",
+                named: true
+              }
+            ]
+          },
+          condition: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "parenthesized_expression",
+                named: true
+              }
+            ]
+          },
+          consequence: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "implements_clause",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "import",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "import_alias",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "identifier",
+              named: true
+            },
+            {
+              type: "nested_identifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "import_attribute",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "object",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "import_clause",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "identifier",
+              named: true
+            },
+            {
+              type: "named_imports",
+              named: true
+            },
+            {
+              type: "namespace_import",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "import_require_clause",
+        named: true,
+        fields: {
+          source: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "identifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "import_specifier",
+        named: true,
+        fields: {
+          alias: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "import_statement",
+        named: true,
+        fields: {
+          source: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "import_attribute",
+              named: true
+            },
+            {
+              type: "import_clause",
+              named: true
+            },
+            {
+              type: "import_require_clause",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "index_signature",
+        named: true,
+        fields: {
+          index_type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              }
+            ]
+          },
+          sign: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "+",
+                named: false
+              },
+              {
+                type: "-",
+                named: false
+              }
+            ]
+          },
+          type: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "adding_type_annotation",
+                named: true
+              },
+              {
+                type: "omitting_type_annotation",
+                named: true
+              },
+              {
+                type: "opting_type_annotation",
+                named: true
+              },
+              {
+                type: "type_annotation",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: false,
+          required: false,
+          types: [
+            {
+              type: "mapped_type_clause",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "index_type_query",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "primary_type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "infer_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            },
+            {
+              type: "type_identifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "instantiation_expression",
+        named: true,
+        fields: {
+          function: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "import",
+                named: true
+              },
+              {
+                type: "member_expression",
+                named: true
+              },
+              {
+                type: "subscript_expression",
+                named: true
+              }
+            ]
+          },
+          type_arguments: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type_arguments",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: false,
+          required: false,
+          types: [
+            {
+              type: "expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "interface_body",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "call_signature",
+              named: true
+            },
+            {
+              type: "construct_signature",
+              named: true
+            },
+            {
+              type: "export_statement",
+              named: true
+            },
+            {
+              type: "index_signature",
+              named: true
+            },
+            {
+              type: "method_signature",
+              named: true
+            },
+            {
+              type: "property_signature",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "interface_declaration",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "interface_body",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type_identifier",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: false,
+          required: false,
+          types: [
+            {
+              type: "extends_type_clause",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "internal_module",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "statement_block",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "nested_identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "intersection_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "jsx_attribute",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "jsx_element",
+              named: true
+            },
+            {
+              type: "jsx_expression",
+              named: true
+            },
+            {
+              type: "jsx_namespace_name",
+              named: true
+            },
+            {
+              type: "jsx_self_closing_element",
+              named: true
+            },
+            {
+              type: "property_identifier",
+              named: true
+            },
+            {
+              type: "string",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "jsx_closing_element",
+        named: true,
+        fields: {
+          name: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "jsx_namespace_name",
+                named: true
+              },
+              {
+                type: "member_expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "jsx_element",
+        named: true,
+        fields: {
+          close_tag: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "jsx_closing_element",
+                named: true
+              }
+            ]
+          },
+          open_tag: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "jsx_opening_element",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "html_character_reference",
+              named: true
+            },
+            {
+              type: "jsx_element",
+              named: true
+            },
+            {
+              type: "jsx_expression",
+              named: true
+            },
+            {
+              type: "jsx_self_closing_element",
+              named: true
+            },
+            {
+              type: "jsx_text",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "jsx_expression",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: false,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "sequence_expression",
+              named: true
+            },
+            {
+              type: "spread_element",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "jsx_namespace_name",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "identifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "jsx_opening_element",
+        named: true,
+        fields: {
+          attribute: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "jsx_attribute",
+                named: true
+              },
+              {
+                type: "jsx_expression",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "jsx_namespace_name",
+                named: true
+              },
+              {
+                type: "member_expression",
+                named: true
+              }
+            ]
+          },
+          type_arguments: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_arguments",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "jsx_self_closing_element",
+        named: true,
+        fields: {
+          attribute: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "jsx_attribute",
+                named: true
+              },
+              {
+                type: "jsx_expression",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "jsx_namespace_name",
+                named: true
+              },
+              {
+                type: "member_expression",
+                named: true
+              }
+            ]
+          },
+          type_arguments: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_arguments",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "jsx_text",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "labeled_statement",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement",
+                named: true
+              }
+            ]
+          },
+          label: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement_identifier",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "lexical_declaration",
+        named: true,
+        fields: {
+          kind: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "const",
+                named: false
+              },
+              {
+                type: "let",
+                named: false
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "variable_declarator",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "literal_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "false",
+              named: true
+            },
+            {
+              type: "null",
+              named: true
+            },
+            {
+              type: "number",
+              named: true
+            },
+            {
+              type: "string",
+              named: true
+            },
+            {
+              type: "true",
+              named: true
+            },
+            {
+              type: "unary_expression",
+              named: true
+            },
+            {
+              type: "undefined",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "lookup_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "mapped_type_clause",
+        named: true,
+        fields: {
+          alias: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type_identifier",
+                named: true
+              }
+            ]
+          },
+          type: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "member_expression",
+        named: true,
+        fields: {
+          object: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              },
+              {
+                type: "import",
+                named: true
+              }
+            ]
+          },
+          optional_chain: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "optional_chain",
+                named: true
+              }
+            ]
+          },
+          property: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "private_property_identifier",
+                named: true
+              },
+              {
+                type: "property_identifier",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "meta_property",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "method_definition",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement_block",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "computed_property_name",
+                named: true
+              },
+              {
+                type: "number",
+                named: true
+              },
+              {
+                type: "private_property_identifier",
+                named: true
+              },
+              {
+                type: "property_identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          },
+          parameters: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "formal_parameters",
+                named: true
+              }
+            ]
+          },
+          return_type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "asserts_annotation",
+                named: true
+              },
+              {
+                type: "type_annotation",
+                named: true
+              },
+              {
+                type: "type_predicate_annotation",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "accessibility_modifier",
+              named: true
+            },
+            {
+              type: "override_modifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "method_signature",
+        named: true,
+        fields: {
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "computed_property_name",
+                named: true
+              },
+              {
+                type: "number",
+                named: true
+              },
+              {
+                type: "private_property_identifier",
+                named: true
+              },
+              {
+                type: "property_identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          },
+          parameters: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "formal_parameters",
+                named: true
+              }
+            ]
+          },
+          return_type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "asserts_annotation",
+                named: true
+              },
+              {
+                type: "type_annotation",
+                named: true
+              },
+              {
+                type: "type_predicate_annotation",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "accessibility_modifier",
+              named: true
+            },
+            {
+              type: "override_modifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "module",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "statement_block",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "nested_identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "named_imports",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "import_specifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "namespace_export",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "identifier",
+              named: true
+            },
+            {
+              type: "string",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "namespace_import",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "identifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "nested_identifier",
+        named: true,
+        fields: {
+          object: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "member_expression",
+                named: true
+              }
+            ]
+          },
+          property: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "property_identifier",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "nested_type_identifier",
+        named: true,
+        fields: {
+          module: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "nested_identifier",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type_identifier",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "new_expression",
+        named: true,
+        fields: {
+          arguments: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "arguments",
+                named: true
+              }
+            ]
+          },
+          constructor: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "primary_expression",
+                named: true
+              }
+            ]
+          },
+          type_arguments: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_arguments",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "non_null_expression",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "object",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "method_definition",
+              named: true
+            },
+            {
+              type: "pair",
+              named: true
+            },
+            {
+              type: "shorthand_property_identifier",
+              named: true
+            },
+            {
+              type: "spread_element",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "object_assignment_pattern",
+        named: true,
+        fields: {
+          left: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "array_pattern",
+                named: true
+              },
+              {
+                type: "object_pattern",
+                named: true
+              },
+              {
+                type: "shorthand_property_identifier_pattern",
+                named: true
+              }
+            ]
+          },
+          right: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "object_pattern",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "object_assignment_pattern",
+              named: true
+            },
+            {
+              type: "pair_pattern",
+              named: true
+            },
+            {
+              type: "rest_pattern",
+              named: true
+            },
+            {
+              type: "shorthand_property_identifier_pattern",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "object_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "call_signature",
+              named: true
+            },
+            {
+              type: "construct_signature",
+              named: true
+            },
+            {
+              type: "export_statement",
+              named: true
+            },
+            {
+              type: "index_signature",
+              named: true
+            },
+            {
+              type: "method_signature",
+              named: true
+            },
+            {
+              type: "property_signature",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "omitting_type_annotation",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "opting_type_annotation",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "optional_chain",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "optional_parameter",
+        named: true,
+        fields: {
+          decorator: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "decorator",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              }
+            ]
+          },
+          pattern: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "pattern",
+                named: true
+              },
+              {
+                type: "this",
+                named: true
+              }
+            ]
+          },
+          type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_annotation",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "accessibility_modifier",
+              named: true
+            },
+            {
+              type: "override_modifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "optional_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "override_modifier",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "pair",
+        named: true,
+        fields: {
+          key: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "computed_property_name",
+                named: true
+              },
+              {
+                type: "number",
+                named: true
+              },
+              {
+                type: "private_property_identifier",
+                named: true
+              },
+              {
+                type: "property_identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "pair_pattern",
+        named: true,
+        fields: {
+          key: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "computed_property_name",
+                named: true
+              },
+              {
+                type: "number",
+                named: true
+              },
+              {
+                type: "private_property_identifier",
+                named: true
+              },
+              {
+                type: "property_identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "assignment_pattern",
+                named: true
+              },
+              {
+                type: "pattern",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "parenthesized_expression",
+        named: true,
+        fields: {
+          type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_annotation",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "sequence_expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "parenthesized_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "predefined_type",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "program",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "hash_bang_line",
+              named: true
+            },
+            {
+              type: "statement",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "property_signature",
+        named: true,
+        fields: {
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "computed_property_name",
+                named: true
+              },
+              {
+                type: "number",
+                named: true
+              },
+              {
+                type: "private_property_identifier",
+                named: true
+              },
+              {
+                type: "property_identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          },
+          type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_annotation",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "accessibility_modifier",
+              named: true
+            },
+            {
+              type: "override_modifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "public_field_definition",
+        named: true,
+        fields: {
+          decorator: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "decorator",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "computed_property_name",
+                named: true
+              },
+              {
+                type: "number",
+                named: true
+              },
+              {
+                type: "private_property_identifier",
+                named: true
+              },
+              {
+                type: "property_identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          },
+          type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_annotation",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "accessibility_modifier",
+              named: true
+            },
+            {
+              type: "override_modifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "readonly_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "regex",
+        named: true,
+        fields: {
+          flags: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "regex_flags",
+                named: true
+              }
+            ]
+          },
+          pattern: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "regex_pattern",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "required_parameter",
+        named: true,
+        fields: {
+          decorator: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "decorator",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "rest_pattern",
+                named: true
+              }
+            ]
+          },
+          pattern: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "pattern",
+                named: true
+              },
+              {
+                type: "this",
+                named: true
+              }
+            ]
+          },
+          type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_annotation",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "accessibility_modifier",
+              named: true
+            },
+            {
+              type: "override_modifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "rest_pattern",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "array_pattern",
+              named: true
+            },
+            {
+              type: "identifier",
+              named: true
+            },
+            {
+              type: "member_expression",
+              named: true
+            },
+            {
+              type: "non_null_expression",
+              named: true
+            },
+            {
+              type: "object_pattern",
+              named: true
+            },
+            {
+              type: "subscript_expression",
+              named: true
+            },
+            {
+              type: "undefined",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "rest_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "return_statement",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: false,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "sequence_expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "satisfies_expression",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "sequence_expression",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "spread_element",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "statement_block",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "statement",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "string",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "escape_sequence",
+              named: true
+            },
+            {
+              type: "html_character_reference",
+              named: true
+            },
+            {
+              type: "string_fragment",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "subscript_expression",
+        named: true,
+        fields: {
+          index: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              },
+              {
+                type: "number",
+                named: true
+              },
+              {
+                type: "predefined_type",
+                named: true
+              },
+              {
+                type: "sequence_expression",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          },
+          object: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          },
+          optional_chain: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "optional_chain",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "switch_body",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "switch_case",
+              named: true
+            },
+            {
+              type: "switch_default",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "switch_case",
+        named: true,
+        fields: {
+          body: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "statement",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              },
+              {
+                type: "sequence_expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "switch_default",
+        named: true,
+        fields: {
+          body: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "statement",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "switch_statement",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "switch_body",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "parenthesized_expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "template_literal_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "string_fragment",
+              named: true
+            },
+            {
+              type: "template_type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "template_string",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "escape_sequence",
+              named: true
+            },
+            {
+              type: "string_fragment",
+              named: true
+            },
+            {
+              type: "template_substitution",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "template_substitution",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "sequence_expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "template_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "infer_type",
+              named: true
+            },
+            {
+              type: "primary_type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "ternary_expression",
+        named: true,
+        fields: {
+          alternative: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          },
+          condition: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          },
+          consequence: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "throw_statement",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "sequence_expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "try_statement",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement_block",
+                named: true
+              }
+            ]
+          },
+          finalizer: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "finally_clause",
+                named: true
+              }
+            ]
+          },
+          handler: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "catch_clause",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "tuple_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "optional_parameter",
+              named: true
+            },
+            {
+              type: "optional_type",
+              named: true
+            },
+            {
+              type: "required_parameter",
+              named: true
+            },
+            {
+              type: "rest_type",
+              named: true
+            },
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "type_alias_declaration",
+        named: true,
+        fields: {
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type_identifier",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameters",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "type_annotation",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "type_arguments",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "type_parameter",
+        named: true,
+        fields: {
+          constraint: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "constraint",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type_identifier",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "default_type",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "type_parameters",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "type_parameter",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "type_predicate",
+        named: true,
+        fields: {
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "this",
+                named: true
+              }
+            ]
+          },
+          type: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "type_predicate_annotation",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "type_predicate",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "type_query",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "call_expression",
+              named: true
+            },
+            {
+              type: "identifier",
+              named: true
+            },
+            {
+              type: "instantiation_expression",
+              named: true
+            },
+            {
+              type: "member_expression",
+              named: true
+            },
+            {
+              type: "subscript_expression",
+              named: true
+            },
+            {
+              type: "this",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "unary_expression",
+        named: true,
+        fields: {
+          argument: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              },
+              {
+                type: "number",
+                named: true
+              }
+            ]
+          },
+          operator: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "!",
+                named: false
+              },
+              {
+                type: "+",
+                named: false
+              },
+              {
+                type: "-",
+                named: false
+              },
+              {
+                type: "delete",
+                named: false
+              },
+              {
+                type: "typeof",
+                named: false
+              },
+              {
+                type: "void",
+                named: false
+              },
+              {
+                type: "~",
+                named: false
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "union_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "update_expression",
+        named: true,
+        fields: {
+          argument: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          },
+          operator: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "++",
+                named: false
+              },
+              {
+                type: "--",
+                named: false
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "variable_declaration",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "variable_declarator",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "variable_declarator",
+        named: true,
+        fields: {
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "array_pattern",
+                named: true
+              },
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "object_pattern",
+                named: true
+              }
+            ]
+          },
+          type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_annotation",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "while_statement",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement",
+                named: true
+              }
+            ]
+          },
+          condition: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "parenthesized_expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "with_statement",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "statement",
+                named: true
+              }
+            ]
+          },
+          object: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "parenthesized_expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "yield_expression",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: false,
+          types: [
+            {
+              type: "expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "!",
+        named: false
+      },
+      {
+        type: "!=",
+        named: false
+      },
+      {
+        type: "!==",
+        named: false
+      },
+      {
+        type: '"',
+        named: false
+      },
+      {
+        type: "${",
+        named: false
+      },
+      {
+        type: "%",
+        named: false
+      },
+      {
+        type: "%=",
+        named: false
+      },
+      {
+        type: "&",
+        named: false
+      },
+      {
+        type: "&&",
+        named: false
+      },
+      {
+        type: "&&=",
+        named: false
+      },
+      {
+        type: "&=",
+        named: false
+      },
+      {
+        type: "'",
+        named: false
+      },
+      {
+        type: "(",
+        named: false
+      },
+      {
+        type: ")",
+        named: false
+      },
+      {
+        type: "*",
+        named: false
+      },
+      {
+        type: "**",
+        named: false
+      },
+      {
+        type: "**=",
+        named: false
+      },
+      {
+        type: "*=",
+        named: false
+      },
+      {
+        type: "+",
+        named: false
+      },
+      {
+        type: "++",
+        named: false
+      },
+      {
+        type: "+=",
+        named: false
+      },
+      {
+        type: "+?:",
+        named: false
+      },
+      {
+        type: ",",
+        named: false
+      },
+      {
+        type: "-",
+        named: false
+      },
+      {
+        type: "--",
+        named: false
+      },
+      {
+        type: "-=",
+        named: false
+      },
+      {
+        type: "-?:",
+        named: false
+      },
+      {
+        type: ".",
+        named: false
+      },
+      {
+        type: "...",
+        named: false
+      },
+      {
+        type: "/",
+        named: false
+      },
+      {
+        type: "/=",
+        named: false
+      },
+      {
+        type: "/>",
+        named: false
+      },
+      {
+        type: ":",
+        named: false
+      },
+      {
+        type: ";",
+        named: false
+      },
+      {
+        type: "<",
+        named: false
+      },
+      {
+        type: "</",
+        named: false
+      },
+      {
+        type: "<<",
+        named: false
+      },
+      {
+        type: "<<=",
+        named: false
+      },
+      {
+        type: "<=",
+        named: false
+      },
+      {
+        type: "=",
+        named: false
+      },
+      {
+        type: "==",
+        named: false
+      },
+      {
+        type: "===",
+        named: false
+      },
+      {
+        type: "=>",
+        named: false
+      },
+      {
+        type: ">",
+        named: false
+      },
+      {
+        type: ">=",
+        named: false
+      },
+      {
+        type: ">>",
+        named: false
+      },
+      {
+        type: ">>=",
+        named: false
+      },
+      {
+        type: ">>>",
+        named: false
+      },
+      {
+        type: ">>>=",
+        named: false
+      },
+      {
+        type: "?",
+        named: false
+      },
+      {
+        type: "?.",
+        named: false
+      },
+      {
+        type: "?:",
+        named: false
+      },
+      {
+        type: "??",
+        named: false
+      },
+      {
+        type: "??=",
+        named: false
+      },
+      {
+        type: "@",
+        named: false
+      },
+      {
+        type: "[",
+        named: false
+      },
+      {
+        type: "]",
+        named: false
+      },
+      {
+        type: "^",
+        named: false
+      },
+      {
+        type: "^=",
+        named: false
+      },
+      {
+        type: "`",
+        named: false
+      },
+      {
+        type: "abstract",
+        named: false
+      },
+      {
+        type: "accessor",
+        named: false
+      },
+      {
+        type: "any",
+        named: false
+      },
+      {
+        type: "as",
+        named: false
+      },
+      {
+        type: "asserts",
+        named: false
+      },
+      {
+        type: "async",
+        named: false
+      },
+      {
+        type: "await",
+        named: false
+      },
+      {
+        type: "boolean",
+        named: false
+      },
+      {
+        type: "break",
+        named: false
+      },
+      {
+        type: "case",
+        named: false
+      },
+      {
+        type: "catch",
+        named: false
+      },
+      {
+        type: "class",
+        named: false
+      },
+      {
+        type: "comment",
+        named: true
+      },
+      {
+        type: "const",
+        named: false
+      },
+      {
+        type: "continue",
+        named: false
+      },
+      {
+        type: "debugger",
+        named: false
+      },
+      {
+        type: "declare",
+        named: false
+      },
+      {
+        type: "default",
+        named: false
+      },
+      {
+        type: "delete",
+        named: false
+      },
+      {
+        type: "do",
+        named: false
+      },
+      {
+        type: "else",
+        named: false
+      },
+      {
+        type: "enum",
+        named: false
+      },
+      {
+        type: "escape_sequence",
+        named: true
+      },
+      {
+        type: "export",
+        named: false
+      },
+      {
+        type: "extends",
+        named: false
+      },
+      {
+        type: "false",
+        named: true
+      },
+      {
+        type: "finally",
+        named: false
+      },
+      {
+        type: "for",
+        named: false
+      },
+      {
+        type: "from",
+        named: false
+      },
+      {
+        type: "function",
+        named: false
+      },
+      {
+        type: "get",
+        named: false
+      },
+      {
+        type: "glimmer_closing_tag",
+        named: true
+      },
+      {
+        type: "glimmer_opening_tag",
+        named: true
+      },
+      {
+        type: "global",
+        named: false
+      },
+      {
+        type: "hash_bang_line",
+        named: true
+      },
+      {
+        type: "html_character_reference",
+        named: true
+      },
+      {
+        type: "html_comment",
+        named: true
+      },
+      {
+        type: "if",
+        named: false
+      },
+      {
+        type: "implements",
+        named: false
+      },
+      {
+        type: "import",
+        named: false
+      },
+      {
+        type: "in",
+        named: false
+      },
+      {
+        type: "infer",
+        named: false
+      },
+      {
+        type: "instanceof",
+        named: false
+      },
+      {
+        type: "interface",
+        named: false
+      },
+      {
+        type: "is",
+        named: false
+      },
+      {
+        type: "keyof",
+        named: false
+      },
+      {
+        type: "let",
+        named: false
+      },
+      {
+        type: "module",
+        named: false
+      },
+      {
+        type: "namespace",
+        named: false
+      },
+      {
+        type: "never",
+        named: false
+      },
+      {
+        type: "new",
+        named: false
+      },
+      {
+        type: "null",
+        named: true
+      },
+      {
+        type: "number",
+        named: true
+      },
+      {
+        type: "number",
+        named: false
+      },
+      {
+        type: "object",
+        named: false
+      },
+      {
+        type: "of",
+        named: false
+      },
+      {
+        type: "override",
+        named: false
+      },
+      {
+        type: "private",
+        named: false
+      },
+      {
+        type: "private_property_identifier",
+        named: true
+      },
+      {
+        type: "property_identifier",
+        named: true
+      },
+      {
+        type: "protected",
+        named: false
+      },
+      {
+        type: "public",
+        named: false
+      },
+      {
+        type: "readonly",
+        named: false
+      },
+      {
+        type: "regex_flags",
+        named: true
+      },
+      {
+        type: "regex_pattern",
+        named: true
+      },
+      {
+        type: "require",
+        named: false
+      },
+      {
+        type: "return",
+        named: false
+      },
+      {
+        type: "satisfies",
+        named: false
+      },
+      {
+        type: "set",
+        named: false
+      },
+      {
+        type: "shorthand_property_identifier",
+        named: true
+      },
+      {
+        type: "shorthand_property_identifier_pattern",
+        named: true
+      },
+      {
+        type: "statement_identifier",
+        named: true
+      },
+      {
+        type: "static",
+        named: false
+      },
+      {
+        type: "string",
+        named: false
+      },
+      {
+        type: "string_fragment",
+        named: true
+      },
+      {
+        type: "super",
+        named: true
+      },
+      {
+        type: "switch",
+        named: false
+      },
+      {
+        type: "symbol",
+        named: false
+      },
+      {
+        type: "target",
+        named: false
+      },
+      {
+        type: "this",
+        named: true
+      },
+      {
+        type: "this_type",
+        named: true
+      },
+      {
+        type: "throw",
+        named: false
+      },
+      {
+        type: "true",
+        named: true
+      },
+      {
+        type: "try",
+        named: false
+      },
+      {
+        type: "type",
+        named: false
+      },
+      {
+        type: "type_identifier",
+        named: true
+      },
+      {
+        type: "typeof",
+        named: false
+      },
+      {
+        type: "undefined",
+        named: true
+      },
+      {
+        type: "unique symbol",
+        named: false
+      },
+      {
+        type: "unknown",
+        named: false
+      },
+      {
+        type: "using",
+        named: false
+      },
+      {
+        type: "var",
+        named: false
+      },
+      {
+        type: "void",
+        named: false
+      },
+      {
+        type: "while",
+        named: false
+      },
+      {
+        type: "with",
+        named: false
+      },
+      {
+        type: "yield",
+        named: false
+      },
+      {
+        type: "{",
+        named: false
+      },
+      {
+        type: "{|",
+        named: false
+      },
+      {
+        type: "|",
+        named: false
+      },
+      {
+        type: "|=",
+        named: false
+      },
+      {
+        type: "||",
+        named: false
+      },
+      {
+        type: "||=",
+        named: false
+      },
+      {
+        type: "|}",
+        named: false
+      },
+      {
+        type: "}",
+        named: false
+      },
+      {
+        type: "~",
+        named: false
+      }
+    ];
+  }
+});
+
+// node_modules/tree-sitter-typescript/bindings/node/index.js
+var require_node = __commonJS({
+  "node_modules/tree-sitter-typescript/bindings/node/index.js"(exports2, module2) {
+    var root = require("path").join(__dirname, "..", "..");
+    module2.exports = require_node_gyp_build2()(root);
+    try {
+      module2.exports.typescript.nodeTypeInfo = require_node_types();
+      module2.exports.tsx.nodeTypeInfo = require_node_types2();
+    } catch (_) {
+    }
+  }
+});
+
+// node_modules/tree-sitter-python/src/node-types.json
+var require_node_types3 = __commonJS({
+  "node_modules/tree-sitter-python/src/node-types.json"(exports2, module2) {
+    module2.exports = [
+      {
+        type: "_compound_statement",
+        named: true,
+        subtypes: [
+          {
+            type: "class_definition",
+            named: true
+          },
+          {
+            type: "decorated_definition",
+            named: true
+          },
+          {
+            type: "for_statement",
+            named: true
+          },
+          {
+            type: "function_definition",
+            named: true
+          },
+          {
+            type: "if_statement",
+            named: true
+          },
+          {
+            type: "match_statement",
+            named: true
+          },
+          {
+            type: "try_statement",
+            named: true
+          },
+          {
+            type: "while_statement",
+            named: true
+          },
+          {
+            type: "with_statement",
+            named: true
+          }
+        ]
+      },
+      {
+        type: "_simple_statement",
+        named: true,
+        subtypes: [
+          {
+            type: "assert_statement",
+            named: true
+          },
+          {
+            type: "break_statement",
+            named: true
+          },
+          {
+            type: "continue_statement",
+            named: true
+          },
+          {
+            type: "delete_statement",
+            named: true
+          },
+          {
+            type: "exec_statement",
+            named: true
+          },
+          {
+            type: "expression_statement",
+            named: true
+          },
+          {
+            type: "future_import_statement",
+            named: true
+          },
+          {
+            type: "global_statement",
+            named: true
+          },
+          {
+            type: "import_from_statement",
+            named: true
+          },
+          {
+            type: "import_statement",
+            named: true
+          },
+          {
+            type: "nonlocal_statement",
+            named: true
+          },
+          {
+            type: "pass_statement",
+            named: true
+          },
+          {
+            type: "print_statement",
+            named: true
+          },
+          {
+            type: "raise_statement",
+            named: true
+          },
+          {
+            type: "return_statement",
+            named: true
+          },
+          {
+            type: "type_alias_statement",
+            named: true
+          }
+        ]
+      },
+      {
+        type: "expression",
+        named: true,
+        subtypes: [
+          {
+            type: "as_pattern",
+            named: true
+          },
+          {
+            type: "boolean_operator",
+            named: true
+          },
+          {
+            type: "comparison_operator",
+            named: true
+          },
+          {
+            type: "conditional_expression",
+            named: true
+          },
+          {
+            type: "lambda",
+            named: true
+          },
+          {
+            type: "named_expression",
+            named: true
+          },
+          {
+            type: "not_operator",
+            named: true
+          },
+          {
+            type: "primary_expression",
+            named: true
+          }
+        ]
+      },
+      {
+        type: "parameter",
+        named: true,
+        subtypes: [
+          {
+            type: "default_parameter",
+            named: true
+          },
+          {
+            type: "dictionary_splat_pattern",
+            named: true
+          },
+          {
+            type: "identifier",
+            named: true
+          },
+          {
+            type: "keyword_separator",
+            named: true
+          },
+          {
+            type: "list_splat_pattern",
+            named: true
+          },
+          {
+            type: "positional_separator",
+            named: true
+          },
+          {
+            type: "tuple_pattern",
+            named: true
+          },
+          {
+            type: "typed_default_parameter",
+            named: true
+          },
+          {
+            type: "typed_parameter",
+            named: true
+          }
+        ]
+      },
+      {
+        type: "pattern",
+        named: true,
+        subtypes: [
+          {
+            type: "attribute",
+            named: true
+          },
+          {
+            type: "identifier",
+            named: true
+          },
+          {
+            type: "list_pattern",
+            named: true
+          },
+          {
+            type: "list_splat_pattern",
+            named: true
+          },
+          {
+            type: "subscript",
+            named: true
+          },
+          {
+            type: "tuple_pattern",
+            named: true
+          }
+        ]
+      },
+      {
+        type: "primary_expression",
+        named: true,
+        subtypes: [
+          {
+            type: "attribute",
+            named: true
+          },
+          {
+            type: "await",
+            named: true
+          },
+          {
+            type: "binary_operator",
+            named: true
+          },
+          {
+            type: "call",
+            named: true
+          },
+          {
+            type: "concatenated_string",
+            named: true
+          },
+          {
+            type: "dictionary",
+            named: true
+          },
+          {
+            type: "dictionary_comprehension",
+            named: true
+          },
+          {
+            type: "ellipsis",
+            named: true
+          },
+          {
+            type: "false",
+            named: true
+          },
+          {
+            type: "float",
+            named: true
+          },
+          {
+            type: "generator_expression",
+            named: true
+          },
+          {
+            type: "identifier",
+            named: true
+          },
+          {
+            type: "integer",
+            named: true
+          },
+          {
+            type: "list",
+            named: true
+          },
+          {
+            type: "list_comprehension",
+            named: true
+          },
+          {
+            type: "list_splat",
+            named: true
+          },
+          {
+            type: "none",
+            named: true
+          },
+          {
+            type: "parenthesized_expression",
+            named: true
+          },
+          {
+            type: "set",
+            named: true
+          },
+          {
+            type: "set_comprehension",
+            named: true
+          },
+          {
+            type: "string",
+            named: true
+          },
+          {
+            type: "subscript",
+            named: true
+          },
+          {
+            type: "true",
+            named: true
+          },
+          {
+            type: "tuple",
+            named: true
+          },
+          {
+            type: "unary_operator",
+            named: true
+          }
+        ]
+      },
+      {
+        type: "aliased_import",
+        named: true,
+        fields: {
+          alias: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "dotted_name",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "argument_list",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "dictionary_splat",
+              named: true
+            },
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "keyword_argument",
+              named: true
+            },
+            {
+              type: "list_splat",
+              named: true
+            },
+            {
+              type: "parenthesized_expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "as_pattern",
+        named: true,
+        fields: {
+          alias: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "as_pattern_target",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "case_pattern",
+              named: true
+            },
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "identifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "assert_statement",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "assignment",
+        named: true,
+        fields: {
+          left: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "pattern",
+                named: true
+              },
+              {
+                type: "pattern_list",
+                named: true
+              }
+            ]
+          },
+          right: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "assignment",
+                named: true
+              },
+              {
+                type: "augmented_assignment",
+                named: true
+              },
+              {
+                type: "expression",
+                named: true
+              },
+              {
+                type: "expression_list",
+                named: true
+              },
+              {
+                type: "pattern_list",
+                named: true
+              },
+              {
+                type: "yield",
+                named: true
+              }
+            ]
+          },
+          type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "attribute",
+        named: true,
+        fields: {
+          attribute: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              }
+            ]
+          },
+          object: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "primary_expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "augmented_assignment",
+        named: true,
+        fields: {
+          left: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "pattern",
+                named: true
+              },
+              {
+                type: "pattern_list",
+                named: true
+              }
+            ]
+          },
+          operator: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "%=",
+                named: false
+              },
+              {
+                type: "&=",
+                named: false
+              },
+              {
+                type: "**=",
+                named: false
+              },
+              {
+                type: "*=",
+                named: false
+              },
+              {
+                type: "+=",
+                named: false
+              },
+              {
+                type: "-=",
+                named: false
+              },
+              {
+                type: "//=",
+                named: false
+              },
+              {
+                type: "/=",
+                named: false
+              },
+              {
+                type: "<<=",
+                named: false
+              },
+              {
+                type: ">>=",
+                named: false
+              },
+              {
+                type: "@=",
+                named: false
+              },
+              {
+                type: "^=",
+                named: false
+              },
+              {
+                type: "|=",
+                named: false
+              }
+            ]
+          },
+          right: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "assignment",
+                named: true
+              },
+              {
+                type: "augmented_assignment",
+                named: true
+              },
+              {
+                type: "expression",
+                named: true
+              },
+              {
+                type: "expression_list",
+                named: true
+              },
+              {
+                type: "pattern_list",
+                named: true
+              },
+              {
+                type: "yield",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "await",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "primary_expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "binary_operator",
+        named: true,
+        fields: {
+          left: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "primary_expression",
+                named: true
+              }
+            ]
+          },
+          operator: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "%",
+                named: false
+              },
+              {
+                type: "&",
+                named: false
+              },
+              {
+                type: "*",
+                named: false
+              },
+              {
+                type: "**",
+                named: false
+              },
+              {
+                type: "+",
+                named: false
+              },
+              {
+                type: "-",
+                named: false
+              },
+              {
+                type: "/",
+                named: false
+              },
+              {
+                type: "//",
+                named: false
+              },
+              {
+                type: "<<",
+                named: false
+              },
+              {
+                type: ">>",
+                named: false
+              },
+              {
+                type: "@",
+                named: false
+              },
+              {
+                type: "^",
+                named: false
+              },
+              {
+                type: "|",
+                named: false
+              }
+            ]
+          },
+          right: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "primary_expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "block",
+        named: true,
+        fields: {
+          alternative: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "case_clause",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "_compound_statement",
+              named: true
+            },
+            {
+              type: "_simple_statement",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "boolean_operator",
+        named: true,
+        fields: {
+          left: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          },
+          operator: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "and",
+                named: false
+              },
+              {
+                type: "or",
+                named: false
+              }
+            ]
+          },
+          right: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "break_statement",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "call",
+        named: true,
+        fields: {
+          arguments: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "argument_list",
+                named: true
+              },
+              {
+                type: "generator_expression",
+                named: true
+              }
+            ]
+          },
+          function: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "primary_expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "case_clause",
+        named: true,
+        fields: {
+          consequence: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "block",
+                named: true
+              }
+            ]
+          },
+          guard: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "if_clause",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "case_pattern",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "case_pattern",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: false,
+          types: [
+            {
+              type: "as_pattern",
+              named: true
+            },
+            {
+              type: "class_pattern",
+              named: true
+            },
+            {
+              type: "complex_pattern",
+              named: true
+            },
+            {
+              type: "concatenated_string",
+              named: true
+            },
+            {
+              type: "dict_pattern",
+              named: true
+            },
+            {
+              type: "dotted_name",
+              named: true
+            },
+            {
+              type: "false",
+              named: true
+            },
+            {
+              type: "float",
+              named: true
+            },
+            {
+              type: "integer",
+              named: true
+            },
+            {
+              type: "keyword_pattern",
+              named: true
+            },
+            {
+              type: "list_pattern",
+              named: true
+            },
+            {
+              type: "none",
+              named: true
+            },
+            {
+              type: "splat_pattern",
+              named: true
+            },
+            {
+              type: "string",
+              named: true
+            },
+            {
+              type: "true",
+              named: true
+            },
+            {
+              type: "tuple_pattern",
+              named: true
+            },
+            {
+              type: "union_pattern",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "chevron",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "class_definition",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "block",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              }
+            ]
+          },
+          superclasses: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "argument_list",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameter",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "class_pattern",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "case_pattern",
+              named: true
+            },
+            {
+              type: "dotted_name",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "comparison_operator",
+        named: true,
+        fields: {
+          operators: {
+            multiple: true,
+            required: true,
+            types: [
+              {
+                type: "!=",
+                named: false
+              },
+              {
+                type: "<",
+                named: false
+              },
+              {
+                type: "<=",
+                named: false
+              },
+              {
+                type: "<>",
+                named: false
+              },
+              {
+                type: "==",
+                named: false
+              },
+              {
+                type: ">",
+                named: false
+              },
+              {
+                type: ">=",
+                named: false
+              },
+              {
+                type: "in",
+                named: false
+              },
+              {
+                type: "is",
+                named: false
+              },
+              {
+                type: "is not",
+                named: false
+              },
+              {
+                type: "not in",
+                named: false
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "primary_expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "complex_pattern",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "float",
+              named: true
+            },
+            {
+              type: "integer",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "concatenated_string",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "string",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "conditional_expression",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "constrained_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "continue_statement",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "decorated_definition",
+        named: true,
+        fields: {
+          definition: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "class_definition",
+                named: true
+              },
+              {
+                type: "function_definition",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "decorator",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "decorator",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "default_parameter",
+        named: true,
+        fields: {
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "tuple_pattern",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "delete_statement",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "expression_list",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "dict_pattern",
+        named: true,
+        fields: {
+          key: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "-",
+                named: false
+              },
+              {
+                type: "_",
+                named: false
+              },
+              {
+                type: "class_pattern",
+                named: true
+              },
+              {
+                type: "complex_pattern",
+                named: true
+              },
+              {
+                type: "concatenated_string",
+                named: true
+              },
+              {
+                type: "dict_pattern",
+                named: true
+              },
+              {
+                type: "dotted_name",
+                named: true
+              },
+              {
+                type: "false",
+                named: true
+              },
+              {
+                type: "float",
+                named: true
+              },
+              {
+                type: "integer",
+                named: true
+              },
+              {
+                type: "list_pattern",
+                named: true
+              },
+              {
+                type: "none",
+                named: true
+              },
+              {
+                type: "splat_pattern",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              },
+              {
+                type: "true",
+                named: true
+              },
+              {
+                type: "tuple_pattern",
+                named: true
+              },
+              {
+                type: "union_pattern",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "case_pattern",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "splat_pattern",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "dictionary",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "dictionary_splat",
+              named: true
+            },
+            {
+              type: "pair",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "dictionary_comprehension",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "pair",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "for_in_clause",
+              named: true
+            },
+            {
+              type: "if_clause",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "dictionary_splat",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "dictionary_splat_pattern",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "attribute",
+              named: true
+            },
+            {
+              type: "identifier",
+              named: true
+            },
+            {
+              type: "subscript",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "dotted_name",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "identifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "elif_clause",
+        named: true,
+        fields: {
+          condition: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          },
+          consequence: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "block",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "else_clause",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "block",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "except_clause",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "block",
+              named: true
+            },
+            {
+              type: "expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "except_group_clause",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "block",
+              named: true
+            },
+            {
+              type: "expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "exec_statement",
+        named: true,
+        fields: {
+          code: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              },
+              {
+                type: "string",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "expression_list",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "expression_statement",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "assignment",
+              named: true
+            },
+            {
+              type: "augmented_assignment",
+              named: true
+            },
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "yield",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "finally_clause",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "block",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "for_in_clause",
+        named: true,
+        fields: {
+          left: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "pattern",
+                named: true
+              },
+              {
+                type: "pattern_list",
+                named: true
+              }
+            ]
+          },
+          right: {
+            multiple: true,
+            required: true,
+            types: [
+              {
+                type: ",",
+                named: false
+              },
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "for_statement",
+        named: true,
+        fields: {
+          alternative: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "else_clause",
+                named: true
+              }
+            ]
+          },
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "block",
+                named: true
+              }
+            ]
+          },
+          left: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "pattern",
+                named: true
+              },
+              {
+                type: "pattern_list",
+                named: true
+              }
+            ]
+          },
+          right: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              },
+              {
+                type: "expression_list",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "format_expression",
+        named: true,
+        fields: {
+          expression: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              },
+              {
+                type: "expression_list",
+                named: true
+              },
+              {
+                type: "pattern_list",
+                named: true
+              },
+              {
+                type: "yield",
+                named: true
+              }
+            ]
+          },
+          format_specifier: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "format_specifier",
+                named: true
+              }
+            ]
+          },
+          type_conversion: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_conversion",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "format_specifier",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "format_expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "function_definition",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "block",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              }
+            ]
+          },
+          parameters: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "parameters",
+                named: true
+              }
+            ]
+          },
+          return_type: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type",
+                named: true
+              }
+            ]
+          },
+          type_parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_parameter",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "future_import_statement",
+        named: true,
+        fields: {
+          name: {
+            multiple: true,
+            required: true,
+            types: [
+              {
+                type: "aliased_import",
+                named: true
+              },
+              {
+                type: "dotted_name",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "generator_expression",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "for_in_clause",
+              named: true
+            },
+            {
+              type: "if_clause",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "generic_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "identifier",
+              named: true
+            },
+            {
+              type: "type_parameter",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "global_statement",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "identifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "if_clause",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "if_statement",
+        named: true,
+        fields: {
+          alternative: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "elif_clause",
+                named: true
+              },
+              {
+                type: "else_clause",
+                named: true
+              }
+            ]
+          },
+          condition: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          },
+          consequence: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "block",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "import_from_statement",
+        named: true,
+        fields: {
+          module_name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "dotted_name",
+                named: true
+              },
+              {
+                type: "relative_import",
+                named: true
+              }
+            ]
+          },
+          name: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "aliased_import",
+                named: true
+              },
+              {
+                type: "dotted_name",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: false,
+          required: false,
+          types: [
+            {
+              type: "wildcard_import",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "import_prefix",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "import_statement",
+        named: true,
+        fields: {
+          name: {
+            multiple: true,
+            required: true,
+            types: [
+              {
+                type: "aliased_import",
+                named: true
+              },
+              {
+                type: "dotted_name",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "interpolation",
+        named: true,
+        fields: {
+          expression: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              },
+              {
+                type: "expression_list",
+                named: true
+              },
+              {
+                type: "pattern_list",
+                named: true
+              },
+              {
+                type: "yield",
+                named: true
+              }
+            ]
+          },
+          format_specifier: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "format_specifier",
+                named: true
+              }
+            ]
+          },
+          type_conversion: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "type_conversion",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "keyword_argument",
+        named: true,
+        fields: {
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "keyword_pattern",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "class_pattern",
+              named: true
+            },
+            {
+              type: "complex_pattern",
+              named: true
+            },
+            {
+              type: "concatenated_string",
+              named: true
+            },
+            {
+              type: "dict_pattern",
+              named: true
+            },
+            {
+              type: "dotted_name",
+              named: true
+            },
+            {
+              type: "false",
+              named: true
+            },
+            {
+              type: "float",
+              named: true
+            },
+            {
+              type: "identifier",
+              named: true
+            },
+            {
+              type: "integer",
+              named: true
+            },
+            {
+              type: "list_pattern",
+              named: true
+            },
+            {
+              type: "none",
+              named: true
+            },
+            {
+              type: "splat_pattern",
+              named: true
+            },
+            {
+              type: "string",
+              named: true
+            },
+            {
+              type: "true",
+              named: true
+            },
+            {
+              type: "tuple_pattern",
+              named: true
+            },
+            {
+              type: "union_pattern",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "keyword_separator",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "lambda",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          },
+          parameters: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "lambda_parameters",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "lambda_parameters",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "parameter",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "list",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "list_splat",
+              named: true
+            },
+            {
+              type: "parenthesized_list_splat",
+              named: true
+            },
+            {
+              type: "yield",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "list_comprehension",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "for_in_clause",
+              named: true
+            },
+            {
+              type: "if_clause",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "list_pattern",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "case_pattern",
+              named: true
+            },
+            {
+              type: "pattern",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "list_splat",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "attribute",
+              named: true
+            },
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "identifier",
+              named: true
+            },
+            {
+              type: "subscript",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "list_splat_pattern",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "attribute",
+              named: true
+            },
+            {
+              type: "identifier",
+              named: true
+            },
+            {
+              type: "subscript",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "match_statement",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "block",
+                named: true
+              }
+            ]
+          },
+          subject: {
+            multiple: true,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "member_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "identifier",
+              named: true
+            },
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "module",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "_compound_statement",
+              named: true
+            },
+            {
+              type: "_simple_statement",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "named_expression",
+        named: true,
+        fields: {
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "nonlocal_statement",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "identifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "not_operator",
+        named: true,
+        fields: {
+          argument: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "pair",
+        named: true,
+        fields: {
+          key: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "parameters",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "parameter",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "parenthesized_expression",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "list_splat",
+              named: true
+            },
+            {
+              type: "parenthesized_expression",
+              named: true
+            },
+            {
+              type: "yield",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "parenthesized_list_splat",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "list_splat",
+              named: true
+            },
+            {
+              type: "parenthesized_expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "pass_statement",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "pattern_list",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "pattern",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "positional_separator",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "print_statement",
+        named: true,
+        fields: {
+          argument: {
+            multiple: true,
+            required: false,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: false,
+          required: false,
+          types: [
+            {
+              type: "chevron",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "raise_statement",
+        named: true,
+        fields: {
+          cause: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: false,
+          required: false,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "expression_list",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "relative_import",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "dotted_name",
+              named: true
+            },
+            {
+              type: "import_prefix",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "return_statement",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: false,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "expression_list",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "set",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "list_splat",
+              named: true
+            },
+            {
+              type: "parenthesized_list_splat",
+              named: true
+            },
+            {
+              type: "yield",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "set_comprehension",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "for_in_clause",
+              named: true
+            },
+            {
+              type: "if_clause",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "slice",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "expression",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "splat_pattern",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: false,
+          types: [
+            {
+              type: "identifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "splat_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "identifier",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "string",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "interpolation",
+              named: true
+            },
+            {
+              type: "string_content",
+              named: true
+            },
+            {
+              type: "string_end",
+              named: true
+            },
+            {
+              type: "string_start",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "string_content",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "escape_interpolation",
+              named: true
+            },
+            {
+              type: "escape_sequence",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "subscript",
+        named: true,
+        fields: {
+          subscript: {
+            multiple: true,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              },
+              {
+                type: "slice",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "primary_expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "try_statement",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "block",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "else_clause",
+              named: true
+            },
+            {
+              type: "except_clause",
+              named: true
+            },
+            {
+              type: "except_group_clause",
+              named: true
+            },
+            {
+              type: "finally_clause",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "tuple",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "list_splat",
+              named: true
+            },
+            {
+              type: "parenthesized_list_splat",
+              named: true
+            },
+            {
+              type: "yield",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "tuple_pattern",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "case_pattern",
+              named: true
+            },
+            {
+              type: "pattern",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "constrained_type",
+              named: true
+            },
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "generic_type",
+              named: true
+            },
+            {
+              type: "member_type",
+              named: true
+            },
+            {
+              type: "splat_type",
+              named: true
+            },
+            {
+              type: "union_type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "type_alias_statement",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "type_parameter",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "typed_default_parameter",
+        named: true,
+        fields: {
+          name: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "identifier",
+                named: true
+              }
+            ]
+          },
+          type: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type",
+                named: true
+              }
+            ]
+          },
+          value: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "typed_parameter",
+        named: true,
+        fields: {
+          type: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "type",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "dictionary_splat_pattern",
+              named: true
+            },
+            {
+              type: "identifier",
+              named: true
+            },
+            {
+              type: "list_splat_pattern",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "unary_operator",
+        named: true,
+        fields: {
+          argument: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "primary_expression",
+                named: true
+              }
+            ]
+          },
+          operator: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "+",
+                named: false
+              },
+              {
+                type: "-",
+                named: false
+              },
+              {
+                type: "~",
+                named: false
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "union_pattern",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: false,
+          types: [
+            {
+              type: "class_pattern",
+              named: true
+            },
+            {
+              type: "complex_pattern",
+              named: true
+            },
+            {
+              type: "concatenated_string",
+              named: true
+            },
+            {
+              type: "dict_pattern",
+              named: true
+            },
+            {
+              type: "dotted_name",
+              named: true
+            },
+            {
+              type: "false",
+              named: true
+            },
+            {
+              type: "float",
+              named: true
+            },
+            {
+              type: "integer",
+              named: true
+            },
+            {
+              type: "list_pattern",
+              named: true
+            },
+            {
+              type: "none",
+              named: true
+            },
+            {
+              type: "splat_pattern",
+              named: true
+            },
+            {
+              type: "string",
+              named: true
+            },
+            {
+              type: "true",
+              named: true
+            },
+            {
+              type: "tuple_pattern",
+              named: true
+            },
+            {
+              type: "union_pattern",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "union_type",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "type",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "while_statement",
+        named: true,
+        fields: {
+          alternative: {
+            multiple: false,
+            required: false,
+            types: [
+              {
+                type: "else_clause",
+                named: true
+              }
+            ]
+          },
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "block",
+                named: true
+              }
+            ]
+          },
+          condition: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "wildcard_import",
+        named: true,
+        fields: {}
+      },
+      {
+        type: "with_clause",
+        named: true,
+        fields: {},
+        children: {
+          multiple: true,
+          required: true,
+          types: [
+            {
+              type: "with_item",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "with_item",
+        named: true,
+        fields: {
+          value: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "expression",
+                named: true
+              }
+            ]
+          }
+        }
+      },
+      {
+        type: "with_statement",
+        named: true,
+        fields: {
+          body: {
+            multiple: false,
+            required: true,
+            types: [
+              {
+                type: "block",
+                named: true
+              }
+            ]
+          }
+        },
+        children: {
+          multiple: false,
+          required: true,
+          types: [
+            {
+              type: "with_clause",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "yield",
+        named: true,
+        fields: {},
+        children: {
+          multiple: false,
+          required: false,
+          types: [
+            {
+              type: "expression",
+              named: true
+            },
+            {
+              type: "expression_list",
+              named: true
+            }
+          ]
+        }
+      },
+      {
+        type: "!=",
+        named: false
+      },
+      {
+        type: "%",
+        named: false
+      },
+      {
+        type: "%=",
+        named: false
+      },
+      {
+        type: "&",
+        named: false
+      },
+      {
+        type: "&=",
+        named: false
+      },
+      {
+        type: "(",
+        named: false
+      },
+      {
+        type: ")",
+        named: false
+      },
+      {
+        type: "*",
+        named: false
+      },
+      {
+        type: "**",
+        named: false
+      },
+      {
+        type: "**=",
+        named: false
+      },
+      {
+        type: "*=",
+        named: false
+      },
+      {
+        type: "+",
+        named: false
+      },
+      {
+        type: "+=",
+        named: false
+      },
+      {
+        type: ",",
+        named: false
+      },
+      {
+        type: "-",
+        named: false
+      },
+      {
+        type: "-=",
+        named: false
+      },
+      {
+        type: "->",
+        named: false
+      },
+      {
+        type: ".",
+        named: false
+      },
+      {
+        type: "/",
+        named: false
+      },
+      {
+        type: "//",
+        named: false
+      },
+      {
+        type: "//=",
+        named: false
+      },
+      {
+        type: "/=",
+        named: false
+      },
+      {
+        type: ":",
+        named: false
+      },
+      {
+        type: ":=",
+        named: false
+      },
+      {
+        type: ";",
+        named: false
+      },
+      {
+        type: "<",
+        named: false
+      },
+      {
+        type: "<<",
+        named: false
+      },
+      {
+        type: "<<=",
+        named: false
+      },
+      {
+        type: "<=",
+        named: false
+      },
+      {
+        type: "<>",
+        named: false
+      },
+      {
+        type: "=",
+        named: false
+      },
+      {
+        type: "==",
+        named: false
+      },
+      {
+        type: ">",
+        named: false
+      },
+      {
+        type: ">=",
+        named: false
+      },
+      {
+        type: ">>",
+        named: false
+      },
+      {
+        type: ">>=",
+        named: false
+      },
+      {
+        type: "@",
+        named: false
+      },
+      {
+        type: "@=",
+        named: false
+      },
+      {
+        type: "[",
+        named: false
+      },
+      {
+        type: "]",
+        named: false
+      },
+      {
+        type: "^",
+        named: false
+      },
+      {
+        type: "^=",
+        named: false
+      },
+      {
+        type: "_",
+        named: false
+      },
+      {
+        type: "__future__",
+        named: false
+      },
+      {
+        type: "and",
+        named: false
+      },
+      {
+        type: "as",
+        named: false
+      },
+      {
+        type: "assert",
+        named: false
+      },
+      {
+        type: "async",
+        named: false
+      },
+      {
+        type: "await",
+        named: false
+      },
+      {
+        type: "break",
+        named: false
+      },
+      {
+        type: "case",
+        named: false
+      },
+      {
+        type: "class",
+        named: false
+      },
+      {
+        type: "comment",
+        named: true
+      },
+      {
+        type: "continue",
+        named: false
+      },
+      {
+        type: "def",
+        named: false
+      },
+      {
+        type: "del",
+        named: false
+      },
+      {
+        type: "elif",
+        named: false
+      },
+      {
+        type: "ellipsis",
+        named: true
+      },
+      {
+        type: "else",
+        named: false
+      },
+      {
+        type: "escape_interpolation",
+        named: true
+      },
+      {
+        type: "escape_sequence",
+        named: true
+      },
+      {
+        type: "except",
+        named: false
+      },
+      {
+        type: "except*",
+        named: false
+      },
+      {
+        type: "exec",
+        named: false
+      },
+      {
+        type: "false",
+        named: true
+      },
+      {
+        type: "finally",
+        named: false
+      },
+      {
+        type: "float",
+        named: true
+      },
+      {
+        type: "for",
+        named: false
+      },
+      {
+        type: "from",
+        named: false
+      },
+      {
+        type: "global",
+        named: false
+      },
+      {
+        type: "identifier",
+        named: true
+      },
+      {
+        type: "if",
+        named: false
+      },
+      {
+        type: "import",
+        named: false
+      },
+      {
+        type: "in",
+        named: false
+      },
+      {
+        type: "integer",
+        named: true
+      },
+      {
+        type: "is",
+        named: false
+      },
+      {
+        type: "is not",
+        named: false
+      },
+      {
+        type: "lambda",
+        named: false
+      },
+      {
+        type: "line_continuation",
+        named: true
+      },
+      {
+        type: "match",
+        named: false
+      },
+      {
+        type: "none",
+        named: true
+      },
+      {
+        type: "nonlocal",
+        named: false
+      },
+      {
+        type: "not",
+        named: false
+      },
+      {
+        type: "not in",
+        named: false
+      },
+      {
+        type: "or",
+        named: false
+      },
+      {
+        type: "pass",
+        named: false
+      },
+      {
+        type: "print",
+        named: false
+      },
+      {
+        type: "raise",
+        named: false
+      },
+      {
+        type: "return",
+        named: false
+      },
+      {
+        type: "string_end",
+        named: true
+      },
+      {
+        type: "string_start",
+        named: true
+      },
+      {
+        type: "true",
+        named: true
+      },
+      {
+        type: "try",
+        named: false
+      },
+      {
+        type: "type",
+        named: false
+      },
+      {
+        type: "type_conversion",
+        named: true
+      },
+      {
+        type: "while",
+        named: false
+      },
+      {
+        type: "with",
+        named: false
+      },
+      {
+        type: "yield",
+        named: false
+      },
+      {
+        type: "{",
+        named: false
+      },
+      {
+        type: "|",
+        named: false
+      },
+      {
+        type: "|=",
+        named: false
+      },
+      {
+        type: "}",
+        named: false
+      },
+      {
+        type: "~",
+        named: false
+      }
+    ];
+  }
+});
+
+// node_modules/tree-sitter-python/bindings/node/index.js
+var require_node2 = __commonJS({
+  "node_modules/tree-sitter-python/bindings/node/index.js"(exports2, module2) {
+    var root = require("path").join(__dirname, "..", "..");
+    module2.exports = require_node_gyp_build2()(root);
+    try {
+      module2.exports.nodeTypeInfo = require_node_types3();
+    } catch (_) {
+    }
   }
 });
 
@@ -24389,10 +41568,8 @@ function isObject(subject) {
   return typeof subject === "object" && subject !== null;
 }
 function toArray(sequence) {
-  if (Array.isArray(sequence))
-    return sequence;
-  else if (isNothing(sequence))
-    return [];
+  if (Array.isArray(sequence)) return sequence;
+  else if (isNothing(sequence)) return [];
   return [sequence];
 }
 function extend(target, source) {
@@ -24432,8 +41609,7 @@ var common = {
 };
 function formatError(exception2, compact) {
   var where = "", message = exception2.reason || "(unknown reason)";
-  if (!exception2.mark)
-    return message;
+  if (!exception2.mark) return message;
   if (exception2.mark.name) {
     where += 'in "' + exception2.mark.name + '" ';
   }
@@ -24484,16 +41660,11 @@ function padStart(string, max) {
 }
 function makeSnippet(mark, options) {
   options = Object.create(options || null);
-  if (!mark.buffer)
-    return null;
-  if (!options.maxLength)
-    options.maxLength = 79;
-  if (typeof options.indent !== "number")
-    options.indent = 1;
-  if (typeof options.linesBefore !== "number")
-    options.linesBefore = 3;
-  if (typeof options.linesAfter !== "number")
-    options.linesAfter = 2;
+  if (!mark.buffer) return null;
+  if (!options.maxLength) options.maxLength = 79;
+  if (typeof options.indent !== "number") options.indent = 1;
+  if (typeof options.linesBefore !== "number") options.linesBefore = 3;
+  if (typeof options.linesAfter !== "number") options.linesAfter = 2;
   var re = /\r?\n|\r|\0/g;
   var lineStarts = [0];
   var lineEnds = [];
@@ -24506,14 +41677,12 @@ function makeSnippet(mark, options) {
       foundLineNo = lineStarts.length - 2;
     }
   }
-  if (foundLineNo < 0)
-    foundLineNo = lineStarts.length - 1;
+  if (foundLineNo < 0) foundLineNo = lineStarts.length - 1;
   var result = "", i, line;
   var lineNoLength = Math.min(mark.line + options.linesAfter, lineEnds.length).toString().length;
   var maxLineLength = options.maxLength - (options.indent + lineNoLength + 3);
   for (i = 1; i <= options.linesBefore; i++) {
-    if (foundLineNo - i < 0)
-      break;
+    if (foundLineNo - i < 0) break;
     line = getLine(
       mark.buffer,
       lineStarts[foundLineNo - i],
@@ -24527,8 +41696,7 @@ function makeSnippet(mark, options) {
   result += common.repeat(" ", options.indent) + padStart((mark.line + 1).toString(), lineNoLength) + " | " + line.str + "\n";
   result += common.repeat("-", options.indent + lineNoLength + 3 + line.pos) + "^\n";
   for (i = 1; i <= options.linesAfter; i++) {
-    if (foundLineNo + i >= lineEnds.length)
-      break;
+    if (foundLineNo + i >= lineEnds.length) break;
     line = getLine(
       mark.buffer,
       lineStarts[foundLineNo + i],
@@ -24647,10 +41815,8 @@ Schema$1.prototype.extend = function extend2(definition) {
   } else if (Array.isArray(definition)) {
     explicit = explicit.concat(definition);
   } else if (definition && (Array.isArray(definition.implicit) || Array.isArray(definition.explicit))) {
-    if (definition.implicit)
-      implicit = implicit.concat(definition.implicit);
-    if (definition.explicit)
-      explicit = explicit.concat(definition.explicit);
+    if (definition.implicit) implicit = implicit.concat(definition.implicit);
+    if (definition.explicit) explicit = explicit.concat(definition.explicit);
   } else {
     throw new exception("Schema.extend argument should be a Type, [ Type ], or a schema definition ({ implicit: [...], explicit: [...] })");
   }
@@ -24705,8 +41871,7 @@ var failsafe = new schema({
   ]
 });
 function resolveYamlNull(data) {
-  if (data === null)
-    return true;
+  if (data === null) return true;
   var max = data.length;
   return max === 1 && data === "~" || max === 4 && (data === "null" || data === "Null" || data === "NULL");
 }
@@ -24741,8 +41906,7 @@ var _null = new type("tag:yaml.org,2002:null", {
   defaultStyle: "lowercase"
 });
 function resolveYamlBoolean(data) {
-  if (data === null)
-    return false;
+  if (data === null) return false;
   var max = data.length;
   return max === 4 && (data === "true" || data === "True" || data === "TRUE") || max === 5 && (data === "false" || data === "False" || data === "FALSE");
 }
@@ -24780,27 +41944,22 @@ function isDecCode(c) {
   return 48 <= c && c <= 57;
 }
 function resolveYamlInteger(data) {
-  if (data === null)
-    return false;
+  if (data === null) return false;
   var max = data.length, index = 0, hasDigits = false, ch;
-  if (!max)
-    return false;
+  if (!max) return false;
   ch = data[index];
   if (ch === "-" || ch === "+") {
     ch = data[++index];
   }
   if (ch === "0") {
-    if (index + 1 === max)
-      return true;
+    if (index + 1 === max) return true;
     ch = data[++index];
     if (ch === "b") {
       index++;
       for (; index < max; index++) {
         ch = data[index];
-        if (ch === "_")
-          continue;
-        if (ch !== "0" && ch !== "1")
-          return false;
+        if (ch === "_") continue;
+        if (ch !== "0" && ch !== "1") return false;
         hasDigits = true;
       }
       return hasDigits && ch !== "_";
@@ -24809,10 +41968,8 @@ function resolveYamlInteger(data) {
       index++;
       for (; index < max; index++) {
         ch = data[index];
-        if (ch === "_")
-          continue;
-        if (!isHexCode(data.charCodeAt(index)))
-          return false;
+        if (ch === "_") continue;
+        if (!isHexCode(data.charCodeAt(index))) return false;
         hasDigits = true;
       }
       return hasDigits && ch !== "_";
@@ -24821,28 +41978,23 @@ function resolveYamlInteger(data) {
       index++;
       for (; index < max; index++) {
         ch = data[index];
-        if (ch === "_")
-          continue;
-        if (!isOctCode(data.charCodeAt(index)))
-          return false;
+        if (ch === "_") continue;
+        if (!isOctCode(data.charCodeAt(index))) return false;
         hasDigits = true;
       }
       return hasDigits && ch !== "_";
     }
   }
-  if (ch === "_")
-    return false;
+  if (ch === "_") return false;
   for (; index < max; index++) {
     ch = data[index];
-    if (ch === "_")
-      continue;
+    if (ch === "_") continue;
     if (!isDecCode(data.charCodeAt(index))) {
       return false;
     }
     hasDigits = true;
   }
-  if (!hasDigits || ch === "_")
-    return false;
+  if (!hasDigits || ch === "_") return false;
   return true;
 }
 function constructYamlInteger(data) {
@@ -24852,20 +42004,15 @@ function constructYamlInteger(data) {
   }
   ch = value[0];
   if (ch === "-" || ch === "+") {
-    if (ch === "-")
-      sign = -1;
+    if (ch === "-") sign = -1;
     value = value.slice(1);
     ch = value[0];
   }
-  if (value === "0")
-    return 0;
+  if (value === "0") return 0;
   if (ch === "0") {
-    if (value[1] === "b")
-      return sign * parseInt(value.slice(2), 2);
-    if (value[1] === "x")
-      return sign * parseInt(value.slice(2), 16);
-    if (value[1] === "o")
-      return sign * parseInt(value.slice(2), 8);
+    if (value[1] === "b") return sign * parseInt(value.slice(2), 2);
+    if (value[1] === "x") return sign * parseInt(value.slice(2), 16);
+    if (value[1] === "o") return sign * parseInt(value.slice(2), 8);
   }
   return sign * parseInt(value, 10);
 }
@@ -24905,8 +42052,7 @@ var YAML_FLOAT_PATTERN = new RegExp(
   "^(?:[-+]?(?:[0-9][0-9_]*)(?:\\.[0-9_]*)?(?:[eE][-+]?[0-9]+)?|\\.[0-9_]+(?:[eE][-+]?[0-9]+)?|[-+]?\\.(?:inf|Inf|INF)|\\.(?:nan|NaN|NAN))$"
 );
 function resolveYamlFloat(data) {
-  if (data === null)
-    return false;
+  if (data === null) return false;
   if (!YAML_FLOAT_PATTERN.test(data) || // Quick hack to not allow integers end with `_`
   // Probably should update regexp & check speed
   data[data.length - 1] === "_") {
@@ -24991,21 +42137,16 @@ var YAML_TIMESTAMP_REGEXP = new RegExp(
   "^([0-9][0-9][0-9][0-9])-([0-9][0-9]?)-([0-9][0-9]?)(?:[Tt]|[ \\t]+)([0-9][0-9]?):([0-9][0-9]):([0-9][0-9])(?:\\.([0-9]*))?(?:[ \\t]*(Z|([-+])([0-9][0-9]?)(?::([0-9][0-9]))?))?$"
 );
 function resolveYamlTimestamp(data) {
-  if (data === null)
-    return false;
-  if (YAML_DATE_REGEXP.exec(data) !== null)
-    return true;
-  if (YAML_TIMESTAMP_REGEXP.exec(data) !== null)
-    return true;
+  if (data === null) return false;
+  if (YAML_DATE_REGEXP.exec(data) !== null) return true;
+  if (YAML_TIMESTAMP_REGEXP.exec(data) !== null) return true;
   return false;
 }
 function constructYamlTimestamp(data) {
   var match, year, month, day, hour, minute, second, fraction = 0, delta = null, tz_hour, tz_minute, date;
   match = YAML_DATE_REGEXP.exec(data);
-  if (match === null)
-    match = YAML_TIMESTAMP_REGEXP.exec(data);
-  if (match === null)
-    throw new Error("Date resolve error");
+  if (match === null) match = YAML_TIMESTAMP_REGEXP.exec(data);
+  if (match === null) throw new Error("Date resolve error");
   year = +match[1];
   month = +match[2] - 1;
   day = +match[3];
@@ -25026,12 +42167,10 @@ function constructYamlTimestamp(data) {
     tz_hour = +match[10];
     tz_minute = +(match[11] || 0);
     delta = (tz_hour * 60 + tz_minute) * 6e4;
-    if (match[9] === "-")
-      delta = -delta;
+    if (match[9] === "-") delta = -delta;
   }
   date = new Date(Date.UTC(year, month, day, hour, minute, second, fraction));
-  if (delta)
-    date.setTime(date.getTime() - delta);
+  if (delta) date.setTime(date.getTime() - delta);
   return date;
 }
 function representYamlTimestamp(object) {
@@ -25053,15 +42192,12 @@ var merge = new type("tag:yaml.org,2002:merge", {
 });
 var BASE64_MAP = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=\n\r";
 function resolveYamlBinary(data) {
-  if (data === null)
-    return false;
+  if (data === null) return false;
   var code, idx, bitlen = 0, max = data.length, map2 = BASE64_MAP;
   for (idx = 0; idx < max; idx++) {
     code = map2.indexOf(data.charAt(idx));
-    if (code > 64)
-      continue;
-    if (code < 0)
-      return false;
+    if (code > 64) continue;
+    if (code < 0) return false;
     bitlen += 6;
   }
   return bitlen % 8 === 0;
@@ -25132,28 +42268,21 @@ var binary = new type("tag:yaml.org,2002:binary", {
 var _hasOwnProperty$3 = Object.prototype.hasOwnProperty;
 var _toString$2 = Object.prototype.toString;
 function resolveYamlOmap(data) {
-  if (data === null)
-    return true;
+  if (data === null) return true;
   var objectKeys = [], index, length, pair, pairKey, pairHasKey, object = data;
   for (index = 0, length = object.length; index < length; index += 1) {
     pair = object[index];
     pairHasKey = false;
-    if (_toString$2.call(pair) !== "[object Object]")
-      return false;
+    if (_toString$2.call(pair) !== "[object Object]") return false;
     for (pairKey in pair) {
       if (_hasOwnProperty$3.call(pair, pairKey)) {
-        if (!pairHasKey)
-          pairHasKey = true;
-        else
-          return false;
+        if (!pairHasKey) pairHasKey = true;
+        else return false;
       }
     }
-    if (!pairHasKey)
-      return false;
-    if (objectKeys.indexOf(pairKey) === -1)
-      objectKeys.push(pairKey);
-    else
-      return false;
+    if (!pairHasKey) return false;
+    if (objectKeys.indexOf(pairKey) === -1) objectKeys.push(pairKey);
+    else return false;
   }
   return true;
 }
@@ -25167,24 +42296,20 @@ var omap = new type("tag:yaml.org,2002:omap", {
 });
 var _toString$1 = Object.prototype.toString;
 function resolveYamlPairs(data) {
-  if (data === null)
-    return true;
+  if (data === null) return true;
   var index, length, pair, keys, result, object = data;
   result = new Array(object.length);
   for (index = 0, length = object.length; index < length; index += 1) {
     pair = object[index];
-    if (_toString$1.call(pair) !== "[object Object]")
-      return false;
+    if (_toString$1.call(pair) !== "[object Object]") return false;
     keys = Object.keys(pair);
-    if (keys.length !== 1)
-      return false;
+    if (keys.length !== 1) return false;
     result[index] = [keys[0], pair[keys[0]]];
   }
   return true;
 }
 function constructYamlPairs(data) {
-  if (data === null)
-    return [];
+  if (data === null) return [];
   var index, length, pair, keys, result, object = data;
   result = new Array(object.length);
   for (index = 0, length = object.length; index < length; index += 1) {
@@ -25201,13 +42326,11 @@ var pairs = new type("tag:yaml.org,2002:pairs", {
 });
 var _hasOwnProperty$2 = Object.prototype.hasOwnProperty;
 function resolveYamlSet(data) {
-  if (data === null)
-    return true;
+  if (data === null) return true;
   var key, object = data;
   for (key in object) {
     if (_hasOwnProperty$2.call(object, key)) {
-      if (object[key] !== null)
-        return false;
+      if (object[key] !== null) return false;
     }
   }
   return true;
@@ -25871,8 +42994,7 @@ function readBlockScalar(state, nodeIndent) {
 }
 function readBlockSequence(state, nodeIndent) {
   var _line, _tag = state.tag, _anchor = state.anchor, _result = [], following, detected = false, ch;
-  if (state.firstTabInLine !== -1)
-    return false;
+  if (state.firstTabInLine !== -1) return false;
   if (state.anchor !== null) {
     state.anchorMap[state.anchor] = _result;
   }
@@ -25920,8 +43042,7 @@ function readBlockSequence(state, nodeIndent) {
 }
 function readBlockMapping(state, nodeIndent, flowIndent) {
   var following, allowCompact, _line, _keyLine, _keyLineStart, _keyPos, _tag = state.tag, _anchor = state.anchor, _result = {}, overridableKeys = /* @__PURE__ */ Object.create(null), keyTag = null, keyNode = null, valueNode = null, atExplicitKey = false, detected = false, ch;
-  if (state.firstTabInLine !== -1)
-    return false;
+  if (state.firstTabInLine !== -1) return false;
   if (state.anchor !== null) {
     state.anchorMap[state.anchor] = _result;
   }
@@ -26031,8 +43152,7 @@ function readBlockMapping(state, nodeIndent, flowIndent) {
 function readTagProperty(state) {
   var _position, isVerbatim = false, isNamed = false, tagHandle, tagName, ch;
   ch = state.input.charCodeAt(state.position);
-  if (ch !== 33)
-    return false;
+  if (ch !== 33) return false;
   if (state.tag !== null) {
     throwError(state, "duplication of a tag property");
   }
@@ -26103,8 +43223,7 @@ function readTagProperty(state) {
 function readAnchorProperty(state) {
   var _position, ch;
   ch = state.input.charCodeAt(state.position);
-  if (ch !== 38)
-    return false;
+  if (ch !== 38) return false;
   if (state.anchor !== null) {
     throwError(state, "duplication of an anchor property");
   }
@@ -26122,8 +43241,7 @@ function readAnchorProperty(state) {
 function readAlias(state) {
   var _position, alias, ch;
   ch = state.input.charCodeAt(state.position);
-  if (ch !== 42)
-    return false;
+  if (ch !== 42) return false;
   ch = state.input.charCodeAt(++state.position);
   _position = state.position;
   while (ch !== 0 && !is_WS_OR_EOL(ch) && !is_FLOW_INDICATOR(ch)) {
@@ -26299,16 +43417,14 @@ function readDocument(state) {
         } while (ch !== 0 && !is_EOL(ch));
         break;
       }
-      if (is_EOL(ch))
-        break;
+      if (is_EOL(ch)) break;
       _position = state.position;
       while (ch !== 0 && !is_WS_OR_EOL(ch)) {
         ch = state.input.charCodeAt(++state.position);
       }
       directiveArgs.push(state.input.slice(_position, state.position));
     }
-    if (ch !== 0)
-      readLineBreak(state);
+    if (ch !== 0) readLineBreak(state);
     if (_hasOwnProperty$1.call(directiveHandlers, directiveName)) {
       directiveHandlers[directiveName](state, directiveName, directiveArgs);
     } else {
@@ -26460,8 +43576,7 @@ var DEPRECATED_BOOLEANS_SYNTAX = [
 var DEPRECATED_BASE60_SYNTAX = /^[-+]?[0-9_]+(?::[0-9_]+)+(?:\.[0-9_]*)?$/;
 function compileStyleMap(schema2, map2) {
   var result, keys, index, length, tag, style, type2;
-  if (map2 === null)
-    return {};
+  if (map2 === null) return {};
   result = {};
   keys = Object.keys(map2);
   for (index = 0, length = keys.length; index < length; index += 1) {
@@ -26530,8 +43645,7 @@ function indentString(string, spaces) {
       line = string.slice(position, next + 1);
       position = next + 1;
     }
-    if (line.length && line !== "\n")
-      result += ind;
+    if (line.length && line !== "\n") result += ind;
     result += line;
   }
   return result;
@@ -26715,8 +43829,7 @@ function foldString(string, width) {
   return result;
 }
 function foldLine(line, width) {
-  if (line === "" || line[0] === " ")
-    return line;
+  if (line === "" || line[0] === " ") return line;
   var breakRe = / [^ ]/g;
   var match;
   var start = 0, end, curr = 0, next = 0;
@@ -26747,8 +43860,7 @@ function escapeString(string) {
     escapeSeq = ESCAPE_SEQUENCES[char];
     if (!escapeSeq && isPrintable(char)) {
       result += string[i];
-      if (char >= 65536)
-        result += string[i + 1];
+      if (char >= 65536) result += string[i + 1];
     } else {
       result += escapeSeq || encodeHex(char);
     }
@@ -26763,8 +43875,7 @@ function writeFlowSequence(state, level, object) {
       value = state.replacer.call(object, String(index), value);
     }
     if (writeNode(state, level, value, false, false) || typeof value === "undefined" && writeNode(state, level, null, false, false)) {
-      if (_result !== "")
-        _result += "," + (!state.condenseFlow ? " " : "");
+      if (_result !== "") _result += "," + (!state.condenseFlow ? " " : "");
       _result += state.dump;
     }
   }
@@ -26797,10 +43908,8 @@ function writeFlowMapping(state, level, object) {
   var _result = "", _tag = state.tag, objectKeyList = Object.keys(object), index, length, objectKey, objectValue, pairBuffer;
   for (index = 0, length = objectKeyList.length; index < length; index += 1) {
     pairBuffer = "";
-    if (_result !== "")
-      pairBuffer += ", ";
-    if (state.condenseFlow)
-      pairBuffer += '"';
+    if (_result !== "") pairBuffer += ", ";
+    if (state.condenseFlow) pairBuffer += '"';
     objectKey = objectKeyList[index];
     objectValue = object[objectKey];
     if (state.replacer) {
@@ -26809,8 +43918,7 @@ function writeFlowMapping(state, level, object) {
     if (!writeNode(state, level, objectKey, false, false)) {
       continue;
     }
-    if (state.dump.length > 1024)
-      pairBuffer += "? ";
+    if (state.dump.length > 1024) pairBuffer += "? ";
     pairBuffer += state.dump + (state.condenseFlow ? '"' : "") + ":" + (state.condenseFlow ? "" : " ");
     if (!writeNode(state, level, objectValue, false, false)) {
       continue;
@@ -26961,8 +44069,7 @@ function writeNode(state, level, object, block, compact, iskey, isblockseq) {
     } else if (type2 === "[object Undefined]") {
       return false;
     } else {
-      if (state.skipInvalid)
-        return false;
+      if (state.skipInvalid) return false;
       throw new exception("unacceptable kind of an object to dump " + type2);
     }
     if (state.tag !== null && state.tag !== "?") {
@@ -27015,14 +44122,12 @@ function inspectNode(object, objects, duplicatesIndexes) {
 function dump$1(input, options) {
   options = options || {};
   var state = new State(options);
-  if (!state.noRefs)
-    getDuplicateReferences(input, state);
+  if (!state.noRefs) getDuplicateReferences(input, state);
   var value = input;
   if (state.replacer) {
     value = state.replacer.call({ "": value }, "", value);
   }
-  if (writeNode(state, 0, value, true, true))
-    return state.dump + "\n";
+  if (writeNode(state, 0, value, true, true)) return state.dump + "\n";
   return "";
 }
 var dump_1 = dump$1;
@@ -27063,6 +44168,10 @@ var DEFAULT_CONFIG = {
   providerMaxParallel: 3,
   quietModeEnabled: false,
   quietMinConfidence: 0.5,
+  quietUseLearning: true,
+  learningEnabled: true,
+  learningMinFeedbackCount: 5,
+  learningLookbackDays: 30,
   inlineMaxComments: 5,
   inlineMinSeverity: "major",
   inlineMinAgreement: 2,
@@ -27081,6 +44190,18 @@ var DEFAULT_CONFIG = {
   enableAiDetection: true,
   incrementalEnabled: true,
   incrementalCacheTtlDays: 7,
+  graphEnabled: true,
+  graphCacheEnabled: true,
+  graphMaxDepth: 5,
+  graphTimeoutSeconds: 10,
+  generateFixPrompts: false,
+  fixPromptFormat: "plain",
+  analyticsEnabled: true,
+  analyticsMaxReviews: 1e3,
+  pluginsEnabled: false,
+  pluginDir: "./plugins",
+  pluginAllowlist: [],
+  pluginBlocklist: [],
   dryRun: false
 };
 
@@ -27192,43 +44313,43 @@ __export(external_exports, {
   undefined: () => undefinedType,
   union: () => unionType,
   unknown: () => unknownType,
-  util: () => util,
+  util: () => util2,
   void: () => voidType
 });
 
 // node_modules/zod/v3/helpers/util.js
-var util;
-(function(util2) {
-  util2.assertEqual = (_) => {
+var util2;
+(function(util3) {
+  util3.assertEqual = (_) => {
   };
   function assertIs(_arg) {
   }
-  util2.assertIs = assertIs;
+  util3.assertIs = assertIs;
   function assertNever(_x) {
     throw new Error();
   }
-  util2.assertNever = assertNever;
-  util2.arrayToEnum = (items) => {
+  util3.assertNever = assertNever;
+  util3.arrayToEnum = (items) => {
     const obj = {};
     for (const item of items) {
       obj[item] = item;
     }
     return obj;
   };
-  util2.getValidEnumValues = (obj) => {
-    const validKeys = util2.objectKeys(obj).filter((k) => typeof obj[obj[k]] !== "number");
+  util3.getValidEnumValues = (obj) => {
+    const validKeys = util3.objectKeys(obj).filter((k) => typeof obj[obj[k]] !== "number");
     const filtered = {};
     for (const k of validKeys) {
       filtered[k] = obj[k];
     }
-    return util2.objectValues(filtered);
+    return util3.objectValues(filtered);
   };
-  util2.objectValues = (obj) => {
-    return util2.objectKeys(obj).map(function(e) {
+  util3.objectValues = (obj) => {
+    return util3.objectKeys(obj).map(function(e) {
       return obj[e];
     });
   };
-  util2.objectKeys = typeof Object.keys === "function" ? (obj) => Object.keys(obj) : (object) => {
+  util3.objectKeys = typeof Object.keys === "function" ? (obj) => Object.keys(obj) : (object) => {
     const keys = [];
     for (const key in object) {
       if (Object.prototype.hasOwnProperty.call(object, key)) {
@@ -27237,25 +44358,25 @@ var util;
     }
     return keys;
   };
-  util2.find = (arr, checker) => {
+  util3.find = (arr, checker) => {
     for (const item of arr) {
       if (checker(item))
         return item;
     }
     return void 0;
   };
-  util2.isInteger = typeof Number.isInteger === "function" ? (val) => Number.isInteger(val) : (val) => typeof val === "number" && Number.isFinite(val) && Math.floor(val) === val;
+  util3.isInteger = typeof Number.isInteger === "function" ? (val) => Number.isInteger(val) : (val) => typeof val === "number" && Number.isFinite(val) && Math.floor(val) === val;
   function joinValues(array, separator = " | ") {
     return array.map((val) => typeof val === "string" ? `'${val}'` : val).join(separator);
   }
-  util2.joinValues = joinValues;
-  util2.jsonStringifyReplacer = (_, value) => {
+  util3.joinValues = joinValues;
+  util3.jsonStringifyReplacer = (_, value) => {
     if (typeof value === "bigint") {
       return value.toString();
     }
     return value;
   };
-})(util || (util = {}));
+})(util2 || (util2 = {}));
 var objectUtil;
 (function(objectUtil2) {
   objectUtil2.mergeShapes = (first, second) => {
@@ -27266,7 +44387,7 @@ var objectUtil;
     };
   };
 })(objectUtil || (objectUtil = {}));
-var ZodParsedType = util.arrayToEnum([
+var ZodParsedType = util2.arrayToEnum([
   "string",
   "nan",
   "number",
@@ -27331,7 +44452,7 @@ var getParsedType = (data) => {
 };
 
 // node_modules/zod/v3/ZodError.js
-var ZodIssueCode = util.arrayToEnum([
+var ZodIssueCode = util2.arrayToEnum([
   "invalid_type",
   "invalid_literal",
   "custom",
@@ -27420,7 +44541,7 @@ var ZodError = class _ZodError extends Error {
     return this.message;
   }
   get message() {
-    return JSON.stringify(this.issues, util.jsonStringifyReplacer, 2);
+    return JSON.stringify(this.issues, util2.jsonStringifyReplacer, 2);
   }
   get isEmpty() {
     return this.issues.length === 0;
@@ -27460,19 +44581,19 @@ var errorMap = (issue, _ctx) => {
       }
       break;
     case ZodIssueCode.invalid_literal:
-      message = `Invalid literal value, expected ${JSON.stringify(issue.expected, util.jsonStringifyReplacer)}`;
+      message = `Invalid literal value, expected ${JSON.stringify(issue.expected, util2.jsonStringifyReplacer)}`;
       break;
     case ZodIssueCode.unrecognized_keys:
-      message = `Unrecognized key(s) in object: ${util.joinValues(issue.keys, ", ")}`;
+      message = `Unrecognized key(s) in object: ${util2.joinValues(issue.keys, ", ")}`;
       break;
     case ZodIssueCode.invalid_union:
       message = `Invalid input`;
       break;
     case ZodIssueCode.invalid_union_discriminator:
-      message = `Invalid discriminator value. Expected ${util.joinValues(issue.options)}`;
+      message = `Invalid discriminator value. Expected ${util2.joinValues(issue.options)}`;
       break;
     case ZodIssueCode.invalid_enum_value:
-      message = `Invalid enum value. Expected ${util.joinValues(issue.options)}, received '${issue.received}'`;
+      message = `Invalid enum value. Expected ${util2.joinValues(issue.options)}, received '${issue.received}'`;
       break;
     case ZodIssueCode.invalid_arguments:
       message = `Invalid function arguments`;
@@ -27495,7 +44616,7 @@ var errorMap = (issue, _ctx) => {
         } else if ("endsWith" in issue.validation) {
           message = `Invalid input: must end with "${issue.validation.endsWith}"`;
         } else {
-          util.assertNever(issue.validation);
+          util2.assertNever(issue.validation);
         }
       } else if (issue.validation !== "regex") {
         message = `Invalid ${issue.validation}`;
@@ -27545,7 +44666,7 @@ var errorMap = (issue, _ctx) => {
       break;
     default:
       message = _ctx.defaultError;
-      util.assertNever(issue);
+      util2.assertNever(issue);
   }
   return { message };
 };
@@ -27562,8 +44683,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path7, errorMaps, issueData } = params;
-  const fullPath = [...path7, ...issueData.path || []];
+  const { data, path: path8, errorMaps, issueData } = params;
+  const fullPath = [...path8, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -27679,11 +44800,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path7, key) {
+  constructor(parent, value, path8, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path7;
+    this._path = path8;
     this._key = key;
   }
   get path() {
@@ -28399,7 +45520,7 @@ var ZodString = class _ZodString extends ZodType {
           status.dirty();
         }
       } else {
-        util.assertNever(check);
+        util2.assertNever(check);
       }
     }
     return { status: status.value, value: input.data };
@@ -28681,7 +45802,7 @@ var ZodNumber = class _ZodNumber extends ZodType {
     const status = new ParseStatus();
     for (const check of this._def.checks) {
       if (check.kind === "int") {
-        if (!util.isInteger(input.data)) {
+        if (!util2.isInteger(input.data)) {
           ctx = this._getOrReturnCtx(input, ctx);
           addIssueToContext(ctx, {
             code: ZodIssueCode.invalid_type,
@@ -28739,7 +45860,7 @@ var ZodNumber = class _ZodNumber extends ZodType {
           status.dirty();
         }
       } else {
-        util.assertNever(check);
+        util2.assertNever(check);
       }
     }
     return { status: status.value, value: input.data };
@@ -28861,7 +45982,7 @@ var ZodNumber = class _ZodNumber extends ZodType {
     return max;
   }
   get isInt() {
-    return !!this._def.checks.find((ch) => ch.kind === "int" || ch.kind === "multipleOf" && util.isInteger(ch.value));
+    return !!this._def.checks.find((ch) => ch.kind === "int" || ch.kind === "multipleOf" && util2.isInteger(ch.value));
   }
   get isFinite() {
     let max = null;
@@ -28946,7 +46067,7 @@ var ZodBigInt = class _ZodBigInt extends ZodType {
           status.dirty();
         }
       } else {
-        util.assertNever(check);
+        util2.assertNever(check);
       }
     }
     return { status: status.value, value: input.data };
@@ -29137,7 +46258,7 @@ var ZodDate = class _ZodDate extends ZodType {
           status.dirty();
         }
       } else {
-        util.assertNever(check);
+        util2.assertNever(check);
       }
     }
     return {
@@ -29463,7 +46584,7 @@ var ZodObject = class _ZodObject extends ZodType {
     if (this._cached !== null)
       return this._cached;
     const shape = this._def.shape();
-    const keys = util.objectKeys(shape);
+    const keys = util2.objectKeys(shape);
     this._cached = { shape, keys };
     return this._cached;
   }
@@ -29697,7 +46818,7 @@ var ZodObject = class _ZodObject extends ZodType {
   }
   pick(mask) {
     const shape = {};
-    for (const key of util.objectKeys(mask)) {
+    for (const key of util2.objectKeys(mask)) {
       if (mask[key] && this.shape[key]) {
         shape[key] = this.shape[key];
       }
@@ -29709,7 +46830,7 @@ var ZodObject = class _ZodObject extends ZodType {
   }
   omit(mask) {
     const shape = {};
-    for (const key of util.objectKeys(this.shape)) {
+    for (const key of util2.objectKeys(this.shape)) {
       if (!mask[key]) {
         shape[key] = this.shape[key];
       }
@@ -29727,7 +46848,7 @@ var ZodObject = class _ZodObject extends ZodType {
   }
   partial(mask) {
     const newShape = {};
-    for (const key of util.objectKeys(this.shape)) {
+    for (const key of util2.objectKeys(this.shape)) {
       const fieldSchema = this.shape[key];
       if (mask && !mask[key]) {
         newShape[key] = fieldSchema;
@@ -29742,7 +46863,7 @@ var ZodObject = class _ZodObject extends ZodType {
   }
   required(mask) {
     const newShape = {};
-    for (const key of util.objectKeys(this.shape)) {
+    for (const key of util2.objectKeys(this.shape)) {
       if (mask && !mask[key]) {
         newShape[key] = this.shape[key];
       } else {
@@ -29760,7 +46881,7 @@ var ZodObject = class _ZodObject extends ZodType {
     });
   }
   keyof() {
-    return createZodEnum(util.objectKeys(this.shape));
+    return createZodEnum(util2.objectKeys(this.shape));
   }
 };
 ZodObject.create = (shape, params) => {
@@ -29891,7 +47012,7 @@ var getDiscriminator = (type2) => {
   } else if (type2 instanceof ZodEnum) {
     return type2.options;
   } else if (type2 instanceof ZodNativeEnum) {
-    return util.objectValues(type2.enum);
+    return util2.objectValues(type2.enum);
   } else if (type2 instanceof ZodDefault) {
     return getDiscriminator(type2._def.innerType);
   } else if (type2 instanceof ZodUndefined) {
@@ -29994,8 +47115,8 @@ function mergeValues(a, b) {
   if (a === b) {
     return { valid: true, data: a };
   } else if (aType === ZodParsedType.object && bType === ZodParsedType.object) {
-    const bKeys = util.objectKeys(b);
-    const sharedKeys = util.objectKeys(a).filter((key) => bKeys.indexOf(key) !== -1);
+    const bKeys = util2.objectKeys(b);
+    const sharedKeys = util2.objectKeys(a).filter((key) => bKeys.indexOf(key) !== -1);
     const newObj = { ...a, ...b };
     for (const key of sharedKeys) {
       const sharedValue = mergeValues(a[key], b[key]);
@@ -30509,7 +47630,7 @@ var ZodEnum = class _ZodEnum extends ZodType {
       const ctx = this._getOrReturnCtx(input);
       const expectedValues = this._def.values;
       addIssueToContext(ctx, {
-        expected: util.joinValues(expectedValues),
+        expected: util2.joinValues(expectedValues),
         received: ctx.parsedType,
         code: ZodIssueCode.invalid_type
       });
@@ -30570,22 +47691,22 @@ var ZodEnum = class _ZodEnum extends ZodType {
 ZodEnum.create = createZodEnum;
 var ZodNativeEnum = class extends ZodType {
   _parse(input) {
-    const nativeEnumValues = util.getValidEnumValues(this._def.values);
+    const nativeEnumValues = util2.getValidEnumValues(this._def.values);
     const ctx = this._getOrReturnCtx(input);
     if (ctx.parsedType !== ZodParsedType.string && ctx.parsedType !== ZodParsedType.number) {
-      const expectedValues = util.objectValues(nativeEnumValues);
+      const expectedValues = util2.objectValues(nativeEnumValues);
       addIssueToContext(ctx, {
-        expected: util.joinValues(expectedValues),
+        expected: util2.joinValues(expectedValues),
         received: ctx.parsedType,
         code: ZodIssueCode.invalid_type
       });
       return INVALID;
     }
     if (!this._cache) {
-      this._cache = new Set(util.getValidEnumValues(this._def.values));
+      this._cache = new Set(util2.getValidEnumValues(this._def.values));
     }
     if (!this._cache.has(input.data)) {
-      const expectedValues = util.objectValues(nativeEnumValues);
+      const expectedValues = util2.objectValues(nativeEnumValues);
       addIssueToContext(ctx, {
         received: ctx.data,
         code: ZodIssueCode.invalid_enum_value,
@@ -30756,7 +47877,7 @@ var ZodEffects = class extends ZodType {
         });
       }
     }
-    util.assertNever(effect);
+    util2.assertNever(effect);
   }
 };
 ZodEffects.create = (schema2, effect, params) => {
@@ -31137,6 +48258,10 @@ var ReviewConfigSchema = external_exports.object({
   provider_max_parallel: external_exports.number().int().min(1).optional(),
   quiet_mode_enabled: external_exports.boolean().optional(),
   quiet_min_confidence: external_exports.number().min(0).max(1).optional(),
+  quiet_use_learning: external_exports.boolean().optional(),
+  learning_enabled: external_exports.boolean().optional(),
+  learning_min_feedback_count: external_exports.number().int().min(1).optional(),
+  learning_lookback_days: external_exports.number().int().min(1).optional(),
   inline_max_comments: external_exports.number().int().min(0).optional(),
   inline_min_severity: external_exports.enum(["critical", "major", "minor"]).optional(),
   inline_min_agreement: external_exports.number().int().min(1).optional(),
@@ -31155,6 +48280,18 @@ var ReviewConfigSchema = external_exports.object({
   enable_ai_detection: external_exports.boolean().optional(),
   incremental_enabled: external_exports.boolean().optional(),
   incremental_cache_ttl_days: external_exports.number().int().min(1).max(30).optional(),
+  graph_enabled: external_exports.boolean().optional(),
+  graph_cache_enabled: external_exports.boolean().optional(),
+  graph_max_depth: external_exports.number().int().min(1).max(10).optional(),
+  graph_timeout_seconds: external_exports.number().int().min(1).max(60).optional(),
+  generate_fix_prompts: external_exports.boolean().optional(),
+  fix_prompt_format: external_exports.enum(["cursor", "copilot", "plain"]).optional(),
+  analytics_enabled: external_exports.boolean().optional(),
+  analytics_max_reviews: external_exports.number().int().min(100).max(1e4).optional(),
+  plugins_enabled: external_exports.boolean().optional(),
+  plugin_dir: external_exports.string().optional(),
+  plugin_allowlist: external_exports.array(external_exports.string()).optional(),
+  plugin_blocklist: external_exports.array(external_exports.string()).optional(),
   dry_run: external_exports.boolean().optional()
 });
 
@@ -31438,8 +48575,7 @@ var ConfigLoader = class {
   static loadFromFile() {
     for (const relPath of this.CONFIG_PATHS) {
       const fullPath = path.join(process.cwd(), relPath);
-      if (!fs.existsSync(fullPath))
-        continue;
+      if (!fs.existsSync(fullPath)) continue;
       try {
         const raw = fs.readFileSync(fullPath, "utf8");
         const parsed = load(raw);
@@ -31528,8 +48664,7 @@ var ConfigLoader = class {
     return overrides.reduce((acc, curr) => {
       const next = {};
       for (const [key, value] of Object.entries(curr)) {
-        if (value === void 0 || value === null)
-          continue;
+        if (value === void 0 || value === null) continue;
         const typedKey = key;
         next[typedKey] = value;
       }
@@ -31537,30 +48672,25 @@ var ConfigLoader = class {
     }, defaults);
   }
   static parseArray(value) {
-    if (!value)
-      return void 0;
+    if (!value) return void 0;
     return value.split(",").map((v) => v.trim()).filter(Boolean);
   }
   static parseBoolean(value) {
-    if (value === void 0)
-      return void 0;
+    if (value === void 0) return void 0;
     return value.toLowerCase() === "true";
   }
   static parseNumber(value) {
-    if (!value)
-      return void 0;
+    if (!value) return void 0;
     const num = parseInt(value, 10);
     return Number.isFinite(num) ? num : void 0;
   }
   static parseFloat(value) {
-    if (!value)
-      return void 0;
+    if (!value) return void 0;
     const num = Number.parseFloat(value);
     return Number.isFinite(num) ? num : void 0;
   }
   static parseSeverity(value) {
-    if (!value)
-      return void 0;
+    if (!value) return void 0;
     const normalized = value.toLowerCase();
     if (normalized === "critical" || normalized === "major" || normalized === "minor") {
       return normalized;
@@ -31650,7 +48780,7 @@ var decorateErrorWithCounts = (error2, attemptNumber, options) => {
   return error2;
 };
 async function pRetry(input, options) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve2, reject) => {
     options = { ...options };
     options.onFailedAttempt ??= () => {
     };
@@ -31672,7 +48802,7 @@ async function pRetry(input, options) {
       try {
         const result = await input(attemptNumber);
         cleanUp();
-        resolve(result);
+        resolve2(result);
       } catch (error2) {
         try {
           if (!(error2 instanceof Error)) {
@@ -31719,7 +48849,7 @@ async function withRetry(fn, options) {
           throw err;
         }
         logger.warn(`Retryable error: attempt ${attempt} of ${maxAttempts}`, err.message);
-        await new Promise((resolve) => setTimeout(resolve, delay));
+        await new Promise((resolve2) => setTimeout(resolve2, delay));
         delay = Math.min(delay * factor, options.maxTimeout ?? 4e3);
       }
     }
@@ -31782,10 +48912,8 @@ var OpenRouterProvider = class _OpenRouterProvider extends Provider {
           retries: 1,
           retryOn: (error2) => {
             const err = error2;
-            if (err instanceof RateLimitError)
-              return false;
-            if (err.name === "AbortError")
-              return false;
+            if (err instanceof RateLimitError) return false;
+            if (err.name === "AbortError") return false;
             return true;
           }
         }
@@ -31830,13 +48958,11 @@ var OpenRouterProvider = class _OpenRouterProvider extends Provider {
       const jsonMatch = content.match(/```json\s*([\s\S]*?)```/i);
       if (jsonMatch) {
         const parsed2 = JSON.parse(jsonMatch[1]);
-        if (Array.isArray(parsed2))
-          return parsed2;
+        if (Array.isArray(parsed2)) return parsed2;
         return parsed2.findings || [];
       }
       const parsed = JSON.parse(content);
-      if (Array.isArray(parsed))
-        return parsed;
+      if (Array.isArray(parsed)) return parsed;
       return parsed.findings || [];
     } catch (error2) {
       logger.debug("Failed to parse findings from content", error2);
@@ -31906,7 +49032,7 @@ var OpenCodeProvider = class extends Provider {
     }
   }
   runCli(bin, args, timeoutMs) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve2, reject) => {
       const proc = (0, import_child_process.spawn)(bin, args, { stdio: ["ignore", "pipe", "pipe"] });
       let stdout = "";
       let stderr = "";
@@ -31929,7 +49055,7 @@ var OpenCodeProvider = class extends Provider {
         if (code !== 0) {
           reject(new Error(`OpenCode CLI exited with code ${code}: ${stderr || stdout || "no output"}`));
         } else {
-          resolve({ stdout: stdout.trim(), stderr: stderr.trim() });
+          resolve2({ stdout: stdout.trim(), stderr: stderr.trim() });
         }
       });
     });
@@ -31944,10 +49070,10 @@ var OpenCodeProvider = class extends Provider {
     throw new Error("OpenCode CLI is not available (opencode or npx opencode-ai)");
   }
   async canRun(cmd, args) {
-    return new Promise((resolve) => {
+    return new Promise((resolve2) => {
       const proc = (0, import_child_process.spawn)(cmd, args, { stdio: "ignore" });
-      proc.on("error", () => resolve(false));
-      proc.on("close", (code) => resolve(code === 0));
+      proc.on("error", () => resolve2(false));
+      proc.on("close", (code) => resolve2(code === 0));
     });
   }
   extractFindings(content) {
@@ -31955,13 +49081,11 @@ var OpenCodeProvider = class extends Provider {
       const match = content.match(/```json\s*([\s\S]*?)```/i);
       if (match) {
         const parsed2 = JSON.parse(match[1]);
-        if (Array.isArray(parsed2))
-          return parsed2;
+        if (Array.isArray(parsed2)) return parsed2;
         return parsed2.findings || [];
       }
       const parsed = JSON.parse(content);
-      if (Array.isArray(parsed))
-        return parsed;
+      if (Array.isArray(parsed)) return parsed;
       return parsed.findings || [];
     } catch (error2) {
       logger.debug("Failed to parse findings from OpenCode response", error2);
@@ -32037,14 +49161,12 @@ var PricingService = class _PricingService {
     };
   }
   async refresh() {
-    if (!this.apiKey)
-      return;
+    if (!this.apiKey) return;
     try {
       const response = await fetch("https://openrouter.ai/api/v1/models", {
         headers: { Authorization: `Bearer ${this.apiKey}` }
       });
-      if (!response.ok)
-        return;
+      if (!response.ok) return;
       const data = await response.json();
       for (const model of data.data || []) {
         const pricing = model.pricing || {};
@@ -32063,6 +49185,9 @@ var PricingService = class _PricingService {
 
 // src/providers/registry.ts
 var ProviderRegistry = class {
+  constructor(pluginLoader) {
+    this.pluginLoader = pluginLoader;
+  }
   rateLimiter = new RateLimiter();
   rotationIndex = 0;
   openRouterPricing = new PricingService(process.env.OPENROUTER_API_KEY);
@@ -32116,6 +49241,17 @@ var ProviderRegistry = class {
         logger.warn(`Skipping invalid provider name: ${name}`);
         continue;
       }
+      if (this.pluginLoader?.hasProvider(name)) {
+        const apiKey = process.env.PLUGIN_API_KEY || "";
+        const provider = this.pluginLoader.createProvider(name, apiKey);
+        if (provider) {
+          list.push(provider);
+          continue;
+        } else {
+          logger.warn(`Failed to create provider ${name} from plugin`);
+          continue;
+        }
+      }
       if (name.startsWith("openrouter/")) {
         const model = name.replace("openrouter/", "");
         const apiKey = process.env.OPENROUTER_API_KEY;
@@ -32152,8 +49288,7 @@ var ProviderRegistry = class {
     const available = [];
     for (const provider of providers) {
       const limited = await this.rateLimiter.isRateLimited(provider.name);
-      if (!limited)
-        available.push(provider);
+      if (!limited) available.push(provider);
     }
     return available;
   }
@@ -32175,8 +49310,7 @@ var ProviderRegistry = class {
     const seen = /* @__PURE__ */ new Set();
     const result = [];
     for (const p of providers) {
-      if (seen.has(p.name))
-        continue;
+      if (seen.has(p.name)) continue;
       seen.add(p.name);
       result.push(p);
     }
@@ -32202,8 +49336,7 @@ var ProviderRegistry = class {
     }
   }
   usesDefaultProviders(list) {
-    if (!Array.isArray(list) || list.length !== DEFAULT_CONFIG.providers.length)
-      return false;
+    if (!Array.isArray(list) || list.length !== DEFAULT_CONFIG.providers.length) return false;
     return list.every((p) => DEFAULT_CONFIG.providers.includes(p));
   }
 };
@@ -32211,8 +49344,7 @@ var ProviderRegistry = class {
 // src/utils/diff.ts
 function trimDiff(diff, maxBytes) {
   const buf = Buffer.from(diff, "utf8");
-  if (buf.byteLength <= maxBytes)
-    return diff;
+  if (buf.byteLength <= maxBytes) return diff;
   const fileChunks = [];
   const lines = diff.split("\n");
   let currentChunk = [];
@@ -32249,8 +49381,7 @@ function trimDiff(diff, maxBytes) {
   return includedChunks.join("\n");
 }
 function mapAddedLines(patch) {
-  if (!patch)
-    return [];
+  if (!patch) return [];
   const lines = patch.split("\n");
   const added = [];
   let currentNew = 0;
@@ -32273,8 +49404,7 @@ function mapAddedLines(patch) {
 }
 function mapLinesToPositions(patch) {
   const map2 = /* @__PURE__ */ new Map();
-  if (!patch)
-    return map2;
+  if (!patch) return map2;
   const lines = patch.split("\n");
   let currentNew = 0;
   let position = 0;
@@ -32373,7 +49503,7 @@ function pTimeout(promise, options) {
   } = options;
   let timer;
   let abortHandler;
-  const wrappedPromise = new Promise((resolve, reject) => {
+  const wrappedPromise = new Promise((resolve2, reject) => {
     if (typeof milliseconds !== "number" || Math.sign(milliseconds) !== 1) {
       throw new TypeError(`Expected \`milliseconds\` to be a positive number, got \`${milliseconds}\``);
     }
@@ -32388,14 +49518,14 @@ function pTimeout(promise, options) {
       signal.addEventListener("abort", abortHandler, { once: true });
     }
     if (milliseconds === Number.POSITIVE_INFINITY) {
-      promise.then(resolve, reject);
+      promise.then(resolve2, reject);
       return;
     }
     const timeoutError = new TimeoutError();
     timer = customTimers.setTimeout.call(void 0, () => {
       if (fallback) {
         try {
-          resolve(fallback());
+          resolve2(fallback());
         } catch (error2) {
           reject(error2);
         }
@@ -32405,7 +49535,7 @@ function pTimeout(promise, options) {
         promise.cancel();
       }
       if (message === false) {
-        resolve();
+        resolve2();
       } else if (message instanceof Error) {
         reject(message);
       } else {
@@ -32415,7 +49545,7 @@ function pTimeout(promise, options) {
     }, milliseconds);
     (async () => {
       try {
-        resolve(await promise);
+        resolve2(await promise);
       } catch (error2) {
         reject(error2);
       }
@@ -32471,13 +49601,13 @@ var PriorityQueue = class {
     const index = lowerBound(this.#queue, element, (a, b) => b.priority - a.priority);
     this.#queue.splice(index, 0, element);
   }
-  setPriority(id, priority) {
-    const index = this.#queue.findIndex((element) => element.id === id);
+  setPriority(id2, priority) {
+    const index = this.#queue.findIndex((element) => element.id === id2);
     if (index === -1) {
-      throw new ReferenceError(`No promise function with the id "${id}" exists in the queue.`);
+      throw new ReferenceError(`No promise function with the id "${id2}" exists in the queue.`);
     }
     const [item] = this.#queue.splice(index, 1);
-    this.enqueue(item.run, { priority, id });
+    this.enqueue(item.run, { priority, id: id2 });
   }
   dequeue() {
     const item = this.#queue.shift();
@@ -32684,8 +49814,8 @@ var PQueue = class extends import_index.default {
       ```
       Here, the promise function with `id: '🦀'` executes last.
       */
-  setPriority(id, priority) {
-    this.#queue.setPriority(id, priority);
+  setPriority(id2, priority) {
+    this.#queue.setPriority(id2, priority);
   }
   async add(function_, options = {}) {
     options.id ??= (this.#idAssigner++).toString();
@@ -32694,7 +49824,7 @@ var PQueue = class extends import_index.default {
       throwOnTimeout: this.#throwOnTimeout,
       ...options
     };
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve2, reject) => {
       this.#queue.enqueue(async () => {
         this.#pending++;
         try {
@@ -32708,11 +49838,11 @@ var PQueue = class extends import_index.default {
             operation = Promise.race([operation, this.#throwOnAbort(options.signal)]);
           }
           const result = await operation;
-          resolve(result);
+          resolve2(result);
           this.emit("completed", result);
         } catch (error2) {
           if (error2 instanceof TimeoutError && !options.throwOnTimeout) {
-            resolve();
+            resolve2();
             return;
           }
           reject(error2);
@@ -32787,13 +49917,13 @@ var PQueue = class extends import_index.default {
     await this.#onEvent("idle");
   }
   async #onEvent(event, filter) {
-    return new Promise((resolve) => {
+    return new Promise((resolve2) => {
       const listener = () => {
         if (filter && !filter()) {
           return;
         }
         this.off(event, listener);
-        resolve();
+        resolve2();
       };
       this.on(event, listener);
     });
@@ -32848,10 +49978,8 @@ var LLMExecutor = class {
           const result = await withRetry(runner, {
             retries: Math.max(0, this.config.providerRetries - 1),
             retryOn: (error2) => {
-              if (error2 instanceof RateLimitError)
-                return false;
-              if (error2.message.includes("timed out after"))
-                return false;
+              if (error2 instanceof RateLimitError) return false;
+              if (error2.message.includes("timed out after")) return false;
               return true;
             }
           });
@@ -32926,12 +50054,9 @@ var ConsensusEngine = class {
       const key = `${finding.file}:${finding.line}:${finding.title}`;
       const existing = grouped.get(key);
       const providers = /* @__PURE__ */ new Set();
-      if (finding.providers)
-        finding.providers.forEach((p) => providers.add(p));
-      if (finding.provider)
-        providers.add(finding.provider);
-      if (providers.size === 0)
-        providers.add("static");
+      if (finding.providers) finding.providers.forEach((p) => providers.add(p));
+      if (finding.provider) providers.add(finding.provider);
+      if (providers.size === 0) providers.add("static");
       if (!existing) {
         grouped.set(key, {
           ...finding,
@@ -32954,11 +50079,9 @@ var ConsensusEngine = class {
     return SEVERITY_ORDER[severity] >= SEVERITY_ORDER[this.options.minSeverity];
   }
   meetsAgreement(providers) {
-    if (providers.includes("static"))
-      return true;
+    if (providers.includes("static")) return true;
     const count = providers.length;
-    if (count >= this.options.minAgreement)
-      return true;
+    if (count >= this.options.minAgreement) return true;
     return count === 1;
   }
 };
@@ -33080,10 +50203,8 @@ var TestCoverageAnalyzer = class _TestCoverageAnalyzer {
   analyze(files) {
     const hints = [];
     for (const file of files) {
-      if (!this.isCodeFile(file.filename))
-        continue;
-      if (this.isTestFile(file.filename))
-        continue;
+      if (!this.isCodeFile(file.filename)) continue;
+      if (this.isTestFile(file.filename)) continue;
       const existing = this.findTestFile(file.filename);
       if (!existing) {
         hints.push({
@@ -33117,8 +50238,7 @@ var TestCoverageAnalyzer = class _TestCoverageAnalyzer {
     ];
     for (const candidate of candidates) {
       const full = path4.join(dir, candidate);
-      if (fs4.existsSync(full))
-        return full;
+      if (fs4.existsSync(full)) return full;
     }
     return null;
   }
@@ -33126,18 +50246,14 @@ var TestCoverageAnalyzer = class _TestCoverageAnalyzer {
     const dir = path4.dirname(filename);
     const base = path4.basename(filename, path4.extname(filename));
     const ext = path4.extname(filename);
-    if (ext === ".ts" || ext === ".tsx")
-      return path4.join(dir, `${base}.test.ts`);
-    if (ext === ".py")
-      return path4.join(dir, `test_${base}.py`);
+    if (ext === ".ts" || ext === ".tsx") return path4.join(dir, `${base}.test.ts`);
+    if (ext === ".py") return path4.join(dir, `test_${base}.py`);
     return path4.join(dir, `${base}.test${ext}`);
   }
   getPattern(filename) {
     const ext = path4.extname(filename);
-    if (ext === ".ts" || ext === ".tsx")
-      return "Jest: *.test.ts or __tests__/*.ts";
-    if (ext === ".py")
-      return "pytest: test_*.py or *_test.py";
+    if (ext === ".ts" || ext === ".tsx") return "Jest: *.test.ts or __tests__/*.ts";
+    if (ext === ".py") return "pytest: test_*.py or *_test.py";
     return `*.test${ext}`;
   }
 };
@@ -33164,8 +50280,7 @@ var PATTERNS = [
   }
 ];
 function detectPatternFindings(filename, addedLines) {
-  if (filename.includes("analysis/ast/patterns.ts"))
-    return [];
+  if (filename.includes("analysis/ast/patterns.ts")) return [];
   const findings = [];
   for (const { line, content } of addedLines) {
     for (const pattern of PATTERNS) {
@@ -33187,49 +50302,39 @@ function detectPatternFindings(filename, addedLines) {
 
 // src/analysis/ast/parsers.ts
 function detectLanguage(filename) {
-  if (filename.endsWith(".ts") || filename.endsWith(".tsx"))
-    return "typescript";
-  if (filename.endsWith(".js") || filename.endsWith(".jsx"))
-    return "javascript";
-  if (filename.endsWith(".py"))
-    return "python";
-  if (filename.endsWith(".go"))
-    return "go";
-  if (filename.endsWith(".rs"))
-    return "rust";
+  if (filename.endsWith(".ts") || filename.endsWith(".tsx")) return "typescript";
+  if (filename.endsWith(".js") || filename.endsWith(".jsx")) return "javascript";
+  if (filename.endsWith(".py")) return "python";
+  if (filename.endsWith(".go")) return "go";
+  if (filename.endsWith(".rs")) return "rust";
   return "unknown";
 }
-function getParser(language) {
-  const Parser = loadModule("tree-sitter");
-  if (!Parser)
-    return null;
-  const parser = new Parser();
+function getParser(language2) {
+  const Parser3 = loadModule("tree-sitter");
+  if (!Parser3) return null;
+  const parser = new Parser3();
   try {
-    if (language === "typescript" || language === "javascript") {
+    if (language2 === "typescript" || language2 === "javascript") {
       const ts = loadModule("tree-sitter-typescript");
-      if (!ts?.typescript)
-        return null;
+      if (!ts?.typescript) return null;
       parser.setLanguage(ts.typescript);
       return parser;
     }
-    if (language === "python") {
+    if (language2 === "python") {
       const py = loadModule("tree-sitter-python");
-      if (!py)
-        return null;
+      if (!py) return null;
       parser.setLanguage(py);
       return parser;
     }
-    if (language === "go") {
+    if (language2 === "go") {
       const go = loadModule("tree-sitter-go");
-      if (!go)
-        return null;
+      if (!go) return null;
       parser.setLanguage(go);
       return parser;
     }
-    if (language === "rust") {
+    if (language2 === "rust") {
       const rust = loadModule("tree-sitter-rust");
-      if (!rust)
-        return null;
+      if (!rust) return null;
       parser.setLanguage(rust);
       return parser;
     }
@@ -33254,22 +50359,21 @@ var ASTAnalyzer = class {
       if (this.isTestFile(file.filename)) {
         continue;
       }
-      const language = detectLanguage(file.filename);
+      const language2 = detectLanguage(file.filename);
       const addedLines = mapAddedLines(file.patch);
       findings.push(...detectPatternFindings(file.filename, addedLines));
-      if (language !== "unknown") {
-        findings.push(...this.runLanguageChecks(file.filename, language, addedLines));
+      if (language2 !== "unknown") {
+        findings.push(...this.runLanguageChecks(file.filename, language2, addedLines));
       }
       findings.push(...this.runHeuristics(file.filename, addedLines));
     }
     return findings;
   }
-  runLanguageChecks(filename, language, addedLines) {
+  runLanguageChecks(filename, language2, addedLines) {
     const findings = [];
     const code = addedLines.map((l) => l.content).join("\n");
-    if (!code.trim())
-      return findings;
-    const parser = getParser(language);
+    if (!code.trim()) return findings;
+    const parser = getParser(language2);
     if (!parser) {
       return this.runHeuristics(filename, addedLines);
     }
@@ -33278,9 +50382,8 @@ var ASTAnalyzer = class {
     const stack = [tree.rootNode];
     while (stack.length > 0) {
       const node = stack.pop();
-      if (!node)
-        continue;
-      if (language !== "python") {
+      if (!node) continue;
+      if (language2 !== "python") {
         if (node.type === "call_expression") {
           const fnNode = node.childForFieldName("function");
           if (fnNode && fnNode.text === "console.log") {
@@ -33310,7 +50413,7 @@ var ASTAnalyzer = class {
             providers: ["ast"]
           });
         }
-        if (language === "typescript" && node.type === "predefined_type" && node.text === "any") {
+        if (language2 === "typescript" && node.type === "predefined_type" && node.text === "any") {
           const row = node.startPosition.row;
           const line = lineLookup[row] ?? row + 1;
           findings.push({
@@ -33427,8 +50530,8 @@ var CacheStorage = class {
       await existingLock.promise;
     }
     let resolver;
-    const lockPromise = new Promise((resolve) => {
-      resolver = resolve;
+    const lockPromise = new Promise((resolve2) => {
+      resolver = resolve2;
     });
     this.locks.set(key, {
       promise: lockPromise,
@@ -33459,8 +50562,7 @@ var CacheManager = class {
   async load(pr) {
     const key = buildCacheKey(pr);
     const raw = await this.storage.read(key);
-    if (!raw)
-      return null;
+    if (!raw) return null;
     try {
       const parsed = JSON.parse(raw);
       logger.info(`Loaded cached findings for ${key}`);
@@ -33523,8 +50625,7 @@ var IncrementalReviewer = class _IncrementalReviewer {
   async getLastReview(prNumber) {
     const key = this.buildCacheKey(prNumber);
     const raw = await this.storage.read(key);
-    if (!raw)
-      return null;
+    if (!raw) return null;
     try {
       const data = JSON.parse(raw);
       return data;
@@ -33646,8 +50747,7 @@ var CostTracker = class {
   totalTokens = 0;
   breakdown = {};
   async record(provider, usage) {
-    if (!usage)
-      return;
+    if (!usage) return;
     const pricing = await this.pricing.getPricing(provider.replace("openrouter/", ""));
     const cost = pricing.promptPrice / 1e6 * usage.promptTokens + pricing.completionPrice / 1e6 * usage.completionTokens;
     this.totalCost += cost;
@@ -33862,7 +50962,7 @@ ${content.substring(0, 500)}...`);
         { retries: 2, minTimeout: 1e3, maxTimeout: 5e3 }
       );
       if (i < chunks.length - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 1e3));
+        await new Promise((resolve2) => setTimeout(resolve2, 1e3));
       }
     }
   }
@@ -33888,8 +50988,7 @@ ${content.substring(0, 500)}...`);
     }
   }
   async postInline(prNumber, comments, files) {
-    if (comments.length === 0)
-      return;
+    if (comments.length === 0) return;
     const positionMaps = /* @__PURE__ */ new Map();
     for (const file of files) {
       positionMaps.set(file.filename, mapLinesToPositions(file.patch));
@@ -33955,8 +51054,7 @@ ${comment.body.substring(0, 200)}...`);
         current += para + "\n\n";
       }
     }
-    if (current.trim())
-      chunks.push(current.trim());
+    if (current.trim()) chunks.push(current.trim());
     logger.info(`Prepared ${chunks.length} comment chunk(s)`);
     return chunks;
   }
@@ -34067,8 +51165,7 @@ var MarkdownFormatter = class {
     return lines.join("\n");
   }
   printSeveritySection(lines, title, findings) {
-    if (findings.length === 0)
-      return;
+    if (findings.length === 0) return;
     lines.push(`
 ### ${title}`);
     findings.forEach((f) => {
@@ -34088,13 +51185,15 @@ var MarkdownFormatter = class {
 
 // src/analysis/context.ts
 var ContextRetriever = class {
+  constructor(graph) {
+    this.graph = graph;
+  }
   findRelatedContext(files) {
     const contexts = [];
     for (const file of files) {
       const snippets = this.buildSnippets(file);
-      const downstreamConsumers = this.extractImports(file.patch);
-      if (snippets.length === 0 && downstreamConsumers.length === 0)
-        continue;
+      const downstreamConsumers = this.graph ? this.extractImportsFromGraph(file.filename) : this.extractImports(file.patch);
+      if (snippets.length === 0 && downstreamConsumers.length === 0) continue;
       contexts.push({
         file: file.filename,
         relationship: downstreamConsumers.length > 0 ? "dependency" : "consumer",
@@ -34107,8 +51206,7 @@ var ContextRetriever = class {
   }
   buildSnippets(file) {
     const added = mapAddedLines(file.patch);
-    if (added.length === 0)
-      return [];
+    if (added.length === 0) return [];
     return added.map((line) => ({
       filename: file.filename,
       startLine: line.line,
@@ -34117,13 +51215,11 @@ var ContextRetriever = class {
     }));
   }
   extractImports(patch) {
-    if (!patch)
-      return [];
+    if (!patch) return [];
     const imports = [];
     const regexes = [/import .*?from ['"](.+?)['"]/, /require\\(['"](.+?)['"]\\)/];
     for (const raw of patch.split("\n")) {
-      if (!raw.startsWith("+"))
-        continue;
+      if (!raw.startsWith("+")) continue;
       for (const rx of regexes) {
         const match = raw.match(rx);
         if (match && match[1]) {
@@ -34133,6 +51229,42 @@ var ContextRetriever = class {
       }
     }
     return Array.from(new Set(imports));
+  }
+  /**
+   * Extract imports using code graph (more accurate than regex)
+   */
+  extractImportsFromGraph(filename) {
+    if (!this.graph) {
+      return [];
+    }
+    const dependencies = this.graph.getDependencies(filename);
+    logger.debug(`Graph-based import extraction for ${filename}: ${dependencies.length} imports`);
+    return dependencies;
+  }
+  /**
+   * Find all files that depend on the given file
+   */
+  findDependents(filename) {
+    if (!this.graph) {
+      logger.debug("No code graph available, cannot find dependents");
+      return [];
+    }
+    return this.graph.getDependents(filename);
+  }
+  /**
+   * Find all places where a symbol is used
+   */
+  findUsages(symbolName) {
+    if (!this.graph) {
+      return [];
+    }
+    const callers = this.graph.findCallers(symbolName);
+    return callers.map((snippet2) => ({
+      filename: snippet2.file,
+      startLine: snippet2.line,
+      endLine: snippet2.line,
+      code: snippet2.code
+    }));
   }
 };
 
@@ -34162,12 +51294,9 @@ var ImpactAnalyzer = class {
   calculateImpact(total, files) {
     const additions = files.reduce((sum, f) => sum + f.additions, 0);
     const weight = total + additions / 50;
-    if (weight > 20)
-      return "critical";
-    if (weight > 12)
-      return "high";
-    if (weight > 4)
-      return "medium";
+    if (weight > 20) return "critical";
+    if (weight > 12) return "high";
+    if (weight > 4) return "medium";
     return "low";
   }
 };
@@ -34178,14 +51307,10 @@ var EvidenceScorer = class {
     const agreement = providerCount > 0 ? (finding.providers?.length || 0) / providerCount : 0;
     const confidence = agreement * 0.3 + (astConfirmed ? 0.25 : 0) + (graphConfirmed ? 0.25 : 0) + (hasDirectEvidence ? 0.2 : 0);
     const reasons = [];
-    if (agreement >= 0.5)
-      reasons.push(`${Math.round(agreement * 100)}% provider agreement`);
-    if (astConfirmed)
-      reasons.push("confirmed by AST analysis");
-    if (graphConfirmed)
-      reasons.push("validated by dependency graph");
-    if (hasDirectEvidence)
-      reasons.push("direct evidence in changed code");
+    if (agreement >= 0.5) reasons.push(`${Math.round(agreement * 100)}% provider agreement`);
+    if (astConfirmed) reasons.push("confirmed by AST analysis");
+    if (graphConfirmed) reasons.push("validated by dependency graph");
+    if (hasDirectEvidence) reasons.push("direct evidence in changed code");
     return {
       confidence: Math.min(1, confidence),
       reasoning: reasons.join(", ") || "limited evidence",
@@ -34193,10 +51318,8 @@ var EvidenceScorer = class {
     };
   }
   getBadge(confidence) {
-    if (confidence >= 0.8)
-      return "\u{1F7E2} High Confidence";
-    if (confidence >= 0.5)
-      return "\u{1F7E1} Medium Confidence";
+    if (confidence >= 0.8) return "\u{1F7E2} High Confidence";
+    if (confidence >= 0.5) return "\u{1F7E1} Medium Confidence";
     return "\u{1F7E0} Low Confidence";
   }
 };
@@ -34204,8 +51327,7 @@ var EvidenceScorer = class {
 // src/output/mermaid.ts
 var MermaidGenerator = class {
   generateImpactDiagram(files, context2) {
-    if (files.length > 30)
-      return "";
+    if (files.length > 30) return "";
     const lines = ["graph TD"];
     const fileNodes = /* @__PURE__ */ new Set();
     const usedIds = /* @__PURE__ */ new Set();
@@ -34290,16 +51412,1378 @@ var FeedbackFilter = class {
     const signature = this.signatureFromComment(comment.path, comment.line, comment.body);
     return !suppressed.has(signature);
   }
-  signatureFromComment(path7, line, body) {
+  signatureFromComment(path8, line, body) {
     const titleMatch = body.match(/\*\*(.+?)\*\*/);
     const title = titleMatch ? titleMatch[1] : body.split("\n")[0] || "unknown";
-    return `${(path7 || "unknown").toLowerCase()}:${line ?? 0}:${title.toLowerCase()}`;
+    return `${(path8 || "unknown").toLowerCase()}:${line ?? 0}:${title.toLowerCase()}`;
+  }
+};
+
+// src/learning/feedback-tracker.ts
+var FeedbackTracker = class _FeedbackTracker {
+  // 1 day
+  constructor(storage = new CacheStorage(), minFeedbackCount = _FeedbackTracker.MIN_FEEDBACK_FOR_LEARNING) {
+    this.storage = storage;
+    this.minFeedbackCount = minFeedbackCount;
+  }
+  static CACHE_KEY = "feedback-learning-data";
+  static DEFAULT_THRESHOLD = 0.5;
+  static HIGH_QUALITY_THRESHOLD = 0.8;
+  static LOW_QUALITY_THRESHOLD = 0.5;
+  static THRESHOLD_ADJUSTMENT = 0.1;
+  static MIN_THRESHOLD = 0.3;
+  static MAX_THRESHOLD = 0.9;
+  static MIN_FEEDBACK_FOR_LEARNING = 5;
+  static AGGREGATION_INTERVAL_MS = 24 * 60 * 60 * 1e3;
+  /**
+   * Record a reaction to a finding
+   */
+  async recordReaction(findingId, category, severity, reaction, prNumber) {
+    const data = await this.loadData();
+    const record = {
+      findingId,
+      category,
+      severity,
+      reaction,
+      timestamp: Date.now(),
+      prNumber
+    };
+    data.records.push(record);
+    const timeSinceAggregation = Date.now() - data.lastAggregation;
+    if (timeSinceAggregation > _FeedbackTracker.AGGREGATION_INTERVAL_MS) {
+      await this.aggregateAndAdjust(data);
+    }
+    await this.saveData(data);
+    logger.info(`Recorded ${reaction} feedback for finding ${findingId} (category: ${category})`);
+  }
+  /**
+   * Get the current confidence threshold for a category
+   * Returns higher threshold for categories with high false positive rate
+   */
+  async getConfidenceThreshold(category) {
+    const data = await this.loadData();
+    const stats = data.categoryStats[category];
+    if (!stats) {
+      return _FeedbackTracker.DEFAULT_THRESHOLD;
+    }
+    return stats.confidenceThreshold;
+  }
+  /**
+   * Get all category statistics
+   */
+  async getCategoryStats() {
+    const data = await this.loadData();
+    return data.categoryStats;
+  }
+  /**
+   * Get feedback records for a specific finding
+   */
+  async getFindingFeedback(findingId) {
+    const data = await this.loadData();
+    return data.records.filter((r) => r.findingId === findingId);
+  }
+  /**
+   * Aggregate feedback and adjust confidence thresholds
+   */
+  async adjustWeights() {
+    const data = await this.loadData();
+    await this.aggregateAndAdjust(data);
+    await this.saveData(data);
+  }
+  /**
+   * Clear all feedback data (useful for testing)
+   */
+  async clear() {
+    const emptyData = {
+      records: [],
+      categoryStats: {},
+      lastAggregation: Date.now()
+    };
+    await this.saveData(emptyData);
+    logger.info("Cleared all feedback data");
+  }
+  /**
+   * Get feedback statistics summary
+   */
+  async getStats() {
+    const data = await this.loadData();
+    const totalPositive = data.records.filter((r) => r.reaction === "\u{1F44D}").length;
+    const totalNegative = data.records.filter((r) => r.reaction === "\u{1F44E}").length;
+    const total = totalPositive + totalNegative;
+    return {
+      totalFeedback: total,
+      categoriesTracked: Object.keys(data.categoryStats).length,
+      overallPositiveRate: total > 0 ? totalPositive / total : 0,
+      lastAggregation: data.lastAggregation
+    };
+  }
+  /**
+   * Load feedback data from cache
+   */
+  async loadData() {
+    const raw = await this.storage.read(_FeedbackTracker.CACHE_KEY);
+    if (!raw) {
+      return {
+        records: [],
+        categoryStats: {},
+        lastAggregation: Date.now()
+      };
+    }
+    try {
+      return JSON.parse(raw);
+    } catch (error2) {
+      logger.warn("Failed to parse feedback data, starting fresh", error2);
+      return {
+        records: [],
+        categoryStats: {},
+        lastAggregation: Date.now()
+      };
+    }
+  }
+  /**
+   * Save feedback data to cache
+   */
+  async saveData(data) {
+    await this.storage.write(_FeedbackTracker.CACHE_KEY, JSON.stringify(data));
+  }
+  /**
+   * Aggregate feedback records and adjust confidence thresholds
+   */
+  async aggregateAndAdjust(data) {
+    logger.info("Aggregating feedback and adjusting confidence thresholds");
+    const categoryGroups = /* @__PURE__ */ new Map();
+    for (const record of data.records) {
+      const group = categoryGroups.get(record.category) || [];
+      group.push(record);
+      categoryGroups.set(record.category, group);
+    }
+    for (const [category, records] of categoryGroups) {
+      const positiveCount = records.filter((r) => r.reaction === "\u{1F44D}").length;
+      const negativeCount = records.filter((r) => r.reaction === "\u{1F44E}").length;
+      const totalCount = positiveCount + negativeCount;
+      if (totalCount < this.minFeedbackCount) {
+        continue;
+      }
+      const positiveRate = positiveCount / totalCount;
+      const currentStats = data.categoryStats[category];
+      const currentThreshold = currentStats?.confidenceThreshold || _FeedbackTracker.DEFAULT_THRESHOLD;
+      let newThreshold = currentThreshold;
+      if (positiveRate > _FeedbackTracker.HIGH_QUALITY_THRESHOLD) {
+        newThreshold = Math.max(
+          _FeedbackTracker.MIN_THRESHOLD,
+          currentThreshold - _FeedbackTracker.THRESHOLD_ADJUSTMENT
+        );
+        logger.debug(
+          `Category ${category}: High quality (${(positiveRate * 100).toFixed(1)}%), lowering threshold ${currentThreshold.toFixed(2)} \u2192 ${newThreshold.toFixed(2)}`
+        );
+      } else if (positiveRate < _FeedbackTracker.LOW_QUALITY_THRESHOLD) {
+        newThreshold = Math.min(
+          _FeedbackTracker.MAX_THRESHOLD,
+          currentThreshold + _FeedbackTracker.THRESHOLD_ADJUSTMENT
+        );
+        logger.debug(
+          `Category ${category}: Low quality (${(positiveRate * 100).toFixed(1)}%), raising threshold ${currentThreshold.toFixed(2)} \u2192 ${newThreshold.toFixed(2)}`
+        );
+      }
+      data.categoryStats[category] = {
+        category,
+        totalFeedback: totalCount,
+        positiveCount,
+        negativeCount,
+        positiveRate,
+        confidenceThreshold: newThreshold,
+        lastUpdated: Date.now()
+      };
+      logger.info(
+        `Updated ${category}: ${positiveCount}\u{1F44D} ${negativeCount}\u{1F44E} (${(positiveRate * 100).toFixed(1)}% positive), threshold: ${newThreshold.toFixed(2)}`
+      );
+    }
+    data.lastAggregation = Date.now();
+  }
+};
+
+// src/learning/quiet-mode.ts
+var QuietModeFilter = class {
+  constructor(config, feedbackTracker) {
+    this.config = config;
+    this.feedbackTracker = feedbackTracker;
+  }
+  /**
+   * Filter findings based on confidence thresholds
+   * Returns only findings that meet the confidence criteria
+   */
+  async filterByConfidence(findings) {
+    if (!this.config.enabled) {
+      logger.debug("Quiet mode disabled, returning all findings");
+      return findings;
+    }
+    logger.info(`Quiet mode enabled (min confidence: ${this.config.minConfidence}), filtering findings`);
+    const filtered = [];
+    const rejected = [];
+    for (const finding of findings) {
+      const threshold = await this.getThreshold(finding);
+      const confidence = finding.confidence || 0;
+      if (confidence >= threshold) {
+        filtered.push(finding);
+      } else {
+        rejected.push(finding);
+        logger.debug(
+          `Filtered out ${finding.category} finding (confidence: ${confidence.toFixed(2)}, threshold: ${threshold.toFixed(2)})`
+        );
+      }
+    }
+    const filterRate = findings.length > 0 ? rejected.length / findings.length * 100 : 0;
+    logger.info(
+      `Quiet mode filtered ${rejected.length}/${findings.length} findings (${filterRate.toFixed(1)}% reduction)`
+    );
+    return filtered;
+  }
+  /**
+   * Get statistics about what would be filtered
+   */
+  async getFilterStats(findings) {
+    if (!this.config.enabled) {
+      return {
+        total: findings.length,
+        filtered: 0,
+        kept: findings.length,
+        filterRate: 0,
+        byCategory: {}
+      };
+    }
+    const byCategory = {};
+    let totalFiltered = 0;
+    for (const finding of findings) {
+      const threshold = await this.getThreshold(finding);
+      const confidence = finding.confidence || 0;
+      const category = finding.category || "unknown";
+      if (!byCategory[category]) {
+        byCategory[category] = { total: 0, filtered: 0, kept: 0 };
+      }
+      byCategory[category].total++;
+      if (confidence >= threshold) {
+        byCategory[category].kept++;
+      } else {
+        byCategory[category].filtered++;
+        totalFiltered++;
+      }
+    }
+    return {
+      total: findings.length,
+      filtered: totalFiltered,
+      kept: findings.length - totalFiltered,
+      filterRate: findings.length > 0 ? totalFiltered / findings.length * 100 : 0,
+      byCategory
+    };
+  }
+  /**
+   * Get the confidence threshold for a finding
+   * Uses learned threshold if available, otherwise falls back to config
+   */
+  async getThreshold(finding) {
+    if (!this.config.useLearning || !this.feedbackTracker) {
+      return this.config.minConfidence;
+    }
+    const category = finding.category || "unknown";
+    const learnedThreshold = await this.feedbackTracker.getConfidenceThreshold(category);
+    return Math.max(learnedThreshold, this.config.minConfidence);
+  }
+};
+
+// src/analysis/context/graph-builder.ts
+var import_tree_sitter = __toESM(require_tree_sitter());
+var import_tree_sitter_typescript = __toESM(require_node());
+var import_tree_sitter_python = __toESM(require_node2());
+var CodeGraph = class {
+  // file → symbols defined
+  constructor(files = [], buildTime = 0) {
+    this.files = files;
+    this.buildTime = buildTime;
+  }
+  definitions = /* @__PURE__ */ new Map();
+  imports = /* @__PURE__ */ new Map();
+  // file → imported files
+  exports = /* @__PURE__ */ new Map();
+  // file → exported symbols
+  calls = /* @__PURE__ */ new Map();
+  // fn → called fns
+  callers = /* @__PURE__ */ new Map();
+  // fn → callers
+  fileSymbols = /* @__PURE__ */ new Map();
+  /**
+   * Add a definition to the graph
+   */
+  addDefinition(def) {
+    const key = `${def.file}:${def.name}`;
+    this.definitions.set(key, def);
+    const symbols = this.fileSymbols.get(def.file) || [];
+    symbols.push(def.name);
+    this.fileSymbols.set(def.file, symbols);
+  }
+  /**
+   * Add an import relationship
+   */
+  addImport(fromFile, toFile) {
+    const imported = this.imports.get(fromFile) || [];
+    if (!imported.includes(toFile)) {
+      imported.push(toFile);
+      this.imports.set(fromFile, imported);
+    }
+  }
+  /**
+   * Add a call relationship
+   */
+  addCall(caller, callee) {
+    const called = this.calls.get(caller) || [];
+    if (!called.includes(callee)) {
+      called.push(callee);
+      this.calls.set(caller, called);
+    }
+    const callerList = this.callers.get(callee) || [];
+    if (!callerList.includes(caller)) {
+      callerList.push(caller);
+      this.callers.set(callee, callerList);
+    }
+  }
+  /**
+   * Find all places where a symbol is called/used
+   */
+  findCallers(symbol) {
+    const callerList = this.callers.get(symbol) || [];
+    const snippets = [];
+    for (const caller of callerList) {
+      for (const [key, def] of this.definitions) {
+        if (key.endsWith(`:${caller}`)) {
+          snippets.push({
+            file: def.file,
+            line: def.line,
+            code: `${def.type} ${def.name}`,
+            context: `Called from ${def.name}`
+          });
+        }
+      }
+    }
+    return snippets;
+  }
+  /**
+   * Find all files that import/depend on a given file
+   */
+  findConsumers(file) {
+    const consumers = [];
+    for (const [fromFile, toFiles] of this.imports) {
+      if (toFiles.includes(file)) {
+        consumers.push({
+          file: fromFile,
+          line: 1,
+          code: `import from '${file}'`,
+          context: `File depends on ${file}`
+        });
+      }
+    }
+    return consumers;
+  }
+  /**
+   * Find all symbols defined in a file
+   */
+  getFileSymbols(file) {
+    const symbolNames = this.fileSymbols.get(file) || [];
+    return symbolNames.map((name) => this.definitions.get(`${file}:${name}`)).filter((def) => def !== void 0);
+  }
+  /**
+   * Get a symbol definition by name (searches all files)
+   */
+  getDefinition(symbolName) {
+    for (const [key, def] of this.definitions) {
+      if (def.name === symbolName) {
+        return def;
+      }
+    }
+    return void 0;
+  }
+  /**
+   * Get all files that a file depends on (direct imports)
+   */
+  getDependencies(file) {
+    return this.imports.get(file) || [];
+  }
+  /**
+   * Get all files that depend on this file (reverse)
+   */
+  getDependents(file) {
+    const dependents = [];
+    for (const [fromFile, toFiles] of this.imports) {
+      if (toFiles.includes(file)) {
+        dependents.push(fromFile);
+      }
+    }
+    return dependents;
+  }
+  /**
+   * Get statistics about the graph
+   */
+  getStats() {
+    return {
+      files: this.files.length,
+      definitions: this.definitions.size,
+      imports: Array.from(this.imports.values()).flat().length,
+      calls: Array.from(this.calls.values()).flat().length,
+      buildTimeMs: this.buildTime
+    };
+  }
+};
+var CodeGraphBuilder = class {
+  constructor(maxDepth = 5, timeoutMs = 1e4) {
+    this.maxDepth = maxDepth;
+    this.timeoutMs = timeoutMs;
+    this.parser = new import_tree_sitter.default();
+    this.tsParser = new import_tree_sitter.default();
+    this.pyParser = new import_tree_sitter.default();
+    try {
+      this.tsParser.setLanguage(import_tree_sitter_typescript.default.typescript);
+      this.pyParser.setLanguage(import_tree_sitter_python.default);
+    } catch (error2) {
+      logger.warn("Failed to initialize parsers", error2);
+    }
+  }
+  parser;
+  tsParser;
+  pyParser;
+  /**
+   * Build a code graph from file changes
+   */
+  async buildGraph(files) {
+    const startTime = Date.now();
+    const graph = new CodeGraph();
+    logger.info(`Building code graph for ${files.length} files`);
+    for (const file of files) {
+      try {
+        await this.analyzeFile(file, graph);
+      } catch (error2) {
+        logger.warn(`Failed to analyze ${file.filename}`, error2);
+      }
+      if (Date.now() - startTime > this.timeoutMs) {
+        logger.warn(`Graph build timeout after ${this.timeoutMs}ms, stopping early`);
+        break;
+      }
+    }
+    const buildTime = Date.now() - startTime;
+    const finalGraph = new CodeGraph(
+      files.map((f) => f.filename),
+      buildTime
+    );
+    Object.assign(finalGraph, graph);
+    logger.info(`Code graph built in ${buildTime}ms: ${graph.getStats().definitions} definitions, ${graph.getStats().imports} imports`);
+    return finalGraph;
+  }
+  /**
+   * Update an existing graph with changed files
+   */
+  async updateGraph(graph, changedFiles) {
+    const startTime = Date.now();
+    logger.info(`Updating code graph with ${changedFiles.length} changed files`);
+    for (const file of changedFiles) {
+      try {
+        await this.analyzeFile(file, graph);
+      } catch (error2) {
+        logger.warn(`Failed to analyze ${file.filename}`, error2);
+      }
+    }
+    const updateTime = Date.now() - startTime;
+    logger.info(`Code graph updated in ${updateTime}ms`);
+    return graph;
+  }
+  /**
+   * Analyze a single file and add to graph
+   */
+  async analyzeFile(file, graph) {
+    const ext = file.filename.split(".").pop()?.toLowerCase();
+    let parser = null;
+    if (ext === "ts" || ext === "tsx" || ext === "js" || ext === "jsx") {
+      parser = this.tsParser;
+    } else if (ext === "py") {
+      parser = this.pyParser;
+    }
+    if (!parser || !file.patch) {
+      return;
+    }
+    const tree = parser.parse(file.patch);
+    const root = tree.rootNode;
+    this.extractDefinitions(root, file.filename, graph);
+    this.extractImports(root, file.filename, graph);
+    this.extractCalls(root, file.filename, graph);
+  }
+  /**
+   * Extract symbol definitions from AST
+   */
+  extractDefinitions(node, file, graph) {
+    if (node.type === "function_declaration" || node.type === "function") {
+      const nameNode = node.childForFieldName("name");
+      if (nameNode) {
+        graph.addDefinition({
+          name: nameNode.text,
+          file,
+          line: node.startPosition.row + 1,
+          type: "function",
+          exported: this.isExported(node)
+        });
+      }
+    }
+    if (node.type === "class_declaration" || node.type === "class") {
+      const nameNode = node.childForFieldName("name");
+      if (nameNode) {
+        graph.addDefinition({
+          name: nameNode.text,
+          file,
+          line: node.startPosition.row + 1,
+          type: "class",
+          exported: this.isExported(node)
+        });
+      }
+    }
+    for (let i = 0; i < node.childCount; i++) {
+      this.extractDefinitions(node.child(i), file, graph);
+    }
+  }
+  /**
+   * Extract import statements from AST
+   */
+  extractImports(node, file, graph) {
+    if (node.type === "import_statement") {
+      const sourceNode = node.childForFieldName("source");
+      if (sourceNode) {
+        const source = sourceNode.text.replace(/['"]/g, "");
+        graph.addImport(file, source);
+      }
+    }
+    if (node.type === "import_from_statement") {
+      const moduleNode = node.childForFieldName("module_name");
+      if (moduleNode) {
+        graph.addImport(file, moduleNode.text);
+      }
+    }
+    for (let i = 0; i < node.childCount; i++) {
+      this.extractImports(node.child(i), file, graph);
+    }
+  }
+  /**
+   * Extract function/method calls from AST
+   */
+  extractCalls(node, file, graph) {
+    if (node.type === "call_expression") {
+      const functionNode = node.childForFieldName("function");
+      if (functionNode) {
+        const callee = functionNode.text;
+      }
+    }
+    for (let i = 0; i < node.childCount; i++) {
+      this.extractCalls(node.child(i), file, graph);
+    }
+  }
+  /**
+   * Check if a node has an export modifier
+   */
+  isExported(node) {
+    let current = node;
+    while (current) {
+      if (current.type === "export_statement") {
+        return true;
+      }
+      current = current.parent;
+    }
+    return false;
+  }
+};
+
+// src/autofix/prompt-generator.ts
+var PromptGenerator = class {
+  constructor(defaultFormat = "plain") {
+    this.defaultFormat = defaultFormat;
+  }
+  /**
+   * Generate fix prompts for all findings
+   */
+  generateFixPrompts(findings) {
+    logger.info(`Generating fix prompts for ${findings.length} findings`);
+    const prompts = [];
+    for (const finding of findings) {
+      const prompt = this.generatePromptForFinding(finding);
+      if (prompt) {
+        prompts.push(prompt);
+      }
+    }
+    logger.info(`Generated ${prompts.length} fix prompts`);
+    return prompts;
+  }
+  /**
+   * Format prompts for a specific IDE
+   */
+  formatForIDE(prompts, format = this.defaultFormat) {
+    logger.debug(`Formatting ${prompts.length} prompts for ${format}`);
+    switch (format) {
+      case "cursor":
+        return this.formatForCursor(prompts);
+      case "copilot":
+        return this.formatForCopilot(prompts);
+      case "plain":
+      default:
+        return this.formatPlain(prompts);
+    }
+  }
+  /**
+   * Generate output with metadata
+   */
+  generate(findings, format) {
+    const prompts = this.generateFixPrompts(findings);
+    const outputFormat = format || this.defaultFormat;
+    return {
+      format: outputFormat,
+      prompts,
+      totalFindings: findings.length,
+      promptsGenerated: prompts.length
+    };
+  }
+  /**
+   * Generate a fix prompt for a single finding
+   */
+  generatePromptForFinding(finding) {
+    if (!finding.suggestion) {
+      return null;
+    }
+    const prompt = this.buildPromptText(finding);
+    return {
+      file: finding.file,
+      line: finding.line,
+      finding: finding.title,
+      severity: finding.severity,
+      fixPrompt: prompt,
+      category: finding.category
+    };
+  }
+  /**
+   * Build prompt text from finding
+   */
+  buildPromptText(finding) {
+    const parts = [];
+    parts.push(`Fix the following ${finding.severity} issue in ${finding.file}:${finding.line}`);
+    parts.push("");
+    parts.push(`Issue: ${finding.title}`);
+    parts.push(`Details: ${finding.message}`);
+    parts.push("");
+    if (finding.suggestion) {
+      parts.push("Suggested fix:");
+      parts.push(finding.suggestion);
+    }
+    if (finding.category) {
+      parts.push("");
+      parts.push(`Category: ${finding.category}`);
+    }
+    return parts.join("\n");
+  }
+  /**
+   * Format for Cursor AI IDE
+   */
+  formatForCursor(prompts) {
+    const lines = [];
+    lines.push("# AI Fix Prompts for Cursor");
+    lines.push("");
+    lines.push(`Generated ${prompts.length} fix prompts. Use Cursor AI to apply these fixes.`);
+    lines.push("");
+    for (let i = 0; i < prompts.length; i++) {
+      const prompt = prompts[i];
+      lines.push(`## Fix ${i + 1}: ${prompt.finding} (${prompt.severity})`);
+      lines.push("");
+      lines.push(`**File:** \`${prompt.file}:${prompt.line}\``);
+      lines.push("");
+      lines.push("**Prompt for Cursor:**");
+      lines.push("```");
+      lines.push(prompt.fixPrompt);
+      lines.push("```");
+      lines.push("");
+      lines.push("**To apply:** Open file in Cursor, position cursor at the line, and use Cmd+K with the prompt above.");
+      lines.push("");
+      lines.push("---");
+      lines.push("");
+    }
+    return lines.join("\n");
+  }
+  /**
+   * Format for GitHub Copilot
+   */
+  formatForCopilot(prompts) {
+    const lines = [];
+    lines.push("# AI Fix Suggestions for GitHub Copilot");
+    lines.push("");
+    lines.push(`${prompts.length} fixes available. Use Copilot to apply these suggestions.`);
+    lines.push("");
+    for (const prompt of prompts) {
+      lines.push(`### ${prompt.file}:${prompt.line} - ${prompt.finding}`);
+      lines.push("");
+      lines.push(`**Severity:** ${prompt.severity}`);
+      if (prompt.category) {
+        lines.push(`**Category:** ${prompt.category}`);
+      }
+      lines.push("");
+      lines.push("**Fix suggestion:**");
+      lines.push("```");
+      lines.push(prompt.fixPrompt);
+      lines.push("```");
+      lines.push("");
+    }
+    return lines.join("\n");
+  }
+  /**
+   * Format as plain text
+   */
+  formatPlain(prompts) {
+    const lines = [];
+    lines.push("AI-Generated Fix Prompts");
+    lines.push("=".repeat(50));
+    lines.push("");
+    lines.push(`Total prompts: ${prompts.length}`);
+    lines.push("");
+    for (let i = 0; i < prompts.length; i++) {
+      const prompt = prompts[i];
+      lines.push(`[${i + 1}] ${prompt.finding} (${prompt.severity})`);
+      lines.push(`    Location: ${prompt.file}:${prompt.line}`);
+      if (prompt.category) {
+        lines.push(`    Category: ${prompt.category}`);
+      }
+      lines.push("");
+      lines.push("    Fix prompt:");
+      const promptLines = prompt.fixPrompt.split("\n");
+      for (const line of promptLines) {
+        lines.push(`    ${line}`);
+      }
+      lines.push("");
+      lines.push("-".repeat(50));
+      lines.push("");
+    }
+    return lines.join("\n");
+  }
+  /**
+   * Save prompts to a file (for CLI usage)
+   */
+  async saveToFile(prompts, filepath, format = this.defaultFormat) {
+    const fs8 = await import("fs/promises");
+    const content = this.formatForIDE(prompts, format);
+    await fs8.writeFile(filepath, content, "utf8");
+    logger.info(`Saved ${prompts.length} fix prompts to ${filepath}`);
+  }
+  /**
+   * Get statistics about generated prompts
+   */
+  getStats(prompts) {
+    const bySeverity = {};
+    const byCategory = {};
+    const byFile = {};
+    for (const prompt of prompts) {
+      bySeverity[prompt.severity] = (bySeverity[prompt.severity] || 0) + 1;
+      if (prompt.category) {
+        byCategory[prompt.category] = (byCategory[prompt.category] || 0) + 1;
+      }
+      byFile[prompt.file] = (byFile[prompt.file] || 0) + 1;
+    }
+    return {
+      total: prompts.length,
+      bySeverity,
+      byCategory,
+      byFile
+    };
+  }
+};
+
+// src/providers/reliability-tracker.ts
+var ReliabilityTracker = class _ReliabilityTracker {
+  constructor(storage = new CacheStorage(), minAttempts = _ReliabilityTracker.MIN_ATTEMPTS_FOR_SCORING) {
+    this.storage = storage;
+    this.minAttempts = minAttempts;
+  }
+  static CACHE_KEY = "provider-reliability-data";
+  static AGGREGATION_INTERVAL_MS = 24 * 60 * 60 * 1e3;
+  // 1 day
+  static MIN_ATTEMPTS_FOR_SCORING = 5;
+  // Reliability score weights
+  static WEIGHTS = {
+    successRate: 0.5,
+    // 50% - Most important
+    falsePositiveRate: 0.3,
+    // 30% - Very important
+    responseTime: 0.2
+    // 20% - Nice to have
+  };
+  /**
+   * Record a provider execution result
+   */
+  async recordResult(providerId, success, durationMs, error2) {
+    const data = await this.loadData();
+    const result = {
+      providerId,
+      success,
+      timestamp: Date.now(),
+      durationMs,
+      error: error2
+    };
+    data.results.push(result);
+    const timeSinceAggregation = Date.now() - data.lastAggregation;
+    if (timeSinceAggregation > _ReliabilityTracker.AGGREGATION_INTERVAL_MS) {
+      await this.aggregateStats(data);
+    }
+    await this.saveData(data);
+    logger.debug(
+      `Recorded ${success ? "success" : "failure"} for provider ${providerId}${durationMs ? ` (${durationMs}ms)` : ""}`
+    );
+  }
+  /**
+   * Record a false positive finding from a provider
+   */
+  async recordFalsePositive(providerId, findingId, category) {
+    const data = await this.loadData();
+    const report = {
+      providerId,
+      findingId,
+      timestamp: Date.now(),
+      category
+    };
+    data.falsePositives.push(report);
+    await this.saveData(data);
+    logger.info(`Recorded false positive from provider ${providerId} (finding: ${findingId})`);
+  }
+  /**
+   * Get reliability score for a provider (0-1, higher is better)
+   */
+  async getReliabilityScore(providerId) {
+    const data = await this.loadData();
+    const stats = data.stats[providerId];
+    if (!stats || stats.totalAttempts < this.minAttempts) {
+      return 0.5;
+    }
+    return stats.reliabilityScore;
+  }
+  /**
+   * Get detailed statistics for a provider
+   */
+  async getStats(providerId) {
+    const data = await this.loadData();
+    return data.stats[providerId] || null;
+  }
+  /**
+   * Get all provider statistics
+   */
+  async getAllStats() {
+    const data = await this.loadData();
+    return data.stats;
+  }
+  /**
+   * Rank providers by reliability score (best first)
+   */
+  async rankProviders(providerIds) {
+    const ranked = [];
+    for (const providerId of providerIds) {
+      const score = await this.getReliabilityScore(providerId);
+      ranked.push({ providerId, score });
+    }
+    ranked.sort((a, b) => b.score - a.score);
+    logger.debug(
+      `Ranked ${ranked.length} providers: ${ranked.map((r) => `${r.providerId}=${r.score.toFixed(2)}`).join(", ")}`
+    );
+    return ranked;
+  }
+  /**
+   * Get provider recommendations based on reliability
+   */
+  async getRecommendations(minScore = 0.6) {
+    const data = await this.loadData();
+    const recommended = [];
+    for (const [providerId, stats] of Object.entries(data.stats)) {
+      if (stats.reliabilityScore >= minScore && stats.totalAttempts >= this.minAttempts) {
+        recommended.push(providerId);
+      }
+    }
+    recommended.sort((a, b) => {
+      const scoreA = data.stats[a].reliabilityScore;
+      const scoreB = data.stats[b].reliabilityScore;
+      return scoreB - scoreA;
+    });
+    logger.info(`Found ${recommended.length} recommended providers with score >= ${minScore}`);
+    return recommended;
+  }
+  /**
+   * Aggregate results and calculate statistics
+   */
+  async aggregateStats(data) {
+    const reliabilityData = data || await this.loadData();
+    logger.info("Aggregating provider reliability statistics");
+    const providerGroups = /* @__PURE__ */ new Map();
+    for (const result of reliabilityData.results) {
+      const group = providerGroups.get(result.providerId) || [];
+      group.push(result);
+      providerGroups.set(result.providerId, group);
+    }
+    const fpGroups = /* @__PURE__ */ new Map();
+    for (const fp of reliabilityData.falsePositives) {
+      const group = fpGroups.get(fp.providerId) || [];
+      group.push(fp);
+      fpGroups.set(fp.providerId, group);
+    }
+    for (const [providerId, results] of providerGroups) {
+      const stats = this.calculateStats(providerId, results, fpGroups.get(providerId) || []);
+      reliabilityData.stats[providerId] = stats;
+      logger.debug(
+        `${providerId}: ${stats.successRate.toFixed(0)}% success, ${stats.falsePositiveCount} FP, score=${stats.reliabilityScore.toFixed(2)}`
+      );
+    }
+    reliabilityData.lastAggregation = Date.now();
+    if (!data) {
+      await this.saveData(reliabilityData);
+    }
+  }
+  /**
+   * Calculate statistics for a provider
+   */
+  calculateStats(providerId, results, falsePositives) {
+    const successCount = results.filter((r) => r.success).length;
+    const failureCount = results.filter((r) => !r.success).length;
+    const totalAttempts = results.length;
+    const successRate = totalAttempts > 0 ? successCount / totalAttempts : 0;
+    const durationsWithValues = results.filter((r) => r.durationMs !== void 0);
+    const averageDurationMs = durationsWithValues.length > 0 ? durationsWithValues.reduce((sum, r) => sum + (r.durationMs || 0), 0) / durationsWithValues.length : 0;
+    const falsePositiveCount = falsePositives.length;
+    const falsePositiveRate = totalAttempts > 0 ? falsePositiveCount / totalAttempts : 0;
+    const responseTimeScore = Math.max(0, Math.min(1, 1 - (averageDurationMs - 500) / 4500));
+    const reliabilityScore = _ReliabilityTracker.WEIGHTS.successRate * successRate + _ReliabilityTracker.WEIGHTS.falsePositiveRate * (1 - falsePositiveRate) + _ReliabilityTracker.WEIGHTS.responseTime * responseTimeScore;
+    return {
+      providerId,
+      totalAttempts,
+      successCount,
+      failureCount,
+      successRate: successRate * 100,
+      // Convert to percentage
+      averageDurationMs: Math.round(averageDurationMs),
+      falsePositiveCount,
+      reliabilityScore,
+      lastUpdated: Date.now()
+    };
+  }
+  /**
+   * Clear all reliability data
+   */
+  async clear() {
+    const emptyData = {
+      results: [],
+      falsePositives: [],
+      stats: {},
+      lastAggregation: Date.now()
+    };
+    await this.saveData(emptyData);
+    logger.info("Cleared all reliability data");
+  }
+  /**
+   * Get overall summary statistics
+   */
+  async getSummary() {
+    const data = await this.loadData();
+    const stats = Object.values(data.stats);
+    if (stats.length === 0) {
+      return {
+        totalProviders: 0,
+        totalAttempts: 0,
+        averageReliability: 0,
+        topProvider: null,
+        worstProvider: null
+      };
+    }
+    const totalAttempts = stats.reduce((sum, s) => sum + s.totalAttempts, 0);
+    const averageReliability = stats.reduce((sum, s) => sum + s.reliabilityScore, 0) / stats.length;
+    const sorted = [...stats].sort((a, b) => b.reliabilityScore - a.reliabilityScore);
+    const topProvider = sorted[0]?.providerId || null;
+    const worstProvider = sorted[sorted.length - 1]?.providerId || null;
+    return {
+      totalProviders: stats.length,
+      totalAttempts,
+      averageReliability,
+      topProvider,
+      worstProvider
+    };
+  }
+  /**
+   * Load reliability data from cache
+   */
+  async loadData() {
+    const raw = await this.storage.read(_ReliabilityTracker.CACHE_KEY);
+    if (!raw) {
+      return {
+        results: [],
+        falsePositives: [],
+        stats: {},
+        lastAggregation: Date.now()
+      };
+    }
+    try {
+      return JSON.parse(raw);
+    } catch (error2) {
+      logger.warn("Failed to parse reliability data, starting fresh", error2);
+      return {
+        results: [],
+        falsePositives: [],
+        stats: {},
+        lastAggregation: Date.now()
+      };
+    }
+  }
+  /**
+   * Save reliability data to cache
+   */
+  async saveData(data) {
+    await this.storage.write(_ReliabilityTracker.CACHE_KEY, JSON.stringify(data));
+  }
+};
+
+// src/analytics/metrics-collector.ts
+var MetricsCollector = class _MetricsCollector {
+  // Keep last 1000 reviews
+  constructor(storage = new CacheStorage()) {
+    this.storage = storage;
+  }
+  static CACHE_KEY = "analytics-metrics-data";
+  static MAX_REVIEWS_STORED = 1e3;
+  /**
+   * Record a completed review
+   */
+  async recordReview(review, prNumber) {
+    const data = await this.loadData();
+    const filesReviewed = new Set(review.findings.map((f) => f.file)).size;
+    const metric = {
+      timestamp: Date.now(),
+      prNumber,
+      filesReviewed,
+      findingsCount: review.metrics.totalFindings,
+      costUsd: review.metrics.totalCost,
+      durationSeconds: review.metrics.durationSeconds,
+      providersUsed: review.metrics.providersUsed,
+      cacheHit: review.metrics.cached || false
+    };
+    data.reviews.push(metric);
+    if (data.reviews.length > _MetricsCollector.MAX_REVIEWS_STORED) {
+      data.reviews = data.reviews.slice(-_MetricsCollector.MAX_REVIEWS_STORED);
+    }
+    this.updateAggregatedStats(data);
+    await this.saveData(data);
+    logger.debug(`Recorded review metrics for PR #${prNumber}`);
+  }
+  /**
+   * Get metrics for a specific time period
+   */
+  async getMetrics(fromTimestamp, toTimestamp) {
+    const data = await this.loadData();
+    let filtered = data.reviews;
+    if (fromTimestamp) {
+      filtered = filtered.filter((r) => r.timestamp >= fromTimestamp);
+    }
+    if (toTimestamp) {
+      filtered = filtered.filter((r) => r.timestamp <= toTimestamp);
+    }
+    return filtered;
+  }
+  /**
+   * Get aggregated statistics
+   */
+  async getStats() {
+    return this.loadData();
+  }
+  /**
+   * Get cost trends over time (grouped by day)
+   */
+  async getCostTrends(days = 30) {
+    const data = await this.loadData();
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1e3;
+    const filtered = data.reviews.filter((r) => r.timestamp >= cutoff);
+    const byDay = /* @__PURE__ */ new Map();
+    for (const review of filtered) {
+      const date = new Date(review.timestamp).toISOString().split("T")[0];
+      const existing = byDay.get(date) || { cost: 0, reviews: 0 };
+      existing.cost += review.costUsd;
+      existing.reviews += 1;
+      byDay.set(date, existing);
+    }
+    const trends = Array.from(byDay.entries()).map(([date, data2]) => ({ date, ...data2 })).sort((a, b) => a.date.localeCompare(b.date));
+    return trends;
+  }
+  /**
+   * Get provider performance comparison
+   */
+  async getProviderStats() {
+    const data = await this.loadData();
+    const totalProviders = data.reviews.reduce((sum, r) => sum + r.providersUsed, 0);
+    return [
+      {
+        provider: "All Providers",
+        totalReviews: data.totalReviews,
+        successRate: 1,
+        // Simplified - all reviews succeeded if they're recorded
+        avgCost: data.totalReviews > 0 ? data.totalCost / data.totalReviews : 0,
+        avgDuration: data.avgReviewTime
+      }
+    ];
+  }
+  /**
+   * Get top finding categories
+   */
+  async getTopCategories(limit = 10) {
+    return [];
+  }
+  /**
+   * Calculate ROI (time saved vs cost)
+   */
+  async calculateROI() {
+    const data = await this.loadData();
+    const avgManualReviewMinutes = 30;
+    const developerHourlyRate = 100;
+    const totalReviews = data.totalReviews;
+    const totalCost = data.totalCost;
+    const estimatedTimeSaved = totalReviews * avgManualReviewMinutes;
+    const estimatedTimeSavedValue = estimatedTimeSaved / 60 * developerHourlyRate;
+    const roi = totalCost > 0 ? (estimatedTimeSavedValue - totalCost) / totalCost * 100 : 0;
+    return {
+      totalCost,
+      estimatedTimeSaved,
+      estimatedTimeSavedValue,
+      roi
+    };
+  }
+  /**
+   * Get performance over time (review speed trends)
+   */
+  async getPerformanceTrends(days = 30) {
+    const data = await this.loadData();
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1e3;
+    const filtered = data.reviews.filter((r) => r.timestamp >= cutoff);
+    const byDay = /* @__PURE__ */ new Map();
+    for (const review of filtered) {
+      const date = new Date(review.timestamp).toISOString().split("T")[0];
+      const existing = byDay.get(date) || { totalDuration: 0, count: 0 };
+      existing.totalDuration += review.durationSeconds;
+      existing.count += 1;
+      byDay.set(date, existing);
+    }
+    const trends = Array.from(byDay.entries()).map(([date, data2]) => ({
+      date,
+      avgDuration: data2.count > 0 ? data2.totalDuration / data2.count : 0
+    })).sort((a, b) => a.date.localeCompare(b.date));
+    return trends;
+  }
+  /**
+   * Clear all metrics data
+   */
+  async clear() {
+    const emptyData = {
+      reviews: [],
+      totalReviews: 0,
+      totalCost: 0,
+      totalFindings: 0,
+      avgReviewTime: 0,
+      cacheHitRate: 0,
+      lastUpdated: Date.now()
+    };
+    await this.saveData(emptyData);
+    logger.info("Cleared all analytics metrics");
+  }
+  /**
+   * Update aggregated statistics
+   */
+  updateAggregatedStats(data) {
+    data.totalReviews = data.reviews.length;
+    data.totalCost = data.reviews.reduce((sum, r) => sum + r.costUsd, 0);
+    data.totalFindings = data.reviews.reduce((sum, r) => sum + r.findingsCount, 0);
+    const totalDuration = data.reviews.reduce((sum, r) => sum + r.durationSeconds, 0);
+    data.avgReviewTime = data.totalReviews > 0 ? totalDuration / data.totalReviews : 0;
+    const cacheHits = data.reviews.filter((r) => r.cacheHit).length;
+    data.cacheHitRate = data.totalReviews > 0 ? cacheHits / data.totalReviews * 100 : 0;
+    data.lastUpdated = Date.now();
+  }
+  /**
+   * Load metrics data from cache
+   */
+  async loadData() {
+    const raw = await this.storage.read(_MetricsCollector.CACHE_KEY);
+    if (!raw) {
+      return {
+        reviews: [],
+        totalReviews: 0,
+        totalCost: 0,
+        totalFindings: 0,
+        avgReviewTime: 0,
+        cacheHitRate: 0,
+        lastUpdated: Date.now()
+      };
+    }
+    try {
+      return JSON.parse(raw);
+    } catch (error2) {
+      logger.warn("Failed to parse metrics data, starting fresh", error2);
+      return {
+        reviews: [],
+        totalReviews: 0,
+        totalCost: 0,
+        totalFindings: 0,
+        avgReviewTime: 0,
+        cacheHitRate: 0,
+        lastUpdated: Date.now()
+      };
+    }
+  }
+  /**
+   * Save metrics data to cache
+   */
+  async saveData(data) {
+    await this.storage.write(_MetricsCollector.CACHE_KEY, JSON.stringify(data));
+  }
+};
+
+// src/plugins/plugin-loader.ts
+var fs6 = __toESM(require("fs/promises"));
+var path6 = __toESM(require("path"));
+var PluginLoader = class {
+  // provider name -> plugin name
+  constructor(config) {
+    this.config = config;
+  }
+  plugins = /* @__PURE__ */ new Map();
+  providerMap = /* @__PURE__ */ new Map();
+  /**
+   * Load all plugins from plugin directory
+   */
+  async loadPlugins() {
+    if (!this.config.enabled) {
+      logger.debug("Plugins disabled, skipping load");
+      return;
+    }
+    try {
+      const pluginDir = path6.resolve(this.config.pluginDir);
+      logger.info(`Loading plugins from: ${pluginDir}`);
+      try {
+        await fs6.access(pluginDir);
+      } catch (error2) {
+        logger.warn(`Plugin directory does not exist: ${pluginDir}`);
+        return;
+      }
+      const entries = await fs6.readdir(pluginDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        const pluginPath = path6.join(pluginDir, entry.name);
+        await this.loadPlugin(pluginPath);
+      }
+      logger.info(`Loaded ${this.plugins.size} plugins`);
+    } catch (error2) {
+      logger.error("Failed to load plugins", error2);
+      throw error2;
+    }
+  }
+  /**
+   * Load a single plugin from directory
+   */
+  async loadPlugin(pluginPath) {
+    try {
+      const indexPath = path6.join(pluginPath, "index.js");
+      try {
+        await fs6.access(indexPath);
+      } catch (error2) {
+        logger.debug(`Plugin at ${pluginPath} missing index.js, skipping`);
+        return;
+      }
+      const pluginModule = await import(indexPath);
+      const plugin = pluginModule.default;
+      if (!plugin.metadata || !plugin.createProvider) {
+        logger.warn(`Invalid plugin at ${pluginPath}: missing required fields`);
+        return;
+      }
+      if (!this.isPluginAllowed(plugin.metadata.name)) {
+        logger.info(`Plugin ${plugin.metadata.name} blocked by policy`);
+        return;
+      }
+      if (plugin.initialize) {
+        await plugin.initialize();
+      }
+      this.plugins.set(plugin.metadata.name, plugin);
+      for (const providerName of plugin.metadata.providers) {
+        this.providerMap.set(providerName, plugin.metadata.name);
+      }
+      logger.info(
+        `Loaded plugin: ${plugin.metadata.name} v${plugin.metadata.version} (${plugin.metadata.providers.length} providers)`
+      );
+    } catch (error2) {
+      logger.error(`Failed to load plugin at ${pluginPath}`, error2);
+    }
+  }
+  /**
+   * Check if plugin is allowed by allowlist/blocklist
+   */
+  isPluginAllowed(name) {
+    const { allowlist, blocklist } = this.config;
+    if (allowlist && allowlist.length > 0) {
+      return allowlist.includes(name);
+    }
+    if (blocklist && blocklist.length > 0) {
+      return !blocklist.includes(name);
+    }
+    return true;
+  }
+  /**
+   * Get plugin by name
+   */
+  getPlugin(name) {
+    return this.plugins.get(name);
+  }
+  /**
+   * Check if provider is provided by a plugin
+   */
+  hasProvider(providerName) {
+    return this.providerMap.has(providerName);
+  }
+  /**
+   * Create provider instance from plugin
+   */
+  createProvider(providerName, apiKey) {
+    const pluginName = this.providerMap.get(providerName);
+    if (!pluginName) {
+      return null;
+    }
+    const plugin = this.plugins.get(pluginName);
+    if (!plugin) {
+      return null;
+    }
+    try {
+      return plugin.createProvider(providerName, apiKey);
+    } catch (error2) {
+      logger.error(`Failed to create provider ${providerName} from plugin ${pluginName}`, error2);
+      return null;
+    }
+  }
+  /**
+   * Get all loaded plugins
+   */
+  getLoadedPlugins() {
+    return Array.from(this.plugins.values()).map((p) => p.metadata);
+  }
+  /**
+   * Get all available providers from plugins
+   */
+  getAvailableProviders() {
+    return Array.from(this.providerMap.keys());
   }
 };
 
 // src/setup.ts
-function createComponents(config, githubToken) {
-  const providerRegistry = new ProviderRegistry();
+async function createComponents(config, githubToken) {
+  const pluginLoader = config.pluginsEnabled ? new PluginLoader({
+    pluginDir: config.pluginDir || "./plugins",
+    enabled: config.pluginsEnabled,
+    allowlist: config.pluginAllowlist,
+    blocklist: config.pluginBlocklist
+  }) : void 0;
+  if (pluginLoader) {
+    await pluginLoader.loadPlugins();
+  }
+  const providerRegistry = new ProviderRegistry(pluginLoader);
   const promptBuilder = new PromptBuilder(config);
   const llmExecutor = new LLMExecutor(config);
   const deduplicator = new Deduplicator();
@@ -34329,6 +52813,20 @@ function createComponents(config, githubToken) {
   const evidenceScorer = new EvidenceScorer();
   const mermaidGenerator = new MermaidGenerator();
   const feedbackFilter = new FeedbackFilter(githubClient);
+  const cacheStorage = new CacheStorage();
+  const feedbackTracker = config.learningEnabled ? new FeedbackTracker(cacheStorage, config.learningMinFeedbackCount) : void 0;
+  const quietModeFilter = config.quietModeEnabled ? new QuietModeFilter(
+    {
+      enabled: config.quietModeEnabled,
+      minConfidence: config.quietMinConfidence || 0.5,
+      useLearning: config.quietUseLearning || false
+    },
+    feedbackTracker
+  ) : void 0;
+  const graphBuilder = config.graphEnabled ? new CodeGraphBuilder(config.graphMaxDepth || 5, (config.graphTimeoutSeconds || 10) * 1e3) : void 0;
+  const promptGenerator = new PromptGenerator("plain");
+  const reliabilityTracker = new ReliabilityTracker(cacheStorage);
+  const metricsCollector = config.analyticsEnabled ? new MetricsCollector(cacheStorage) : void 0;
   return {
     config,
     providerRegistry,
@@ -34351,7 +52849,13 @@ function createComponents(config, githubToken) {
     impactAnalyzer,
     evidenceScorer,
     mermaidGenerator,
-    feedbackFilter
+    feedbackFilter,
+    feedbackTracker,
+    quietModeFilter,
+    graphBuilder,
+    promptGenerator,
+    reliabilityTracker,
+    metricsCollector
   };
 }
 
@@ -34359,8 +52863,7 @@ function createComponents(config, githubToken) {
 function extractFindings(results) {
   const findings = [];
   for (const result of results) {
-    if (result.status !== "success" || !result.result?.findings)
-      continue;
+    if (result.status !== "success" || !result.result?.findings) continue;
     for (const finding of result.result.findings) {
       findings.push({
         ...finding,
@@ -34382,8 +52885,7 @@ function summarizeAIDetection(results) {
     }
   }
   const providers = Object.keys(estimates);
-  if (providers.length === 0)
-    return void 0;
+  if (providers.length === 0) return void 0;
   const average = providers.reduce((sum, key) => sum + estimates[key], 0) / providers.length;
   const consensus = average > 0.7 ? "High" : average > 0.4 ? "Medium" : "Low";
   return {
@@ -34438,15 +52940,13 @@ function buildSarif(findings) {
   };
 }
 function severityToLevel(severity) {
-  if (severity === "critical")
-    return "error";
-  if (severity === "major")
-    return "warning";
+  if (severity === "critical") return "error";
+  if (severity === "major") return "warning";
   return "note";
 }
 
 // src/core/orchestrator.ts
-var fs6 = __toESM(require("fs/promises"));
+var fs7 = __toESM(require("fs/promises"));
 var import_path = __toESM(require("path"));
 var ReviewOrchestrator = class {
   constructor(components) {
@@ -34468,6 +52968,20 @@ var ReviewOrchestrator = class {
   async executeReview(pr) {
     const { config } = this.components;
     const start = Date.now();
+    let codeGraph;
+    if (config.graphEnabled && this.components.graphBuilder) {
+      try {
+        const graphStart = Date.now();
+        codeGraph = await this.components.graphBuilder.buildGraph(pr.files);
+        const graphTime = Date.now() - graphStart;
+        logger.info(`Code graph built in ${graphTime}ms: ${codeGraph.getStats().definitions} definitions, ${codeGraph.getStats().imports} imports`);
+        if (codeGraph) {
+          this.components.contextRetriever = new ContextRetriever(codeGraph);
+        }
+      } catch (error2) {
+        logger.warn("Failed to build code graph, falling back to regex-based context", error2);
+      }
+    }
     const useIncremental = await this.components.incrementalReviewer.shouldUseIncremental(pr);
     let filesToReview = pr.files;
     let lastReviewData = null;
@@ -34476,6 +52990,14 @@ var ReviewOrchestrator = class {
       if (lastReviewData) {
         filesToReview = await this.components.incrementalReviewer.getChangedFilesSince(pr, lastReviewData.lastReviewedCommit);
         logger.info(`Incremental review: reviewing ${filesToReview.length} changed files`);
+        if (codeGraph && this.components.graphBuilder) {
+          try {
+            codeGraph = await this.components.graphBuilder.updateGraph(codeGraph, filesToReview);
+            logger.debug("Code graph updated incrementally");
+          } catch (error2) {
+            logger.warn("Failed to update code graph incrementally", error2);
+          }
+        }
       }
     }
     const cachedFindings = config.enableCaching ? await this.components.cache.load(pr) : null;
@@ -34492,6 +53014,16 @@ var ReviewOrchestrator = class {
       providerResults = await this.components.llmExecutor.execute(providers, prompt);
       llmFindings = extractFindings(providerResults);
       aiAnalysis = config.enableAiDetection ? summarizeAIDetection(providerResults) : void 0;
+      if (this.components.reliabilityTracker) {
+        for (const result of providerResults) {
+          await this.components.reliabilityTracker.recordResult(
+            result.name,
+            result.status === "success",
+            result.durationSeconds * 1e3,
+            result.error?.message
+          );
+        }
+      }
       for (const result of providerResults) {
         await this.components.costTracker.record(result.name, result.result?.usage);
       }
@@ -34511,9 +53043,9 @@ var ReviewOrchestrator = class {
     const consensus = this.components.consensus.filter(deduped);
     const providerCount = providers.length || 1;
     const enriched = consensus.map(
-      (f) => this.enrichFinding(f, pr.files, context2, providerCount)
+      (f) => this.enrichFinding(f, pr.files, context2, providerCount, codeGraph)
     );
-    const quietFiltered = this.applyQuietMode(enriched, config);
+    const quietFiltered = await this.applyQuietMode(enriched, config);
     const testHints = config.enableTestHints ? this.components.testCoverage.analyze(pr.files) : void 0;
     const impactAnalysis = this.components.impactAnalyzer.analyze(pr.files, context2, quietFiltered.length > 0);
     const mermaidDiagram = this.components.mermaidGenerator.generateImpactDiagram(pr.files, context2);
@@ -34573,11 +53105,28 @@ var ReviewOrchestrator = class {
       review.runDetails.durationSeconds = review.metrics.durationSeconds;
     }
     review.metrics.cached = Boolean(cachedFindings);
+    if (config.generateFixPrompts && this.components.promptGenerator) {
+      const fixPrompts = this.components.promptGenerator.generateFixPrompts(review.findings);
+      if (fixPrompts.length > 0) {
+        const fixPromptsPath = import_path.default.join(process.cwd(), `${process.env.REPORT_BASENAME || "multi-provider-review"}-fix-prompts.md`);
+        const format = config.fixPromptFormat || "plain";
+        await this.components.promptGenerator.saveToFile(fixPrompts, fixPromptsPath, format);
+        logger.info(`Generated ${fixPrompts.length} fix prompts: ${fixPromptsPath}`);
+      }
+    }
     if (config.enableCaching) {
       await this.components.cache.save(pr, review);
     }
     if (config.incrementalEnabled) {
       await this.components.incrementalReviewer.saveReview(pr, review);
+    }
+    if (config.analyticsEnabled && this.components.metricsCollector) {
+      try {
+        await this.components.metricsCollector.recordReview(review, pr.number);
+        logger.debug(`Recorded review metrics for PR #${pr.number}`);
+      } catch (error2) {
+        logger.warn("Failed to record review metrics", error2);
+      }
     }
     const markdown = this.components.formatter.format(review);
     const suppressed = await this.components.feedbackFilter.loadSuppressed(pr.number);
@@ -34596,10 +53145,8 @@ var ReviewOrchestrator = class {
   }
   shouldSkip(pr) {
     const { config } = this.components;
-    if (config.skipDrafts && pr.draft)
-      return "PR is a draft";
-    if (config.skipBots && this.isBot(pr.author))
-      return `Author ${pr.author} is a bot`;
+    if (config.skipDrafts && pr.draft) return "PR is a draft";
+    if (config.skipBots && this.isBot(pr.author)) return `Author ${pr.author} is a bot`;
     if (config.skipLabels.length > 0) {
       for (const label of pr.labels) {
         if (config.skipLabels.includes(label)) {
@@ -34621,8 +53168,7 @@ var ReviewOrchestrator = class {
     return ["bot", "dependabot", "renovate", "github-actions", "[bot]"].some((p) => lower.includes(p));
   }
   async ensureBudget(config) {
-    if (config.budgetMaxUsd <= 0)
-      return;
+    if (config.budgetMaxUsd <= 0) return;
   }
   estimateTokens(text) {
     return Math.ceil(Buffer.byteLength(text, "utf8") / 4);
@@ -34633,16 +53179,14 @@ var ReviewOrchestrator = class {
    * Uses indexOf instead of regex to avoid ReDoS and improve memory efficiency
    */
   filterDiffByFiles(diff, files) {
-    if (files.length === 0)
-      return "";
+    if (files.length === 0) return "";
     const fileNames = new Set(files.map((f) => f.filename));
     const diffChunks = [];
     const DIFF_MARKER = "diff --git ";
     let startIdx = 0;
     while (startIdx < diff.length) {
       const markerIdx = diff.indexOf(DIFF_MARKER, startIdx);
-      if (markerIdx === -1)
-        break;
+      if (markerIdx === -1) break;
       if (markerIdx > 0 && diff[markerIdx - 1] !== "\n") {
         startIdx = markerIdx + DIFF_MARKER.length;
         continue;
@@ -34667,12 +53211,16 @@ var ReviewOrchestrator = class {
     }
     return diffChunks.join("");
   }
-  enrichFinding(finding, files, context2, providerCount) {
+  enrichFinding(finding, files, context2, providerCount, codeGraph) {
     const file = files.find((f) => f.filename === finding.file);
     const changedLines = mapAddedLines(file?.patch);
     const hasDirectEvidence = changedLines.some((l) => l.line === finding.line);
     const astConfirmed = Boolean(finding.providers?.includes("ast") || finding.provider === "ast");
-    const graphConfirmed = context2.some((ctx) => ctx.file === finding.file);
+    let graphConfirmed = context2.some((ctx) => ctx.file === finding.file);
+    if (codeGraph && !graphConfirmed) {
+      const dependents = codeGraph.getDependents(finding.file);
+      graphConfirmed = dependents.length > 0;
+    }
     const relatedSnippets = context2.filter((ctx) => ctx.file === finding.file).flatMap((ctx) => ctx.affectedCode);
     const evidence = this.components.evidenceScorer.score(
       finding,
@@ -34693,9 +53241,14 @@ var ReviewOrchestrator = class {
       }
     };
   }
-  applyQuietMode(findings, config) {
-    if (!config.quietModeEnabled)
-      return findings;
+  async applyQuietMode(findings, config) {
+    if (!config.quietModeEnabled) return findings;
+    if (this.components.quietModeFilter) {
+      const filtered = await this.components.quietModeFilter.filterByConfidence(findings);
+      const filterStats = await this.components.quietModeFilter.getFilterStats(findings);
+      logger.info(`Quiet mode: filtered ${filterStats.filtered}/${filterStats.total} findings (${filterStats.filterRate.toFixed(1)}% reduction)`);
+      return filtered;
+    }
     const threshold = config.quietMinConfidence ?? 0.5;
     return findings.filter((f) => (f.evidence?.confidence ?? 1) >= threshold);
   }
@@ -34703,8 +53256,8 @@ var ReviewOrchestrator = class {
     const base = process.env.REPORT_BASENAME || "multi-provider-review";
     const sarifPath = import_path.default.join(process.cwd(), `${base}.sarif`);
     const jsonPath = import_path.default.join(process.cwd(), `${base}.json`);
-    await fs6.writeFile(sarifPath, JSON.stringify(buildSarif(review.findings), null, 2), "utf8");
-    await fs6.writeFile(jsonPath, buildJson(review), "utf8");
+    await fs7.writeFile(sarifPath, JSON.stringify(buildSarif(review.findings), null, 2), "utf8");
+    await fs7.writeFile(jsonPath, buildJson(review), "utf8");
     logger.info(`Wrote reports: ${sarifPath}, ${jsonPath}`);
   }
 };
@@ -34752,7 +53305,7 @@ async function run() {
     const token = core3.getInput("GITHUB_TOKEN") || process.env.GITHUB_TOKEN;
     validateRequired(token, "GITHUB_TOKEN");
     const config = ConfigLoader.load();
-    const components = createComponents(config, token);
+    const components = await createComponents(config, token);
     const orchestrator = new ReviewOrchestrator(components);
     const prInput = core3.getInput("PR_NUMBER") || process.env.PR_NUMBER;
     validateRequired(prInput, "PR_NUMBER");

@@ -6,11 +6,14 @@ import { RateLimiter } from './rate-limiter';
 import { logger } from '../utils/logger';
 import { PricingService } from '../cost/pricing';
 import { DEFAULT_CONFIG } from '../config/defaults';
+import { PluginLoader } from '../plugins';
 
 export class ProviderRegistry {
   private readonly rateLimiter = new RateLimiter();
   private rotationIndex = 0;
   private openRouterPricing = new PricingService(process.env.OPENROUTER_API_KEY);
+
+  constructor(private readonly pluginLoader?: PluginLoader) {}
 
   async createProviders(config: ReviewConfig): Promise<Provider[]> {
     let providers = this.instantiate(config.providers);
@@ -79,6 +82,19 @@ export class ProviderRegistry {
       if (!Provider.validate(name)) {
         logger.warn(`Skipping invalid provider name: ${name}`);
         continue;
+      }
+
+      // Check if provider is provided by a plugin
+      if (this.pluginLoader?.hasProvider(name)) {
+        const apiKey = process.env.PLUGIN_API_KEY || '';
+        const provider = this.pluginLoader.createProvider(name, apiKey);
+        if (provider) {
+          list.push(provider);
+          continue;
+        } else {
+          logger.warn(`Failed to create provider ${name} from plugin`);
+          continue;
+        }
       }
 
       if (name.startsWith('openrouter/')) {

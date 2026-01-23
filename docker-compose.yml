@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  # Main review service
+  multi-provider-review:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mpr-review
+    restart: unless-stopped
+    environment:
+      # GitHub configuration
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+
+      # Provider configuration
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - REVIEW_PROVIDERS=${REVIEW_PROVIDERS:-openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free}
+
+      # Feature flags
+      - ENABLE_AST_ANALYSIS=true
+      - ENABLE_SECURITY=true
+      - ENABLE_CACHING=true
+      - INCREMENTAL_ENABLED=true
+      - LEARNING_ENABLED=true
+      - GRAPH_ENABLED=true
+      - GENERATE_FIX_PROMPTS=false
+
+      # Quiet mode
+      - QUIET_MODE_ENABLED=false
+      - QUIET_MIN_CONFIDENCE=0.5
+
+      # Budget controls
+      - BUDGET_MAX_USD=1.0
+
+      # Analytics
+      - ANALYTICS_ENABLED=true
+
+      # Logging
+      - LOG_LEVEL=info
+    volumes:
+      # Mount cache directory for persistence
+      - mpr-cache:/app/.cache
+      # Mount reports directory
+      - ./reports:/app/reports
+    networks:
+      - mpr-network
+    # Optional: expose webhook port
+    # ports:
+    #   - "3000:3000"
+
+  # Optional: Webhook server for GitHub webhooks
+  # Uncomment to run in webhook mode
+  # mpr-webhook:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: mpr-webhook
+  #   restart: unless-stopped
+  #   command: ["node", "dist/server/index.js"]
+  #   environment:
+  #     - GITHUB_TOKEN=${GITHUB_TOKEN}
+  #     - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+  #     - PORT=3000
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - mpr-cache:/app/.cache
+  #   networks:
+  #     - mpr-network
+
+volumes:
+  mpr-cache:
+    driver: local
+
+networks:
+  mpr-network:
+    driver: bridge

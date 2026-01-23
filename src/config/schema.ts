@@ -48,6 +48,14 @@ export const ReviewConfigSchema = z.object({
   generate_fix_prompts: z.boolean().optional(),
   fix_prompt_format: z.enum(['cursor', 'copilot', 'plain']).optional(),
 
+  analytics_enabled: z.boolean().optional(),
+  analytics_max_reviews: z.number().int().min(100).max(10000).optional(),
+
+  plugins_enabled: z.boolean().optional(),
+  plugin_dir: z.string().optional(),
+  plugin_allowlist: z.array(z.string()).optional(),
+  plugin_blocklist: z.array(z.string()).optional(),
+
   dry_run: z.boolean().optional(),
 });
 

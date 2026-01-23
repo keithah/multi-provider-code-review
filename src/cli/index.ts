@@ -6,6 +6,7 @@ import { CLIReviewer } from './reviewer';
 import { setupComponents } from '../setup';
 import { PRContext } from '../types';
 import { logger } from '../utils/logger';
+import { generateAnalytics, printSummary } from './analytics';
 
 /**
  * CLI interface for multi-provider code review
@@ -37,6 +38,9 @@ export class CLI {
       switch (command) {
         case 'review':
           return await this.runReview(target, options);
+
+        case 'analytics':
+          return await this.runAnalytics(target, options);
 
         case 'help':
         case '--help':
@@ -128,6 +132,60 @@ export class CLI {
   }
 
   /**
+   * Run analytics command
+   */
+  private async runAnalytics(subcommand?: string, options: Record<string, unknown> = {}): Promise<number> {
+    try {
+      if (subcommand === 'summary' || !subcommand) {
+        // Show summary
+        const days = typeof options.days === 'number' ? options.days : 30;
+        await printSummary(days);
+        return 0;
+      } else if (subcommand === 'generate') {
+        // Generate dashboard
+        await generateAnalytics({
+          output: (options.output as string) || './reports',
+          format: (options.format as 'html' | 'csv' | 'json') || 'html',
+          days: (options.days as number) || 30,
+        });
+        return 0;
+      } else {
+        console.error(this.formatter.formatMessage(`Unknown analytics subcommand: ${subcommand}`, 'error'));
+        this.showAnalyticsHelp();
+        return 1;
+      }
+    } catch (error) {
+      logger.error('Analytics command failed', error as Error);
+      return 1;
+    }
+  }
+
+  /**
+   * Show analytics help
+   */
+  private showAnalyticsHelp(): void {
+    const help = `
+Analytics Commands:
+
+Usage:
+  mpr analytics summary [--days=N]           Show summary statistics
+  mpr analytics generate [options]           Generate analytics dashboard
+
+Options:
+  --output=<dir>                             Output directory (default: ./reports)
+  --format=<html|csv|json>                   Output format (default: html)
+  --days=<number>                            Days of data to include (default: 30)
+
+Examples:
+  mpr analytics summary                      Show last 30 days summary
+  mpr analytics summary --days=7             Show last 7 days summary
+  mpr analytics generate                     Generate HTML dashboard
+  mpr analytics generate --format=csv        Generate CSV export
+`;
+    console.log(help);
+  }
+
+  /**
    * Parse command line arguments
    */
   private parseArgs(args: string[]): {
@@ -169,23 +227,29 @@ Multi-Provider Code Review CLI
 
 Usage:
   mpr review [target] [options]    Run code review
+  mpr analytics <command> [options] Manage analytics and dashboards
   mpr help                         Show this help
   mpr version                      Show version
 
-Targets:
+Review Targets:
   (none)                          Review uncommitted changes
   HEAD~1                          Review specific commit
   main..feature                   Review branch changes
   abc123..def456                  Review commit range
 
-Options:
+Review Options:
   --dry-run                       Preview without posting results
+
+Analytics Commands:
+  summary [--days=N]              Show summary statistics
+  generate [options]              Generate analytics dashboard
 
 Examples:
   mpr review                      Review uncommitted changes
   mpr review HEAD~1               Review last commit
   mpr review main..feature        Review feature branch
-  mpr review --dry-run            Preview review results
+  mpr analytics summary           Show analytics summary
+  mpr analytics generate          Generate HTML dashboard
 
 Exit Codes:
   0    No issues or only minor issues

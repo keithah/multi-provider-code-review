@@ -58,5 +58,13 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   generateFixPrompts: false,
   fixPromptFormat: 'plain',
 
+  analyticsEnabled: true,
+  analyticsMaxReviews: 1000,
+
+  pluginsEnabled: false,
+  pluginDir: './plugins',
+  pluginAllowlist: [],
+  pluginBlocklist: [],
+
   dryRun: false,
 };
