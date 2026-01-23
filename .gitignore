@@ -1,0 +1,8 @@
+node_modules
+coverage
+dist/**
+!dist/index.js
+!dist/index.js.map
+.mpr-cache
+npm-debug.log*
+.DS_Store

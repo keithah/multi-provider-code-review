@@ -2,8 +2,13 @@ name: CI
 
 on:
   pull_request:
+    branches: [main, ts-rewrite]
   push:
+    branches: [main, ts-rewrite]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:

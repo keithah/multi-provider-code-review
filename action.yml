@@ -1,61 +1,117 @@
 name: "Multi-Provider Code Review"
-description: "Run code reviews with multiple providers using OpenCode"
+description: "Hybrid AST + LLM code review with multiple providers"
+author: "Keith Herrington"
+branding:
+  icon: "code-review"
+  color: "blue"
 
 inputs:
   GITHUB_TOKEN:
     description: "GitHub token"
     required: true
-  REVIEW_PROVIDERS:
-    description: "Comma-separated list of review providers"
-    required: false
-    default: "opencode/big-pickle,opencode/grok-code,opencode/minimax-m2.1-free,opencode/glm-4.7-free"
-  PR_TITLE:
-    description: "PR title"
-    required: true
   PR_NUMBER:
-    description: "PR number"
+    description: "Pull request number"
     required: true
-  PR_BODY:
-    description: "PR body"
-    required: true
-  HAS_AGENTS:
-    description: "Whether AGENTS.md exists"
+  REVIEW_PROVIDERS:
+    description: "Comma-separated provider list"
     required: false
-    default: "false"
+    default: "openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free"
+  FALLBACK_PROVIDERS:
+    description: "Comma-separated fallback providers"
+    required: false
+    default: ""
   SYNTHESIS_MODEL:
-    description: "Model used to synthesize provider outputs"
+    description: "Model used for synthesis/prompts"
     required: false
-    default: "opencode/big-pickle"
+    default: "openrouter/google/gemini-2.0-flash-exp:free"
+  INLINE_MAX_COMMENTS:
+    description: "Maximum inline comments"
+    required: false
+    default: "5"
+  INLINE_MIN_SEVERITY:
+    description: "Minimum severity for inline comments"
+    required: false
+    default: "major"
+  INLINE_MIN_AGREEMENT:
+    description: "Providers required to agree"
+    required: false
+    default: "2"
+  MIN_CHANGED_LINES:
+    description: "Skip if below this line count"
+    required: false
+    default: "0"
+  MAX_CHANGED_FILES:
+    description: "Skip if over this file count"
+    required: false
+    default: "0"
+  SKIP_LABELS:
+    description: "Comma-separated labels to skip"
+    required: false
+    default: ""
+  PROVIDER_LIMIT:
+    description: "Limit number of providers to rotate"
+    required: false
+    default: "6"
+  PROVIDER_RETRIES:
+    description: "Retries per provider"
+    required: false
+    default: "2"
+  PROVIDER_MAX_PARALLEL:
+    description: "Maximum providers to run in parallel"
+    required: false
+    default: "3"
   DIFF_MAX_BYTES:
-    description: "Maximum diff bytes to include in prompt"
+    description: "Maximum diff bytes to send to providers"
     required: false
     default: "120000"
   RUN_TIMEOUT_SECONDS:
-    description: "Seconds to allow each model run before timing out"
+    description: "Timeout per provider run"
     required: false
     default: "600"
+  BUDGET_MAX_USD:
+    description: "Budget guard in USD"
+    required: false
+    default: "0"
+  ENABLE_AST_ANALYSIS:
+    description: "Enable AST analysis"
+    required: false
+    default: "true"
+  ENABLE_SECURITY:
+    description: "Enable security scan"
+    required: false
+    default: "true"
+  ENABLE_CACHING:
+    description: "Enable caching of findings"
+    required: false
+    default: "true"
+  ENABLE_TEST_HINTS:
+    description: "Enable test coverage hints"
+    required: false
+    default: "true"
+  ENABLE_AI_DETECTION:
+    description: "Enable AI-generated code detection"
+    required: false
+    default: "true"
+  REPORT_BASENAME:
+    description: "Base name for JSON/SARIF reports"
+    required: false
+    default: "multi-provider-review"
   OPENROUTER_API_KEY:
-    description: "API key for OpenRouter providers (optional)"
+    description: "API key for OpenRouter"
     required: false
 
-runs:
-  using: "composite"
-  steps:
-    - name: Run Multi-Provider Review
-      shell: bash
-      env:
-        GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
-        REVIEW_PROVIDERS: ${{ inputs.REVIEW_PROVIDERS }}
-        PR_TITLE: ${{ inputs.PR_TITLE }}
-        PR_NUMBER: ${{ inputs.PR_NUMBER }}
-        PR_BODY: ${{ inputs.PR_BODY }}
-        HAS_AGENTS: ${{ inputs.HAS_AGENTS }}
-        SYNTHESIS_MODEL: ${{ inputs.SYNTHESIS_MODEL }}
-        DIFF_MAX_BYTES: ${{ inputs.DIFF_MAX_BYTES }}
-        RUN_TIMEOUT_SECONDS: ${{ inputs.RUN_TIMEOUT_SECONDS }}
-        OPENROUTER_API_KEY: ${{ inputs.OPENROUTER_API_KEY }}
-      run: bash "${{ github.action_path }}/action.sh"
+outputs:
+  findings_count:
+    description: "Number of findings"
+  critical_count:
+    description: "Critical findings count"
+  cost_usd:
+    description: "Total cost in USD"
+  total_cost:
+    description: "Total cost in USD (alias for cost_usd)"
+  ai_likelihood:
+    description: "Average AI-generated likelihood"
 
-branding:
-  icon: "code-review"
-  color: "blue"
+runs:
+  using: "node20"
+  main: "dist/index.js"
