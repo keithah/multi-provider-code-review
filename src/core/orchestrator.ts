@@ -286,24 +286,51 @@ export class ReviewOrchestrator {
   /**
    * Filter diff to only include files that changed
    * Used for incremental reviews to send only relevant diffs to LLMs
+   * Uses indexOf instead of regex to avoid ReDoS and improve memory efficiency
    */
   private filterDiffByFiles(diff: string, files: FileChange[]): string {
     if (files.length === 0) return '';
 
     const fileNames = new Set(files.map(f => f.filename));
     const diffChunks: string[] = [];
-    const chunks = diff.split(/^diff --git /m).filter(Boolean);
+    const DIFF_MARKER = 'diff --git ';
 
-    for (const chunk of chunks) {
-      // Extract filename from chunk (format: "a/file.ts b/file.ts")
-      const firstLine = chunk.split('\n')[0];
+    // Manual parsing using indexOf to avoid regex and reduce memory overhead
+    let startIdx = 0;
+
+    while (startIdx < diff.length) {
+      const markerIdx = diff.indexOf(DIFF_MARKER, startIdx);
+      if (markerIdx === -1) break;
+
+      // Skip if not at start of line
+      if (markerIdx > 0 && diff[markerIdx - 1] !== '\n') {
+        startIdx = markerIdx + DIFF_MARKER.length;
+        continue;
+      }
+
+      // Find next diff marker or end
+      let nextIdx = diff.indexOf('\n' + DIFF_MARKER, markerIdx + 1);
+      if (nextIdx === -1) {
+        nextIdx = diff.length;
+      } else {
+        nextIdx += 1;
+      }
+
+      const chunk = diff.substring(markerIdx, nextIdx);
+
+      // Extract filename from first line
+      const firstLineEnd = chunk.indexOf('\n');
+      const firstLine = firstLineEnd === -1 ? chunk : chunk.substring(0, firstLineEnd);
       const bIndex = firstLine.indexOf(' b/');
+
       if (bIndex !== -1) {
         const filename = firstLine.substring(bIndex + 3).trim();
         if (fileNames.has(filename)) {
-          diffChunks.push('diff --git ' + chunk);
+          diffChunks.push(chunk);
         }
       }
+
+      startIdx = nextIdx;
     }
 
     return diffChunks.join('');

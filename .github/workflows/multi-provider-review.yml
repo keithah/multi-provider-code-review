@@ -3,8 +3,8 @@ name: Multi-Provider Code Review
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-  pull_request_review:
-    types: [submitted, dismissed]
+  # Note: pull_request_review trigger removed to prevent duplicate runs
+  # when the bot posts its own review comment
   workflow_dispatch:
     inputs:
       pr_number:

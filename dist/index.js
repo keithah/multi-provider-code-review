@@ -34630,22 +34630,40 @@ var ReviewOrchestrator = class {
   /**
    * Filter diff to only include files that changed
    * Used for incremental reviews to send only relevant diffs to LLMs
+   * Uses indexOf instead of regex to avoid ReDoS and improve memory efficiency
    */
   filterDiffByFiles(diff, files) {
     if (files.length === 0)
       return "";
     const fileNames = new Set(files.map((f) => f.filename));
     const diffChunks = [];
-    const chunks = diff.split(/^diff --git /m).filter(Boolean);
-    for (const chunk of chunks) {
-      const firstLine = chunk.split("\n")[0];
+    const DIFF_MARKER = "diff --git ";
+    let startIdx = 0;
+    while (startIdx < diff.length) {
+      const markerIdx = diff.indexOf(DIFF_MARKER, startIdx);
+      if (markerIdx === -1)
+        break;
+      if (markerIdx > 0 && diff[markerIdx - 1] !== "\n") {
+        startIdx = markerIdx + DIFF_MARKER.length;
+        continue;
+      }
+      let nextIdx = diff.indexOf("\n" + DIFF_MARKER, markerIdx + 1);
+      if (nextIdx === -1) {
+        nextIdx = diff.length;
+      } else {
+        nextIdx += 1;
+      }
+      const chunk = diff.substring(markerIdx, nextIdx);
+      const firstLineEnd = chunk.indexOf("\n");
+      const firstLine = firstLineEnd === -1 ? chunk : chunk.substring(0, firstLineEnd);
       const bIndex = firstLine.indexOf(" b/");
       if (bIndex !== -1) {
         const filename = firstLine.substring(bIndex + 3).trim();
         if (fileNames.has(filename)) {
-          diffChunks.push("diff --git " + chunk);
+          diffChunks.push(chunk);
         }
       }
+      startIdx = nextIdx;
     }
     return diffChunks.join("");
   }

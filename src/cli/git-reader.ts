@@ -212,7 +212,7 @@ export class GitReader {
 
   /**
    * Parse git diff output into FileChange objects
-   * Uses string operations instead of complex regex to avoid ReDoS
+   * Uses indexOf instead of regex to avoid ReDoS vulnerability
    */
   private parseDiff(diff: string): FileChange[] {
     // Limit diff size to prevent ReDoS attacks
@@ -223,54 +223,99 @@ export class GitReader {
     }
 
     const files: FileChange[] = [];
-    const patches = diff.split(/^diff --git /m).filter(Boolean);
+    const DIFF_MARKER = 'diff --git ';
+    const MAX_FILES = 1000; // Hard limit to prevent infinite loops on malformed input
 
-    for (const patch of patches) {
-      const lines = patch.split('\n');
-      if (lines.length === 0) continue;
+    // Manual parsing using indexOf to avoid regex backtracking
+    let startIdx = 0;
+    let fileCount = 0;
 
-      // Parse filename using string operations instead of regex to avoid ReDoS
-      const firstLine = lines[0];
-      const aIndex = firstLine.indexOf('a/');
-      const bIndex = firstLine.indexOf(' b/', aIndex);
-
-      if (aIndex === -1 || bIndex === -1) continue;
-
-      const filename = firstLine.substring(bIndex + 3).trim();
-      let status: FileChange['status'] = 'modified';
-      let additions = 0;
-      let deletions = 0;
-
-      // Detect file status using simple string checks
-      const patchText = patch;
-      if (patchText.includes('new file mode')) {
-        status = 'added';
-      } else if (patchText.includes('deleted file mode')) {
-        status = 'removed';
-      } else if (patchText.includes('rename from')) {
-        status = 'renamed';
-      }
-
-      // Count additions and deletions
-      for (const line of lines) {
-        if (line.startsWith('+') && !line.startsWith('+++')) {
-          additions++;
-        } else if (line.startsWith('-') && !line.startsWith('---')) {
-          deletions++;
+    while (startIdx < diff.length && fileCount < MAX_FILES) {
+      const markerIdx = diff.indexOf(DIFF_MARKER, startIdx);
+      if (markerIdx === -1) {
+        // Process last patch if any content remains
+        if (startIdx < diff.length) {
+          const lastPatch = diff.substring(startIdx);
+          if (lastPatch.trim()) {
+            this.parsePatch(lastPatch, files);
+          }
         }
+        break;
       }
 
-      files.push({
-        filename,
-        status,
-        additions,
-        deletions,
-        changes: additions + deletions,
-        patch: lines.join('\n'),
-      });
+      // Skip if not at start of line (must be preceded by newline or be at position 0)
+      if (markerIdx > 0 && diff[markerIdx - 1] !== '\n') {
+        startIdx = markerIdx + DIFF_MARKER.length;
+        continue;
+      }
+
+      // Find next diff marker or end of string
+      let nextIdx = diff.indexOf('\n' + DIFF_MARKER, markerIdx + 1);
+      if (nextIdx === -1) {
+        nextIdx = diff.length;
+      } else {
+        nextIdx += 1; // Include the newline
+      }
+
+      const patch = diff.substring(markerIdx + DIFF_MARKER.length, nextIdx);
+      this.parsePatch(patch, files);
+
+      startIdx = nextIdx;
+      fileCount++;
+    }
+
+    if (fileCount >= MAX_FILES) {
+      logger.warn(`Reached maximum file limit (${MAX_FILES}), some files may be skipped`);
     }
 
     return files;
+  }
+
+  /**
+   * Parse a single patch into FileChange object
+   */
+  private parsePatch(patch: string, files: FileChange[]): void {
+    const lines = patch.split('\n');
+    if (lines.length === 0) return;
+
+    // Parse filename using string operations instead of regex to avoid ReDoS
+    const firstLine = lines[0];
+    const aIndex = firstLine.indexOf('a/');
+    const bIndex = firstLine.indexOf(' b/', aIndex);
+
+    if (aIndex === -1 || bIndex === -1) return;
+
+    const filename = firstLine.substring(bIndex + 3).trim();
+    let status: FileChange['status'] = 'modified';
+    let additions = 0;
+    let deletions = 0;
+
+    // Detect file status using simple string checks
+    if (patch.includes('new file mode')) {
+      status = 'added';
+    } else if (patch.includes('deleted file mode')) {
+      status = 'removed';
+    } else if (patch.includes('rename from')) {
+      status = 'renamed';
+    }
+
+    // Count additions and deletions
+    for (const line of lines) {
+      if (line.startsWith('+') && !line.startsWith('+++')) {
+        additions++;
+      } else if (line.startsWith('-') && !line.startsWith('---')) {
+        deletions++;
+      }
+    }
+
+    files.push({
+      filename,
+      status,
+      additions,
+      deletions,
+      changes: additions + deletions,
+      patch: lines.join('\n'),
+    });
   }
 
   /**
