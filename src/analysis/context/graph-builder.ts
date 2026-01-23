@@ -1,8 +1,9 @@
 import { FileChange, CodeSnippet, ImpactAnalysis } from '../../types';
 import { logger } from '../../utils/logger';
-import Parser from 'tree-sitter';
-import TypeScriptParser from 'tree-sitter-typescript';
-import PythonParser from 'tree-sitter-python';
+
+// Lazy-load tree-sitter to avoid bundling native modules
+type Parser = any;
+type SyntaxNode = any;
 
 export interface Definition {
   name: string;
@@ -262,23 +263,39 @@ export class CodeGraph {
  * Builds a code graph from file changes using AST analysis
  */
 export class CodeGraphBuilder {
-  private readonly parser: Parser;
-  private readonly tsParser: Parser;
-  private readonly pyParser: Parser;
+  private tsParser: Parser | null = null;
+  private pyParser: Parser | null = null;
+  private parsersInitialized = false;
 
   constructor(
     private readonly maxDepth: number = 5,
     private readonly timeoutMs: number = 10000
-  ) {
-    this.parser = new Parser();
-    this.tsParser = new Parser();
-    this.pyParser = new Parser();
+  ) {}
+
+  /**
+   * Lazy-load and initialize parsers only when needed
+   */
+  private async initParsers(): Promise<void> {
+    if (this.parsersInitialized) {
+      return;
+    }
 
     try {
-      this.tsParser.setLanguage(TypeScriptParser.typescript);
-      this.pyParser.setLanguage(PythonParser);
+      // Dynamic imports to avoid bundling native modules
+      const ParserModule = await import('tree-sitter');
+      const TypeScriptParser = await import('tree-sitter-typescript');
+      const PythonParser = await import('tree-sitter-python');
+
+      const Parser = ParserModule.default;
+      this.tsParser = new Parser();
+      this.pyParser = new Parser();
+
+      this.tsParser.setLanguage(TypeScriptParser.default.typescript);
+      this.pyParser.setLanguage(PythonParser.default);
+      this.parsersInitialized = true;
     } catch (error) {
-      logger.warn('Failed to initialize parsers', error as Error);
+      logger.warn('Failed to initialize parsers - AST analysis disabled', error as Error);
+      this.parsersInitialized = true; // Mark as initialized even if failed to avoid retrying
     }
   }
 
@@ -358,6 +375,9 @@ export class CodeGraphBuilder {
    * Analyze a single file and add to graph
    */
   private async analyzeFile(file: FileChange, graph: CodeGraph): Promise<void> {
+    // Ensure parsers are initialized
+    await this.initParsers();
+
     const ext = file.filename.split('.').pop()?.toLowerCase();
     let parser: Parser | null = null;
 
@@ -389,7 +409,7 @@ export class CodeGraphBuilder {
   /**
    * Extract symbol definitions from AST
    */
-  private extractDefinitions(node: Parser.SyntaxNode, file: string, graph: CodeGraph): void {
+  private extractDefinitions(node: SyntaxNode, file: string, graph: CodeGraph): void {
     // Function declarations
     if (node.type === 'function_declaration' || node.type === 'function') {
       const nameNode = node.childForFieldName('name');
@@ -427,7 +447,7 @@ export class CodeGraphBuilder {
   /**
    * Extract import statements from AST
    */
-  private extractImports(node: Parser.SyntaxNode, file: string, graph: CodeGraph): void {
+  private extractImports(node: SyntaxNode, file: string, graph: CodeGraph): void {
     // ES6 imports: import { foo } from './bar'
     if (node.type === 'import_statement') {
       const sourceNode = node.childForFieldName('source');
@@ -454,7 +474,7 @@ export class CodeGraphBuilder {
   /**
    * Extract function/method calls from AST
    */
-  private extractCalls(node: Parser.SyntaxNode, file: string, graph: CodeGraph): void {
+  private extractCalls(node: SyntaxNode, file: string, graph: CodeGraph): void {
     // Function calls
     if (node.type === 'call_expression') {
       const functionNode = node.childForFieldName('function');
@@ -474,9 +494,9 @@ export class CodeGraphBuilder {
   /**
    * Check if a node has an export modifier
    */
-  private isExported(node: Parser.SyntaxNode): boolean {
+  private isExported(node: SyntaxNode): boolean {
     // Check if parent or sibling has 'export' keyword
-    let current: Parser.SyntaxNode | null = node;
+    let current: SyntaxNode | null = node;
     while (current) {
       if (current.type === 'export_statement') {
         return true;

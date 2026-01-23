@@ -7309,7 +7309,7 @@ var require_client = __commonJS({
     var TIMEOUT_HEADERS = 1;
     var TIMEOUT_BODY = 2;
     var TIMEOUT_IDLE = 3;
-    var Parser2 = class {
+    var Parser = class {
       constructor(client, socket, { exports: exports3 }) {
         assert(Number.isFinite(client[kMaxHeadersSize]) && client[kMaxHeadersSize] > 0);
         this.llhttp = exports3;
@@ -7822,7 +7822,7 @@ var require_client = __commonJS({
           socket[kWriting] = false;
           socket[kReset] = false;
           socket[kBlocking] = false;
-          socket[kParser] = new Parser2(client, socket, llhttpInstance);
+          socket[kParser] = new Parser(client, socket, llhttpInstance);
         }
         socket[kCounter] = 0;
         socket[kMaxRequests] = client[kMaxRequests];
@@ -33028,9 +33028,9 @@ function detectLanguage(filename) {
   return "unknown";
 }
 function getParser(language) {
-  const Parser2 = loadModule("tree-sitter");
-  if (!Parser2) return null;
-  const parser = new Parser2();
+  const Parser = loadModule("tree-sitter");
+  if (!Parser) return null;
+  const parser = new Parser();
   try {
     if (language === "typescript" || language === "javascript") {
       const ts = loadModule("tree-sitter-typescript");
@@ -34409,9 +34409,6 @@ var QuietModeFilter = class {
 };
 
 // src/analysis/context/graph-builder.ts
-var import_tree_sitter = __toESM(require("tree-sitter"));
-var import_tree_sitter_typescript = __toESM(require("tree-sitter-typescript"));
-var import_tree_sitter_python = __toESM(require("tree-sitter-python"));
 var CodeGraph = class {
   // file → symbols defined
   constructor(files = [], buildTime = 0) {
@@ -34601,19 +34598,32 @@ var CodeGraphBuilder = class {
   constructor(maxDepth = 5, timeoutMs = 1e4) {
     this.maxDepth = maxDepth;
     this.timeoutMs = timeoutMs;
-    this.parser = new import_tree_sitter.default();
-    this.tsParser = new import_tree_sitter.default();
-    this.pyParser = new import_tree_sitter.default();
+  }
+  tsParser = null;
+  pyParser = null;
+  parsersInitialized = false;
+  /**
+   * Lazy-load and initialize parsers only when needed
+   */
+  async initParsers() {
+    if (this.parsersInitialized) {
+      return;
+    }
     try {
-      this.tsParser.setLanguage(import_tree_sitter_typescript.default.typescript);
-      this.pyParser.setLanguage(import_tree_sitter_python.default);
+      const ParserModule = await import("tree-sitter");
+      const TypeScriptParser = await import("tree-sitter-typescript");
+      const PythonParser = await import("tree-sitter-python");
+      const Parser = ParserModule.default;
+      this.tsParser = new Parser();
+      this.pyParser = new Parser();
+      this.tsParser.setLanguage(TypeScriptParser.default.typescript);
+      this.pyParser.setLanguage(PythonParser.default);
+      this.parsersInitialized = true;
     } catch (error2) {
-      logger.warn("Failed to initialize parsers", error2);
+      logger.warn("Failed to initialize parsers - AST analysis disabled", error2);
+      this.parsersInitialized = true;
     }
   }
-  parser;
-  tsParser;
-  pyParser;
   /**
    * Build a code graph from file changes
    */
@@ -34637,7 +34647,12 @@ var CodeGraphBuilder = class {
       files.map((f) => f.filename),
       buildTime
     );
-    Object.assign(finalGraph, graph);
+    finalGraph.definitions = graph.definitions;
+    finalGraph.imports = graph.imports;
+    finalGraph.exports = graph.exports;
+    finalGraph.calls = graph.calls;
+    finalGraph.callers = graph.callers;
+    finalGraph.fileSymbols = graph.fileSymbols;
     logger.info(`Code graph built in ${buildTime}ms: ${graph.getStats().definitions} definitions, ${graph.getStats().imports} imports`);
     return finalGraph;
   }
@@ -34662,6 +34677,7 @@ var CodeGraphBuilder = class {
    * Analyze a single file and add to graph
    */
   async analyzeFile(file, graph) {
+    await this.initParsers();
     const ext = file.filename.split(".").pop()?.toLowerCase();
     let parser = null;
     if (ext === "ts" || ext === "tsx" || ext === "js" || ext === "jsx") {
