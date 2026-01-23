@@ -10,8 +10,8 @@
   "license": "MIT",
   "scripts": {
     "build": "npm run build:action && npm run build:cli",
-    "build:action": "esbuild src/main.ts --bundle --platform=node --target=node20 --outfile=dist/index.js --sourcemap",
-    "build:cli": "esbuild src/cli/index.ts --bundle --platform=node --target=node20 --outfile=dist/cli/index.js --sourcemap",
+    "build:action": "esbuild src/main.ts --bundle --platform=node --target=node20 --outfile=dist/index.js --sourcemap --external:tree-sitter --external:tree-sitter-* --external:@actions/cache",
+    "build:cli": "esbuild src/cli/index.ts --bundle --platform=node --target=node20 --outfile=dist/cli/index.js --sourcemap --external:tree-sitter --external:tree-sitter-*",
     "build:prod": "npm run build:action -- --minify && npm run build:cli -- --minify",
     "test": "jest",
     "test:coverage": "jest --coverage",
