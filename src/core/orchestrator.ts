@@ -71,30 +71,12 @@ export class ReviewOrchestrator {
     // Check for incremental review
     const useIncremental = await this.components.incrementalReviewer.shouldUseIncremental(pr);
     let filesToReview: FileChange[] = pr.files;
-    let previousReview: Review | null = null;
+    let lastReviewData = null;
 
     if (useIncremental) {
-      const lastReview = await this.components.incrementalReviewer.getLastReview(pr.number);
-      if (lastReview) {
-        filesToReview = await this.components.incrementalReviewer.getChangedFilesSince(pr, lastReview.lastReviewedCommit);
-        previousReview = {
-          summary: lastReview.reviewSummary,
-          findings: lastReview.findings,
-          inlineComments: [],
-          actionItems: [],
-          metrics: {
-            totalFindings: lastReview.findings.length,
-            critical: lastReview.findings.filter(f => f.severity === 'critical').length,
-            major: lastReview.findings.filter(f => f.severity === 'major').length,
-            minor: lastReview.findings.filter(f => f.severity === 'minor').length,
-            providersUsed: 0,
-            providersSuccess: 0,
-            providersFailed: 0,
-            totalTokens: 0,
-            totalCost: 0,
-            durationSeconds: 0,
-          },
-        };
+      lastReviewData = await this.components.incrementalReviewer.getLastReview(pr.number);
+      if (lastReviewData) {
+        filesToReview = await this.components.incrementalReviewer.getChangedFilesSince(pr, lastReviewData.lastReviewedCommit);
         logger.info(`Incremental review: reviewing ${filesToReview.length} changed files`);
       }
     }
@@ -170,33 +152,30 @@ export class ReviewOrchestrator {
     );
 
     // Merge with previous review if incremental
-    if (useIncremental && previousReview) {
-      const lastReview = await this.components.incrementalReviewer.getLastReview(pr.number);
-      if (lastReview) {
-        // Merge findings: keep findings from unchanged files, add new findings
-        review.findings = this.components.incrementalReviewer.mergeFindings(
-          lastReview.findings,
-          review.findings,
-          filesToReview
-        );
+    if (useIncremental && lastReviewData) {
+      // Merge findings: keep findings from unchanged files, add new findings
+      review.findings = this.components.incrementalReviewer.mergeFindings(
+        lastReviewData.findings,
+        review.findings,
+        filesToReview
+      );
 
-        // Update summary with incremental note
-        review.summary = this.components.incrementalReviewer.generateIncrementalSummary(
-          lastReview.reviewSummary,
-          review.summary,
-          filesToReview,
-          lastReview.lastReviewedCommit,
-          pr.headSha
-        );
+      // Update summary with incremental note
+      review.summary = this.components.incrementalReviewer.generateIncrementalSummary(
+        lastReviewData.reviewSummary,
+        review.summary,
+        filesToReview,
+        lastReviewData.lastReviewedCommit,
+        pr.headSha
+      );
 
-        // Update metrics to reflect total findings
-        review.metrics.totalFindings = review.findings.length;
-        review.metrics.critical = review.findings.filter(f => f.severity === 'critical').length;
-        review.metrics.major = review.findings.filter(f => f.severity === 'major').length;
-        review.metrics.minor = review.findings.filter(f => f.severity === 'minor').length;
+      // Update metrics to reflect total findings
+      review.metrics.totalFindings = review.findings.length;
+      review.metrics.critical = review.findings.filter(f => f.severity === 'critical').length;
+      review.metrics.major = review.findings.filter(f => f.severity === 'major').length;
+      review.metrics.minor = review.findings.filter(f => f.severity === 'minor').length;
 
-        logger.info(`Incremental review completed: ${review.findings.length} total findings after merge`);
-      }
+      logger.info(`Incremental review completed: ${review.findings.length} total findings after merge`);
     }
 
     review.metrics.totalCost = costSummary.totalCost;

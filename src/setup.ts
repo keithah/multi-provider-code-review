@@ -74,7 +74,7 @@ function createComponentsForCLI(config: ReviewConfig): ReviewComponents {
   const astAnalyzer = new ASTAnalyzer();
   const cache = new CacheManager();
   const incrementalReviewer = new IncrementalReviewer(undefined, {
-    enabled: false, // Disable incremental in CLI mode
+    enabled: config.incrementalEnabled,
     cacheTtlDays: config.incrementalCacheTtlDays,
   });
   const pricing = new PricingService(process.env.OPENROUTER_API_KEY);
