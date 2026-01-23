@@ -1,5 +1,4 @@
 import { GitHubClient } from '../../../src/github/client';
-import { createMockOctokit, createErrorOctokit } from '../../helpers/github-mock';
 
 describe('GitHubClient', () => {
   const mockToken = 'ghp_test123456789';

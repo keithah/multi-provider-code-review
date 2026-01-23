@@ -127,7 +127,8 @@ export class IncrementalReviewer {
       const lines = output.trim().split('\n').filter(Boolean);
 
       for (const line of lines) {
-        const [status, ...pathParts] = line.split('\t');
+        // Git diff format: "M\tfilepath" - skip status, keep filepath
+        const pathParts = line.split('\t').slice(1);
         const filename = pathParts.join('\t'); // Handle filenames with tabs
 
         // Find this file in the PR files list to get full details

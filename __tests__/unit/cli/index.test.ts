@@ -1,6 +1,7 @@
 import { CLI } from '../../../src/cli/index';
 import { GitReader } from '../../../src/cli/git-reader';
 import { TerminalFormatter } from '../../../src/cli/formatter';
+import * as pkg from '../../../package.json';
 
 jest.mock('../../../src/cli/git-reader');
 jest.mock('../../../src/cli/formatter');
@@ -154,7 +155,6 @@ describe('CLI', () => {
   describe('showVersion', () => {
     it('displays version', () => {
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-      const pkg = require('../../../package.json');
 
       (cli as any).showVersion();
 
