@@ -36,6 +36,11 @@ export interface ReviewConfig {
   enableCaching: boolean;
   enableTestHints: boolean;
   enableAiDetection: boolean;
+
+  incrementalEnabled: boolean;
+  incrementalCacheTtlDays: number;
+
+  dryRun: boolean;
 }
 
 export interface TokenUsage {

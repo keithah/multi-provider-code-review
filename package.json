@@ -4,16 +4,24 @@
   "description": "Best-in-class multi-provider code review GitHub Action with hybrid AST + LLM analysis.",
   "main": "dist/index.js",
   "type": "commonjs",
+  "bin": {
+    "mpr": "./bin/mpr"
+  },
   "license": "MIT",
   "scripts": {
-    "build": "esbuild src/main.ts --bundle --platform=node --target=node20 --outfile=dist/index.js --sourcemap",
-    "build:prod": "npm run build -- --minify",
+    "build": "npm run build:action && npm run build:cli",
+    "build:action": "esbuild src/main.ts --bundle --platform=node --target=node20 --outfile=dist/index.js --sourcemap",
+    "build:cli": "esbuild src/cli/index.ts --bundle --platform=node --target=node20 --outfile=dist/cli/index.js --sourcemap",
+    "build:prod": "npm run build:action -- --minify && npm run build:cli -- --minify",
     "test": "jest",
     "test:coverage": "jest --coverage",
+    "test:unit": "jest --testPathIgnorePatterns=integration --testPathIgnorePatterns=benchmarks",
+    "benchmark": "jest __tests__/benchmarks --verbose",
     "lint": "eslint \"src/**/*.ts\" \"__tests__/**/*.ts\"",
     "format": "prettier --write \"src/**/*.ts\" \"__tests__/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"__tests__/**/*.ts\"",
     "typecheck": "tsc --noEmit",
+    "hooks:install": "bash scripts/install-hooks.sh",
     "prepare": "npm run build:prod"
   },
   "repository": {

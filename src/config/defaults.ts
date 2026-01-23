@@ -2,13 +2,18 @@ import { ReviewConfig } from '../types';
 
 export const DEFAULT_CONFIG: ReviewConfig = {
   providers: [
-    'opencode/minimax-m2.1-free',
-    'opencode/big-pickle',
-    'opencode/grok-code',
-    'opencode/glm-4.7-free',
+    'openrouter/google/gemini-2.0-flash-exp:free',
+    'openrouter/mistralai/devstral-2512:free',
+    'openrouter/xiaomi/mimo-v2-flash:free',
+    'openrouter/qwen/qwen-2.5-coder-32b-instruct:free',
+    'openrouter/deepseek/deepseek-r1-distill-llama-70b:free',
+    'openrouter/meta-llama/llama-3.1-70b-instruct:free',
   ],
   synthesisModel: 'openrouter/google/gemini-2.0-flash-exp:free',
-  fallbackProviders: ['opencode/minimax-m2.1-free'],
+  fallbackProviders: [
+    'openrouter/microsoft/phi-4:free',
+    'openrouter/nvidia/llama-3.1-nemotron-70b-instruct:free',
+  ],
   providerAllowlist: [],
   providerBlocklist: [],
   providerLimit: 6,
@@ -37,4 +42,9 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   enableCaching: true,
   enableTestHints: true,
   enableAiDetection: true,
+
+  incrementalEnabled: true,
+  incrementalCacheTtlDays: 7,
+
+  dryRun: false,
 };

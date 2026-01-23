@@ -110,12 +110,18 @@ export class OpenCodeProvider extends Provider {
 
   private extractFindings(content: string): any[] {
     try {
+      // Try markdown code block first
       const match = content.match(/```json\s*([\s\S]*?)```/i);
       if (match) {
         const parsed = JSON.parse(match[1]);
         if (Array.isArray(parsed)) return parsed;
         return parsed.findings || [];
       }
+
+      // Fallback: try parsing as plain JSON
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed)) return parsed;
+      return parsed.findings || [];
     } catch (error) {
       logger.debug('Failed to parse findings from OpenCode response', error as Error);
     }

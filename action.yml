@@ -15,11 +15,11 @@ inputs:
   REVIEW_PROVIDERS:
     description: "Comma-separated provider list"
     required: false
-    default: "openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free"
+    default: "openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free,openrouter/xiaomi/mimo-v2-flash:free,openrouter/qwen/qwen-2.5-coder-32b-instruct:free,openrouter/deepseek/deepseek-r1-distill-llama-70b:free,openrouter/meta-llama/llama-3.1-70b-instruct:free"
   FALLBACK_PROVIDERS:
     description: "Comma-separated fallback providers"
     required: false
-    default: ""
+    default: "openrouter/microsoft/phi-4:free,openrouter/nvidia/llama-3.1-nemotron-70b-instruct:free"
   SYNTHESIS_MODEL:
     description: "Model used for synthesis/prompts"
     required: false
@@ -92,10 +92,22 @@ inputs:
     description: "Enable AI-generated code detection"
     required: false
     default: "true"
+  INCREMENTAL_ENABLED:
+    description: "Enable incremental review (only review changed files on PR updates)"
+    required: false
+    default: "true"
+  INCREMENTAL_CACHE_TTL_DAYS:
+    description: "Days to keep incremental review cache"
+    required: false
+    default: "7"
   REPORT_BASENAME:
     description: "Base name for JSON/SARIF reports"
     required: false
     default: "multi-provider-review"
+  DRY_RUN:
+    description: "Preview mode - run review without posting to GitHub"
+    required: false
+    default: "false"
   OPENROUTER_API_KEY:
     description: "API key for OpenRouter"
     required: false

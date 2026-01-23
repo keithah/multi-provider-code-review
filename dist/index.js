@@ -432,18 +432,18 @@ var require_tunnel = __commonJS({
             res.statusCode
           );
           socket.destroy();
-          var error = new Error("tunneling socket could not be established, statusCode=" + res.statusCode);
-          error.code = "ECONNRESET";
-          options.request.emit("error", error);
+          var error2 = new Error("tunneling socket could not be established, statusCode=" + res.statusCode);
+          error2.code = "ECONNRESET";
+          options.request.emit("error", error2);
           self.removeSocket(placeholder);
           return;
         }
         if (head.length > 0) {
           debug2("got illegal response body from proxy");
           socket.destroy();
-          var error = new Error("got illegal response body from proxy");
-          error.code = "ECONNRESET";
-          options.request.emit("error", error);
+          var error2 = new Error("got illegal response body from proxy");
+          error2.code = "ECONNRESET";
+          options.request.emit("error", error2);
           self.removeSocket(placeholder);
           return;
         }
@@ -458,9 +458,9 @@ var require_tunnel = __commonJS({
           cause.message,
           cause.stack
         );
-        var error = new Error("tunneling socket could not be established, cause=" + cause.message);
-        error.code = "ECONNRESET";
-        options.request.emit("error", error);
+        var error2 = new Error("tunneling socket could not be established, cause=" + cause.message);
+        error2.code = "ECONNRESET";
+        options.request.emit("error", error2);
         self.removeSocket(placeholder);
       }
     };
@@ -5585,7 +5585,7 @@ Content-Type: ${value.type || "application/octet-stream"}\r
         throw new TypeError("Body is unusable");
       }
       const promise = createDeferredPromise();
-      const errorSteps = (error) => promise.reject(error);
+      const errorSteps = (error2) => promise.reject(error2);
       const successSteps = (data) => {
         try {
           promise.resolve(convertBytesToJSValue(data));
@@ -5871,16 +5871,16 @@ var require_request = __commonJS({
           this.onError(err);
         }
       }
-      onError(error) {
+      onError(error2) {
         this.onFinally();
         if (channels.error.hasSubscribers) {
-          channels.error.publish({ request: this, error });
+          channels.error.publish({ request: this, error: error2 });
         }
         if (this.aborted) {
           return;
         }
         this.aborted = true;
-        return this[kHandler].onError(error);
+        return this[kHandler].onError(error2);
       }
       onFinally() {
         if (this.errorHandler) {
@@ -6752,8 +6752,8 @@ var require_RedirectHandler = __commonJS({
       onUpgrade(statusCode, headers, socket) {
         this.handler.onUpgrade(statusCode, headers, socket);
       }
-      onError(error) {
-        this.handler.onError(error);
+      onError(error2) {
+        this.handler.onError(error2);
       }
       onHeaders(statusCode, headers, resume, statusText) {
         this.location = this.history.length >= this.maxRedirections || util2.isDisturbed(this.opts.body) ? null : parseLocation(statusCode, headers);
@@ -8897,7 +8897,7 @@ var require_pool = __commonJS({
         this[kOptions] = { ...util2.deepClone(options), connect, allowH2 };
         this[kOptions].interceptors = options.interceptors ? { ...options.interceptors } : void 0;
         this[kFactory] = factory;
-        this.on("connectionError", (origin2, targets, error) => {
+        this.on("connectionError", (origin2, targets, error2) => {
           for (const target of targets) {
             const idx = this[kClients].indexOf(target);
             if (idx !== -1) {
@@ -10507,13 +10507,13 @@ var require_mock_utils = __commonJS({
       if (mockDispatch2.data.callback) {
         mockDispatch2.data = { ...mockDispatch2.data, ...mockDispatch2.data.callback(opts) };
       }
-      const { data: { statusCode, data, headers, trailers, error }, delay, persist } = mockDispatch2;
+      const { data: { statusCode, data, headers, trailers, error: error2 }, delay, persist } = mockDispatch2;
       const { timesInvoked, times } = mockDispatch2;
       mockDispatch2.consumed = !persist && timesInvoked >= times;
       mockDispatch2.pending = timesInvoked < times;
-      if (error !== null) {
+      if (error2 !== null) {
         deleteMockDispatch(this[kDispatches], key);
-        handler.onError(error);
+        handler.onError(error2);
         return true;
       }
       if (typeof delay === "number" && delay > 0) {
@@ -10551,19 +10551,19 @@ var require_mock_utils = __commonJS({
         if (agent.isMockActive) {
           try {
             mockDispatch.call(this, opts, handler);
-          } catch (error) {
-            if (error instanceof MockNotMatchedError) {
+          } catch (error2) {
+            if (error2 instanceof MockNotMatchedError) {
               const netConnect = agent[kGetNetConnect]();
               if (netConnect === false) {
-                throw new MockNotMatchedError(`${error.message}: subsequent request to origin ${origin} was not allowed (net.connect disabled)`);
+                throw new MockNotMatchedError(`${error2.message}: subsequent request to origin ${origin} was not allowed (net.connect disabled)`);
               }
               if (checkNetConnect(netConnect, origin)) {
                 originalDispatch.call(this, opts, handler);
               } else {
-                throw new MockNotMatchedError(`${error.message}: subsequent request to origin ${origin} was not allowed (net.connect is not enabled for this origin)`);
+                throw new MockNotMatchedError(`${error2.message}: subsequent request to origin ${origin} was not allowed (net.connect is not enabled for this origin)`);
               }
             } else {
-              throw error;
+              throw error2;
             }
           }
         } else {
@@ -10726,11 +10726,11 @@ var require_mock_interceptor = __commonJS({
       /**
        * Mock an undici request with a defined error.
        */
-      replyWithError(error) {
-        if (typeof error === "undefined") {
+      replyWithError(error2) {
+        if (typeof error2 === "undefined") {
           throw new InvalidArgumentError("error must be defined");
         }
-        const newMockDispatch = addMockDispatch(this[kDispatches], this[kDispatchKey], { error });
+        const newMockDispatch = addMockDispatch(this[kDispatches], this[kDispatchKey], { error: error2 });
         return new MockScope(newMockDispatch);
       }
       /**
@@ -13060,17 +13060,17 @@ var require_fetch = __commonJS({
         this.emit("terminated", reason);
       }
       // https://fetch.spec.whatwg.org/#fetch-controller-abort
-      abort(error) {
+      abort(error2) {
         if (this.state !== "ongoing") {
           return;
         }
         this.state = "aborted";
-        if (!error) {
-          error = new DOMException2("The operation was aborted.", "AbortError");
+        if (!error2) {
+          error2 = new DOMException2("The operation was aborted.", "AbortError");
         }
-        this.serializedAbortReason = error;
-        this.connection?.destroy(error);
-        this.emit("terminated", error);
+        this.serializedAbortReason = error2;
+        this.connection?.destroy(error2);
+        this.emit("terminated", error2);
       }
     };
     function fetch2(input, init = {}) {
@@ -13174,13 +13174,13 @@ var require_fetch = __commonJS({
         performance.markResourceTiming(timingInfo, originalURL.href, initiatorType, globalThis2, cacheState);
       }
     }
-    function abortFetch(p, request, responseObject, error) {
-      if (!error) {
-        error = new DOMException2("The operation was aborted.", "AbortError");
+    function abortFetch(p, request, responseObject, error2) {
+      if (!error2) {
+        error2 = new DOMException2("The operation was aborted.", "AbortError");
       }
-      p.reject(error);
+      p.reject(error2);
       if (request.body != null && isReadable(request.body?.stream)) {
-        request.body.stream.cancel(error).catch((err) => {
+        request.body.stream.cancel(error2).catch((err) => {
           if (err.code === "ERR_INVALID_STATE") {
             return;
           }
@@ -13192,7 +13192,7 @@ var require_fetch = __commonJS({
       }
       const response = responseObject[kState];
       if (response.body != null && isReadable(response.body?.stream)) {
-        response.body.stream.cancel(error).catch((err) => {
+        response.body.stream.cancel(error2).catch((err) => {
           if (err.code === "ERR_INVALID_STATE") {
             return;
           }
@@ -13972,13 +13972,13 @@ var require_fetch = __commonJS({
               fetchParams.controller.ended = true;
               this.body.push(null);
             },
-            onError(error) {
+            onError(error2) {
               if (this.abort) {
                 fetchParams.controller.off("terminated", this.abort);
               }
-              this.body?.destroy(error);
-              fetchParams.controller.terminate(error);
-              reject(error);
+              this.body?.destroy(error2);
+              fetchParams.controller.terminate(error2);
+              reject(error2);
             },
             onUpgrade(status, headersList, socket) {
               if (status !== 101) {
@@ -14444,8 +14444,8 @@ var require_util4 = __commonJS({
                   }
                   fr[kResult] = result;
                   fireAProgressEvent("load", fr);
-                } catch (error) {
-                  fr[kError] = error;
+                } catch (error2) {
+                  fr[kError] = error2;
                   fireAProgressEvent("error", fr);
                 }
                 if (fr[kState] !== "loading") {
@@ -14454,13 +14454,13 @@ var require_util4 = __commonJS({
               });
               break;
             }
-          } catch (error) {
+          } catch (error2) {
             if (fr[kAborted]) {
               return;
             }
             queueMicrotask(() => {
               fr[kState] = "done";
-              fr[kError] = error;
+              fr[kError] = error2;
               fireAProgressEvent("error", fr);
               if (fr[kState] !== "loading") {
                 fireAProgressEvent("loadend", fr);
@@ -16462,11 +16462,11 @@ var require_connection = __commonJS({
         });
       }
     }
-    function onSocketError(error) {
+    function onSocketError(error2) {
       const { ws } = this;
       ws[kReadyState] = states.CLOSING;
       if (channels.socketError.hasSubscribers) {
-        channels.socketError.publish(error);
+        channels.socketError.publish(error2);
       }
       this.destroy();
     }
@@ -18103,12 +18103,12 @@ var require_oidc_utils = __commonJS({
         var _a;
         return __awaiter(this, void 0, void 0, function* () {
           const httpclient = _OidcClient.createHttpClient();
-          const res = yield httpclient.getJson(id_token_url).catch((error) => {
+          const res = yield httpclient.getJson(id_token_url).catch((error2) => {
             throw new Error(`Failed to get ID Token. 
  
-        Error Code : ${error.statusCode}
+        Error Code : ${error2.statusCode}
  
-        Error Message: ${error.message}`);
+        Error Message: ${error2.message}`);
           });
           const id_token = (_a = res.result) === null || _a === void 0 ? void 0 : _a.value;
           if (!id_token) {
@@ -18129,8 +18129,8 @@ var require_oidc_utils = __commonJS({
             const id_token = yield _OidcClient.getCall(id_token_url);
             (0, core_1.setSecret)(id_token);
             return id_token;
-          } catch (error) {
-            throw new Error(`Error message: ${error.message}`);
+          } catch (error2) {
+            throw new Error(`Error message: ${error2.message}`);
           }
         });
       }
@@ -19272,7 +19272,7 @@ var require_toolrunner = __commonJS({
               this._debug(`STDIO streams have closed for tool '${this.toolPath}'`);
               state.CheckComplete();
             });
-            state.on("done", (error, exitCode) => {
+            state.on("done", (error2, exitCode) => {
               if (stdbuffer.length > 0) {
                 this.emit("stdline", stdbuffer);
               }
@@ -19280,8 +19280,8 @@ var require_toolrunner = __commonJS({
                 this.emit("errline", errbuffer);
               }
               cp.removeAllListeners();
-              if (error) {
-                reject(error);
+              if (error2) {
+                reject(error2);
               } else {
                 resolve(exitCode);
               }
@@ -19376,14 +19376,14 @@ var require_toolrunner = __commonJS({
         this.emit("debug", message);
       }
       _setResult() {
-        let error;
+        let error2;
         if (this.processExited) {
           if (this.processError) {
-            error = new Error(`There was an error when attempting to execute the process '${this.toolPath}'. This may indicate the process failed to start. Error: ${this.processError}`);
+            error2 = new Error(`There was an error when attempting to execute the process '${this.toolPath}'. This may indicate the process failed to start. Error: ${this.processError}`);
           } else if (this.processExitCode !== 0 && !this.options.ignoreReturnCode) {
-            error = new Error(`The process '${this.toolPath}' failed with exit code ${this.processExitCode}`);
+            error2 = new Error(`The process '${this.toolPath}' failed with exit code ${this.processExitCode}`);
           } else if (this.processStderr && this.options.failOnStdErr) {
-            error = new Error(`The process '${this.toolPath}' failed because one or more lines were written to the STDERR stream`);
+            error2 = new Error(`The process '${this.toolPath}' failed because one or more lines were written to the STDERR stream`);
           }
         }
         if (this.timeout) {
@@ -19391,7 +19391,7 @@ var require_toolrunner = __commonJS({
           this.timeout = null;
         }
         this.done = true;
-        this.emit("done", error, this.processExitCode);
+        this.emit("done", error2, this.processExitCode);
       }
       static HandleTimeout(state) {
         if (state.done) {
@@ -19789,7 +19789,7 @@ Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
     exports2.setCommandEcho = setCommandEcho;
     function setFailed2(message) {
       process.exitCode = ExitCode.Failure;
-      error(message);
+      error2(message);
     }
     exports2.setFailed = setFailed2;
     function isDebug() {
@@ -19800,10 +19800,10 @@ Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
       (0, command_1.issueCommand)("debug", {}, message);
     }
     exports2.debug = debug2;
-    function error(message, properties = {}) {
+    function error2(message, properties = {}) {
       (0, command_1.issueCommand)("error", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
-    exports2.error = error;
+    exports2.error = error2;
     function warning(message, properties = {}) {
       (0, command_1.issueCommand)("warning", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
@@ -19998,12 +19998,12 @@ var require_retry_operation = __commonJS({
       var mainError = null;
       var mainErrorCount = 0;
       for (var i = 0; i < this._errors.length; i++) {
-        var error = this._errors[i];
-        var message = error.message;
+        var error2 = this._errors[i];
+        var message = error2.message;
         var count = (counts[message] || 0) + 1;
         counts[message] = count;
         if (count >= mainErrorCount) {
-          mainError = error;
+          mainError = error2;
           mainErrorCount = count;
         }
       }
@@ -20520,8 +20520,8 @@ var require_add = __commonJS({
       }
       if (kind === "error") {
         hook = function(method, options) {
-          return Promise.resolve().then(method.bind(null, options)).catch(function(error) {
-            return orig(error, options);
+          return Promise.resolve().then(method.bind(null, options)).catch(function(error2) {
+            return orig(error2, options);
           });
         };
       }
@@ -21255,7 +21255,7 @@ var require_dist_node5 = __commonJS({
         }
         if (status >= 400) {
           const data = await getResponseData(response);
-          const error = new import_request_error.RequestError(toErrorMessage(data), status, {
+          const error2 = new import_request_error.RequestError(toErrorMessage(data), status, {
             response: {
               url,
               status,
@@ -21264,7 +21264,7 @@ var require_dist_node5 = __commonJS({
             },
             request: requestOptions
           });
-          throw error;
+          throw error2;
         }
         return parseSuccessResponseBody ? await getResponseData(response) : response.body;
       }).then((data) => {
@@ -21274,17 +21274,17 @@ var require_dist_node5 = __commonJS({
           headers,
           data
         };
-      }).catch((error) => {
-        if (error instanceof import_request_error.RequestError)
-          throw error;
-        else if (error.name === "AbortError")
-          throw error;
-        let message = error.message;
-        if (error.name === "TypeError" && "cause" in error) {
-          if (error.cause instanceof Error) {
-            message = error.cause.message;
-          } else if (typeof error.cause === "string") {
-            message = error.cause;
+      }).catch((error2) => {
+        if (error2 instanceof import_request_error.RequestError)
+          throw error2;
+        else if (error2.name === "AbortError")
+          throw error2;
+        let message = error2.message;
+        if (error2.name === "TypeError" && "cause" in error2) {
+          if (error2.cause instanceof Error) {
+            message = error2.cause.message;
+          } else if (typeof error2.cause === "string") {
+            message = error2.cause;
           }
         }
         throw new import_request_error.RequestError(message, 500, {
@@ -23957,9 +23957,9 @@ var require_dist_node10 = __commonJS({
                 /<([^<>]+)>;\s*rel="next"/
               ) || [])[1];
               return { value: normalizedResponse };
-            } catch (error) {
-              if (error.status !== 409)
-                throw error;
+            } catch (error2) {
+              if (error2.status !== 409)
+                throw error2;
               url = "";
               return {
                 value: {
@@ -27044,13 +27044,18 @@ var safeDump = renamed("safeDump", "dump");
 // src/config/defaults.ts
 var DEFAULT_CONFIG = {
   providers: [
-    "opencode/minimax-m2.1-free",
-    "opencode/big-pickle",
-    "opencode/grok-code",
-    "opencode/glm-4.7-free"
+    "openrouter/google/gemini-2.0-flash-exp:free",
+    "openrouter/mistralai/devstral-2512:free",
+    "openrouter/xiaomi/mimo-v2-flash:free",
+    "openrouter/qwen/qwen-2.5-coder-32b-instruct:free",
+    "openrouter/deepseek/deepseek-r1-distill-llama-70b:free",
+    "openrouter/meta-llama/llama-3.1-70b-instruct:free"
   ],
   synthesisModel: "openrouter/google/gemini-2.0-flash-exp:free",
-  fallbackProviders: ["opencode/minimax-m2.1-free"],
+  fallbackProviders: [
+    "openrouter/microsoft/phi-4:free",
+    "openrouter/nvidia/llama-3.1-nemotron-70b-instruct:free"
+  ],
   providerAllowlist: [],
   providerBlocklist: [],
   providerLimit: 6,
@@ -27073,7 +27078,10 @@ var DEFAULT_CONFIG = {
   enableSecurity: true,
   enableCaching: true,
   enableTestHints: true,
-  enableAiDetection: true
+  enableAiDetection: true,
+  incrementalEnabled: true,
+  incrementalCacheTtlDays: 7,
+  dryRun: false
 };
 
 // node_modules/zod/v3/external.js
@@ -27372,8 +27380,8 @@ var ZodError = class _ZodError extends Error {
       return issue.message;
     };
     const fieldErrors = { _errors: [] };
-    const processError = (error) => {
-      for (const issue of error.issues) {
+    const processError = (error2) => {
+      for (const issue of error2.issues) {
         if (issue.code === "invalid_union") {
           issue.unionErrors.map(processError);
         } else if (issue.code === "invalid_return_type") {
@@ -27436,8 +27444,8 @@ var ZodError = class _ZodError extends Error {
   }
 };
 ZodError.create = (issues) => {
-  const error = new ZodError(issues);
-  return error;
+  const error2 = new ZodError(issues);
+  return error2;
 };
 
 // node_modules/zod/v3/locales/en.js
@@ -27701,8 +27709,8 @@ var handleResult = (ctx, result) => {
       get error() {
         if (this._error)
           return this._error;
-        const error = new ZodError(ctx.common.issues);
-        this._error = error;
+        const error2 = new ZodError(ctx.common.issues);
+        this._error = error2;
         return this._error;
       }
     };
@@ -30357,25 +30365,25 @@ var ZodFunction = class _ZodFunction extends ZodType {
       });
       return INVALID;
     }
-    function makeArgsIssue(args, error) {
+    function makeArgsIssue(args, error2) {
       return makeIssue({
         data: args,
         path: ctx.path,
         errorMaps: [ctx.common.contextualErrorMap, ctx.schemaErrorMap, getErrorMap(), en_default].filter((x) => !!x),
         issueData: {
           code: ZodIssueCode.invalid_arguments,
-          argumentsError: error
+          argumentsError: error2
         }
       });
     }
-    function makeReturnsIssue(returns, error) {
+    function makeReturnsIssue(returns, error2) {
       return makeIssue({
         data: returns,
         path: ctx.path,
         errorMaps: [ctx.common.contextualErrorMap, ctx.schemaErrorMap, getErrorMap(), en_default].filter((x) => !!x),
         issueData: {
           code: ZodIssueCode.invalid_return_type,
-          returnTypeError: error
+          returnTypeError: error2
         }
       });
     }
@@ -30384,15 +30392,15 @@ var ZodFunction = class _ZodFunction extends ZodType {
     if (this._def.returns instanceof ZodPromise) {
       const me = this;
       return OK(async function(...args) {
-        const error = new ZodError([]);
+        const error2 = new ZodError([]);
         const parsedArgs = await me._def.args.parseAsync(args, params).catch((e) => {
-          error.addIssue(makeArgsIssue(args, e));
-          throw error;
+          error2.addIssue(makeArgsIssue(args, e));
+          throw error2;
         });
         const result = await Reflect.apply(fn, this, parsedArgs);
         const parsedReturns = await me._def.returns._def.type.parseAsync(result, params).catch((e) => {
-          error.addIssue(makeReturnsIssue(result, e));
-          throw error;
+          error2.addIssue(makeReturnsIssue(result, e));
+          throw error2;
         });
         return parsedReturns;
       });
@@ -31144,8 +31152,262 @@ var ReviewConfigSchema = external_exports.object({
   enable_security: external_exports.boolean().optional(),
   enable_caching: external_exports.boolean().optional(),
   enable_test_hints: external_exports.boolean().optional(),
-  enable_ai_detection: external_exports.boolean().optional()
+  enable_ai_detection: external_exports.boolean().optional(),
+  incremental_enabled: external_exports.boolean().optional(),
+  incremental_cache_ttl_days: external_exports.number().int().min(1).max(30).optional(),
+  dry_run: external_exports.boolean().optional()
 });
+
+// src/utils/logger.ts
+var LEVELS = {
+  debug: 10,
+  info: 20,
+  warn: 30,
+  error: 40
+};
+var CURRENT_LEVEL = process.env.LOG_LEVEL || "info";
+function shouldLog(level) {
+  return LEVELS[level] >= LEVELS[CURRENT_LEVEL];
+}
+function formatMessage(level, message, metadata) {
+  const timestamp2 = (/* @__PURE__ */ new Date()).toISOString();
+  const levelStr = level.toUpperCase().padEnd(5);
+  if (metadata && Object.keys(metadata).length > 0) {
+    const metaStr = JSON.stringify(metadata);
+    return `[${timestamp2}] ${levelStr} ${message} ${metaStr}`;
+  }
+  return `[${timestamp2}] ${levelStr} ${message}`;
+}
+var logger = {
+  debug(message, ...args) {
+    if (shouldLog("debug")) {
+      const metadata = args.length > 0 && typeof args[0] === "object" && !Array.isArray(args[0]) ? args[0] : void 0;
+      console.debug(formatMessage("debug", message, metadata));
+    }
+  },
+  info(message, ...args) {
+    if (shouldLog("info")) {
+      const metadata = args.length > 0 && typeof args[0] === "object" && !Array.isArray(args[0]) ? args[0] : void 0;
+      console.info(formatMessage("info", message, metadata));
+    }
+  },
+  warn(message, ...args) {
+    if (shouldLog("warn")) {
+      const metadata = args.length > 0 && typeof args[0] === "object" && !Array.isArray(args[0]) ? args[0] : void 0;
+      console.warn(formatMessage("warn", message, metadata));
+    }
+  },
+  error(message, ...args) {
+    if (shouldLog("error")) {
+      let metadata = {};
+      let error2;
+      for (const arg of args) {
+        if (arg instanceof Error) {
+          error2 = arg;
+        } else if (typeof arg === "object" && arg !== null && !Array.isArray(arg)) {
+          metadata = { ...metadata, ...arg };
+        }
+      }
+      if (error2) {
+        metadata.error = error2.message;
+        metadata.stack = error2.stack;
+      }
+      console.error(formatMessage("error", message, Object.keys(metadata).length > 0 ? metadata : void 0));
+    }
+  }
+};
+
+// src/utils/validation.ts
+var ValidationError = class extends Error {
+  constructor(message, field, hint) {
+    super(message);
+    this.field = field;
+    this.hint = hint;
+    this.name = "ValidationError";
+  }
+};
+function validateRequired(value, field) {
+  if (value === void 0 || value === null || value === "") {
+    throw new ValidationError(
+      `${field} is required`,
+      field,
+      `Please provide a value for ${field}`
+    );
+  }
+}
+function validatePositiveInteger(value, field) {
+  const num = Number(value);
+  if (isNaN(num)) {
+    throw new ValidationError(
+      `${field} must be a number`,
+      field,
+      `Received: ${JSON.stringify(value)}. Expected: positive integer`
+    );
+  }
+  if (!Number.isInteger(num)) {
+    throw new ValidationError(
+      `${field} must be an integer`,
+      field,
+      `Received: ${value}. Decimals are not allowed`
+    );
+  }
+  if (num <= 0) {
+    throw new ValidationError(
+      `${field} must be positive`,
+      field,
+      `Received: ${num}. Expected: value > 0`
+    );
+  }
+  return num;
+}
+function validateNonNegativeNumber(value, field) {
+  const num = Number(value);
+  if (isNaN(num)) {
+    throw new ValidationError(
+      `${field} must be a number`,
+      field,
+      `Received: ${JSON.stringify(value)}. Expected: non-negative number`
+    );
+  }
+  if (num < 0) {
+    throw new ValidationError(
+      `${field} cannot be negative`,
+      field,
+      `Received: ${num}. Expected: value >= 0`
+    );
+  }
+  return num;
+}
+function validateInRange(value, field, min, max) {
+  if (value < min || value > max) {
+    throw new ValidationError(
+      `${field} must be between ${min} and ${max}`,
+      field,
+      `Received: ${value}. Valid range: [${min}, ${max}]`
+    );
+  }
+}
+function validateEnum(value, field, allowedValues) {
+  if (typeof value !== "string") {
+    throw new ValidationError(
+      `${field} must be a string`,
+      field,
+      `Received type: ${typeof value}. Expected one of: ${allowedValues.join(", ")}`
+    );
+  }
+  if (!allowedValues.includes(value)) {
+    throw new ValidationError(
+      `${field} has invalid value`,
+      field,
+      `Received: "${value}". Expected one of: ${allowedValues.join(", ")}`
+    );
+  }
+  return value;
+}
+function validateArray(value, field) {
+  if (!Array.isArray(value)) {
+    throw new ValidationError(
+      `${field} must be an array`,
+      field,
+      `Received type: ${typeof value}. Expected: array`
+    );
+  }
+  return value;
+}
+function validateNonEmptyArray(value, field) {
+  const arr = validateArray(value, field);
+  if (arr.length === 0) {
+    throw new ValidationError(
+      `${field} cannot be empty`,
+      field,
+      "At least one item is required"
+    );
+  }
+  return arr;
+}
+function validateStringArray(value, field) {
+  const arr = validateArray(value, field);
+  for (let i = 0; i < arr.length; i++) {
+    if (typeof arr[i] !== "string") {
+      throw new ValidationError(
+        `${field}[${i}] must be a string`,
+        field,
+        `Received type: ${typeof arr[i]} at index ${i}`
+      );
+    }
+  }
+  return arr;
+}
+function validateModelId(modelId) {
+  if (!modelId || typeof modelId !== "string") {
+    throw new ValidationError(
+      "Model ID is required",
+      "modelId",
+      "Model ID must be a non-empty string"
+    );
+  }
+  const validPrefixes = ["openrouter/", "opencode/", "anthropic/", "openai/"];
+  const hasValidPrefix = validPrefixes.some((prefix) => modelId.startsWith(prefix));
+  if (!hasValidPrefix && !modelId.includes("/")) {
+    logger.warn(
+      `Model ID "${modelId}" doesn't have a recognized provider prefix. Consider using: ${validPrefixes.map((p) => p + "model-name").join(", ")}`
+    );
+  }
+}
+function formatValidationError(error2) {
+  if (error2 instanceof ValidationError) {
+    let message = `\u274C ${error2.message}`;
+    if (error2.field) {
+      message += ` (field: ${error2.field})`;
+    }
+    if (error2.hint) {
+      message += `
+\u{1F4A1} Hint: ${error2.hint}`;
+    }
+    return message;
+  }
+  return `\u274C ${error2.message}`;
+}
+function validateConfig(config) {
+  if (config.providers) {
+    const providers = validateNonEmptyArray(config.providers, "providers");
+    validateStringArray(providers, "providers");
+    providers.forEach((p) => {
+      if (typeof p === "string") {
+        validateModelId(p);
+      }
+    });
+  }
+  if (config.providerLimit !== void 0 && config.providerLimit !== null) {
+    const limit = validateNonNegativeNumber(config.providerLimit, "providerLimit");
+    if (limit > 0) {
+      validateInRange(limit, "providerLimit", 1, 100);
+    }
+  }
+  if (config.inlineMaxComments !== void 0) {
+    const maxComments = validateNonNegativeNumber(config.inlineMaxComments, "inlineMaxComments");
+    if (maxComments > 100) {
+      logger.warn(
+        `inlineMaxComments is set to ${maxComments}. Very high values may cause rate limiting on GitHub API.`
+      );
+    }
+  }
+  if (config.budgetMaxUsd !== void 0) {
+    const budget = validateNonNegativeNumber(config.budgetMaxUsd, "budgetMaxUsd");
+    if (budget > 100) {
+      logger.warn(
+        `budgetMaxUsd is set to $${budget}. This is unusually high. Make sure this is intentional.`
+      );
+    }
+  }
+  if (config.inlineMinSeverity) {
+    validateEnum(
+      config.inlineMinSeverity,
+      "inlineMinSeverity",
+      ["critical", "major", "minor"]
+    );
+  }
+}
 
 // src/config/loader.ts
 var ConfigLoader = class {
@@ -31158,7 +31420,20 @@ var ConfigLoader = class {
   static load() {
     const fileConfig = this.loadFromFile();
     const envConfig = this.loadFromEnv();
-    return this.merge(DEFAULT_CONFIG, fileConfig, envConfig);
+    const merged = this.merge(DEFAULT_CONFIG, fileConfig, envConfig);
+    try {
+      validateConfig(merged);
+    } catch (error2) {
+      if (error2 instanceof ValidationError) {
+        throw new ValidationError(
+          `Invalid configuration: ${error2.message}`,
+          error2.field,
+          error2.hint
+        );
+      }
+      throw error2;
+    }
+    return merged;
   }
   static loadFromFile() {
     for (const relPath of this.CONFIG_PATHS) {
@@ -31170,8 +31445,14 @@ var ConfigLoader = class {
         const parsed = load(raw);
         const validated = ReviewConfigSchema.parse(parsed);
         return this.normalizeKeys(validated);
-      } catch (error) {
-        console.warn(`Failed to read config ${relPath}:`, error);
+      } catch (error2) {
+        const err = error2;
+        logger.warn(`\u26A0\uFE0F  Failed to load config from ${relPath}: ${err.message}`);
+        if (err.message.includes("YAMLException")) {
+          logger.warn("\u{1F4A1} Check for YAML syntax errors (indentation, colons, quotes)");
+        } else if (err.message.includes("parse")) {
+          logger.warn("\u{1F4A1} Check that all values match expected types");
+        }
       }
     }
     return {};
@@ -31204,7 +31485,10 @@ var ConfigLoader = class {
       enableSecurity: this.parseBoolean(env.ENABLE_SECURITY),
       enableCaching: this.parseBoolean(env.ENABLE_CACHING),
       enableTestHints: this.parseBoolean(env.ENABLE_TEST_HINTS),
-      enableAiDetection: this.parseBoolean(env.ENABLE_AI_DETECTION)
+      enableAiDetection: this.parseBoolean(env.ENABLE_AI_DETECTION),
+      incrementalEnabled: this.parseBoolean(env.INCREMENTAL_ENABLED),
+      incrementalCacheTtlDays: this.parseNumber(env.INCREMENTAL_CACHE_TTL_DAYS),
+      dryRun: this.parseBoolean(env.DRY_RUN)
     };
   }
   static normalizeKeys(config) {
@@ -31234,7 +31518,10 @@ var ConfigLoader = class {
       enableSecurity: config.enable_security,
       enableCaching: config.enable_caching,
       enableTestHints: config.enable_test_hints,
-      enableAiDetection: config.enable_ai_detection
+      enableAiDetection: config.enable_ai_detection,
+      incrementalEnabled: config.incremental_enabled,
+      incrementalCacheTtlDays: config.incremental_cache_ttl_days,
+      dryRun: config.dry_run
     };
   }
   static merge(defaults, ...overrides) {
@@ -31300,40 +31587,6 @@ var RateLimitError = class extends Error {
   }
 };
 
-// src/utils/logger.ts
-var LEVELS = {
-  debug: 10,
-  info: 20,
-  warn: 30,
-  error: 40
-};
-var CURRENT_LEVEL = process.env.LOG_LEVEL || "info";
-function shouldLog(level) {
-  return LEVELS[level] >= LEVELS[CURRENT_LEVEL];
-}
-var logger = {
-  debug(message, ...args) {
-    if (shouldLog("debug")) {
-      console.debug(`DEBUG ${message}`, ...args);
-    }
-  },
-  info(message, ...args) {
-    if (shouldLog("info")) {
-      console.info(`INFO  ${message}`, ...args);
-    }
-  },
-  warn(message, ...args) {
-    if (shouldLog("warn")) {
-      console.warn(`WARN  ${message}`, ...args);
-    }
-  },
-  error(message, ...args) {
-    if (shouldLog("error")) {
-      console.error(`ERROR ${message}`, ...args);
-    }
-  }
-};
-
 // node_modules/p-retry/index.js
 var import_retry = __toESM(require_retry2(), 1);
 
@@ -31360,14 +31613,14 @@ var errorMessages = /* @__PURE__ */ new Set([
   "Network connection lost"
   // Cloudflare Workers (fetch)
 ]);
-function isNetworkError(error) {
-  const isValid2 = error && isError(error) && error.name === "TypeError" && typeof error.message === "string";
+function isNetworkError(error2) {
+  const isValid2 = error2 && isError(error2) && error2.name === "TypeError" && typeof error2.message === "string";
   if (!isValid2) {
     return false;
   }
-  const { message, stack } = error;
+  const { message, stack } = error2;
   if (message === "Load failed") {
-    return stack === void 0 || "__sentry_captured__" in error;
+    return stack === void 0 || "__sentry_captured__" in error2;
   }
   if (message.startsWith("error sending request for url")) {
     return true;
@@ -31390,11 +31643,11 @@ var AbortError = class extends Error {
     this.message = message;
   }
 };
-var decorateErrorWithCounts = (error, attemptNumber, options) => {
+var decorateErrorWithCounts = (error2, attemptNumber, options) => {
   const retriesLeft = options.retries - (attemptNumber - 1);
-  error.attemptNumber = attemptNumber;
-  error.retriesLeft = retriesLeft;
-  return error;
+  error2.attemptNumber = attemptNumber;
+  error2.retriesLeft = retriesLeft;
+  return error2;
 };
 async function pRetry(input, options) {
   return new Promise((resolve, reject) => {
@@ -31420,24 +31673,24 @@ async function pRetry(input, options) {
         const result = await input(attemptNumber);
         cleanUp();
         resolve(result);
-      } catch (error) {
+      } catch (error2) {
         try {
-          if (!(error instanceof Error)) {
-            throw new TypeError(`Non-error was thrown: "${error}". You should only throw errors.`);
+          if (!(error2 instanceof Error)) {
+            throw new TypeError(`Non-error was thrown: "${error2}". You should only throw errors.`);
           }
-          if (error instanceof AbortError) {
-            throw error.originalError;
+          if (error2 instanceof AbortError) {
+            throw error2.originalError;
           }
-          if (error instanceof TypeError && !isNetworkError(error)) {
-            throw error;
+          if (error2 instanceof TypeError && !isNetworkError(error2)) {
+            throw error2;
           }
-          decorateErrorWithCounts(error, attemptNumber, options);
-          if (!await options.shouldRetry(error)) {
+          decorateErrorWithCounts(error2, attemptNumber, options);
+          if (!await options.shouldRetry(error2)) {
             operation.stop();
-            reject(error);
+            reject(error2);
           }
-          await options.onFailedAttempt(error);
-          if (!operation.retry(error)) {
+          await options.onFailedAttempt(error2);
+          if (!operation.retry(error2)) {
             throw operation.mainError();
           }
         } catch (finalError) {
@@ -31460,8 +31713,8 @@ async function withRetry(fn, options) {
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         return await fn();
-      } catch (error) {
-        const err = error;
+      } catch (error2) {
+        const err = error2;
         if (!options.retryOn(err) || attempt === maxAttempts) {
           throw err;
         }
@@ -31476,10 +31729,10 @@ async function withRetry(fn, options) {
     factor: options.factor ?? 2,
     minTimeout: options.minTimeout ?? 500,
     maxTimeout: options.maxTimeout ?? 4e3,
-    onFailedAttempt: (error) => {
+    onFailedAttempt: (error2) => {
       logger.warn(
-        `Retryable error: attempt ${error.attemptNumber} of ${options.retries + 1}`,
-        error.message
+        `Retryable error: attempt ${error2.attemptNumber} of ${options.retries + 1}`,
+        error2.message
       );
     }
   });
@@ -31527,8 +31780,8 @@ var OpenRouterProvider = class _OpenRouterProvider extends Provider {
         }),
         {
           retries: 1,
-          retryOn: (error) => {
-            const err = error;
+          retryOn: (error2) => {
+            const err = error2;
             if (err instanceof RateLimitError)
               return false;
             if (err.name === "AbortError")
@@ -31585,8 +31838,8 @@ var OpenRouterProvider = class _OpenRouterProvider extends Provider {
       if (Array.isArray(parsed))
         return parsed;
       return parsed.findings || [];
-    } catch (error) {
-      logger.debug("Failed to parse findings from content", error);
+    } catch (error2) {
+      logger.debug("Failed to parse findings from content", error2);
       return [];
     }
   }
@@ -31598,8 +31851,8 @@ var OpenRouterProvider = class _OpenRouterProvider extends Provider {
       if (parsed.ai_likelihood !== void 0) {
         return { likelihood: parsed.ai_likelihood, reasoning: parsed.ai_reasoning };
       }
-    } catch (error) {
-      logger.debug("Failed to parse AI analysis from OpenRouter response", error);
+    } catch (error2) {
+      logger.debug("Failed to parse AI analysis from OpenRouter response", error2);
     }
     return void 0;
   }
@@ -31641,9 +31894,9 @@ var OpenCodeProvider = class extends Provider {
         durationSeconds,
         findings: this.extractFindings(content)
       };
-    } catch (error) {
-      logger.error(`OpenCode provider failed: ${this.name}`, error);
-      throw error;
+    } catch (error2) {
+      logger.error(`OpenCode provider failed: ${this.name}`, error2);
+      throw error2;
     } finally {
       try {
         await fs2.unlink(promptFile);
@@ -31701,13 +31954,17 @@ var OpenCodeProvider = class extends Provider {
     try {
       const match = content.match(/```json\s*([\s\S]*?)```/i);
       if (match) {
-        const parsed = JSON.parse(match[1]);
-        if (Array.isArray(parsed))
-          return parsed;
-        return parsed.findings || [];
+        const parsed2 = JSON.parse(match[1]);
+        if (Array.isArray(parsed2))
+          return parsed2;
+        return parsed2.findings || [];
       }
-    } catch (error) {
-      logger.debug("Failed to parse findings from OpenCode response", error);
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed))
+        return parsed;
+      return parsed.findings || [];
+    } catch (error2) {
+      logger.debug("Failed to parse findings from OpenCode response", error2);
     }
     return [];
   }
@@ -31939,8 +32196,8 @@ var ProviderRegistry = class {
       const unique = Array.from(new Set(free));
       const target = Math.max(8, Math.min(unique.length, 12));
       return unique.slice(0, target);
-    } catch (error) {
-      logger.warn("Error fetching OpenRouter models", error);
+    } catch (error2) {
+      logger.warn("Error fetching OpenRouter models", error2);
       return [];
     }
   }
@@ -31956,13 +32213,40 @@ function trimDiff(diff, maxBytes) {
   const buf = Buffer.from(diff, "utf8");
   if (buf.byteLength <= maxBytes)
     return diff;
-  const marker = Buffer.byteLength("\n...diff truncated...\n", "utf8");
-  const halfBytes = Math.floor((maxBytes - marker) / 2);
-  const head = buf.slice(0, halfBytes).toString("utf8");
-  const tail = buf.slice(Math.max(buf.byteLength - halfBytes, 0)).toString("utf8");
-  return `${head}
-...diff truncated...
-${tail}`;
+  const fileChunks = [];
+  const lines = diff.split("\n");
+  let currentChunk = [];
+  for (const line of lines) {
+    if (line.startsWith("diff --git ") && currentChunk.length > 0) {
+      fileChunks.push(currentChunk.join("\n"));
+      currentChunk = [line];
+    } else {
+      currentChunk.push(line);
+    }
+  }
+  if (currentChunk.length > 0) {
+    fileChunks.push(currentChunk.join("\n"));
+  }
+  const includedChunks = [];
+  let currentBytes = 0;
+  const truncationMarker = "\n\n...remaining files truncated to stay within size limit...\n";
+  const markerBytes = Buffer.byteLength(truncationMarker, "utf8");
+  for (const chunk of fileChunks) {
+    const chunkBytes = Buffer.byteLength(chunk, "utf8");
+    if (currentBytes + chunkBytes + markerBytes > maxBytes && includedChunks.length > 0) {
+      break;
+    }
+    includedChunks.push(chunk);
+    currentBytes += chunkBytes + 1;
+  }
+  if (includedChunks.length < fileChunks.length) {
+    const truncatedCount = fileChunks.length - includedChunks.length;
+    return includedChunks.join("\n") + `
+
+...${truncatedCount} file(s) truncated to stay within size limit...
+`;
+  }
+  return includedChunks.join("\n");
 }
 function mapAddedLines(patch) {
   if (!patch)
@@ -32021,19 +32305,40 @@ var PromptBuilder = class {
   }
   build(pr) {
     const diff = trimDiff(pr.diff, this.config.diffMaxBytes);
-    return [
+    const filesInDiff = /* @__PURE__ */ new Set();
+    const diffGitPattern = /^diff --git a\/(.+?) b\/(.+?)$/gm;
+    let match;
+    while ((match = diffGitPattern.exec(diff)) !== null) {
+      filesInDiff.add(match[2]);
+    }
+    const includedFiles = pr.files.filter((f) => filesInDiff.has(f.filename));
+    const excludedCount = pr.files.length - includedFiles.length;
+    const fileList = [
+      ...includedFiles.map((f) => `- ${f.filename} (${f.status}, +${f.additions}/-${f.deletions})`)
+    ];
+    if (excludedCount > 0) {
+      fileList.push(`  (${excludedCount} additional file(s) truncated)`);
+    }
+    const instructions = [
       "You are a senior engineer performing a pull request review.",
       "Identify critical, major, and minor issues. Include actionable suggestions when possible.",
       "Return JSON with findings: [{file, line, severity, title, message, suggestion?}] and optional ai_likelihood/ai_reasoning.",
       "",
+      "IMPORTANT RULES:",
+      "- ONLY review files that have diffs shown below",
+      '- DO NOT report "missing file" issues - all files listed are intentionally included',
+      '- DO NOT report issues about files being "referenced but not in diff"',
+      "- Focus on actual code quality, security, and correctness issues in the provided diffs",
+      "",
       `PR #${pr.number}: ${pr.title}`,
       `Author: ${pr.author}`,
       "Files changed:",
-      ...pr.files.map((f) => `- ${f.filename} (${f.status}, +${f.additions}/-${f.deletions})`),
+      ...fileList,
       "",
       "Diff:",
       diff
-    ].join("\n");
+    ];
+    return instructions.join("\n");
   }
 };
 
@@ -32091,8 +32396,8 @@ function pTimeout(promise, options) {
       if (fallback) {
         try {
           resolve(fallback());
-        } catch (error) {
-          reject(error);
+        } catch (error2) {
+          reject(error2);
         }
         return;
       }
@@ -32111,8 +32416,8 @@ function pTimeout(promise, options) {
     (async () => {
       try {
         resolve(await promise);
-      } catch (error) {
-        reject(error);
+      } catch (error2) {
+        reject(error2);
       }
     })();
   });
@@ -32405,13 +32710,13 @@ var PQueue = class extends import_index.default {
           const result = await operation;
           resolve(result);
           this.emit("completed", result);
-        } catch (error) {
-          if (error instanceof TimeoutError && !options.throwOnTimeout) {
+        } catch (error2) {
+          if (error2 instanceof TimeoutError && !options.throwOnTimeout) {
             resolve();
             return;
           }
-          reject(error);
-          this.emit("error", error);
+          reject(error2);
+          this.emit("error", error2);
         } finally {
           this.#next();
         }
@@ -32542,10 +32847,10 @@ var LLMExecutor = class {
         try {
           const result = await withRetry(runner, {
             retries: Math.max(0, this.config.providerRetries - 1),
-            retryOn: (error) => {
-              if (error instanceof RateLimitError)
+            retryOn: (error2) => {
+              if (error2 instanceof RateLimitError)
                 return false;
-              if (error.message.includes("timed out after"))
+              if (error2.message.includes("timed out after"))
                 return false;
               return true;
             }
@@ -32556,8 +32861,8 @@ var LLMExecutor = class {
             result,
             durationSeconds: (Date.now() - started) / 1e3
           });
-        } catch (error) {
-          const err = error;
+        } catch (error2) {
+          const err = error2;
           let status = "error";
           if (err instanceof RateLimitError) {
             status = "rate-limited";
@@ -33096,6 +33401,7 @@ var CacheStorage = class {
   constructor(baseDir = path5.join(process.cwd(), ".mpr-cache")) {
     this.baseDir = baseDir;
   }
+  locks = /* @__PURE__ */ new Map();
   async read(key) {
     const file = path5.join(this.baseDir, `${key}.json`);
     try {
@@ -33105,10 +33411,36 @@ var CacheStorage = class {
     }
   }
   async write(key, value) {
-    const file = path5.join(this.baseDir, `${key}.json`);
-    await fs5.mkdir(this.baseDir, { recursive: true });
-    await fs5.writeFile(file, value, "utf8");
-    logger.info(`Cached results at ${file}`);
+    await this.acquireLock(key);
+    try {
+      const file = path5.join(this.baseDir, `${key}.json`);
+      await fs5.mkdir(this.baseDir, { recursive: true });
+      await fs5.writeFile(file, value, "utf8");
+      logger.info(`Cached results at ${file}`);
+    } finally {
+      this.releaseLock(key);
+    }
+  }
+  async acquireLock(key) {
+    const existingLock = this.locks.get(key);
+    if (existingLock) {
+      await existingLock.promise;
+    }
+    let resolver;
+    const lockPromise = new Promise((resolve) => {
+      resolver = resolve;
+    });
+    this.locks.set(key, {
+      promise: lockPromise,
+      resolve: resolver
+    });
+  }
+  releaseLock(key) {
+    const lock = this.locks.get(key);
+    if (lock) {
+      lock.resolve();
+      this.locks.delete(key);
+    }
   }
 };
 
@@ -33133,8 +33465,8 @@ var CacheManager = class {
       const parsed = JSON.parse(raw);
       logger.info(`Loaded cached findings for ${key}`);
       return parsed.findings;
-    } catch (error) {
-      logger.warn("Failed to parse cache payload", error);
+    } catch (error2) {
+      logger.warn("Failed to parse cache payload", error2);
       return null;
     }
   }
@@ -33145,6 +33477,163 @@ var CacheManager = class {
       timestamp: Date.now()
     };
     await this.storage.write(key, JSON.stringify(payload));
+  }
+};
+
+// src/cache/incremental.ts
+var import_child_process2 = require("child_process");
+var IncrementalReviewer = class _IncrementalReviewer {
+  constructor(storage = new CacheStorage(), config = { enabled: true, cacheTtlDays: 7 }) {
+    this.storage = storage;
+    this.config = config;
+  }
+  static CACHE_KEY_PREFIX = "incremental-review-pr-";
+  static DEFAULT_TTL_DAYS = 7;
+  static MS_PER_DAY = 24 * 60 * 60 * 1e3;
+  /**
+   * Check if incremental review should be used for this PR
+   */
+  async shouldUseIncremental(pr) {
+    if (!this.config.enabled) {
+      logger.debug("Incremental review disabled by configuration");
+      return false;
+    }
+    const lastReview = await this.getLastReview(pr.number);
+    if (!lastReview) {
+      logger.debug("No previous review found, running full review");
+      return false;
+    }
+    const ageMs = Date.now() - lastReview.timestamp;
+    const ttlMs = this.config.cacheTtlDays * _IncrementalReviewer.MS_PER_DAY;
+    if (ageMs > ttlMs) {
+      const ageMinutes = Math.round(ageMs / 1e3 / 60);
+      logger.debug(`Cache expired (age: ${ageMinutes} minutes, TTL: ${this.config.cacheTtlDays} days)`);
+      return false;
+    }
+    if (lastReview.lastReviewedCommit === pr.headSha) {
+      logger.debug("PR head SHA unchanged since last review");
+      return false;
+    }
+    logger.info(`Incremental review available from ${lastReview.lastReviewedCommit.substring(0, 7)} to ${pr.headSha.substring(0, 7)}`);
+    return true;
+  }
+  /**
+   * Get the last review data for a PR
+   */
+  async getLastReview(prNumber) {
+    const key = this.buildCacheKey(prNumber);
+    const raw = await this.storage.read(key);
+    if (!raw)
+      return null;
+    try {
+      const data = JSON.parse(raw);
+      return data;
+    } catch (error2) {
+      logger.warn("Failed to parse incremental cache", error2);
+      return null;
+    }
+  }
+  /**
+   * Save review data for incremental updates
+   */
+  async saveReview(pr, review) {
+    const key = this.buildCacheKey(pr.number);
+    const data = {
+      prNumber: pr.number,
+      lastReviewedCommit: pr.headSha,
+      timestamp: Date.now(),
+      findings: review.findings,
+      reviewSummary: review.summary
+    };
+    await this.storage.write(key, JSON.stringify(data));
+    logger.info(`Saved incremental review data for PR #${pr.number} at commit ${pr.headSha.substring(0, 7)}`);
+  }
+  /**
+   * Validate that a string is a valid git SHA
+   */
+  isValidSha(sha) {
+    return /^[a-f0-9]{4,40}$/i.test(sha);
+  }
+  /**
+   * Get list of files changed since the last review
+   */
+  async getChangedFilesSince(pr, lastCommit) {
+    try {
+      if (!this.isValidSha(lastCommit)) {
+        throw new Error(`Invalid commit SHA: ${lastCommit}`);
+      }
+      if (!this.isValidSha(pr.headSha)) {
+        throw new Error(`Invalid PR head SHA: ${pr.headSha}`);
+      }
+      logger.debug(`Running git diff --name-status ${lastCommit.substring(0, 7)}...${pr.headSha.substring(0, 7)}`);
+      const output = (0, import_child_process2.execFileSync)("git", ["diff", "--name-status", `${lastCommit}...${pr.headSha}`], {
+        encoding: "utf8",
+        cwd: process.cwd()
+      });
+      const changedFiles = [];
+      const lines = output.trim().split("\n").filter(Boolean);
+      for (const line of lines) {
+        const pathParts = line.split("	").slice(1);
+        const filename = pathParts.join("	");
+        const prFile = pr.files.find((f) => f.filename === filename);
+        if (prFile) {
+          changedFiles.push(prFile);
+        } else {
+          logger.debug(`File ${filename} in diff but not in PR files`);
+        }
+      }
+      logger.info(`Found ${changedFiles.length} changed files since ${lastCommit.substring(0, 7)}`);
+      return changedFiles;
+    } catch (error2) {
+      logger.error("Failed to get changed files from git diff", error2);
+      logger.warn(`Falling back to full review (${pr.files.length} files) due to git diff failure`);
+      return pr.files;
+    }
+  }
+  /**
+   * Merge findings from previous review with new findings
+   *
+   * Strategy:
+   * 1. Keep findings from unchanged files
+   * 2. Remove findings from changed files (they'll be replaced by new review)
+   * 3. Add new findings from current review
+   */
+  mergeFindings(previousFindings, newFindings, changedFiles) {
+    const changedFilenames = new Set(changedFiles.map((f) => f.filename));
+    const keptFindings = previousFindings.filter((f) => !changedFilenames.has(f.file));
+    const merged = [...keptFindings, ...newFindings];
+    logger.info(
+      `Merged findings: ${keptFindings.length} kept from unchanged files, ${newFindings.length} new from review, total ${merged.length}`
+    );
+    return merged;
+  }
+  /**
+   * Generate incremental review summary
+   */
+  generateIncrementalSummary(previousSummary, newSummary, changedFiles, lastCommit, currentCommit) {
+    const incrementalNote = `
+## \u{1F504} Incremental Review
+
+This is an incremental review covering changes from \`${lastCommit.substring(0, 7)}\` to \`${currentCommit.substring(0, 7)}\`.
+
+**Files reviewed in this update:** ${changedFiles.length}
+${changedFiles.map((f) => `- ${f.filename}`).join("\n")}
+
+---
+
+${newSummary}
+
+<details>
+<summary>Previous Review Summary</summary>
+
+${previousSummary}
+
+</details>
+`;
+    return incrementalNote;
+  }
+  buildCacheKey(prNumber) {
+    return `${_IncrementalReviewer.CACHE_KEY_PREFIX}${prNumber}`;
   }
 };
 
@@ -33171,6 +33660,14 @@ var CostTracker = class {
       totalTokens: this.totalTokens,
       breakdown: this.breakdown
     };
+  }
+  /**
+   * Reset accumulated cost data
+   */
+  reset() {
+    this.totalCost = 0;
+    this.totalTokens = 0;
+    this.breakdown = {};
   }
 };
 
@@ -33317,25 +33814,77 @@ var PullRequestLoader = class {
 
 // src/github/comment-poster.ts
 var CommentPoster = class _CommentPoster {
-  constructor(client) {
+  constructor(client, dryRun = false) {
     this.client = client;
+    this.dryRun = dryRun;
   }
   static MAX_COMMENT_SIZE = 6e4;
-  async postSummary(prNumber, body) {
+  static BOT_COMMENT_MARKER = "<!-- multi-provider-code-review-bot -->";
+  async postSummary(prNumber, body, updateExisting = true) {
     const chunks = this.chunk(body);
+    if (this.dryRun) {
+      logger.info(`[DRY RUN] Would post ${chunks.length} summary comment(s) to PR #${prNumber}`);
+      for (let i = 0; i < chunks.length; i++) {
+        const header = chunks.length > 1 ? `## Review Summary (Part ${i + 1}/${chunks.length})
+
+` : "";
+        const content = header + chunks[i];
+        logger.info(`[DRY RUN] Summary comment ${i + 1}:
+${content.substring(0, 500)}...`);
+      }
+      return;
+    }
     const { octokit, owner, repo } = this.client;
+    if (updateExisting) {
+      const existingComment = await this.findBotComment(prNumber);
+      if (existingComment) {
+        logger.info(`Found existing review comment ${existingComment.id}, updating it`);
+        const markedBody = _CommentPoster.BOT_COMMENT_MARKER + "\n\n" + chunks[0];
+        await withRetry(
+          () => octokit.rest.issues.updateComment({
+            owner,
+            repo,
+            comment_id: existingComment.id,
+            body: markedBody
+          }),
+          { retries: 2, minTimeout: 1e3, maxTimeout: 5e3 }
+        );
+        return;
+      }
+    }
     for (let i = 0; i < chunks.length; i++) {
       const header = chunks.length > 1 ? `## Review Summary (Part ${i + 1}/${chunks.length})
 
 ` : "";
-      const content = header + chunks[i];
+      const markedBody = _CommentPoster.BOT_COMMENT_MARKER + "\n\n" + header + chunks[i];
       await withRetry(
-        () => octokit.rest.issues.createComment({ owner, repo, issue_number: prNumber, body: content }),
+        () => octokit.rest.issues.createComment({ owner, repo, issue_number: prNumber, body: markedBody }),
         { retries: 2, minTimeout: 1e3, maxTimeout: 5e3 }
       );
       if (i < chunks.length - 1) {
         await new Promise((resolve) => setTimeout(resolve, 1e3));
       }
+    }
+  }
+  /**
+   * Find the bot's review comment on a PR
+   */
+  async findBotComment(prNumber) {
+    const { octokit, owner, repo } = this.client;
+    try {
+      const comments = await withRetry(
+        () => octokit.rest.issues.listComments({ owner, repo, issue_number: prNumber, per_page: 100 }),
+        { retries: 2, minTimeout: 1e3, maxTimeout: 5e3 }
+      );
+      for (const comment of comments.data) {
+        if (comment.body?.includes(_CommentPoster.BOT_COMMENT_MARKER)) {
+          return { id: comment.id, body: comment.body };
+        }
+      }
+      return null;
+    } catch (error2) {
+      logger.warn("Failed to find existing bot comment", error2);
+      return null;
     }
   }
   async postInline(prNumber, comments, files) {
@@ -33356,6 +33905,14 @@ var CommentPoster = class _CommentPoster {
     }).filter((c) => c !== null);
     if (apiComments.length === 0) {
       logger.info("No inline comments with valid diff positions to post");
+      return;
+    }
+    if (this.dryRun) {
+      logger.info(`[DRY RUN] Would post ${apiComments.length} inline comment(s) to PR #${prNumber}`);
+      for (const comment of apiComments) {
+        logger.info(`[DRY RUN] Inline comment at ${comment.path}:${comment.position}:
+${comment.body.substring(0, 200)}...`);
+      }
       return;
     }
     const { octokit, owner, repo } = this.client;
@@ -33720,12 +34277,12 @@ var FeedbackFilter = class {
             const signature = this.signatureFromComment(comment.path, comment.line, comment.body || "");
             suppressed.add(signature);
           }
-        } catch (error) {
-          logger.warn(`Failed to load reactions for comment ${comment.id}`, error);
+        } catch (error2) {
+          logger.warn(`Failed to load reactions for comment ${comment.id}`, error2);
         }
       }
-    } catch (error) {
-      logger.warn("Failed to load review comments for feedback filter", error);
+    } catch (error2) {
+      logger.warn("Failed to load review comments for feedback filter", error2);
     }
     return suppressed;
   }
@@ -33755,13 +34312,17 @@ function createComponents(config, githubToken) {
   const testCoverage = new TestCoverageAnalyzer();
   const astAnalyzer = new ASTAnalyzer();
   const cache = new CacheManager();
+  const incrementalReviewer = new IncrementalReviewer(new CacheStorage(), {
+    enabled: config.incrementalEnabled,
+    cacheTtlDays: config.incrementalCacheTtlDays
+  });
   const pricing = new PricingService(process.env.OPENROUTER_API_KEY);
   const costTracker = new CostTracker(pricing);
   const security = new SecurityScanner();
   const rules = RuleLoader.load();
   const githubClient = new GitHubClient(githubToken);
   const prLoader = new PullRequestLoader(githubClient);
-  const commentPoster = new CommentPoster(githubClient);
+  const commentPoster = new CommentPoster(githubClient, config.dryRun);
   const formatter = new MarkdownFormatter();
   const contextRetriever = new ContextRetriever();
   const impactAnalyzer = new ImpactAnalyzer();
@@ -33779,6 +34340,7 @@ function createComponents(config, githubToken) {
     testCoverage,
     astAnalyzer,
     cache,
+    incrementalReviewer,
     costTracker,
     security,
     rules,
@@ -33891,28 +34453,53 @@ var ReviewOrchestrator = class {
     this.components = components;
   }
   async execute(prNumber) {
-    const { config } = this.components;
-    const start = Date.now();
     const pr = await this.components.prLoader.load(prNumber);
     const skipReason = this.shouldSkip(pr);
     if (skipReason) {
       logger.info(`Skipping review: ${skipReason}`);
       return null;
     }
-    const cachedFindings = config.enableCaching ? await this.components.cache.load(pr) : null;
-    const providers = await this.components.providerRegistry.createProviders(config);
-    const prompt = this.components.promptBuilder.build(pr);
-    await this.ensureBudget(config);
-    const astFindings = config.enableAstAnalysis ? this.components.astAnalyzer.analyze(pr.files) : [];
-    const ruleFindings = this.components.rules.run(pr.files);
-    const securityFindings = config.enableSecurity ? this.components.security.scan(pr.files) : [];
-    const context2 = this.components.contextRetriever.findRelatedContext(pr.files);
-    const providerResults = await this.components.llmExecutor.execute(providers, prompt);
-    const llmFindings = extractFindings(providerResults);
-    const aiAnalysis = config.enableAiDetection ? summarizeAIDetection(providerResults) : void 0;
-    for (const result of providerResults) {
-      await this.components.costTracker.record(result.name, result.result?.usage);
+    return this.executeReview(pr);
+  }
+  /**
+   * Execute review on a given PR context
+   * Can be called directly with a PRContext from CLI or GitHub
+   */
+  async executeReview(pr) {
+    const { config } = this.components;
+    const start = Date.now();
+    const useIncremental = await this.components.incrementalReviewer.shouldUseIncremental(pr);
+    let filesToReview = pr.files;
+    let lastReviewData = null;
+    if (useIncremental) {
+      lastReviewData = await this.components.incrementalReviewer.getLastReview(pr.number);
+      if (lastReviewData) {
+        filesToReview = await this.components.incrementalReviewer.getChangedFilesSince(pr, lastReviewData.lastReviewedCommit);
+        logger.info(`Incremental review: reviewing ${filesToReview.length} changed files`);
+      }
     }
+    const cachedFindings = config.enableCaching ? await this.components.cache.load(pr) : null;
+    const reviewPR = useIncremental ? { ...pr, files: filesToReview, diff: this.filterDiffByFiles(pr.diff, filesToReview) } : pr;
+    let llmFindings = [];
+    let providerResults = [];
+    let aiAnalysis;
+    const providers = await this.components.providerRegistry.createProviders(config);
+    if (filesToReview.length === 0) {
+      logger.info("No files to review in incremental update, using cached findings only");
+    } else {
+      const prompt = this.components.promptBuilder.build(reviewPR);
+      await this.ensureBudget(config);
+      providerResults = await this.components.llmExecutor.execute(providers, prompt);
+      llmFindings = extractFindings(providerResults);
+      aiAnalysis = config.enableAiDetection ? summarizeAIDetection(providerResults) : void 0;
+      for (const result of providerResults) {
+        await this.components.costTracker.record(result.name, result.result?.usage);
+      }
+    }
+    const astFindings = config.enableAstAnalysis ? this.components.astAnalyzer.analyze(filesToReview) : [];
+    const ruleFindings = this.components.rules.run(filesToReview);
+    const securityFindings = config.enableSecurity ? this.components.security.scan(filesToReview) : [];
+    const context2 = this.components.contextRetriever.findRelatedContext(filesToReview);
     const combinedFindings = [
       ...astFindings,
       ...ruleFindings,
@@ -33949,7 +34536,7 @@ var ReviewOrchestrator = class {
     };
     const review = this.components.synthesis.synthesize(
       quietFiltered,
-      pr,
+      reviewPR,
       testHints,
       aiAnalysis,
       providerResults,
@@ -33957,6 +34544,25 @@ var ReviewOrchestrator = class {
       impactAnalysis,
       mermaidDiagram
     );
+    if (useIncremental && lastReviewData) {
+      review.findings = this.components.incrementalReviewer.mergeFindings(
+        lastReviewData.findings,
+        review.findings,
+        filesToReview
+      );
+      review.summary = this.components.incrementalReviewer.generateIncrementalSummary(
+        lastReviewData.reviewSummary,
+        review.summary,
+        filesToReview,
+        lastReviewData.lastReviewedCommit,
+        pr.headSha
+      );
+      review.metrics.totalFindings = review.findings.length;
+      review.metrics.critical = review.findings.filter((f) => f.severity === "critical").length;
+      review.metrics.major = review.findings.filter((f) => f.severity === "major").length;
+      review.metrics.minor = review.findings.filter((f) => f.severity === "minor").length;
+      logger.info(`Incremental review completed: ${review.findings.length} total findings after merge`);
+    }
     review.metrics.totalCost = costSummary.totalCost;
     review.metrics.totalTokens = costSummary.totalTokens;
     review.metrics.providersUsed = providers.length;
@@ -33970,13 +34576,23 @@ var ReviewOrchestrator = class {
     if (config.enableCaching) {
       await this.components.cache.save(pr, review);
     }
+    if (config.incrementalEnabled) {
+      await this.components.incrementalReviewer.saveReview(pr, review);
+    }
     const markdown = this.components.formatter.format(review);
     const suppressed = await this.components.feedbackFilter.loadSuppressed(pr.number);
     const inlineFiltered = review.inlineComments.filter((c) => this.components.feedbackFilter.shouldPost(c, suppressed));
-    await this.components.commentPoster.postSummary(pr.number, markdown);
+    await this.components.commentPoster.postSummary(pr.number, markdown, useIncremental);
     await this.components.commentPoster.postInline(pr.number, inlineFiltered, pr.files);
     await this.writeReports(review);
     return review;
+  }
+  /**
+   * Cleanup resources after review to prevent memory leaks in long-running processes
+   */
+  async dispose() {
+    this.components.costTracker.reset();
+    logger.debug("Orchestrator resources disposed");
   }
   shouldSkip(pr) {
     const { config } = this.components;
@@ -34010,6 +34626,46 @@ var ReviewOrchestrator = class {
   }
   estimateTokens(text) {
     return Math.ceil(Buffer.byteLength(text, "utf8") / 4);
+  }
+  /**
+   * Filter diff to only include files that changed
+   * Used for incremental reviews to send only relevant diffs to LLMs
+   * Uses indexOf instead of regex to avoid ReDoS and improve memory efficiency
+   */
+  filterDiffByFiles(diff, files) {
+    if (files.length === 0)
+      return "";
+    const fileNames = new Set(files.map((f) => f.filename));
+    const diffChunks = [];
+    const DIFF_MARKER = "diff --git ";
+    let startIdx = 0;
+    while (startIdx < diff.length) {
+      const markerIdx = diff.indexOf(DIFF_MARKER, startIdx);
+      if (markerIdx === -1)
+        break;
+      if (markerIdx > 0 && diff[markerIdx - 1] !== "\n") {
+        startIdx = markerIdx + DIFF_MARKER.length;
+        continue;
+      }
+      let nextIdx = diff.indexOf("\n" + DIFF_MARKER, markerIdx + 1);
+      if (nextIdx === -1) {
+        nextIdx = diff.length;
+      } else {
+        nextIdx += 1;
+      }
+      const chunk = diff.substring(markerIdx, nextIdx);
+      const firstLineEnd = chunk.indexOf("\n");
+      const firstLine = firstLineEnd === -1 ? chunk : chunk.substring(0, firstLineEnd);
+      const bIndex = firstLine.indexOf(" b/");
+      if (bIndex !== -1) {
+        const filename = firstLine.substring(bIndex + 3).trim();
+        if (fileNames.has(filename)) {
+          diffChunks.push(chunk);
+        }
+      }
+      startIdx = nextIdx;
+    }
+    return diffChunks.join("");
   }
   enrichFinding(finding, files, context2, providerCount) {
     const file = files.find((f) => f.filename === finding.file);
@@ -34078,7 +34734,10 @@ function syncEnvFromInputs() {
     "ENABLE_CACHING",
     "ENABLE_TEST_HINTS",
     "ENABLE_AI_DETECTION",
-    "REPORT_BASENAME"
+    "INCREMENTAL_ENABLED",
+    "INCREMENTAL_CACHE_TTL_DAYS",
+    "REPORT_BASENAME",
+    "DRY_RUN"
   ];
   for (const key of inputKeys) {
     const value = core3.getInput(key);
@@ -34091,19 +34750,15 @@ async function run() {
   try {
     syncEnvFromInputs();
     const token = core3.getInput("GITHUB_TOKEN") || process.env.GITHUB_TOKEN;
-    if (!token) {
-      throw new Error("GITHUB_TOKEN is required");
-    }
+    validateRequired(token, "GITHUB_TOKEN");
     const config = ConfigLoader.load();
     const components = createComponents(config, token);
     const orchestrator = new ReviewOrchestrator(components);
     const prInput = core3.getInput("PR_NUMBER") || process.env.PR_NUMBER;
-    if (!prInput) {
-      throw new Error("PR_NUMBER is required");
-    }
-    const prNumber = parseInt(prInput, 10);
-    if (Number.isNaN(prNumber) || prNumber <= 0) {
-      throw new Error(`Invalid PR_NUMBER: ${prInput}. Must be a positive integer.`);
+    validateRequired(prInput, "PR_NUMBER");
+    const prNumber = validatePositiveInteger(prInput, "PR_NUMBER");
+    if (config.dryRun) {
+      core3.info("\u{1F50D} DRY RUN MODE - Review will run but no comments will be posted");
     }
     core3.info(`Starting review for PR #${prNumber}`);
     const review = await orchestrator.execute(prNumber);
@@ -34119,15 +34774,31 @@ async function run() {
       core3.setOutput("ai_likelihood", review.aiAnalysis.averageLikelihood);
     }
     core3.info("Review completed successfully");
-  } catch (error) {
-    core3.setFailed(`Review failed: ${error.message}`);
+  } catch (error2) {
+    const err = error2;
+    if (error2 instanceof ValidationError) {
+      const formatted = formatValidationError(error2);
+      core3.setFailed(`Configuration error:
+${formatted}`);
+    } else {
+      core3.setFailed(`Review failed: ${err.message}`);
+      if (err.message.includes("ENOENT")) {
+        core3.error("File not found. Check that all file paths are correct.");
+      } else if (err.message.includes("EACCES")) {
+        core3.error("Permission denied. Check file permissions.");
+      } else if (err.message.includes("rate limit")) {
+        core3.error("API rate limit exceeded. Consider using caching or reducing provider count.");
+      } else if (err.message.includes("timeout")) {
+        core3.error("Operation timed out. Consider increasing the timeout value.");
+      }
+    }
     process.exit(1);
   }
 }
 run().then(() => {
   process.exit(0);
-}).catch((error) => {
-  core3.setFailed(`Unhandled error: ${error.message}`);
+}).catch((error2) => {
+  core3.setFailed(`Unhandled error: ${error2.message}`);
   process.exit(1);
 });
 /*! Bundled license information:

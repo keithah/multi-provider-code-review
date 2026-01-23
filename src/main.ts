@@ -2,6 +2,7 @@ import * as core from '@actions/core';
 import { ConfigLoader } from './config/loader';
 import { createComponents } from './setup';
 import { ReviewOrchestrator } from './core/orchestrator';
+import { validateRequired, validatePositiveInteger, ValidationError, formatValidationError } from './utils/validation';
 
 function syncEnvFromInputs(): void {
   const inputKeys = [
@@ -27,7 +28,10 @@ function syncEnvFromInputs(): void {
     'ENABLE_CACHING',
     'ENABLE_TEST_HINTS',
     'ENABLE_AI_DETECTION',
+    'INCREMENTAL_ENABLED',
+    'INCREMENTAL_CACHE_TTL_DAYS',
     'REPORT_BASENAME',
+    'DRY_RUN',
   ];
 
   for (const key of inputKeys) {
@@ -43,21 +47,19 @@ async function run(): Promise<void> {
     syncEnvFromInputs();
     const token = core.getInput('GITHUB_TOKEN') || process.env.GITHUB_TOKEN;
 
-    if (!token) {
-      throw new Error('GITHUB_TOKEN is required');
-    }
+    validateRequired(token, 'GITHUB_TOKEN');
 
     const config = ConfigLoader.load();
-    const components = createComponents(config, token);
+    const components = createComponents(config, token!);
     const orchestrator = new ReviewOrchestrator(components);
 
     const prInput = core.getInput('PR_NUMBER') || process.env.PR_NUMBER;
-    if (!prInput) {
-      throw new Error('PR_NUMBER is required');
-    }
-    const prNumber = parseInt(prInput, 10);
-    if (Number.isNaN(prNumber) || prNumber <= 0) {
-      throw new Error(`Invalid PR_NUMBER: ${prInput}. Must be a positive integer.`);
+    validateRequired(prInput, 'PR_NUMBER');
+
+    const prNumber = validatePositiveInteger(prInput, 'PR_NUMBER');
+
+    if (config.dryRun) {
+      core.info('🔍 DRY RUN MODE - Review will run but no comments will be posted');
     }
 
     core.info(`Starting review for PR #${prNumber}`);
@@ -78,7 +80,26 @@ async function run(): Promise<void> {
 
     core.info('Review completed successfully');
   } catch (error) {
-    core.setFailed(`Review failed: ${(error as Error).message}`);
+    const err = error as Error;
+
+    if (error instanceof ValidationError) {
+      const formatted = formatValidationError(error);
+      core.setFailed(`Configuration error:\n${formatted}`);
+    } else {
+      core.setFailed(`Review failed: ${err.message}`);
+
+      // Add helpful context for common errors
+      if (err.message.includes('ENOENT')) {
+        core.error('File not found. Check that all file paths are correct.');
+      } else if (err.message.includes('EACCES')) {
+        core.error('Permission denied. Check file permissions.');
+      } else if (err.message.includes('rate limit')) {
+        core.error('API rate limit exceeded. Consider using caching or reducing provider count.');
+      } else if (err.message.includes('timeout')) {
+        core.error('Operation timed out. Consider increasing the timeout value.');
+      }
+    }
+
     process.exit(1);
   }
 }

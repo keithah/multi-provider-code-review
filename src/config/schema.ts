@@ -32,6 +32,11 @@ export const ReviewConfigSchema = z.object({
   enable_caching: z.boolean().optional(),
   enable_test_hints: z.boolean().optional(),
   enable_ai_detection: z.boolean().optional(),
+
+  incremental_enabled: z.boolean().optional(),
+  incremental_cache_ttl_days: z.number().int().min(1).max(30).optional(),
+
+  dry_run: z.boolean().optional(),
 });
 
 export type ReviewConfigFile = z.infer<typeof ReviewConfigSchema>;

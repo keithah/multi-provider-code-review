@@ -6,3 +6,7 @@ dist/**
 .mpr-cache
 npm-debug.log*
 .DS_Store
+
+# Generated review output files
+*.sarif
+multi-provider-review.json

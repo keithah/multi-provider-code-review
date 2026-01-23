@@ -4,6 +4,8 @@ import * as yaml from 'js-yaml';
 import { ReviewConfig } from '../types';
 import { DEFAULT_CONFIG } from './defaults';
 import { ReviewConfigSchema, ReviewConfigFile } from './schema';
+import { validateConfig, ValidationError } from '../utils/validation';
+import { logger } from '../utils/logger';
 
 export class ConfigLoader {
   private static readonly CONFIG_PATHS = [
@@ -17,7 +19,23 @@ export class ConfigLoader {
     const fileConfig = this.loadFromFile();
     const envConfig = this.loadFromEnv();
 
-    return this.merge(DEFAULT_CONFIG, fileConfig, envConfig);
+    const merged = this.merge(DEFAULT_CONFIG, fileConfig, envConfig);
+
+    // Validate final configuration
+    try {
+      validateConfig(merged as unknown as Record<string, unknown>);
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        throw new ValidationError(
+          `Invalid configuration: ${error.message}`,
+          error.field,
+          error.hint
+        );
+      }
+      throw error;
+    }
+
+    return merged;
   }
 
   private static loadFromFile(): Partial<ReviewConfig> {
@@ -31,7 +49,13 @@ export class ConfigLoader {
         const validated = ReviewConfigSchema.parse(parsed);
         return this.normalizeKeys(validated);
       } catch (error) {
-        console.warn(`Failed to read config ${relPath}:`, error);
+        const err = error as Error;
+        logger.warn(`⚠️  Failed to load config from ${relPath}: ${err.message}`);
+        if (err.message.includes('YAMLException')) {
+          logger.warn('💡 Check for YAML syntax errors (indentation, colons, quotes)');
+        } else if (err.message.includes('parse')) {
+          logger.warn('💡 Check that all values match expected types');
+        }
       }
     }
 
@@ -73,6 +97,11 @@ export class ConfigLoader {
       enableCaching: this.parseBoolean(env.ENABLE_CACHING),
       enableTestHints: this.parseBoolean(env.ENABLE_TEST_HINTS),
       enableAiDetection: this.parseBoolean(env.ENABLE_AI_DETECTION),
+
+      incrementalEnabled: this.parseBoolean(env.INCREMENTAL_ENABLED),
+      incrementalCacheTtlDays: this.parseNumber(env.INCREMENTAL_CACHE_TTL_DAYS),
+
+      dryRun: this.parseBoolean(env.DRY_RUN),
     };
   }
 
@@ -104,6 +133,9 @@ export class ConfigLoader {
       enableCaching: config.enable_caching,
       enableTestHints: config.enable_test_hints,
       enableAiDetection: config.enable_ai_detection,
+      incrementalEnabled: config.incremental_enabled,
+      incrementalCacheTtlDays: config.incremental_cache_ttl_days,
+      dryRun: config.dry_run,
     };
   }
 
