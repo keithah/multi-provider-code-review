@@ -312,17 +312,17 @@ export class CodeGraphBuilder {
     );
 
     // Copy Maps from working graph to final graph
-    // @ts-expect-error - accessing private fields for copying
+    // @ts-expect-error - accessing private field definitions to copy graph data
     finalGraph.definitions = graph.definitions;
-    // @ts-expect-error
+    // @ts-expect-error - accessing private field imports to copy graph data
     finalGraph.imports = graph.imports;
-    // @ts-expect-error
+    // @ts-expect-error - accessing private field exports to copy graph data
     finalGraph.exports = graph.exports;
-    // @ts-expect-error
+    // @ts-expect-error - accessing private field calls to copy graph data
     finalGraph.calls = graph.calls;
-    // @ts-expect-error
+    // @ts-expect-error - accessing private field callers to copy graph data
     finalGraph.callers = graph.callers;
-    // @ts-expect-error
+    // @ts-expect-error - accessing private field fileSymbols to copy graph data
     finalGraph.fileSymbols = graph.fileSymbols;
 
     logger.info(`Code graph built in ${buildTime}ms: ${graph.getStats().definitions} definitions, ${graph.getStats().imports} imports`);
