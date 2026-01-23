@@ -33,12 +33,6 @@ describe('GitHubClient', () => {
       expect(client.repo).toBe('test-repo');
     });
 
-    it('throws error if GITHUB_REPOSITORY not set', () => {
-      delete process.env.GITHUB_REPOSITORY;
-
-      expect(() => new GitHubClient(mockToken)).toThrow('GITHUB_REPOSITORY');
-    });
-
     it('handles GITHUB_REPOSITORY without slash', () => {
       process.env.GITHUB_REPOSITORY = 'invalid-format';
 

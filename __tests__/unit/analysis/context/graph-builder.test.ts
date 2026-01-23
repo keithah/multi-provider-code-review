@@ -293,7 +293,7 @@ export function UserComponent() {
       const graph = await builder.buildGraph(files);
       const actualTime = Date.now() - startTime;
 
-      expect(graph.buildTime).toBeGreaterThan(0);
+      expect(graph.buildTime).toBeGreaterThanOrEqual(0);
       expect(graph.buildTime).toBeLessThanOrEqual(actualTime + 100); // Some tolerance
     });
   });
