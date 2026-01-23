@@ -27044,13 +27044,18 @@ var safeDump = renamed("safeDump", "dump");
 // src/config/defaults.ts
 var DEFAULT_CONFIG = {
   providers: [
-    "opencode/minimax-m2.1-free",
-    "opencode/big-pickle",
-    "opencode/grok-code",
-    "opencode/glm-4.7-free"
+    "openrouter/google/gemini-2.0-flash-exp:free",
+    "openrouter/mistralai/devstral-2512:free",
+    "openrouter/xiaomi/mimo-v2-flash:free",
+    "openrouter/qwen/qwen-2.5-coder-32b-instruct:free",
+    "openrouter/deepseek/deepseek-r1-distill-llama-70b:free",
+    "openrouter/meta-llama/llama-3.1-70b-instruct:free"
   ],
   synthesisModel: "openrouter/google/gemini-2.0-flash-exp:free",
-  fallbackProviders: ["opencode/minimax-m2.1-free"],
+  fallbackProviders: [
+    "openrouter/microsoft/phi-4:free",
+    "openrouter/nvidia/llama-3.1-nemotron-70b-instruct:free"
+  ],
   providerAllowlist: [],
   providerBlocklist: [],
   providerLimit: 6,
@@ -32208,13 +32213,40 @@ function trimDiff(diff, maxBytes) {
   const buf = Buffer.from(diff, "utf8");
   if (buf.byteLength <= maxBytes)
     return diff;
-  const marker = Buffer.byteLength("\n...diff truncated...\n", "utf8");
-  const halfBytes = Math.floor((maxBytes - marker) / 2);
-  const head = buf.slice(0, halfBytes).toString("utf8");
-  const tail = buf.slice(Math.max(buf.byteLength - halfBytes, 0)).toString("utf8");
-  return `${head}
-...diff truncated...
-${tail}`;
+  const fileChunks = [];
+  const lines = diff.split("\n");
+  let currentChunk = [];
+  for (const line of lines) {
+    if (line.startsWith("diff --git ") && currentChunk.length > 0) {
+      fileChunks.push(currentChunk.join("\n"));
+      currentChunk = [line];
+    } else {
+      currentChunk.push(line);
+    }
+  }
+  if (currentChunk.length > 0) {
+    fileChunks.push(currentChunk.join("\n"));
+  }
+  const includedChunks = [];
+  let currentBytes = 0;
+  const truncationMarker = "\n\n...remaining files truncated to stay within size limit...\n";
+  const markerBytes = Buffer.byteLength(truncationMarker, "utf8");
+  for (const chunk of fileChunks) {
+    const chunkBytes = Buffer.byteLength(chunk, "utf8");
+    if (currentBytes + chunkBytes + markerBytes > maxBytes && includedChunks.length > 0) {
+      break;
+    }
+    includedChunks.push(chunk);
+    currentBytes += chunkBytes + 1;
+  }
+  if (includedChunks.length < fileChunks.length) {
+    const truncatedCount = fileChunks.length - includedChunks.length;
+    return includedChunks.join("\n") + `
+
+...${truncatedCount} file(s) truncated to stay within size limit...
+`;
+  }
+  return includedChunks.join("\n");
 }
 function mapAddedLines(patch) {
   if (!patch)
@@ -32273,19 +32305,40 @@ var PromptBuilder = class {
   }
   build(pr) {
     const diff = trimDiff(pr.diff, this.config.diffMaxBytes);
-    return [
+    const filesInDiff = /* @__PURE__ */ new Set();
+    const diffGitPattern = /^diff --git a\/(.+?) b\/(.+?)$/gm;
+    let match;
+    while ((match = diffGitPattern.exec(diff)) !== null) {
+      filesInDiff.add(match[2]);
+    }
+    const includedFiles = pr.files.filter((f) => filesInDiff.has(f.filename));
+    const excludedCount = pr.files.length - includedFiles.length;
+    const fileList = [
+      ...includedFiles.map((f) => `- ${f.filename} (${f.status}, +${f.additions}/-${f.deletions})`)
+    ];
+    if (excludedCount > 0) {
+      fileList.push(`  (${excludedCount} additional file(s) truncated)`);
+    }
+    const instructions = [
       "You are a senior engineer performing a pull request review.",
       "Identify critical, major, and minor issues. Include actionable suggestions when possible.",
       "Return JSON with findings: [{file, line, severity, title, message, suggestion?}] and optional ai_likelihood/ai_reasoning.",
       "",
+      "IMPORTANT RULES:",
+      "- ONLY review files that have diffs shown below",
+      '- DO NOT report "missing file" issues - all files listed are intentionally included',
+      '- DO NOT report issues about files being "referenced but not in diff"',
+      "- Focus on actual code quality, security, and correctness issues in the provided diffs",
+      "",
       `PR #${pr.number}: ${pr.title}`,
       `Author: ${pr.author}`,
       "Files changed:",
-      ...pr.files.map((f) => `- ${f.filename} (${f.status}, +${f.additions}/-${f.deletions})`),
+      ...fileList,
       "",
       "Diff:",
       diff
-    ].join("\n");
+    ];
+    return instructions.join("\n");
   }
 };
 
@@ -33348,6 +33401,7 @@ var CacheStorage = class {
   constructor(baseDir = path5.join(process.cwd(), ".mpr-cache")) {
     this.baseDir = baseDir;
   }
+  locks = /* @__PURE__ */ new Map();
   async read(key) {
     const file = path5.join(this.baseDir, `${key}.json`);
     try {
@@ -33357,10 +33411,36 @@ var CacheStorage = class {
     }
   }
   async write(key, value) {
-    const file = path5.join(this.baseDir, `${key}.json`);
-    await fs5.mkdir(this.baseDir, { recursive: true });
-    await fs5.writeFile(file, value, "utf8");
-    logger.info(`Cached results at ${file}`);
+    await this.acquireLock(key);
+    try {
+      const file = path5.join(this.baseDir, `${key}.json`);
+      await fs5.mkdir(this.baseDir, { recursive: true });
+      await fs5.writeFile(file, value, "utf8");
+      logger.info(`Cached results at ${file}`);
+    } finally {
+      this.releaseLock(key);
+    }
+  }
+  async acquireLock(key) {
+    const existingLock = this.locks.get(key);
+    if (existingLock) {
+      await existingLock.promise;
+    }
+    let resolver;
+    const lockPromise = new Promise((resolve) => {
+      resolver = resolve;
+    });
+    this.locks.set(key, {
+      promise: lockPromise,
+      resolve: resolver
+    });
+  }
+  releaseLock(key) {
+    const lock = this.locks.get(key);
+    if (lock) {
+      lock.resolve();
+      this.locks.delete(key);
+    }
   }
 };
 
@@ -33409,6 +33489,7 @@ var IncrementalReviewer = class _IncrementalReviewer {
   }
   static CACHE_KEY_PREFIX = "incremental-review-pr-";
   static DEFAULT_TTL_DAYS = 7;
+  static MS_PER_DAY = 24 * 60 * 60 * 1e3;
   /**
    * Check if incremental review should be used for this PR
    */
@@ -33423,9 +33504,10 @@ var IncrementalReviewer = class _IncrementalReviewer {
       return false;
     }
     const ageMs = Date.now() - lastReview.timestamp;
-    const ttlMs = this.config.cacheTtlDays * 24 * 60 * 60 * 1e3;
+    const ttlMs = this.config.cacheTtlDays * _IncrementalReviewer.MS_PER_DAY;
     if (ageMs > ttlMs) {
-      logger.debug(`Cache expired (age: ${Math.round(ageMs / 1e3 / 60)} minutes, TTL: ${this.config.cacheTtlDays} days)`);
+      const ageMinutes = Math.round(ageMs / 1e3 / 60);
+      logger.debug(`Cache expired (age: ${ageMinutes} minutes, TTL: ${this.config.cacheTtlDays} days)`);
       return false;
     }
     if (lastReview.lastReviewedCommit === pr.headSha) {
@@ -33467,21 +33549,31 @@ var IncrementalReviewer = class _IncrementalReviewer {
     logger.info(`Saved incremental review data for PR #${pr.number} at commit ${pr.headSha.substring(0, 7)}`);
   }
   /**
+   * Validate that a string is a valid git SHA
+   */
+  isValidSha(sha) {
+    return /^[a-f0-9]{4,40}$/i.test(sha);
+  }
+  /**
    * Get list of files changed since the last review
    */
   async getChangedFilesSince(pr, lastCommit) {
     try {
-      const diffCommand = `git diff --name-status ${lastCommit}...${pr.headSha}`;
-      logger.debug(`Running: ${diffCommand}`);
-      const output = (0, import_child_process2.execSync)(diffCommand, {
+      if (!this.isValidSha(lastCommit)) {
+        throw new Error(`Invalid commit SHA: ${lastCommit}`);
+      }
+      if (!this.isValidSha(pr.headSha)) {
+        throw new Error(`Invalid PR head SHA: ${pr.headSha}`);
+      }
+      logger.debug(`Running git diff --name-status ${lastCommit.substring(0, 7)}...${pr.headSha.substring(0, 7)}`);
+      const output = (0, import_child_process2.execFileSync)("git", ["diff", "--name-status", `${lastCommit}...${pr.headSha}`], {
         encoding: "utf8",
-        cwd: process.cwd(),
-        stdio: ["pipe", "pipe", "pipe"]
+        cwd: process.cwd()
       });
       const changedFiles = [];
       const lines = output.trim().split("\n").filter(Boolean);
       for (const line of lines) {
-        const [status, ...pathParts] = line.split("	");
+        const pathParts = line.split("	").slice(1);
         const filename = pathParts.join("	");
         const prFile = pr.files.find((f) => f.filename === filename);
         if (prFile) {
@@ -33494,6 +33586,7 @@ var IncrementalReviewer = class _IncrementalReviewer {
       return changedFiles;
     } catch (error2) {
       logger.error("Failed to get changed files from git diff", error2);
+      logger.warn(`Falling back to full review (${pr.files.length} files) due to git diff failure`);
       return pr.files;
     }
   }
@@ -33567,6 +33660,14 @@ var CostTracker = class {
       totalTokens: this.totalTokens,
       breakdown: this.breakdown
     };
+  }
+  /**
+   * Reset accumulated cost data
+   */
+  reset() {
+    this.totalCost = 0;
+    this.totalTokens = 0;
+    this.breakdown = {};
   }
 };
 
@@ -34211,7 +34312,7 @@ function createComponents(config, githubToken) {
   const testCoverage = new TestCoverageAnalyzer();
   const astAnalyzer = new ASTAnalyzer();
   const cache = new CacheManager();
-  const incrementalReviewer = new IncrementalReviewer(void 0, {
+  const incrementalReviewer = new IncrementalReviewer(new CacheStorage(), {
     enabled: config.incrementalEnabled,
     cacheTtlDays: config.incrementalCacheTtlDays
   });
@@ -34352,57 +34453,53 @@ var ReviewOrchestrator = class {
     this.components = components;
   }
   async execute(prNumber) {
-    const { config } = this.components;
-    const start = Date.now();
     const pr = await this.components.prLoader.load(prNumber);
     const skipReason = this.shouldSkip(pr);
     if (skipReason) {
       logger.info(`Skipping review: ${skipReason}`);
       return null;
     }
+    return this.executeReview(pr);
+  }
+  /**
+   * Execute review on a given PR context
+   * Can be called directly with a PRContext from CLI or GitHub
+   */
+  async executeReview(pr) {
+    const { config } = this.components;
+    const start = Date.now();
     const useIncremental = await this.components.incrementalReviewer.shouldUseIncremental(pr);
     let filesToReview = pr.files;
-    let previousReview = null;
+    let lastReviewData = null;
     if (useIncremental) {
-      const lastReview = await this.components.incrementalReviewer.getLastReview(pr.number);
-      if (lastReview) {
-        filesToReview = await this.components.incrementalReviewer.getChangedFilesSince(pr, lastReview.lastReviewedCommit);
-        previousReview = {
-          summary: lastReview.reviewSummary,
-          findings: lastReview.findings,
-          inlineComments: [],
-          actionItems: [],
-          metrics: {
-            totalFindings: lastReview.findings.length,
-            critical: lastReview.findings.filter((f) => f.severity === "critical").length,
-            major: lastReview.findings.filter((f) => f.severity === "major").length,
-            minor: lastReview.findings.filter((f) => f.severity === "minor").length,
-            providersUsed: 0,
-            providersSuccess: 0,
-            providersFailed: 0,
-            totalTokens: 0,
-            totalCost: 0,
-            durationSeconds: 0
-          }
-        };
+      lastReviewData = await this.components.incrementalReviewer.getLastReview(pr.number);
+      if (lastReviewData) {
+        filesToReview = await this.components.incrementalReviewer.getChangedFilesSince(pr, lastReviewData.lastReviewedCommit);
         logger.info(`Incremental review: reviewing ${filesToReview.length} changed files`);
       }
     }
     const cachedFindings = config.enableCaching ? await this.components.cache.load(pr) : null;
+    const reviewPR = useIncremental ? { ...pr, files: filesToReview, diff: this.filterDiffByFiles(pr.diff, filesToReview) } : pr;
+    let llmFindings = [];
+    let providerResults = [];
+    let aiAnalysis;
     const providers = await this.components.providerRegistry.createProviders(config);
-    const reviewPR = useIncremental ? { ...pr, files: filesToReview } : pr;
-    const prompt = this.components.promptBuilder.build(reviewPR);
-    await this.ensureBudget(config);
+    if (filesToReview.length === 0) {
+      logger.info("No files to review in incremental update, using cached findings only");
+    } else {
+      const prompt = this.components.promptBuilder.build(reviewPR);
+      await this.ensureBudget(config);
+      providerResults = await this.components.llmExecutor.execute(providers, prompt);
+      llmFindings = extractFindings(providerResults);
+      aiAnalysis = config.enableAiDetection ? summarizeAIDetection(providerResults) : void 0;
+      for (const result of providerResults) {
+        await this.components.costTracker.record(result.name, result.result?.usage);
+      }
+    }
     const astFindings = config.enableAstAnalysis ? this.components.astAnalyzer.analyze(filesToReview) : [];
     const ruleFindings = this.components.rules.run(filesToReview);
     const securityFindings = config.enableSecurity ? this.components.security.scan(filesToReview) : [];
     const context2 = this.components.contextRetriever.findRelatedContext(filesToReview);
-    const providerResults = await this.components.llmExecutor.execute(providers, prompt);
-    const llmFindings = extractFindings(providerResults);
-    const aiAnalysis = config.enableAiDetection ? summarizeAIDetection(providerResults) : void 0;
-    for (const result of providerResults) {
-      await this.components.costTracker.record(result.name, result.result?.usage);
-    }
     const combinedFindings = [
       ...astFindings,
       ...ruleFindings,
@@ -34447,27 +34544,24 @@ var ReviewOrchestrator = class {
       impactAnalysis,
       mermaidDiagram
     );
-    if (useIncremental && previousReview) {
-      const lastReview = await this.components.incrementalReviewer.getLastReview(pr.number);
-      if (lastReview) {
-        review.findings = this.components.incrementalReviewer.mergeFindings(
-          lastReview.findings,
-          review.findings,
-          filesToReview
-        );
-        review.summary = this.components.incrementalReviewer.generateIncrementalSummary(
-          lastReview.reviewSummary,
-          review.summary,
-          filesToReview,
-          lastReview.lastReviewedCommit,
-          pr.headSha
-        );
-        review.metrics.totalFindings = review.findings.length;
-        review.metrics.critical = review.findings.filter((f) => f.severity === "critical").length;
-        review.metrics.major = review.findings.filter((f) => f.severity === "major").length;
-        review.metrics.minor = review.findings.filter((f) => f.severity === "minor").length;
-        logger.info(`Incremental review completed: ${review.findings.length} total findings after merge`);
-      }
+    if (useIncremental && lastReviewData) {
+      review.findings = this.components.incrementalReviewer.mergeFindings(
+        lastReviewData.findings,
+        review.findings,
+        filesToReview
+      );
+      review.summary = this.components.incrementalReviewer.generateIncrementalSummary(
+        lastReviewData.reviewSummary,
+        review.summary,
+        filesToReview,
+        lastReviewData.lastReviewedCommit,
+        pr.headSha
+      );
+      review.metrics.totalFindings = review.findings.length;
+      review.metrics.critical = review.findings.filter((f) => f.severity === "critical").length;
+      review.metrics.major = review.findings.filter((f) => f.severity === "major").length;
+      review.metrics.minor = review.findings.filter((f) => f.severity === "minor").length;
+      logger.info(`Incremental review completed: ${review.findings.length} total findings after merge`);
     }
     review.metrics.totalCost = costSummary.totalCost;
     review.metrics.totalTokens = costSummary.totalTokens;
@@ -34492,6 +34586,13 @@ var ReviewOrchestrator = class {
     await this.components.commentPoster.postInline(pr.number, inlineFiltered, pr.files);
     await this.writeReports(review);
     return review;
+  }
+  /**
+   * Cleanup resources after review to prevent memory leaks in long-running processes
+   */
+  async dispose() {
+    this.components.costTracker.reset();
+    logger.debug("Orchestrator resources disposed");
   }
   shouldSkip(pr) {
     const { config } = this.components;
@@ -34525,6 +34626,28 @@ var ReviewOrchestrator = class {
   }
   estimateTokens(text) {
     return Math.ceil(Buffer.byteLength(text, "utf8") / 4);
+  }
+  /**
+   * Filter diff to only include files that changed
+   * Used for incremental reviews to send only relevant diffs to LLMs
+   */
+  filterDiffByFiles(diff, files) {
+    if (files.length === 0)
+      return "";
+    const fileNames = new Set(files.map((f) => f.filename));
+    const diffChunks = [];
+    const chunks = diff.split(/^diff --git /m).filter(Boolean);
+    for (const chunk of chunks) {
+      const firstLine = chunk.split("\n")[0];
+      const bIndex = firstLine.indexOf(" b/");
+      if (bIndex !== -1) {
+        const filename = firstLine.substring(bIndex + 3).trim();
+        if (fileNames.has(filename)) {
+          diffChunks.push("diff --git " + chunk);
+        }
+      }
+    }
+    return diffChunks.join("");
   }
   enrichFinding(finding, files, context2, providerCount) {
     const file = files.find((f) => f.filename === finding.file);

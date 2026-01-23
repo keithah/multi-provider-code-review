@@ -58,15 +58,23 @@ export class ReviewOrchestrator {
   constructor(private readonly components: ReviewComponents) {}
 
   async execute(prNumber: number): Promise<Review | null> {
-    const { config } = this.components;
-    const start = Date.now();
-
     const pr = await this.components.prLoader.load(prNumber);
     const skipReason = this.shouldSkip(pr);
     if (skipReason) {
       logger.info(`Skipping review: ${skipReason}`);
       return null;
     }
+
+    return this.executeReview(pr);
+  }
+
+  /**
+   * Execute review on a given PR context
+   * Can be called directly with a PRContext from CLI or GitHub
+   */
+  async executeReview(pr: PRContext): Promise<Review> {
+    const { config } = this.components;
+    const start = Date.now();
 
     // Check for incremental review
     const useIncremental = await this.components.incrementalReviewer.shouldUseIncremental(pr);
@@ -83,6 +91,11 @@ export class ReviewOrchestrator {
 
     const cachedFindings = config.enableCaching ? await this.components.cache.load(pr) : null;
 
+    // Create a PR context for the files to review with filtered diff
+    const reviewPR: PRContext = useIncremental
+      ? { ...pr, files: filesToReview, diff: this.filterDiffByFiles(pr.diff, filesToReview) }
+      : pr;
+
     // Skip LLM execution if no files to review (incremental with no changes)
     let llmFindings: Finding[] = [];
     let providerResults: ProviderResult[] = [];
@@ -92,11 +105,6 @@ export class ReviewOrchestrator {
     if (filesToReview.length === 0) {
       logger.info('No files to review in incremental update, using cached findings only');
     } else {
-
-      // Create a PR context for the files to review with filtered diff
-      const reviewPR: PRContext = useIncremental
-        ? { ...pr, files: filesToReview, diff: this.filterDiffByFiles(pr.diff, filesToReview) }
-        : pr;
       const prompt = this.components.promptBuilder.build(reviewPR);
 
       await this.ensureBudget(config);

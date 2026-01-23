@@ -1,30 +1,22 @@
-import { PRContext, Review, Finding } from '../types';
-import { ReviewComponents } from '../core/orchestrator';
+import { PRContext, Review } from '../types';
+import { ReviewComponents, ReviewOrchestrator } from '../core/orchestrator';
 import { logger } from '../utils/logger';
 
 /**
  * CLI-specific review runner
- * MVP version - delegates to orchestrator's execute method
- *
- * Note: For MVP, we're using a simplified approach.
- * Future enhancement: Implement full CLI-optimized pipeline
- *
- * TODO: Complete CLI review pipeline implementation
- *   - Connect to LLM providers
- *   - Run security scanner
- *   - Run AST analysis
- *   - Apply consensus filtering
- *   - Generate synthesis
- *   See src/core/orchestrator.ts:execute() for full pipeline
+ * Delegates to orchestrator for full review pipeline, but operates on
+ * a PRContext object created from local git state rather than GitHub API
  */
 export class CLIReviewer {
-  constructor(private components: ReviewComponents) {}
+  private orchestrator: ReviewOrchestrator;
+
+  constructor(components: ReviewComponents) {
+    this.orchestrator = new ReviewOrchestrator(components);
+  }
 
   /**
    * Run review on local changes
-   *
-   * For MVP: Returns empty review structure
-   * TODO: Implement full review pipeline (see orchestrator.ts for reference)
+   * Uses the full review pipeline from orchestrator but skips GitHub-specific operations
    */
   async review(pr: PRContext): Promise<Review> {
     logger.info('Starting CLI review', {
@@ -33,36 +25,27 @@ export class CLIReviewer {
       deletions: pr.deletions,
     });
 
-    // TODO: Replace with actual review pipeline
-    // Current status: MVP skeleton for CLI infrastructure
-    // Next step: Wire up components from ReviewComponents
-    const findings: Finding[] = [];
+    // Run the full review pipeline using orchestrator's internal logic
+    // The orchestrator will handle:
+    // - Incremental review checks
+    // - Provider execution
+    // - AST/security/rules analysis
+    // - Consensus filtering
+    // - Evidence scoring
+    // - Impact analysis
+    // - Synthesis
+    //
+    // Since we're in CLI mode with cliMode=true in setup, the commentPoster
+    // is configured to skip GitHub API calls
 
-    // Placeholder: In a real implementation, we'd run providers here
-    // For now, return an empty review to unblock MVP
+    const review = await this.orchestrator.executeReview(pr);
 
-    const metrics = {
-      totalFindings: findings.length,
-      critical: findings.filter(f => f.severity === 'critical').length,
-      major: findings.filter(f => f.severity === 'major').length,
-      minor: findings.filter(f => f.severity === 'minor').length,
-      providersUsed: 0,
-      providersSuccess: 0,
-      providersFailed: 0,
-      totalTokens: 0,
-      totalCost: 0,
-      durationSeconds: 0,
-    };
-
-    const review: Review = {
-      summary: 'CLI review completed (MVP mode - full review pipeline coming soon)',
-      findings,
-      inlineComments: [],
-      actionItems: [],
-      metrics,
-    };
-
-    logger.info('CLI review completed', { metrics });
+    logger.info('CLI review completed', {
+      findings: review.findings.length,
+      critical: review.metrics.critical,
+      major: review.metrics.major,
+      minor: review.metrics.minor,
+    });
 
     return review;
   }

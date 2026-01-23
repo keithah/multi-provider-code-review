@@ -11,6 +11,11 @@ on:
         description: "Pull request number to review"
         required: true
 
+# Cancel in-progress runs for the same PR to prevent duplicate reviews
+concurrency:
+  group: review-${{ github.event.pull_request.number || inputs.pr_number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   pull-requests: write
