@@ -12,8 +12,9 @@ on:
         required: true
 
 # Cancel in-progress runs for the same PR to prevent duplicate reviews
+# Use PR number + head SHA to ensure uniqueness per commit
 concurrency:
-  group: review-${{ github.event.pull_request.number || inputs.pr_number || github.ref }}
+  group: review-${{ github.event.pull_request.number || inputs.pr_number }}-${{ github.sha }}
   cancel-in-progress: true
 
 permissions:
@@ -26,6 +27,8 @@ jobs:
     runs-on: ubicloud-standard-2
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for incremental review git diff
       - name: Resolve PR number
         id: resolve-pr
         env:

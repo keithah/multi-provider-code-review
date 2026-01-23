@@ -9,7 +9,12 @@ describe('OpenCodeProvider Integration', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.useRealTimers();  // Ensure we're using real timers, not fake
+    // Use fake timers for more reliable tests that don't depend on actual timing
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   function createMockProcess(stdout: string, stderr: string = '', exitCode: number = 0, delay: number = 0) {

@@ -301,8 +301,8 @@ describe('OpenRouterProvider Integration', () => {
         });
       });
 
-      // Set very short timeout (100ms), request will be aborted
-      await expect(provider.review('test', 100)).rejects.toThrow();
+      // Set short timeout (500ms) for more reliable test in CI environments
+      await expect(provider.review('test', 500)).rejects.toThrow();
     });
 
     it('should handle network errors', async () => {

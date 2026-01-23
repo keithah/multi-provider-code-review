@@ -438,9 +438,12 @@ describe('ReviewOrchestrator integration (offline)', () => {
     const review = await orchestrator.execute(1);
 
     expect(review).toBeTruthy();
-    // Inline comments should only include findings with 2+ providers agreeing
-    // We can't easily check provider count from inline comments, but we can verify consensus was applied
+    // Verify consensus filtering: 'Agreed' finding should be present, 'Noise' should be filtered
     expect(review?.inlineComments.length).toBeGreaterThan(0);
+    const agreedFound = review?.inlineComments.some(c => c.body.includes('Agreed'));
+    const noiseFound = review?.inlineComments.some(c => c.body.includes('Noise'));
+    expect(agreedFound).toBe(true);
+    expect(noiseFound).toBe(false); // Should be filtered by consensus (only 1 provider)
   });
 
   it('generates complete review with all outputs', async () => {

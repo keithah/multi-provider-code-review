@@ -75,6 +75,15 @@ async shouldUseIncremental(pr: PRContext): boolean {
 
 ### Git Diff Integration
 
+**Important:** Requires full git history for commit comparison. In CI environments:
+```yaml
+- uses: actions/checkout@v4
+  with:
+    fetch-depth: 0  # Required for incremental review git diff
+```
+
+Without full history, `git diff` will fail and automatically fall back to full review.
+
 ```typescript
 async getChangedFilesSince(pr: PRContext, lastCommit: string): FileChange[] {
   // Validate SHAs to prevent command injection

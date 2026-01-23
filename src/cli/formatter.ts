@@ -273,6 +273,9 @@ export class TerminalFormatter {
     // Exit with warning if major issues found
     if (review.metrics.major > 0) return 1;
 
+    // Exit with warning if there are action items requiring changes
+    if (review.actionItems && review.actionItems.length > 0) return 1;
+
     // Success
     return 0;
   }

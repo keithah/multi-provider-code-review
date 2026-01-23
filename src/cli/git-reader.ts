@@ -53,7 +53,8 @@ export class GitReader {
   }
 
   /**
-   * Get default branch name (main or master)
+   * Get default branch name
+   * Tries multiple strategies to find the repository's default branch
    */
   private getDefaultBranch(): string {
     try {
@@ -61,12 +62,30 @@ export class GitReader {
       const result = execFileSync('git', ['symbolic-ref', 'refs/remotes/origin/HEAD'], { encoding: 'utf8' }).trim();
       return result.replace('refs/remotes/origin/', '');
     } catch {
-      // Fallback: check if main exists, otherwise use master
+      // Fallback 1: check if main exists
       try {
         execFileSync('git', ['rev-parse', '--verify', 'main'], { encoding: 'utf8' });
         return 'main';
       } catch {
-        return 'master';
+        // Fallback 2: check if master exists
+        try {
+          execFileSync('git', ['rev-parse', '--verify', 'master'], { encoding: 'utf8' });
+          return 'master';
+        } catch {
+          // Fallback 3: use current branch if not detached HEAD
+          try {
+            const currentBranch = execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { encoding: 'utf8' }).trim();
+            if (currentBranch !== 'HEAD') {
+              logger.debug(`Using current branch as default: ${currentBranch}`);
+              return currentBranch;
+            }
+          } catch {
+            // Ignore error and continue to final fallback
+          }
+          // Final fallback: use HEAD which always exists
+          logger.debug('Using HEAD as default branch fallback');
+          return 'HEAD';
+        }
       }
     }
   }
