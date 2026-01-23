@@ -15,7 +15,7 @@ inputs:
   REVIEW_PROVIDERS:
     description: "Comma-separated provider list"
     required: false
-    default: "openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free,openrouter/xiaomi/mimo-v2-flash:free,openrouter/qwen/qwen-2.5-coder-32b-instruct:free,openrouter/deepseek/deepseek-r1-distill-llama-70b:free,openrouter/meta-llama/llama-3.1-70b-instruct:free"
+    default: "openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free,openrouter/xiaomi/mimo-v2-flash:free,openrouter/qwen/qwen-2.5-coder-32b-instruct:free,openrouter/deepseek/deepseek-r1-distill-llama-70b:free,openrouter/meta-llama/llama-3.1-70b-instruct:free,opencode/big-pickle,opencode/grok-code,opencode/glm-4.7,opencode/qwen3-coder"
   FALLBACK_PROVIDERS:
     description: "Comma-separated fallback providers"
     required: false
