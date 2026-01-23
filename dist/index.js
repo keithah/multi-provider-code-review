@@ -32664,7 +32664,7 @@ var SynthesisEngine = class {
     this.config = config;
   }
   synthesize(findings, pr, testHints, aiAnalysis, providerResults, runDetails, impactAnalysis, mermaidDiagram) {
-    const metrics = this.buildMetrics(findings);
+    const metrics = this.buildMetrics(findings, providerResults, runDetails);
     const summary = this.buildSummary(pr, findings, metrics, testHints, aiAnalysis, providerResults, impactAnalysis);
     const inlineComments = this.buildInlineComments(findings);
     const actionItems = this.buildActionItems(findings);
@@ -32682,21 +32682,48 @@ var SynthesisEngine = class {
       mermaidDiagram
     };
   }
-  buildMetrics(findings) {
+  buildMetrics(findings, providerResults, runDetails) {
     const critical = findings.filter((f) => f.severity === "critical").length;
     const major = findings.filter((f) => f.severity === "major").length;
     const minor = findings.filter((f) => f.severity === "minor").length;
+    let providersUsed = 0;
+    let providersSuccess = 0;
+    let providersFailed = 0;
+    let totalTokens = 0;
+    let totalCost = 0;
+    let durationSeconds = 0;
+    if (runDetails) {
+      providersUsed = runDetails.providers.length;
+      providersSuccess = runDetails.providers.filter((p) => p.status === "success").length;
+      providersFailed = runDetails.providers.filter(
+        (p) => p.status === "error" || p.status === "timeout"
+      ).length;
+      totalTokens = runDetails.totalTokens;
+      totalCost = runDetails.totalCost;
+      durationSeconds = runDetails.durationSeconds;
+    } else if (providerResults) {
+      providersUsed = providerResults.length;
+      providersSuccess = providerResults.filter((p) => p.status === "success").length;
+      providersFailed = providerResults.filter(
+        (p) => p.status === "error" || p.status === "timeout"
+      ).length;
+      totalTokens = providerResults.reduce((sum, p) => {
+        return sum + (p.result?.usage?.totalTokens ?? 0);
+      }, 0);
+      totalCost = 0;
+      durationSeconds = providerResults.reduce((sum, p) => sum + p.durationSeconds, 0);
+    }
     return {
       totalFindings: findings.length,
       critical,
       major,
       minor,
-      providersUsed: 0,
-      providersSuccess: 0,
-      providersFailed: 0,
-      totalTokens: 0,
-      totalCost: 0,
-      durationSeconds: 0
+      providersUsed,
+      providersSuccess,
+      providersFailed,
+      totalTokens,
+      totalCost,
+      durationSeconds
     };
   }
   buildSummary(pr, findings, metrics, testHints, aiAnalysis, providerResults, impactAnalysis) {
