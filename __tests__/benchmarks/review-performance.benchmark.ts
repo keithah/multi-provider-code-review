@@ -23,14 +23,11 @@ import { SecurityScanner } from '../../src/security/scanner';
 import { RulesEngine } from '../../src/rules/engine';
 import { PromptBuilder } from '../../src/analysis/llm/prompt-builder';
 import { MarkdownFormatter } from '../../src/output/formatter';
-import { CommentPoster } from '../../src/github/comment-poster';
-import { PullRequestLoader } from '../../src/github/pr-loader';
 import { Provider } from '../../src/providers/base';
 import { ContextRetriever } from '../../src/analysis/context';
 import { ImpactAnalyzer } from '../../src/analysis/impact';
 import { EvidenceScorer } from '../../src/analysis/evidence';
 import { MermaidGenerator } from '../../src/output/mermaid';
-import { FeedbackFilter } from '../../src/github/feedback';
 
 interface BenchmarkResult {
   name: string;
@@ -47,7 +44,11 @@ class MockProvider extends Provider {
     super(name);
   }
 
-  async review(_prompt: string, _timeoutMs: number): Promise<any> {
+  async review(): Promise<{
+    content: string;
+    findings: Array<{ file: string; line: number; severity: string; title: string; message: string }>;
+    durationSeconds: number;
+  }> {
     await new Promise(resolve => setTimeout(resolve, this.latencyMs));
     return {
       content: 'Review complete',
@@ -209,9 +210,9 @@ async function runBenchmark(
 
   const components: ReviewComponents = {
     config,
-    providerRegistry: new BenchmarkProviderRegistry(providers) as any,
+    providerRegistry: new BenchmarkProviderRegistry(providers) as unknown as ReviewComponents['providerRegistry'],
     promptBuilder: new PromptBuilder(config),
-    llmExecutor: new BenchmarkLLMExecutor(providers) as any,
+    llmExecutor: new BenchmarkLLMExecutor(providers) as unknown as ReviewComponents['llmExecutor'],
     deduplicator: new Deduplicator(),
     consensus: new ConsensusEngine({ minAgreement: 1, minSeverity: 'minor', maxComments: 100 }),
     synthesis: new SynthesisEngine(config),
@@ -220,17 +221,17 @@ async function runBenchmark(
     cache: cache || new NoopCache(),
     costTracker: new CostTracker({
       getPricing: async () => ({ modelId: 'mock', promptPrice: 0.001, completionPrice: 0.002, isFree: false }),
-    } as any),
+    } as ReviewComponents['costTracker']['rateLimiter']),
     security: new SecurityScanner(),
     rules: new RulesEngine([]),
-    prLoader: new BenchmarkPRLoader(prContext) as any,
-    commentPoster: new NoopCommentPoster() as any,
+    prLoader: new BenchmarkPRLoader(prContext) as unknown as ReviewComponents['prLoader'],
+    commentPoster: new NoopCommentPoster() as unknown as ReviewComponents['commentPoster'],
     formatter: new MarkdownFormatter(),
     contextRetriever: new ContextRetriever(),
     impactAnalyzer: new ImpactAnalyzer(),
     evidenceScorer: new EvidenceScorer(),
     mermaidGenerator: new MermaidGenerator(),
-    feedbackFilter: new NoopFeedbackFilter() as any,
+    feedbackFilter: new NoopFeedbackFilter() as unknown as ReviewComponents['feedbackFilter'],
   };
 
   const orchestrator = new ReviewOrchestrator(components);

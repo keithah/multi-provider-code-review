@@ -10,11 +10,13 @@
     "build:prod": "npm run build -- --minify",
     "test": "jest",
     "test:coverage": "jest --coverage",
+    "test:unit": "jest --testPathIgnorePatterns=integration --testPathIgnorePatterns=benchmarks",
     "benchmark": "jest __tests__/benchmarks --verbose",
     "lint": "eslint \"src/**/*.ts\" \"__tests__/**/*.ts\"",
     "format": "prettier --write \"src/**/*.ts\" \"__tests__/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"__tests__/**/*.ts\"",
     "typecheck": "tsc --noEmit",
+    "hooks:install": "bash scripts/install-hooks.sh",
     "prepare": "npm run build:prod"
   },
   "repository": {
