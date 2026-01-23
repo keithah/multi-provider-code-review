@@ -9,11 +9,9 @@ describe('OpenCodeProvider Integration', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    // Use fake timers for more reliable tests that don't depend on actual timing
-    jest.useFakeTimers();
-  });
-
-  afterEach(() => {
+    // Use real timers for integration tests that depend on actual timing logic
+    // These tests need to validate real setTimeout behavior and duration tracking
+    // The delay parameter (10ms) is minimal to keep tests fast while still reliable
     jest.useRealTimers();
   });
 

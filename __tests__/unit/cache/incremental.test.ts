@@ -1,10 +1,12 @@
 import { IncrementalReviewer } from '../../../src/cache/incremental';
 import { CacheStorage } from '../../../src/cache/storage';
 import { PRContext, Review, Finding, FileChange } from '../../../src/types';
-import * as childProcess from 'child_process';
+import { execFileSync } from 'child_process';
 
 jest.mock('../../../src/cache/storage');
-jest.mock('child_process');
+jest.mock('child_process', () => ({
+  execFileSync: jest.fn(),
+}));
 
 describe('IncrementalReviewer', () => {
   let mockStorage: jest.Mocked<CacheStorage>;
@@ -141,7 +143,7 @@ describe('IncrementalReviewer', () => {
   describe('getChangedFilesSince', () => {
     it('returns changed files from git diff', async () => {
       const gitOutput = 'M\tsrc/file1.ts\nA\tsrc/file2.ts\nD\tsrc/file3.ts';
-      (childProcess.execSync as jest.Mock).mockReturnValue(gitOutput);
+      (execFileSync as jest.Mock).mockReturnValue(gitOutput);
 
       const pr: PRContext = createMockPR({
         files: [
@@ -158,7 +160,7 @@ describe('IncrementalReviewer', () => {
     });
 
     it('falls back to all files on git error', async () => {
-      (childProcess.execSync as jest.Mock).mockImplementation(() => {
+      (execFileSync as jest.Mock).mockImplementation(() => {
         throw new Error('Git command failed');
       });
 
@@ -173,7 +175,7 @@ describe('IncrementalReviewer', () => {
 
     it('handles files with tabs in filename', async () => {
       const gitOutput = 'M\tsrc/file\twith\ttabs.ts';
-      (childProcess.execSync as jest.Mock).mockReturnValue(gitOutput);
+      (execFileSync as jest.Mock).mockReturnValue(gitOutput);
 
       const pr: PRContext = createMockPR({
         files: [createMockFile({ filename: 'src/file\twith\ttabs.ts' })],

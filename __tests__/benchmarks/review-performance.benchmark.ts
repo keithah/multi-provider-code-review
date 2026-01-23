@@ -275,7 +275,8 @@ function formatResults(results: BenchmarkResult[]): string {
 }
 
 describe('Performance Benchmarks', () => {
-  jest.setTimeout(120000); // 2 minute timeout for benchmarks
+  // Increase timeout for CI environments where benchmarks may run slower
+  jest.setTimeout(300000); // 5 minute timeout for benchmarks
 
   it('benchmarks small PR (5 files, 100 lines)', async () => {
     const providers = [new MockProvider('fast-provider', 50)];
