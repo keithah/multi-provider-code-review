@@ -204,9 +204,7 @@ Skip with: `git commit --no-verify`
 - **Enterprise Features:** Webhook server, health checks, graceful shutdown
 - **Documentation:** Complete guides for self-hosting, plugins, and analytics
 
-**Phase development complete; testing and stabilization in progress (278/286 tests passing)**
-
-All 14 weeks of v2.1 development plan delivered. Current focus: test stabilization and QA (8 stub tests need implementation for full coverage).
+Phase development complete; testing and stabilization in progress (278/286 tests passing). All 14 weeks of v2.1 development plan delivered. Current focus: test stabilization and QA (8 stub tests need implementation for full coverage).
 
 See [DEVELOPMENT_PLAN_V2.1.md](./DEVELOPMENT_PLAN_V2.1.md) for detailed roadmap.
 

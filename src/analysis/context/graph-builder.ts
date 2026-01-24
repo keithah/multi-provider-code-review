@@ -112,14 +112,16 @@ export class CodeGraph {
     // Remove calls made from functions in this file
     // Iterate through this file's symbols and clean up their call edges
     for (const symbolName of symbolNames) {
+      const qualifiedSymbol = `${file}:${symbolName}`;
+
       // Remove calls made by this symbol
-      const callees = this.calls.get(symbolName);
+      const callees = this.calls.get(qualifiedSymbol);
       if (callees) {
         // Remove this caller from all callees' caller lists
         for (const callee of callees) {
           const callerList = this.callers.get(callee);
           if (callerList) {
-            const filtered = callerList.filter(c => c !== symbolName);
+            const filtered = callerList.filter(c => c !== qualifiedSymbol);
             if (filtered.length > 0) {
               this.callers.set(callee, filtered);
             } else {
@@ -127,11 +129,11 @@ export class CodeGraph {
             }
           }
         }
-        this.calls.delete(symbolName);
+        this.calls.delete(qualifiedSymbol);
       }
 
       // Remove calls to this symbol (clean up callers list)
-      this.callers.delete(symbolName);
+      this.callers.delete(qualifiedSymbol);
     }
   }
 
@@ -151,19 +153,23 @@ export class CodeGraph {
   /**
    * Add a call relationship
    */
-  addCall(caller: string, callee: string): void {
+  addCall(callerFile: string, caller: string, callee: string): void {
+    // Use file-qualified keys to avoid symbol collisions across files
+    const qualifiedCaller = `${callerFile}:${caller}`;
+    const qualifiedCallee = callee; // callee might be from another file, keep as-is for now
+
     // Track caller → callee
-    const called = this.calls.get(caller) || [];
-    if (!called.includes(callee)) {
-      called.push(callee);
-      this.calls.set(caller, called);
+    const called = this.calls.get(qualifiedCaller) || [];
+    if (!called.includes(qualifiedCallee)) {
+      called.push(qualifiedCallee);
+      this.calls.set(qualifiedCaller, called);
     }
 
     // Track callee → callers (reverse index)
-    const callerList = this.callers.get(callee) || [];
-    if (!callerList.includes(caller)) {
-      callerList.push(caller);
-      this.callers.set(callee, callerList);
+    const callerList = this.callers.get(qualifiedCallee) || [];
+    if (!callerList.includes(qualifiedCaller)) {
+      callerList.push(qualifiedCaller);
+      this.callers.set(qualifiedCallee, callerList);
     }
   }
 
@@ -174,17 +180,17 @@ export class CodeGraph {
     const callerList = this.callers.get(symbol) || [];
     const snippets: GraphCodeSnippet[] = [];
 
-    for (const caller of callerList) {
-      // Find the definition of the caller
-      for (const [key, def] of this.definitions) {
-        if (key.endsWith(`:${caller}`)) {
-          snippets.push({
-            file: def.file,
-            line: def.line,
-            code: `${def.type} ${def.name}`,
-            context: `Called from ${def.name}`,
-          });
-        }
+    for (const qualifiedCaller of callerList) {
+      // qualifiedCaller is now in format "file:symbol"
+      // Look it up directly in definitions
+      const def = this.definitions.get(qualifiedCaller);
+      if (def) {
+        snippets.push({
+          file: def.file,
+          line: def.line,
+          code: `${def.type} ${def.name}`,
+          context: `Called from ${def.name}`,
+        });
       }
     }
 
@@ -192,20 +198,33 @@ export class CodeGraph {
   }
 
   /**
+   * Normalize a file path for comparison (strips extensions, converts to posix)
+   */
+  private normalizePathForComparison(path: string): string {
+    // Convert backslashes to forward slashes
+    let normalized = path.replace(/\\/g, '/');
+    // Strip common file extensions
+    normalized = normalized.replace(/\.(ts|tsx|js|jsx|mjs|cjs)$/, '');
+    return normalized;
+  }
+
+  /**
    * Find all files that import/depend on a given file
    */
   findConsumers(file: string): GraphCodeSnippet[] {
     const consumers: GraphCodeSnippet[] = [];
-    // Normalize the file path for consistent comparison
-    const normalizedFile = file.replace(/\\/g, '/');
+    const normalizedFile = this.normalizePathForComparison(file);
 
     for (const [fromFile, toFiles] of this.imports) {
       // Check if any imported path matches (could be relative or absolute)
       const hasMatch = toFiles.some(importedPath => {
+        const normalizedImport = this.normalizePathForComparison(importedPath);
         // Direct match with normalized path
-        if (importedPath === normalizedFile) return true;
+        if (normalizedImport === normalizedFile) return true;
         // Also check if the resolved path ends with the file (for relative comparisons)
-        if (importedPath.endsWith(normalizedFile)) return true;
+        if (normalizedImport.endsWith(normalizedFile)) return true;
+        // Check if the file ends with the import (reverse check for extensionless imports)
+        if (normalizedFile.endsWith(normalizedImport)) return true;
         return false;
       });
 
@@ -256,16 +275,18 @@ export class CodeGraph {
    */
   getDependents(file: string): string[] {
     const dependents: string[] = [];
-    // Normalize the file path for consistent comparison
-    const normalizedFile = file.replace(/\\/g, '/');
+    const normalizedFile = this.normalizePathForComparison(file);
 
     for (const [fromFile, toFiles] of this.imports) {
       // Check if any imported path matches (could be relative or absolute)
       const hasMatch = toFiles.some(importedPath => {
+        const normalizedImport = this.normalizePathForComparison(importedPath);
         // Direct match with normalized path
-        if (importedPath === normalizedFile) return true;
+        if (normalizedImport === normalizedFile) return true;
         // Also check if the resolved path ends with the file (for relative comparisons)
-        if (importedPath.endsWith(normalizedFile)) return true;
+        if (normalizedImport.endsWith(normalizedFile)) return true;
+        // Check if the file ends with the import (reverse check for extensionless imports)
+        if (normalizedFile.endsWith(normalizedImport)) return true;
         return false;
       });
 
@@ -627,7 +648,7 @@ export class CodeGraphBuilder {
         // Find the enclosing function (caller)
         const caller = this.findEnclosingFunction(node);
         if (caller && callee) {
-          graph.addCall(caller, callee);
+          graph.addCall(file, caller, callee);
         }
       }
     }
@@ -708,8 +729,9 @@ export class CodeGraphBuilder {
       if (line.startsWith('@@')) {
         continue;
       }
-      // Extract added lines (start with +, but not ++)
-      if (line.startsWith('+') && !line.startsWith('++')) {
+      // Extract added lines (start with +, but not +++ which is the diff file header)
+      // This allows ++ (increment operators like ++counter)
+      if (line.startsWith('+') && !line.startsWith('+++')) {
         // Remove the + prefix
         addedLines.push(line.substring(1));
       }
@@ -743,8 +765,9 @@ export class CodeGraphBuilder {
     }
 
     // Check for presence of top-level declarations
-    // At minimum, we expect function/class/const/let/var/type/interface/export
-    const hasTopLevelDeclaration = /^\s*(export\s+)?(function|class|const|let|var|type|interface|async\s+function)\s+/m.test(code);
+    // JS/TS: function/class/const/let/var/type/interface/export
+    // Python: def/class/import/from
+    const hasTopLevelDeclaration = /^\s*(export\s+)?(function|class|const|let|var|type|interface|async\s+function|def|async\s+def|import|from)\s+/m.test(code);
 
     return !hasTopLevelDeclaration;
   }
