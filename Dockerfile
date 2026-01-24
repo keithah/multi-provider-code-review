@@ -12,14 +12,17 @@ WORKDIR /app
 COPY package*.json ./
 COPY tsconfig.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install all dependencies (including devDependencies for build)
+RUN npm ci
 
 # Copy source code
 COPY src ./src
 
 # Build application
 RUN npm run build:prod
+
+# Remove devDependencies after build
+RUN npm prune --production
 
 # Production image
 FROM node:20-alpine
@@ -48,9 +51,9 @@ ENV LOG_LEVEL=info
 # Expose webhook port (if using webhook mode)
 EXPOSE 3000
 
-# Health check
+# Health check - verifies Node.js runtime and core modules can be loaded
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
-  CMD node -e "console.log('healthy')" || exit 1
+  CMD node -e "require('fs'); require('path'); process.exit(0)" || exit 1
 
 # Default command (can be overridden)
 CMD ["node", "dist/index.js"]

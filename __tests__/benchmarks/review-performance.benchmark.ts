@@ -11,7 +11,7 @@
  */
 
 import { ReviewOrchestrator, ReviewComponents } from '../../src/core/orchestrator';
-import { ReviewConfig, PRContext, Finding, ProviderResult, FileChange, ReviewResult } from '../../src/types';
+import { ReviewConfig, PRContext, Finding, ProviderResult, FileChange, ReviewResult, Review } from '../../src/types';
 import { ConsensusEngine } from '../../src/analysis/consensus';
 import { Deduplicator } from '../../src/analysis/deduplicator';
 import { SynthesisEngine } from '../../src/analysis/synthesis';
@@ -49,6 +49,28 @@ class MockPricingService {
 
   async refresh() {
     // No-op for mock
+  }
+}
+
+/**
+ * Mock IncrementalReviewer for benchmarks
+ * Always returns false to force full review for accurate benchmarking
+ */
+class MockIncrementalReviewer {
+  async shouldUseIncremental(_pr: PRContext): Promise<boolean> {
+    return false; // Always do full review in benchmarks
+  }
+
+  async getLastReview(_prNumber: number): Promise<null> {
+    return null;
+  }
+
+  async saveReview(_pr: PRContext, _review: Review): Promise<void> {
+    // No-op for benchmarks
+  }
+
+  async getChangedFilesSince(_pr: PRContext, _lastCommit: string): Promise<FileChange[]> {
+    return [];
   }
 }
 
@@ -250,7 +272,7 @@ async function runBenchmark(
     evidenceScorer: new EvidenceScorer(),
     mermaidGenerator: new MermaidGenerator(),
     feedbackFilter: new NoopFeedbackFilter() as unknown as ReviewComponents['feedbackFilter'],
-    incrementalReviewer: {} as any,
+    incrementalReviewer: new MockIncrementalReviewer() as any,
   };
 
   const orchestrator = new ReviewOrchestrator(components);
