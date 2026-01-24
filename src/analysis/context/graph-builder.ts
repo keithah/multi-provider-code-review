@@ -110,14 +110,16 @@ export class CodeGraph {
     this.exports.delete(file);
 
     // Remove calls made from functions in this file
-    // Note: This is a simplified approach - ideally we'd track which calls come from which file
-    for (const [caller, callees] of this.calls.entries()) {
-      if (caller.startsWith(`${file}:`)) {
-        // Remove this caller's calls
+    // Iterate through this file's symbols and clean up their call edges
+    for (const symbolName of symbolNames) {
+      // Remove calls made by this symbol
+      const callees = this.calls.get(symbolName);
+      if (callees) {
+        // Remove this caller from all callees' caller lists
         for (const callee of callees) {
           const callerList = this.callers.get(callee);
           if (callerList) {
-            const filtered = callerList.filter(c => c !== caller);
+            const filtered = callerList.filter(c => c !== symbolName);
             if (filtered.length > 0) {
               this.callers.set(callee, filtered);
             } else {
@@ -125,8 +127,11 @@ export class CodeGraph {
             }
           }
         }
-        this.calls.delete(caller);
+        this.calls.delete(symbolName);
       }
+
+      // Remove calls to this symbol (clean up callers list)
+      this.callers.delete(symbolName);
     }
   }
 
@@ -566,16 +571,16 @@ export class CodeGraphBuilder {
         graph.addImport(file, source);
       } else {
         // Python plain import: import os, import foo.bar
-        // Look for dotted_name child
-        const dottedName = node.childForFieldName('dotted_name');
-        if (dottedName) {
-          graph.addImport(file, dottedName.text);
-        }
-
-        // Also handle aliased_import: import foo as bar
+        // Iterate over children to find dotted_name or aliased_import nodes
         for (let i = 0; i < node.childCount; i++) {
           const child = node.child(i);
-          if (child && child.type === 'aliased_import') {
+          if (!child) continue;
+
+          if (child.type === 'dotted_name') {
+            // Plain import: import os
+            graph.addImport(file, child.text);
+          } else if (child.type === 'aliased_import') {
+            // Aliased import: import foo as bar
             // Extract the original module name (left side before "as")
             const nameNode = child.childForFieldName('name');
             if (nameNode) {

@@ -1,7 +1,9 @@
-// Placeholder test for learning module exports
+import * as learning from '../../../src/learning';
+
 describe('Learning Module', () => {
   it('should export required components', () => {
-    const learning = require('../../../src/learning');
     expect(learning).toBeDefined();
+    expect(learning.FeedbackTracker).toBeDefined();
+    expect(learning.QuietModeFilter).toBeDefined();
   });
 });

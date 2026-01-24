@@ -1,6 +1,6 @@
 # Multi-Provider Code Review (TypeScript v2.1)
 
-**Status:** All Phases Complete ✅ | Production Ready | Enterprise Features
+**Status:** Development Complete ✅ | Pre-Release Testing | Enterprise Features
 
 Hybrid AST + LLM GitHub Action that fuses multiple AI providers with consensus filtering, cost tracking, and security scanning. Now with incremental review (6x faster), CLI mode, analytics dashboard, and self-hosted deployment.
 
@@ -48,7 +48,13 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REVIEW_PROVIDERS: openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free
           INCREMENTAL_ENABLED: 'true'  # 6x faster on updates
+        env:
+          # Required when using OpenRouter providers (even free ones)
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
 ```
+
+**Note:** When using OpenRouter providers, set `OPENROUTER_API_KEY` in your repository secrets. Get a free API key at [openrouter.ai](https://openrouter.ai).
+
 
 ### CLI Mode (Local Development)
 ```bash

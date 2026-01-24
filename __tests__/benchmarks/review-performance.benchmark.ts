@@ -39,16 +39,13 @@ interface BenchmarkResult {
   cacheHit: boolean;
 }
 
-class MockPricingService {
-  cache = new Map();
-  cacheExpiry = 0;
+interface MockPricingService {
+  getPricing(modelId: string): Promise<{ modelId: string; promptPrice: number; completionPrice: number; isFree: boolean }>;
+}
 
-  async getPricing() {
+class BenchmarkPricingService implements MockPricingService {
+  async getPricing(_modelId: string) {
     return { modelId: 'mock', promptPrice: 0.001, completionPrice: 0.002, isFree: false };
-  }
-
-  async refresh() {
-    // No-op for mock
   }
 }
 
@@ -261,7 +258,7 @@ async function runBenchmark(
     testCoverage: new TestCoverageAnalyzer(),
     astAnalyzer: new ASTAnalyzer(),
     cache: cache || new NoopCache(),
-    costTracker: new CostTracker(new MockPricingService() as any),
+    costTracker: new CostTracker(new BenchmarkPricingService() as unknown as MockPricingService),
     security: new SecurityScanner(),
     rules: new RulesEngine([]),
     prLoader: new BenchmarkPRLoader(prContext) as unknown as ReviewComponents['prLoader'],

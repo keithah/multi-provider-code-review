@@ -36,17 +36,8 @@ describe('DashboardGenerator', () => {
       expect(csv).toContain('Yes');
     });
 
-    it('should escape CSV fields containing commas', async () => {
-      // Test that values with commas are properly escaped
-      const csv = await generator.exportCSV();
-      expect(csv).toBeDefined();
-    });
-
-    it('should escape CSV fields containing quotes', async () => {
-      // Test that values with quotes are properly escaped
-      const csv = await generator.exportCSV();
-      expect(csv).toBeDefined();
-    });
+    // Note: CSV escaping is implemented but cannot be tested with current metrics structure
+    // ReviewMetric only contains numeric/boolean fields, no string fields that could contain commas/quotes
 
     it('should handle empty metrics', async () => {
       mockCollector.getMetrics.mockResolvedValue([]);

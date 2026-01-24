@@ -8,7 +8,7 @@ describe('PromptGenerator', () => {
     generator = new PromptGenerator();
   });
 
-  describe('generatePrompts', () => {
+  describe('generate', () => {
     it('should generate fix prompts for findings', () => {
       const findings: Finding[] = [
         {
@@ -21,11 +21,13 @@ describe('PromptGenerator', () => {
         },
       ];
 
-      const prompts = generator.generatePrompts(findings);
+      const result = generator.generate(findings);
 
-      expect(prompts).toHaveLength(1);
-      expect(prompts[0]).toContain('Add null check');
-      expect(prompts[0]).toContain('test.ts');
+      expect(result.prompts).toHaveLength(1);
+      expect(result.prompts[0].fixPrompt).toContain('Add null check');
+      expect(result.prompts[0].file).toContain('test.ts');
+      expect(result.totalFindings).toBe(1);
+      expect(result.promptsGenerated).toBe(1);
     });
 
     it('should handle findings without suggestions', () => {
@@ -39,24 +41,41 @@ describe('PromptGenerator', () => {
         },
       ];
 
-      const prompts = generator.generatePrompts(findings);
+      const result = generator.generate(findings);
 
-      expect(prompts).toHaveLength(1);
-      expect(prompts[0]).toContain('Problem found');
+      expect(result.prompts).toHaveLength(0); // No suggestion = no prompt
+      expect(result.totalFindings).toBe(1);
+      expect(result.promptsGenerated).toBe(0);
     });
 
     it('should format prompts for Cursor IDE', () => {
-      const findings: Finding[] = [{} as any];
-      const prompts = generator.generatePrompts(findings, 'cursor');
+      const findings: Finding[] = [{
+        file: 'test.ts',
+        line: 1,
+        severity: 'major',
+        title: 'Test',
+        message: 'Test',
+        suggestion: 'Fix it',
+      }];
+      const result = generator.generate(findings, 'cursor');
 
-      expect(prompts).toBeDefined();
+      expect(result).toBeDefined();
+      expect(result.format).toBe('cursor');
     });
 
     it('should format prompts for Copilot', () => {
-      const findings: Finding[] = [{} as any];
-      const prompts = generator.generatePrompts(findings, 'copilot');
+      const findings: Finding[] = [{
+        file: 'test.ts',
+        line: 1,
+        severity: 'major',
+        title: 'Test',
+        message: 'Test',
+        suggestion: 'Fix it',
+      }];
+      const result = generator.generate(findings, 'copilot');
 
-      expect(prompts).toBeDefined();
+      expect(result).toBeDefined();
+      expect(result.format).toBe('copilot');
     });
   });
 });
