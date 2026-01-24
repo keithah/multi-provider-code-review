@@ -64,7 +64,7 @@ jobs:
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.resolve-pr.outputs.pr }}
-          REVIEW_PROVIDERS: openrouter/mistralai/devstral-2512:free,openrouter/xiaomi/mimo-v2-flash:free
-          FALLBACK_PROVIDERS: openrouter/microsoft/phi-4:free,openrouter/google/gemini-2.0-flash-exp:free
+          # No REVIEW_PROVIDERS specified - uses dynamic model discovery
+          # Automatically fetches best free models from OpenRouter and OpenCode
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}

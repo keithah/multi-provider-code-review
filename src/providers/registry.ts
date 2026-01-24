@@ -7,6 +7,8 @@ import { logger } from '../utils/logger';
 import { PricingService } from '../cost/pricing';
 import { DEFAULT_CONFIG } from '../config/defaults';
 import { PluginLoader } from '../plugins';
+import { getBestFreeModelsCached as getBestFreeOpenRouterModels } from './openrouter-models';
+import { getBestFreeOpenCodeModelsCached as getBestFreeOpenCodeModels } from './opencode-models';
 
 export class ProviderRegistry {
   private readonly rateLimiter = new RateLimiter();
@@ -21,15 +23,31 @@ export class ProviderRegistry {
     const userProvidedList = Boolean(process.env.REVIEW_PROVIDERS);
     const usingDefaults = this.usesDefaultProviders(config.providers);
 
-    // Only fetch OpenRouter models when defaults are in use and no explicit env override.
-    if (process.env.OPENROUTER_API_KEY && providers.length === 0 && usingDefaults && !userProvidedList) {
-      providers.push(...this.instantiate(DEFAULT_CONFIG.providers));
-      const freeModels = await this.fetchFreeOpenRouterModels();
-      providers.push(...this.instantiate(freeModels));
+    // Dynamically fetch best free models when defaults are in use and no explicit env override
+    if (providers.length === 0 && usingDefaults && !userProvidedList) {
+      logger.info('No providers specified, dynamically discovering best free models...');
+
+      const discoveredModels: string[] = [];
+
+      // Fetch best free OpenRouter models (if API key available)
+      if (process.env.OPENROUTER_API_KEY) {
+        const openRouterModels = await getBestFreeOpenRouterModels(4, 5000);
+        discoveredModels.push(...openRouterModels);
+      }
+
+      // Fetch best free OpenCode models (if CLI available)
+      const openCodeModels = await getBestFreeOpenCodeModels(3, 10000);
+      discoveredModels.push(...openCodeModels);
+
+      if (discoveredModels.length > 0) {
+        logger.info(`Discovered ${discoveredModels.length} free models: ${discoveredModels.join(', ')}`);
+        providers.push(...this.instantiate(discoveredModels));
+      }
     }
 
-    // Ensure we have at least some providers; if user list is empty, fall back to defaults.
+    // Ensure we have at least some providers; if discovery failed, fall back to defaults.
     if (providers.length === 0) {
+      logger.warn('No providers discovered, falling back to default config');
       providers = this.instantiate(DEFAULT_CONFIG.providers);
     }
 
@@ -175,29 +193,6 @@ export class ProviderRegistry {
       result.push(p);
     }
     return result;
-  }
-
-  private async fetchFreeOpenRouterModels(): Promise<string[]> {
-    try {
-      const response = await fetch('https://openrouter.ai/api/v1/models', {
-        headers: { Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}` },
-      });
-      if (!response.ok) {
-        logger.warn(`Failed to fetch OpenRouter models: HTTP ${response.status}`);
-        return [];
-      }
-      const data = (await response.json()) as { data?: Array<{ id: string; pricing?: { prompt?: string; completion?: string } }> };
-      const free = (data.data || [])
-        .filter(model => model.id.includes(':free') || (model.pricing?.prompt === '0' && model.pricing?.completion === '0'))
-        .map(model => `openrouter/${model.id}`);
-      // ensure uniqueness and at least 8 if available
-      const unique = Array.from(new Set(free));
-      const target = Math.max(8, Math.min(unique.length, 12));
-      return unique.slice(0, target);
-    } catch (error) {
-      logger.warn('Error fetching OpenRouter models', error as Error);
-      return [];
-    }
   }
 
   private usesDefaultProviders(list: string[]): boolean {
