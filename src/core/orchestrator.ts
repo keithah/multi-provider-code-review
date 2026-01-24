@@ -166,7 +166,7 @@ export class ReviewOrchestrator {
       }
 
       for (const result of providerResults) {
-        await this.components.costTracker.record(result.name, result.result?.usage);
+        await this.components.costTracker.record(result.name, result.result?.usage, config.budgetMaxUsd);
       }
     }
 
@@ -353,7 +353,14 @@ export class ReviewOrchestrator {
 
   private async ensureBudget(config: ReviewConfig): Promise<void> {
     if (config.budgetMaxUsd <= 0) return;
-    // Budget pre-check is skipped; cost is tracked after execution.
+
+    // Pre-flight guardrail: refuse to run when no budget remains based on cached totals
+    const projected = this.components.costTracker.summary().totalCost;
+    if (projected >= config.budgetMaxUsd) {
+      throw new Error(
+        `Budget exhausted: current recorded cost $${projected.toFixed(4)} exceeds or equals cap $${config.budgetMaxUsd.toFixed(2)}`
+      );
+    }
   }
 
   private estimateTokens(text: string): number {

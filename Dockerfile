@@ -70,10 +70,10 @@ ENV LOG_LEVEL=info
 # Expose webhook port (if using webhook mode)
 EXPOSE 3000
 
-# Health check - comprehensive application health verification
-# Verifies: Node.js runtime, core modules, required files, package.json validity, cache directory writability
+# Health check - verifies that the bundled entrypoint exists and Node can execute
+# Avoids depending on a build artifact (health-check.js) that is not bundled
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD node dist/health-check.js || exit 1
+  CMD node -e "require('fs').accessSync('dist/index.js')" || exit 1
 
 # Default command (can be overridden)
 CMD ["node", "dist/index.js"]

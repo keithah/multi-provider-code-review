@@ -156,7 +156,8 @@ export class CodeGraph {
   addCall(callerFile: string, caller: string, callee: string): void {
     // Use file-qualified keys to avoid symbol collisions across files
     const qualifiedCaller = `${callerFile}:${caller}`;
-    const qualifiedCallee = callee; // callee might be from another file, keep as-is for now
+    // Qualify callee with caller file when we cannot resolve the target file to avoid collisions across files
+    const qualifiedCallee = callee.includes(':') ? callee : `${callerFile}:${callee}`;
 
     // Track caller → callee
     const called = this.calls.get(qualifiedCaller) || [];
@@ -177,7 +178,12 @@ export class CodeGraph {
    * Find all places where a symbol is called/used
    */
   findCallers(symbol: string): GraphCodeSnippet[] {
-    const callerList = this.callers.get(symbol) || [];
+    // Support both qualified (file:symbol) and unqualified symbol lookups
+    const candidateKeys = symbol.includes(':')
+      ? [symbol]
+      : Array.from(this.callers.keys()).filter(key => key.endsWith(`:${symbol}`));
+
+    const callerList = candidateKeys.flatMap(key => this.callers.get(key) || []);
     const snippets: GraphCodeSnippet[] = [];
 
     for (const qualifiedCaller of callerList) {
@@ -348,9 +354,23 @@ export class CodeGraph {
   /**
    * Analyze the impact radius of changes to a file
    * Required by CodeGraph interface - currently a stub
+   *
+   * LIMITATION: Full impact analysis is not yet implemented.
+   * This would require:
+   * 1. Building reverse dependency graph (who imports this file)
+   * 2. Finding all function callers across the codebase
+   * 3. Identifying derived classes (requires inheritance tracking)
+   * 4. Calculating transitive impact (affected files that import affected files)
+   *
+   * Current behavior: Returns a stub response indicating low impact.
+   * Reviews may underestimate the blast radius of changes to widely-used files.
+   *
+   * Workaround: The code graph still provides dependency context for the
+   * changed files themselves, which helps LLMs understand direct relationships.
+   *
+   * Tracked in issue #TODO
    */
   findImpactRadius(file: string): ImpactAnalysis {
-    // TODO: Implement full impact analysis
     return {
       file,
       totalAffected: 0,
@@ -358,7 +378,7 @@ export class CodeGraph {
       consumers: [],
       derived: [],
       impactLevel: 'low',
-      summary: 'Impact analysis not yet implemented',
+      summary: 'Impact analysis not yet implemented - file relationships are tracked but impact radius calculation is pending',
     };
   }
 
@@ -526,11 +546,26 @@ export class CodeGraphBuilder {
     }
 
     // CRITICAL LIMITATION: We only have patch (diff) content, not full file content
-    // This means AST analysis will be incomplete and may produce misleading results
-    // TODO: [#XXX] Fetch full file content from GitHub API for reliable analysis
-    //       - Use GitHub API: GET /repos/{owner}/{repo}/contents/{path}?ref={sha}
-    //       - Cache full file contents to reduce API calls
-    //       - Fallback to patch-only for rate limit/error cases
+    // This means AST analysis will be incomplete and may produce misleading results.
+    //
+    // IMPACT: Code graph may miss:
+    //   - Imports outside the changed lines
+    //   - Function/class definitions outside the patch
+    //   - Accurate line numbers for definitions
+    //   - Complete dependency relationships
+    //
+    // TODO: Fetch full file content from GitHub API for reliable analysis
+    //       Implementation steps:
+    //       1. Use GitHub API: GET /repos/{owner}/{repo}/contents/{path}?ref={sha}
+    //       2. Cache full file contents to reduce API calls
+    //       3. Fallback to patch-only for rate limit/error cases
+    //       4. Update AST parsing to use full content
+    //
+    // WORKAROUND: Current implementation extracts added lines from patch for
+    // partial analysis. This works for simple cases but may miss cross-file
+    // relationships. LLMs still receive the full diff context in the prompt.
+    //
+    // Tracked in issue #TODO
     logger.warn(`Analyzing patch-only for ${file.filename} - AST may be incomplete/invalid`);
 
     // Try to extract added lines from patch for partial analysis

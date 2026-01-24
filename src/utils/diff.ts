@@ -73,8 +73,13 @@ export function mapAddedLines(patch: string | undefined): AddedLine[] {
 
   let currentNew = 0;
   const hunkRegex = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/;
+  const noNewlineMarker = '\\ No newline at end of file';
 
   for (const raw of lines) {
+    if (raw === noNewlineMarker) {
+      continue; // marker only, do not advance line numbers
+    }
+
     const hunkMatch = raw.match(hunkRegex);
     if (hunkMatch) {
       currentNew = parseInt(hunkMatch[2], 10);
@@ -106,8 +111,13 @@ export function mapLinesToPositions(patch: string | undefined): Map<number, numb
   let currentNew = 0;
   let position = 0;
   const hunkRegex = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/;
+  const noNewlineMarker = '\\ No newline at end of file';
 
   for (const raw of lines) {
+    if (raw === noNewlineMarker) {
+      continue; // marker only, do not advance counters
+    }
+
     position += 1;
 
     const hunkMatch = raw.match(hunkRegex);

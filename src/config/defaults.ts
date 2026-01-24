@@ -42,7 +42,7 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   incrementalEnabled: true,
   incrementalCacheTtlDays: 7,
 
-  graphEnabled: true,
+  graphEnabled: false,
   graphCacheEnabled: true,
   graphMaxDepth: 5,
   graphTimeoutSeconds: 10,

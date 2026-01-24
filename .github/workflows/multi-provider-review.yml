@@ -61,24 +61,24 @@ jobs:
       - name: Validate Review Providers Input
         if: ${{ inputs.review_providers != '' }}
         run: |
-          # Validate REVIEW_PROVIDERS format: only allow alphanumeric, dots, hyphens, underscores, slashes, colons, and commas
-          # Examples of valid formats: "openrouter/model:free", "opencode/model-name", "provider/vendor/model:tag", "gemini-2.0-flash-exp"
+          # Validate REVIEW_PROVIDERS against the same pattern used in code (Provider.validate)
+          # Allowed: openrouter/<vendor>/<model>[:tag], opencode/<model>[:tag]
           PROVIDERS="${{ inputs.review_providers }}"
-          if ! echo "$PROVIDERS" | grep -qE '^[a-zA-Z0-9_/.-]+:[a-zA-Z0-9_/.-]+(,[a-zA-Z0-9_/.-]+:[a-zA-Z0-9_/.-]+)*$'; then
-            echo "Error: Invalid REVIEW_PROVIDERS format. Must be comma-separated provider/model:tag format."
-            echo "Examples: 'openrouter/mistralai/model:free' or 'opencode/gemini-2.0-flash-exp:free'"
-            echo "Received: $PROVIDERS"
-            exit 1
-          fi
+          IFS=',' read -ra MODELS <<< "$PROVIDERS"
+          for MODEL in "${MODELS[@]}"; do
+            if ! echo "$MODEL" | grep -qE '^(openrouter|opencode)/[A-Za-z0-9._:-/]+$'; then
+              echo "Error: Invalid provider name: $MODEL"
+              echo "Expected format: openrouter/vendor/model:tag or opencode/model[:tag]"
+              exit 1
+            fi
+          done
           echo "Providers validated: $PROVIDERS"
       - name: Validate Secrets and Configuration
         run: |
           # Check if OPENROUTER_API_KEY is available for fork PRs
           if [ "${{ github.event.pull_request.head.repo.fork }}" = "true" ]; then
             if [ -z "${{ secrets.OPENROUTER_API_KEY }}" ]; then
-              echo "⚠️  Warning: Fork PR detected without OPENROUTER_API_KEY secret."
-              echo "    Review step will be SKIPPED (see workflow gate condition at line 99)."
-              echo "    To enable reviews for fork PRs, add OPENROUTER_API_KEY to repository secrets."
+              echo "⚠️  Warning: Fork PR without OPENROUTER_API_KEY. OpenRouter providers will be skipped; free OpenCode providers will be used."
             else
               echo "✅ OPENROUTER_API_KEY available for fork PR - review will run"
             fi
@@ -94,10 +94,9 @@ jobs:
           fi
       - name: Install OpenCode CLI
         run: npm install -g opencode-ai@1.1.32
-      # Run review if: (1) PR number found, AND (2) either not a fork PR OR has OpenRouter API key
-      # Fork PRs can run using free opencode providers if OPENROUTER_API_KEY is not available
+      # Run review if: PR number found. Fork PRs are allowed without OpenRouter key (falls back to free providers).
       - name: Multi-Provider Code Review
-        if: ${{ steps.resolve-pr.outputs.pr != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false || env.OPENROUTER_API_KEY != '') }}
+        if: ${{ steps.resolve-pr.outputs.pr != '' }}
         uses: ./
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
