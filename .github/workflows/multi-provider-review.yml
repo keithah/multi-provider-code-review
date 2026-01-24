@@ -61,12 +61,12 @@ jobs:
       - name: Validate Review Providers Input
         if: ${{ inputs.review_providers != '' }}
         run: |
-          # Validate REVIEW_PROVIDERS format: only allow alphanumeric, hyphens, underscores, slashes, colons, and commas
-          # Examples of valid formats: "openrouter/model:free", "opencode/model-name", "provider/vendor/model:tag"
+          # Validate REVIEW_PROVIDERS format: only allow alphanumeric, dots, hyphens, underscores, slashes, colons, and commas
+          # Examples of valid formats: "openrouter/model:free", "opencode/model-name", "provider/vendor/model:tag", "gemini-2.0-flash-exp"
           PROVIDERS="${{ inputs.review_providers }}"
-          if ! echo "$PROVIDERS" | grep -qE '^[a-zA-Z0-9_/-]+:[a-zA-Z0-9_/.-]+(,[a-zA-Z0-9_/-]+:[a-zA-Z0-9_/.-]+)*$'; then
+          if ! echo "$PROVIDERS" | grep -qE '^[a-zA-Z0-9_/.-]+:[a-zA-Z0-9_/.-]+(,[a-zA-Z0-9_/.-]+:[a-zA-Z0-9_/.-]+)*$'; then
             echo "Error: Invalid REVIEW_PROVIDERS format. Must be comma-separated provider/model:tag format."
-            echo "Examples: 'openrouter/mistralai/model:free' or 'opencode/model-name:free'"
+            echo "Examples: 'openrouter/mistralai/model:free' or 'opencode/gemini-2.0-flash-exp:free'"
             echo "Received: $PROVIDERS"
             exit 1
           fi
@@ -77,9 +77,10 @@ jobs:
           if [ "${{ github.event.pull_request.head.repo.fork }}" = "true" ]; then
             if [ -z "${{ secrets.OPENROUTER_API_KEY }}" ]; then
               echo "⚠️  Warning: Fork PR detected without OPENROUTER_API_KEY secret."
-              echo "    Will fall back to free OpenCode providers if available."
+              echo "    Review step will be SKIPPED (see workflow gate condition at line 99)."
+              echo "    To enable reviews for fork PRs, add OPENROUTER_API_KEY to repository secrets."
             else
-              echo "✅ OPENROUTER_API_KEY available for fork PR"
+              echo "✅ OPENROUTER_API_KEY available for fork PR - review will run"
             fi
           else
             echo "✅ Not a fork PR - all secrets available"

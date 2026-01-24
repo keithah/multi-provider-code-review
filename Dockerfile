@@ -40,7 +40,7 @@ ARG VERSION=0.2.1
 LABEL org.opencontainers.image.title="Multi-Provider Code Review"
 LABEL org.opencontainers.image.description="AI-powered code review with multiple LLM providers"
 LABEL org.opencontainers.image.vendor="multi-provider-code-review"
-LABEL org.opencontainers.image.source="https://github.com/user/multi-provider-code-review"
+LABEL org.opencontainers.image.source="https://github.com/keithah/multi-provider-code-review"
 LABEL org.opencontainers.image.version="${VERSION}"
 LABEL org.opencontainers.image.created="${BUILD_DATE}"
 
