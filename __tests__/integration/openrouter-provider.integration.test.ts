@@ -274,7 +274,8 @@ describe('OpenRouterProvider Integration', () => {
 
       global.fetch = jest.fn().mockImplementation((url, options) => {
         return new Promise((resolve, reject) => {
-          // Simulate very slow response (longer than the test timeout)
+          // Simulate slow response (200ms delay, but timeout is 100ms)
+          // Keep delays short to avoid CI flakiness
           const timeout = setTimeout(() => {
             if (options.signal?.aborted) {
               const error = new Error('The operation was aborted');
@@ -287,9 +288,9 @@ describe('OpenRouterProvider Integration', () => {
                 headers: new Map()
               });
             }
-          }, 3000); // 3 seconds - longer than 1s timeout to ensure abort fires
+          }, 200);
 
-          // Listen for abort
+          // Listen for abort signal
           if (options.signal) {
             options.signal.addEventListener('abort', () => {
               clearTimeout(timeout);
@@ -301,9 +302,9 @@ describe('OpenRouterProvider Integration', () => {
         });
       });
 
-      // Set 1s timeout - should abort before 3s mock response completes
-      // Mock delay (3s) is 3x the timeout to ensure abort triggers reliably
-      await expect(provider.review('test', 1000)).rejects.toThrow();
+      // Set 100ms timeout - should abort before 200ms mock response completes
+      // Using shorter timeouts reduces CI flakiness while still testing abort behavior
+      await expect(provider.review('test', 100)).rejects.toThrow();
     });
 
     it('should handle network errors', async () => {

@@ -1,6 +1,10 @@
 # Multi-Provider Code Review - Self-Hosted Deployment
 # Production-ready Docker image with all dependencies
 
+# Build arguments for metadata
+ARG BUILD_DATE
+ARG VERSION=0.2.1
+
 FROM node:20-alpine AS builder
 
 # Install build dependencies
@@ -21,11 +25,24 @@ COPY src ./src
 # Build application
 RUN npm run build:prod
 
-# Remove devDependencies after build
+# Remove devDependencies after build (keeps only production dependencies)
+# This significantly reduces the final image size by removing TypeScript, build tools, etc.
 RUN npm prune --production
 
 # Production image
 FROM node:20-alpine
+
+# Pass build arguments to production stage
+ARG BUILD_DATE
+ARG VERSION=0.2.1
+
+# Add metadata labels (OCI standard)
+LABEL org.opencontainers.image.title="Multi-Provider Code Review"
+LABEL org.opencontainers.image.description="AI-powered code review with multiple LLM providers"
+LABEL org.opencontainers.image.vendor="multi-provider-code-review"
+LABEL org.opencontainers.image.source="https://github.com/user/multi-provider-code-review"
+LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.created="${BUILD_DATE}"
 
 # Install runtime dependencies
 RUN apk add --no-cache git
