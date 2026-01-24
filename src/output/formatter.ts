@@ -15,14 +15,6 @@ export class MarkdownFormatter {
     this.printSeveritySection(lines, 'Major', major);
     this.printSeveritySection(lines, 'Minor', minor);
 
-    if (review.mermaidDiagram && review.mermaidDiagram.trim()) {
-      lines.push('\n<details><summary>Impact graph</summary>');
-      lines.push('```mermaid');
-      lines.push(review.mermaidDiagram);
-      lines.push('```');
-      lines.push('</details>');
-    }
-
     lines.push('\n---');
     lines.push('<details><summary>Run details (usage, cost, providers, status)</summary>');
     lines.push('');
