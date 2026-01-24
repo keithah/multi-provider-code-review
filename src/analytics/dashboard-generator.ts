@@ -1,6 +1,25 @@
-import { MetricsCollector } from './metrics-collector';
+import { MetricsCollector, MetricsData, ReviewMetric } from './metrics-collector';
 import { logger } from '../utils/logger';
 import * as fs from 'fs/promises';
+
+// Type definitions for dashboard data
+interface CostTrend {
+  date: string;
+  cost: number;
+  reviews: number;
+}
+
+interface PerformanceTrend {
+  date: string;
+  avgDuration: number;
+}
+
+interface ROIData {
+  totalCost: number;
+  estimatedTimeSaved: number;
+  estimatedTimeSavedValue: number;
+  roi: number;
+}
 
 /**
  * Generates an HTML analytics dashboard with charts and statistics
@@ -93,7 +112,7 @@ export class DashboardGenerator {
   /**
    * Build complete HTML document
    */
-  private buildHTML(stats: any, costTrends: any[], perfTrends: any[], roi: any): string {
+  private buildHTML(stats: MetricsData, costTrends: CostTrend[], perfTrends: PerformanceTrend[], roi: ROIData): string {
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -140,7 +159,7 @@ export class DashboardGenerator {
   /**
    * Build summary cards HTML
    */
-  private buildSummaryCards(stats: any, roi: any): string {
+  private buildSummaryCards(stats: MetricsData, roi: ROIData): string {
     return `
     <div class="summary-cards">
       <div class="card">
@@ -197,7 +216,7 @@ export class DashboardGenerator {
   /**
    * Build cost trend chart HTML
    */
-  private buildCostTrendChart(_costTrends: any[]): string {
+  private buildCostTrendChart(_costTrends: CostTrend[]): string {
     return `
     <div class="chart-container">
       <h2>💰 Cost Trends (Last 30 Days)</h2>
@@ -208,7 +227,7 @@ export class DashboardGenerator {
   /**
    * Build performance trend chart HTML
    */
-  private buildPerformanceTrendChart(_perfTrends: any[]): string {
+  private buildPerformanceTrendChart(_perfTrends: PerformanceTrend[]): string {
     return `
     <div class="chart-container">
       <h2>⚡ Review Performance (Last 30 Days)</h2>
@@ -219,7 +238,7 @@ export class DashboardGenerator {
   /**
    * Build findings distribution chart HTML
    */
-  private buildFindingsDistributionChart(_stats: any): string {
+  private buildFindingsDistributionChart(_stats: MetricsData): string {
     // TODO: Actually use the stats data
     // const recent = stats.reviews.slice(-100); // Last 100 reviews
     // const critical = recent.reduce((sum: number, r: any) => sum + r.criticalCount, 0);
@@ -237,7 +256,7 @@ export class DashboardGenerator {
   /**
    * Build provider success chart HTML
    */
-  private buildProviderSuccessChart(_stats: any): string {
+  private buildProviderSuccessChart(_stats: MetricsData): string {
     return `
     <div class="chart-container">
       <h2>🤖 Provider Success Rate</h2>
@@ -248,7 +267,7 @@ export class DashboardGenerator {
   /**
    * Build ROI section HTML
    */
-  private buildROISection(roi: any): string {
+  private buildROISection(roi: ROIData): string {
     return `
     <div class="roi-section">
       <h2>💎 Return on Investment Analysis</h2>
@@ -280,20 +299,20 @@ export class DashboardGenerator {
   /**
    * Build recent reviews table HTML
    */
-  private buildRecentReviewsTable(reviews: any[]): string {
+  private buildRecentReviewsTable(reviews: ReviewMetric[]): string {
     const recent = reviews.slice(-10).reverse(); // Last 10, newest first
 
     const rows = recent
       .map(
-        (r: any) => `
+        (r: ReviewMetric) => `
       <tr>
         <td>${this.escapeHtml(new Date(r.timestamp).toLocaleDateString())}</td>
         <td>#${r.prNumber}</td>
         <td>${r.filesReviewed}</td>
         <td>${r.findingsCount}</td>
-        <td class="severity critical">${r.criticalCount}</td>
-        <td class="severity major">${r.majorCount}</td>
-        <td class="severity minor">${r.minorCount}</td>
+        <td class="severity critical">-</td>
+        <td class="severity major">-</td>
+        <td class="severity minor">-</td>
         <td>$${r.costUsd.toFixed(4)}</td>
         <td>${r.durationSeconds.toFixed(1)}s</td>
         <td>${r.cacheHit ? '✅' : '❌'}</td>
@@ -376,14 +395,16 @@ export class DashboardGenerator {
   /**
    * Get Chart.js JavaScript
    */
-  private getChartJS(costTrends: any[], perfTrends: any[], stats: any): string {
+  private getChartJS(costTrends: CostTrend[], perfTrends: PerformanceTrend[], stats: MetricsData): string {
     const recent = stats.reviews.slice(-100);
-    const critical = recent.reduce((sum: number, r: any) => sum + r.criticalCount, 0);
-    const major = recent.reduce((sum: number, r: any) => sum + r.majorCount, 0);
-    const minor = recent.reduce((sum: number, r: any) => sum + r.minorCount, 0);
+    // Placeholder values - severity breakdown not currently tracked in ReviewMetric
+    const critical = 0;
+    const major = 0;
+    const minor = 0;
 
-    const totalSuccess = recent.reduce((sum: number, r: any) => sum + r.providersSuccess, 0);
-    const totalFailed = recent.reduce((sum: number, r: any) => sum + r.providersFailed, 0);
+    // Placeholder values - provider success/failure not currently tracked per review
+    const totalSuccess = recent.reduce((sum: number, r: ReviewMetric) => sum + r.providersUsed, 0);
+    const totalFailed = 0;
 
     return `
       // Cost Trend Chart

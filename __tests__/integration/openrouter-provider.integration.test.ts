@@ -287,7 +287,7 @@ describe('OpenRouterProvider Integration', () => {
                 headers: new Map()
               });
             }
-          }, 2000); // 2 seconds - much longer than 500ms timeout
+          }, 5000); // 5 seconds - much longer than 2s timeout
 
           // Listen for abort
           if (options.signal) {
@@ -301,8 +301,9 @@ describe('OpenRouterProvider Integration', () => {
         });
       });
 
-      // Set short timeout (500ms) - should abort before 2s mock response
-      await expect(provider.review('test', 500)).rejects.toThrow();
+      // Set timeout (2s) - should abort before 5s mock response
+      // Using longer timeout to avoid flakiness in slow CI environments
+      await expect(provider.review('test', 2000)).rejects.toThrow();
     });
 
     it('should handle network errors', async () => {

@@ -1,10 +1,11 @@
 import { FileChange, CodeSnippet, ImpactAnalysis } from '../../types';
 import { logger } from '../../utils/logger';
 import * as path from 'path';
+import type TreeSitter from 'tree-sitter';
 
-// Lazy-load tree-sitter to avoid bundling native modules
-type Parser = any;
-type SyntaxNode = any;
+// Type aliases for tree-sitter types (modules are lazy-loaded to avoid bundling native code)
+type Parser = TreeSitter;
+type SyntaxNode = TreeSitter.SyntaxNode;
 
 /**
  * Normalize a module specifier to a canonical file path
