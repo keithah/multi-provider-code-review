@@ -9,6 +9,20 @@ export class DashboardGenerator {
   constructor(private readonly metricsCollector: MetricsCollector) {}
 
   /**
+   * Escape HTML special characters to prevent XSS
+   */
+  private escapeHtml(text: string): string {
+    const map: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;',
+    };
+    return text.replace(/[&<>"']/g, (char) => map[char]);
+  }
+
+  /**
    * Generate complete HTML dashboard
    */
   async generateDashboard(): Promise<string> {
@@ -273,7 +287,7 @@ export class DashboardGenerator {
       .map(
         (r: any) => `
       <tr>
-        <td>${new Date(r.timestamp).toLocaleDateString()}</td>
+        <td>${this.escapeHtml(new Date(r.timestamp).toLocaleDateString())}</td>
         <td>#${r.prNumber}</td>
         <td>${r.filesReviewed}</td>
         <td>${r.findingsCount}</td>

@@ -1,6 +1,22 @@
 /**
  * Plugin Loader System
  * Dynamically loads and registers custom provider plugins
+ *
+ * ⚠️  SECURITY WARNING ⚠️
+ *
+ * This module loads and executes arbitrary JavaScript code from the filesystem.
+ * Plugins have FULL system access with no sandboxing or isolation.
+ *
+ * CRITICAL SECURITY CONSIDERATIONS:
+ * - Only load plugins from trusted sources you control
+ * - Never use in public GitHub Actions workflows where untrusted PRs could influence plugin loading
+ * - Plugins can execute ANY Node.js code with the same permissions as this process
+ * - Review all plugin code before deployment
+ * - Use allowlist/blocklist to restrict which plugins can be loaded
+ *
+ * RECOMMENDED USAGE:
+ * - Private, controlled environments only (self-hosted runners, internal CI/CD)
+ * - Consider requiring explicit acknowledgment via PLUGIN_SECURITY_ACKNOWLEDGED env var
  */
 
 import * as fs from 'fs/promises';

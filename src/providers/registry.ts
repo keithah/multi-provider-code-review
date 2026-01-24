@@ -81,7 +81,11 @@ export class ProviderRegistry {
     for (const name of names) {
       // Check if provider is provided by a plugin first (before validation)
       if (this.pluginLoader?.hasProvider(name)) {
-        const apiKey = process.env.PLUGIN_API_KEY || '';
+        // Extract plugin name from provider name (e.g., "custom/my-provider" -> "custom")
+        const pluginName = name.split('/')[0];
+        // Support per-plugin API keys: PLUGIN_CUSTOM_API_KEY, fallback to shared PLUGIN_API_KEY
+        const pluginEnvVar = `PLUGIN_${pluginName.toUpperCase().replace(/-/g, '_')}_API_KEY`;
+        const apiKey = process.env[pluginEnvVar] || process.env.PLUGIN_API_KEY || '';
         const provider = this.pluginLoader.createProvider(name, apiKey);
         if (provider) {
           list.push(provider);
