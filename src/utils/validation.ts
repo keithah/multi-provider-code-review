@@ -272,8 +272,9 @@ export function formatValidationError(error: ValidationError | Error): string {
  */
 export function validateConfig(config: Record<string, unknown>): void {
   // Validate providers
+  // Note: Empty array is valid - it enables dynamic model discovery
   if (config.providers) {
-    const providers = validateNonEmptyArray(config.providers, 'providers');
+    const providers = validateArray(config.providers, 'providers');
     validateStringArray(providers, 'providers');
 
     providers.forEach((p: unknown) => {

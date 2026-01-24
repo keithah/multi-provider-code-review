@@ -31342,17 +31342,6 @@ function validateArray(value, field) {
   }
   return value;
 }
-function validateNonEmptyArray(value, field) {
-  const arr = validateArray(value, field);
-  if (arr.length === 0) {
-    throw new ValidationError(
-      `${field} cannot be empty`,
-      field,
-      "At least one item is required"
-    );
-  }
-  return arr;
-}
 function validateStringArray(value, field) {
   const arr = validateArray(value, field);
   for (let i = 0; i < arr.length; i++) {
@@ -31398,7 +31387,7 @@ function formatValidationError(error2) {
 }
 function validateConfig(config) {
   if (config.providers) {
-    const providers = validateNonEmptyArray(config.providers, "providers");
+    const providers = validateArray(config.providers, "providers");
     validateStringArray(providers, "providers");
     providers.forEach((p) => {
       if (typeof p === "string") {
