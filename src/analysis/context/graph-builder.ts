@@ -1,9 +1,30 @@
 import { FileChange, CodeSnippet, ImpactAnalysis } from '../../types';
 import { logger } from '../../utils/logger';
+import * as path from 'path';
 
 // Lazy-load tree-sitter to avoid bundling native modules
 type Parser = any;
 type SyntaxNode = any;
+
+/**
+ * Normalize a module specifier to a canonical file path
+ * Resolves relative imports (./foo, ../bar) relative to the importer
+ */
+function resolveImportPath(importerFile: string, moduleSpecifier: string): string {
+  // If it's a relative import (starts with . or ..)
+  if (moduleSpecifier.startsWith('.')) {
+    const importerDir = path.dirname(importerFile);
+    // Only resolve to absolute if importer has a directory component
+    // This prevents test files like 'component.ts' from becoming absolute
+    if (importerDir && importerDir !== '.' && importerDir !== importerFile) {
+      const resolved = path.join(importerDir, moduleSpecifier);
+      // Normalize to forward slashes for consistency
+      return resolved.replace(/\\/g, '/');
+    }
+  }
+  // For package imports (e.g., 'react', '@types/node') or simple relative paths, return as-is
+  return moduleSpecifier;
+}
 
 export interface Definition {
   name: string;
@@ -73,9 +94,11 @@ export class CodeGraph {
    * Add an import relationship
    */
   addImport(fromFile: string, toFile: string): void {
+    // Normalize the import path to canonical form
+    const normalizedPath = resolveImportPath(fromFile, toFile);
     const imported = this.imports.get(fromFile) || [];
-    if (!imported.includes(toFile)) {
-      imported.push(toFile);
+    if (!imported.includes(normalizedPath)) {
+      imported.push(normalizedPath);
       this.imports.set(fromFile, imported);
     }
   }
@@ -128,9 +151,20 @@ export class CodeGraph {
    */
   findConsumers(file: string): GraphCodeSnippet[] {
     const consumers: GraphCodeSnippet[] = [];
+    // Normalize the file path for consistent comparison
+    const normalizedFile = file.replace(/\\/g, '/');
 
     for (const [fromFile, toFiles] of this.imports) {
-      if (toFiles.includes(file)) {
+      // Check if any imported path matches (could be relative or absolute)
+      const hasMatch = toFiles.some(importedPath => {
+        // Direct match with normalized path
+        if (importedPath === normalizedFile) return true;
+        // Also check if the resolved path ends with the file (for relative comparisons)
+        if (importedPath.endsWith(normalizedFile)) return true;
+        return false;
+      });
+
+      if (hasMatch) {
         consumers.push({
           file: fromFile,
           line: 1,
@@ -177,8 +211,20 @@ export class CodeGraph {
    */
   getDependents(file: string): string[] {
     const dependents: string[] = [];
+    // Normalize the file path for consistent comparison
+    const normalizedFile = file.replace(/\\/g, '/');
+
     for (const [fromFile, toFiles] of this.imports) {
-      if (toFiles.includes(file)) {
+      // Check if any imported path matches (could be relative or absolute)
+      const hasMatch = toFiles.some(importedPath => {
+        // Direct match with normalized path
+        if (importedPath === normalizedFile) return true;
+        // Also check if the resolved path ends with the file (for relative comparisons)
+        if (importedPath.endsWith(normalizedFile)) return true;
+        return false;
+      });
+
+      if (hasMatch) {
         dependents.push(fromFile);
       }
     }
@@ -257,6 +303,19 @@ export class CodeGraph {
       buildTimeMs: this.buildTime,
     };
   }
+
+  /**
+   * Copy graph data from another CodeGraph instance
+   * Type-safe alternative to direct private field assignment
+   */
+  copyFrom(other: CodeGraph): void {
+    this.definitions = new Map(other.definitions);
+    this.imports = new Map(other.imports.entries());
+    this.exports = new Map(other.exports.entries());
+    this.calls = new Map(other.calls.entries());
+    this.callers = new Map(other.callers.entries());
+    this.fileSymbols = new Map(other.fileSymbols.entries());
+  }
 }
 
 /**
@@ -264,6 +323,7 @@ export class CodeGraph {
  */
 export class CodeGraphBuilder {
   private tsParser: Parser | null = null;
+  private tsxParser: Parser | null = null;
   private pyParser: Parser | null = null;
   private parsersInitialized = false;
 
@@ -288,9 +348,11 @@ export class CodeGraphBuilder {
 
       const Parser = ParserModule.default;
       this.tsParser = new Parser();
+      this.tsxParser = new Parser();
       this.pyParser = new Parser();
 
       this.tsParser.setLanguage(TypeScriptParser.default.typescript);
+      this.tsxParser.setLanguage(TypeScriptParser.default.tsx);
       this.pyParser.setLanguage(PythonParser.default);
       this.parsersInitialized = true;
     } catch (error) {
@@ -328,19 +390,8 @@ export class CodeGraphBuilder {
       buildTime
     );
 
-    // Copy Maps from working graph to final graph
-    // @ts-expect-error - accessing private field definitions to copy graph data
-    finalGraph.definitions = graph.definitions;
-    // @ts-expect-error - accessing private field imports to copy graph data
-    finalGraph.imports = graph.imports;
-    // @ts-expect-error - accessing private field exports to copy graph data
-    finalGraph.exports = graph.exports;
-    // @ts-expect-error - accessing private field calls to copy graph data
-    finalGraph.calls = graph.calls;
-    // @ts-expect-error - accessing private field callers to copy graph data
-    finalGraph.callers = graph.callers;
-    // @ts-expect-error - accessing private field fileSymbols to copy graph data
-    finalGraph.fileSymbols = graph.fileSymbols;
+    // Copy graph data using type-safe method
+    finalGraph.copyFrom(graph);
 
     logger.info(`Code graph built in ${buildTime}ms: ${graph.getStats().definitions} definitions, ${graph.getStats().imports} imports`);
 
@@ -381,7 +432,10 @@ export class CodeGraphBuilder {
     const ext = file.filename.split('.').pop()?.toLowerCase();
     let parser: Parser | null = null;
 
-    if (ext === 'ts' || ext === 'tsx' || ext === 'js' || ext === 'jsx') {
+    // Route to appropriate parser based on file extension
+    if (ext === 'tsx' || ext === 'jsx') {
+      parser = this.tsxParser;
+    } else if (ext === 'ts' || ext === 'js') {
       parser = this.tsParser;
     } else if (ext === 'py') {
       parser = this.pyParser;
@@ -452,8 +506,28 @@ export class CodeGraphBuilder {
     if (node.type === 'import_statement') {
       const sourceNode = node.childForFieldName('source');
       if (sourceNode) {
+        // ES6/TypeScript import with source
         const source = sourceNode.text.replace(/['"]/g, '');
         graph.addImport(file, source);
+      } else {
+        // Python plain import: import os, import foo.bar
+        // Look for dotted_name child
+        const dottedName = node.childForFieldName('dotted_name');
+        if (dottedName) {
+          graph.addImport(file, dottedName.text);
+        }
+
+        // Also handle aliased_import: import foo as bar
+        for (let i = 0; i < node.childCount; i++) {
+          const child = node.child(i);
+          if (child && child.type === 'aliased_import') {
+            // Extract the original module name (left side before "as")
+            const nameNode = child.childForFieldName('name');
+            if (nameNode) {
+              graph.addImport(file, nameNode.text);
+            }
+          }
+        }
       }
     }
 
