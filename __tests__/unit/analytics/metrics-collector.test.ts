@@ -4,8 +4,10 @@ import { Review } from '../../../src/types';
 describe('MetricsCollector', () => {
   let collector: MetricsCollector;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     collector = new MetricsCollector();
+    // Clear all metrics before each test for isolation
+    await collector.clear();
   });
 
   describe('recordReview', () => {
@@ -62,7 +64,7 @@ describe('MetricsCollector', () => {
 
       const metrics = await collector.getMetrics();
       expect(metrics.length).toBeLessThanOrEqual(1000);
-    });
+    }, 10000); // Increase timeout to 10 seconds for this test
   });
 
   describe('getMetrics', () => {

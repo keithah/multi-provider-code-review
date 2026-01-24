@@ -1,9 +1,8 @@
-import * as context from '../../../../src/analysis/context';
+import { CodeGraph, CodeGraphBuilder } from '../../../../src/analysis/context/index';
 
 describe('Context Module', () => {
   it('should export required components', () => {
-    expect(context).toBeDefined();
-    expect(context.CodeGraph).toBeDefined();
-    expect(context.CodeGraphBuilder).toBeDefined();
+    expect(CodeGraph).toBeDefined();
+    expect(CodeGraphBuilder).toBeDefined();
   });
 });

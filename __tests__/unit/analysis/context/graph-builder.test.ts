@@ -70,7 +70,11 @@ describe('CodeGraphBuilder', () => {
     it('should track imports and calls', () => {
       const graph = new CodeGraph();
       graph.addImport('a.ts', './b.ts');
-      graph.addCall('foo', 'bar');
+      // Add definitions for the functions first
+      graph.addDefinition({ name: 'foo', file: 'a.ts', line: 1, type: 'function', exported: false });
+      graph.addDefinition({ name: 'bar', file: 'b.ts', line: 1, type: 'function', exported: false });
+      // Now add the call relationship
+      graph.addCall('a.ts', 'foo', 'bar');
 
       expect(graph.getDependencies('a.ts')).toContain('./b.ts');
       expect(graph.findCallers('bar').length).toBeGreaterThan(0);

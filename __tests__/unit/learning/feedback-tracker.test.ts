@@ -8,14 +8,14 @@ describe('FeedbackTracker', () => {
   });
 
   it('should record feedback reactions', async () => {
-    await tracker.recordReaction('finding-123', '👍');
+    await tracker.recordReaction('finding-123', 'test-category', 'major', '👍');
     const confidence = await tracker.getConfidenceThreshold('test-category');
     expect(confidence).toBeGreaterThanOrEqual(0);
   });
 
   it('should adjust weights based on feedback', async () => {
-    await tracker.recordReaction('finding-1', '👍');
-    await tracker.recordReaction('finding-2', '👎');
+    await tracker.recordReaction('finding-1', 'test-category', 'major', '👍');
+    await tracker.recordReaction('finding-2', 'test-category', 'major', '👎');
     await tracker.adjustWeights();
     expect(true).toBe(true); // Placeholder assertion
   });
