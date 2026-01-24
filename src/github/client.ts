@@ -23,8 +23,8 @@ export class GitHubClient {
 
     const [owner, repo] = repoEnv.split('/');
     this.owner = owner || '';
-    this.repo = repo;
+    this.repo = repo || '';
 
-    core.debug(`GitHub client initialized for ${owner}/${repo}`);
+    core.debug(`GitHub client initialized for ${this.owner}/${this.repo}`);
   }
 }

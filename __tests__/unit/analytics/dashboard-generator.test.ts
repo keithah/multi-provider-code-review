@@ -44,6 +44,7 @@ describe('DashboardGenerator', () => {
           durationSeconds: 30,
           providersUsed: 3,
           cacheHit: true,
+          providers: ['openai/gpt-4', 'anthropic/claude-3'],
         },
       ]);
 
@@ -80,6 +81,7 @@ describe('DashboardGenerator', () => {
         durationSeconds: 30,
         providersUsed: 3,
         cacheHit: true,
+        providers: ['openai/gpt-4', 'anthropic/claude-3'],
       };
       mockCollector.getMetrics.mockResolvedValue([sampleMetric]);
       mockCollector.getStats.mockResolvedValue({

@@ -54,6 +54,8 @@ export interface ReviewConfig {
 
   analyticsEnabled?: boolean;
   analyticsMaxReviews?: number;
+  analyticsDeveloperRate?: number;
+  analyticsManualReviewTime?: number;
 
   pluginsEnabled?: boolean;
   pluginDir?: string;

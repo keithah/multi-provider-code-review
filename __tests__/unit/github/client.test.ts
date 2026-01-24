@@ -38,9 +38,9 @@ describe('GitHubClient', () => {
 
       const client = new GitHubClient(mockToken);
 
-      // When there's no '/', split returns the whole string as first element
+      // When there's no '/', split returns the whole string as first element, repo is empty string
       expect(client.owner).toBe('invalid-format');
-      expect(client.repo).toBeUndefined();
+      expect(client.repo).toBe('');
     });
 
     it('handles GITHUB_REPOSITORY not set', () => {

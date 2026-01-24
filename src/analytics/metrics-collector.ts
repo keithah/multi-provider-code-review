@@ -1,4 +1,4 @@
-import { Review } from '../types';
+import { Review, ReviewConfig } from '../types';
 import { CacheStorage } from '../cache/storage';
 import { logger } from '../utils/logger';
 
@@ -11,6 +11,7 @@ export interface ReviewMetric {
   durationSeconds: number;
   providersUsed: number;
   cacheHit: boolean;
+  providers: string[]; // List of provider names used
 }
 
 export interface CategoryMetric {
@@ -42,9 +43,11 @@ export interface MetricsData {
  */
 export class MetricsCollector {
   private static readonly CACHE_KEY = 'analytics-metrics-data';
-  private static readonly MAX_REVIEWS_STORED = 1000; // Keep last 1000 reviews
 
-  constructor(private readonly storage = new CacheStorage()) {}
+  constructor(
+    private readonly storage = new CacheStorage(),
+    private readonly config?: Partial<ReviewConfig>
+  ) {}
 
   /**
    * Record a completed review
@@ -55,6 +58,11 @@ export class MetricsCollector {
     // Calculate files reviewed from findings
     const filesReviewed = new Set(review.findings.map(f => f.file)).size;
 
+    // Extract provider names from results
+    const providers = review.providerResults
+      ?.filter(pr => pr.status === 'success')
+      .map(pr => pr.name) || [];
+
     const metric: ReviewMetric = {
       timestamp: Date.now(),
       prNumber,
@@ -64,13 +72,15 @@ export class MetricsCollector {
       durationSeconds: review.metrics.durationSeconds,
       providersUsed: review.metrics.providersUsed,
       cacheHit: review.metrics.cached || false,
+      providers,
     };
 
     data.reviews.push(metric);
 
     // Keep only last N reviews to prevent unbounded growth
-    if (data.reviews.length > MetricsCollector.MAX_REVIEWS_STORED) {
-      data.reviews = data.reviews.slice(-MetricsCollector.MAX_REVIEWS_STORED);
+    const maxReviews = this.config?.analyticsMaxReviews || 1000;
+    if (data.reviews.length > maxReviews) {
+      data.reviews = data.reviews.slice(-maxReviews);
     }
 
     // Update aggregated stats
@@ -141,17 +151,42 @@ export class MetricsCollector {
   async getProviderStats(): Promise<ProviderMetric[]> {
     const data = await this.loadData();
 
-    // This is simplified - in real implementation would track per-provider
-    // For now, return overall stats
-    return [
-      {
-        provider: 'All Providers',
+    // Aggregate metrics per provider
+    const providerMap = new Map<string, {
+      totalReviews: number;
+      totalCost: number;
+      totalDuration: number;
+    }>();
+
+    for (const review of data.reviews) {
+      for (const providerName of review.providers) {
+        const existing = providerMap.get(providerName) || {
+          totalReviews: 0,
+          totalCost: 0,
+          totalDuration: 0,
+        };
+
+        existing.totalReviews += 1;
+        // Divide cost equally among providers used
+        existing.totalCost += review.costUsd / review.providers.length;
+        existing.totalDuration += review.durationSeconds;
+
+        providerMap.set(providerName, existing);
+      }
+    }
+
+    // Convert to array and calculate averages
+    const stats: ProviderMetric[] = Array.from(providerMap.entries())
+      .map(([provider, data]) => ({
+        provider,
         totalReviews: data.totalReviews,
-        successRate: 1.0, // Simplified - all reviews succeeded if they're recorded
+        successRate: 1.0, // We only track successful reviews
         avgCost: data.totalReviews > 0 ? data.totalCost / data.totalReviews : 0,
-        avgDuration: data.avgReviewTime,
-      },
-    ];
+        avgDuration: data.totalReviews > 0 ? data.totalDuration / data.totalReviews : 0,
+      }))
+      .sort((a, b) => b.totalReviews - a.totalReviews); // Sort by most used
+
+    return stats;
   }
 
   /**
@@ -174,11 +209,9 @@ export class MetricsCollector {
   }> {
     const data = await this.loadData();
 
-    // Assumptions:
-    // - Manual review takes ~30 minutes per PR
-    // - Developer time valued at $100/hour
-    const avgManualReviewMinutes = 30;
-    const developerHourlyRate = 100;
+    // Get configurable assumptions (with defaults)
+    const avgManualReviewMinutes = this.config?.analyticsManualReviewTime || 30;
+    const developerHourlyRate = this.config?.analyticsDeveloperRate || 100;
 
     const totalReviews = data.totalReviews;
     const totalCost = data.totalCost;
@@ -280,7 +313,15 @@ export class MetricsCollector {
     }
 
     try {
-      return JSON.parse(raw) as MetricsData;
+      const data = JSON.parse(raw) as MetricsData;
+
+      // Ensure backward compatibility: add empty providers array if missing
+      data.reviews = data.reviews.map(review => ({
+        ...review,
+        providers: review.providers || [],
+      }));
+
+      return data;
     } catch (error) {
       logger.warn('Failed to parse metrics data, starting fresh', error as Error);
       return {

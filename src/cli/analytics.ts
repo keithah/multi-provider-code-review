@@ -8,6 +8,7 @@ import { MetricsCollector } from '../analytics/metrics-collector';
 import { DashboardGenerator } from '../analytics/dashboard-generator';
 import { CacheStorage } from '../cache/storage';
 import { logger } from '../utils/logger';
+import { ConfigLoader } from '../config/loader';
 import * as path from 'path';
 
 interface AnalyticsOptions {
@@ -26,8 +27,9 @@ async function generateAnalytics(options: AnalyticsOptions = {}): Promise<void> 
   try {
     logger.info('Generating analytics dashboard...');
 
+    const config = ConfigLoader.load();
     const cacheStorage = new CacheStorage();
-    const metricsCollector = new MetricsCollector(cacheStorage);
+    const metricsCollector = new MetricsCollector(cacheStorage, config);
     const dashboardGenerator = new DashboardGenerator(metricsCollector);
 
     // Generate output based on format
@@ -61,8 +63,9 @@ async function generateAnalytics(options: AnalyticsOptions = {}): Promise<void> 
  */
 async function printSummary(days: number = 30): Promise<void> {
   try {
+    const config = ConfigLoader.load();
     const cacheStorage = new CacheStorage();
-    const metricsCollector = new MetricsCollector(cacheStorage);
+    const metricsCollector = new MetricsCollector(cacheStorage, config);
 
     const fromTimestamp = Date.now() - days * 24 * 60 * 60 * 1000;
     const metrics = await metricsCollector.getMetrics(fromTimestamp);

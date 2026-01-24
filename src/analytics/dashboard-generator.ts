@@ -143,7 +143,7 @@ export class DashboardGenerator {
   <div class="container">
     <header>
       <h1>📊 Multi-Provider Code Review Analytics</h1>
-      <p class="subtitle">Dashboard generated on ${new Date().toLocaleString()}</p>
+      <p class="subtitle">Dashboard generated on ${this.escapeHtml(new Date().toLocaleString())}</p>
     </header>
 
     ${this.buildSummaryCards(stats, roi)}
@@ -252,19 +252,20 @@ export class DashboardGenerator {
 
   /**
    * Build findings distribution chart HTML
+   *
+   * NOTE: Severity breakdown is not currently tracked in ReviewMetric.
+   * To implement this feature, ReviewMetric would need additional fields:
+   * criticalCount, majorCount, minorCount. This would require updating
+   * the MetricsCollector.recordReview() method to aggregate findings by severity.
+   *
+   * For now, the chart shows placeholder data. Tracked in issue #TODO
    */
   private buildFindingsDistributionChart(_stats: MetricsData): string {
-    // TODO: Actually use the stats data
-    // const recent = stats.reviews.slice(-100); // Last 100 reviews
-    // const critical = recent.reduce((sum: number, r: any) => sum + r.criticalCount, 0);
-    // const major = recent.reduce((sum: number, r: any) => sum + r.majorCount, 0);
-    // const minor = recent.reduce((sum: number, r: any) => sum + r.minorCount, 0);
-
     return `
     <div class="chart-container">
       <h2>🐛 Findings by Severity</h2>
       <canvas id="findingsChart"></canvas>
-      <p class="chart-note">Based on last 100 reviews</p>
+      <p class="chart-note">Placeholder chart - severity tracking not yet implemented</p>
     </div>`;
   }
 
@@ -409,6 +410,7 @@ export class DashboardGenerator {
 
   /**
    * Get Chart.js JavaScript
+   * Note: JSON.stringify() provides XSS protection by properly escaping strings for JavaScript context
    */
   private getChartJS(costTrends: CostTrend[], perfTrends: PerformanceTrend[], stats: MetricsData): string {
     const recent = stats.reviews.slice(-100);

@@ -27,13 +27,41 @@ export interface WebhookConfig {
   autoReviewOnOpen?: boolean;
   autoReviewOnSync?: boolean;
   autoReviewOnReopen?: boolean;
+  rateLimitPerMinute?: number; // Max reviews per minute (default: 10)
+  rateLimitPerPR?: number; // Max reviews per PR per hour (default: 5)
+}
+
+interface RateLimitEntry {
+  count: number;
+  resetTime: number;
 }
 
 export class WebhookHandler {
+  private static readonly MIN_SECRET_LENGTH = 32;
+  private readonly globalRateLimit = new Map<string, RateLimitEntry>();
+  private readonly prRateLimit = new Map<number, RateLimitEntry>();
+
   constructor(
     private readonly config: WebhookConfig,
     private readonly orchestrator: ReviewOrchestrator
-  ) {}
+  ) {
+    this.validateConfig();
+    // Clean up old rate limit entries every 5 minutes
+    setInterval(() => this.cleanupRateLimits(), 5 * 60 * 1000);
+  }
+
+  /**
+   * Validate configuration on initialization
+   */
+  private validateConfig(): void {
+    if (this.config.secret.length < WebhookHandler.MIN_SECRET_LENGTH) {
+      throw new Error(
+        `Webhook secret must be at least ${WebhookHandler.MIN_SECRET_LENGTH} characters. ` +
+        `Current length: ${this.config.secret.length}. ` +
+        `Generate a secure secret with: openssl rand -hex 32`
+      );
+    }
+  }
 
   /**
    * Verify webhook signature using HMAC-SHA256
@@ -87,6 +115,12 @@ export class WebhookHandler {
       return false;
     }
 
+    // Check rate limits before processing
+    if (!this.checkRateLimits(payload.pull_request.number)) {
+      logger.warn(`Rate limit exceeded for PR #${payload.pull_request.number}`);
+      return false;
+    }
+
     try {
       // Trigger review using orchestrator
       const review = await this.orchestrator.execute(payload.pull_request.number);
@@ -106,7 +140,8 @@ export class WebhookHandler {
         `Failed to process webhook for PR #${payload.pull_request.number}`,
         error as Error
       );
-      throw error;
+      // Don't throw - return false to keep server running
+      return false;
     }
   }
 
@@ -135,21 +170,123 @@ export class WebhookHandler {
   }
 
   /**
+   * Check if request is within rate limits
+   */
+  private checkRateLimits(prNumber: number): boolean {
+    const now = Date.now();
+    const rateLimitPerMinute = this.config.rateLimitPerMinute || 10;
+    const rateLimitPerPR = this.config.rateLimitPerPR || 5;
+
+    // Check global rate limit (per minute)
+    const globalKey = 'global';
+    const globalEntry = this.globalRateLimit.get(globalKey);
+
+    if (globalEntry && now < globalEntry.resetTime) {
+      if (globalEntry.count >= rateLimitPerMinute) {
+        return false;
+      }
+      globalEntry.count++;
+    } else {
+      this.globalRateLimit.set(globalKey, {
+        count: 1,
+        resetTime: now + 60 * 1000, // 1 minute
+      });
+    }
+
+    // Check per-PR rate limit (per hour)
+    const prEntry = this.prRateLimit.get(prNumber);
+
+    if (prEntry && now < prEntry.resetTime) {
+      if (prEntry.count >= rateLimitPerPR) {
+        return false;
+      }
+      prEntry.count++;
+    } else {
+      this.prRateLimit.set(prNumber, {
+        count: 1,
+        resetTime: now + 60 * 60 * 1000, // 1 hour
+      });
+    }
+
+    return true;
+  }
+
+  /**
+   * Clean up expired rate limit entries
+   */
+  private cleanupRateLimits(): void {
+    const now = Date.now();
+
+    for (const [key, entry] of this.globalRateLimit.entries()) {
+      if (now >= entry.resetTime) {
+        this.globalRateLimit.delete(key);
+      }
+    }
+
+    for (const [pr, entry] of this.prRateLimit.entries()) {
+      if (now >= entry.resetTime) {
+        this.prRateLimit.delete(pr);
+      }
+    }
+  }
+
+  /**
    * Parse and validate webhook payload
    */
   static parsePayload(body: string): WebhookPayload {
     try {
       const payload = JSON.parse(body);
 
-      // Basic validation
-      if (typeof payload.action !== 'string') {
+      // Validate required fields
+      if (typeof payload.action !== 'string' || payload.action.trim() === '') {
         throw new Error('Missing or invalid action');
+      }
+
+      if (typeof payload.number !== 'number' || payload.number <= 0) {
+        throw new Error('Missing or invalid number');
+      }
+
+      // Validate pull_request if present
+      if (payload.pull_request) {
+        const pr = payload.pull_request;
+
+        if (typeof pr.number !== 'number' || pr.number <= 0) {
+          throw new Error('Invalid pull_request.number');
+        }
+
+        if (typeof pr.title !== 'string') {
+          throw new Error('Invalid pull_request.title');
+        }
+
+        if (pr.body !== null && typeof pr.body !== 'string') {
+          throw new Error('Invalid pull_request.body');
+        }
+
+        if (!pr.user || typeof pr.user.login !== 'string') {
+          throw new Error('Invalid pull_request.user.login');
+        }
+
+        if (typeof pr.draft !== 'boolean') {
+          throw new Error('Invalid pull_request.draft');
+        }
+
+        if (!Array.isArray(pr.labels)) {
+          throw new Error('Invalid pull_request.labels');
+        }
+
+        if (!pr.base || typeof pr.base.sha !== 'string') {
+          throw new Error('Invalid pull_request.base.sha');
+        }
+
+        if (!pr.head || typeof pr.head.sha !== 'string') {
+          throw new Error('Invalid pull_request.head.sha');
+        }
       }
 
       return payload as WebhookPayload;
     } catch (error) {
       logger.error('Failed to parse webhook payload', error as Error);
-      throw new Error('Invalid webhook payload');
+      throw new Error(`Invalid webhook payload: ${(error as Error).message}`);
     }
   }
 }

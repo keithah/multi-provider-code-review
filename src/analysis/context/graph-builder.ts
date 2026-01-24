@@ -314,9 +314,20 @@ export class CodeGraph {
   /**
    * Find all classes that inherit from a given class
    * Required by CodeGraph interface - currently a stub
+   *
+   * LIMITATION: Class inheritance tracking is not yet implemented.
+   * This would require:
+   * 1. Parsing extends/implements clauses in class declarations
+   * 2. Building an inheritance graph alongside the import graph
+   * 3. Resolving parent class names to their definitions
+   *
+   * Impact: Without this, code reviews may miss inheritance-related issues
+   * where changes to a base class affect derived classes. Reviewers should
+   * manually check for inheritance relationships when reviewing class changes.
+   *
+   * Tracked in issue #TODO
    */
   findDerivedClasses(_className: string): CodeSnippet[] {
-    // TODO: Implement class inheritance tracking
     return [];
   }
 

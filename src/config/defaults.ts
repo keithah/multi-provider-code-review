@@ -52,6 +52,8 @@ export const DEFAULT_CONFIG: ReviewConfig = {
 
   analyticsEnabled: true,
   analyticsMaxReviews: 1000,
+  analyticsDeveloperRate: 100, // USD per hour
+  analyticsManualReviewTime: 30, // minutes
 
   pluginsEnabled: false,
   pluginDir: './plugins',

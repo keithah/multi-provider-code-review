@@ -127,7 +127,7 @@ async function createComponentsForCLI(config: ReviewConfig): Promise<ReviewCompo
   const promptGenerator = new PromptGenerator('plain');
   const reliabilityTracker = new ReliabilityTracker(cacheStorage);
   const metricsCollector = config.analyticsEnabled
-    ? new MetricsCollector(cacheStorage)
+    ? new MetricsCollector(cacheStorage, config)
     : undefined;
 
   // Mock GitHub components for CLI mode
@@ -234,7 +234,7 @@ export async function createComponents(config: ReviewConfig, githubToken: string
   const promptGenerator = new PromptGenerator('plain');
   const reliabilityTracker = new ReliabilityTracker(cacheStorage);
   const metricsCollector = config.analyticsEnabled
-    ? new MetricsCollector(cacheStorage)
+    ? new MetricsCollector(cacheStorage, config)
     : undefined;
 
   return {

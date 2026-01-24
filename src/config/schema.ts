@@ -50,6 +50,8 @@ export const ReviewConfigSchema = z.object({
 
   analytics_enabled: z.boolean().optional(),
   analytics_max_reviews: z.number().int().min(100).max(10000).optional(),
+  analytics_developer_rate: z.number().min(0).optional(),
+  analytics_manual_review_time: z.number().min(0).optional(),
 
   plugins_enabled: z.boolean().optional(),
   plugin_dir: z.string().optional(),

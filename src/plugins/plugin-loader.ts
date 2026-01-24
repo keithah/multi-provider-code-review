@@ -113,6 +113,31 @@ export class PluginLoader {
         return;
       }
 
+      // Validate metadata structure
+      const metadata = plugin.metadata;
+      if (!metadata.name || typeof metadata.name !== 'string' || metadata.name.trim() === '') {
+        logger.warn(`Invalid plugin at ${pluginPath}: metadata.name must be a non-empty string`);
+        return;
+      }
+
+      if (!metadata.version || typeof metadata.version !== 'string' || metadata.version.trim() === '') {
+        logger.warn(`Invalid plugin at ${pluginPath}: metadata.version must be a non-empty string`);
+        return;
+      }
+
+      if (!Array.isArray(metadata.providers) || metadata.providers.length === 0) {
+        logger.warn(`Invalid plugin at ${pluginPath}: metadata.providers must be a non-empty array`);
+        return;
+      }
+
+      // Validate all provider names are non-empty strings
+      for (const provider of metadata.providers) {
+        if (typeof provider !== 'string' || provider.trim() === '') {
+          logger.warn(`Invalid plugin at ${pluginPath}: all provider names must be non-empty strings`);
+          return;
+        }
+      }
+
       // Check allowlist/blocklist
       if (!this.isPluginAllowed(plugin.metadata.name)) {
         logger.info(`Plugin ${plugin.metadata.name} blocked by policy`);
