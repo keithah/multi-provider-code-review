@@ -66,7 +66,8 @@ var require_command = __commonJS({
   "node_modules/@actions/core/lib/command.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
+      if (k2 === void 0)
+        k2 = k;
       var desc = Object.getOwnPropertyDescriptor(m, k);
       if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
         desc = { enumerable: true, get: function() {
@@ -75,7 +76,8 @@ var require_command = __commonJS({
       }
       Object.defineProperty(o, k2, desc);
     } : function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
+      if (k2 === void 0)
+        k2 = k;
       o[k2] = m[k];
     });
     var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? function(o, v) {
@@ -84,10 +86,13 @@ var require_command = __commonJS({
       o["default"] = v;
     });
     var __importStar = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule) return mod;
+      if (mod && mod.__esModule)
+        return mod;
       var result = {};
       if (mod != null) {
-        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+        for (var k in mod)
+          if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
+            __createBinding(result, mod, k);
       }
       __setModuleDefault(result, mod);
       return result;
@@ -152,7 +157,8 @@ var require_file_command = __commonJS({
   "node_modules/@actions/core/lib/file-command.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
+      if (k2 === void 0)
+        k2 = k;
       var desc = Object.getOwnPropertyDescriptor(m, k);
       if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
         desc = { enumerable: true, get: function() {
@@ -161,7 +167,8 @@ var require_file_command = __commonJS({
       }
       Object.defineProperty(o, k2, desc);
     } : function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
+      if (k2 === void 0)
+        k2 = k;
       o[k2] = m[k];
     });
     var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? function(o, v) {
@@ -170,10 +177,13 @@ var require_file_command = __commonJS({
       o["default"] = v;
     });
     var __importStar = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule) return mod;
+      if (mod && mod.__esModule)
+        return mod;
       var result = {};
       if (mod != null) {
-        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+        for (var k in mod)
+          if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
+            __createBinding(result, mod, k);
       }
       __setModuleDefault(result, mod);
       return result;
@@ -995,14 +1005,14 @@ var require_util = __commonJS({
         }
         const port = url.port != null ? url.port : url.protocol === "https:" ? 443 : 80;
         let origin = url.origin != null ? url.origin : `${url.protocol}//${url.hostname}:${port}`;
-        let path8 = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
+        let path9 = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
         if (origin.endsWith("/")) {
           origin = origin.substring(0, origin.length - 1);
         }
-        if (path8 && !path8.startsWith("/")) {
-          path8 = `/${path8}`;
+        if (path9 && !path9.startsWith("/")) {
+          path9 = `/${path9}`;
         }
-        url = new URL(origin + path8);
+        url = new URL(origin + path9);
       }
       return url;
     }
@@ -1020,7 +1030,8 @@ var require_util = __commonJS({
         return host.substring(1, idx2);
       }
       const idx = host.indexOf(":");
-      if (idx === -1) return host;
+      if (idx === -1)
+        return host;
       return host.substring(0, idx);
     }
     function getServerName(host) {
@@ -1090,7 +1101,8 @@ var require_util = __commonJS({
       return headerNameLowerCasedRecord[value] || value.toLowerCase();
     }
     function parseHeaders(headers, obj = {}) {
-      if (!Array.isArray(headers)) return headers;
+      if (!Array.isArray(headers))
+        return headers;
       for (let i = 0; i < headers.length; i += 2) {
         const key = headers[i].toString().toLowerCase();
         let val = obj[key];
@@ -1264,7 +1276,8 @@ var require_util = __commonJS({
       return `${val}`;
     }
     function parseRangeHeader(range) {
-      if (range == null || range === "") return { start: 0, end: null, size: null };
+      if (range == null || range === "")
+        return { start: 0, end: null, size: null };
       const m = range ? range.match(/^bytes (\d+)-(\d+)\/(\d+)?$/) : null;
       return m ? {
         start: parseInt(m[1]),
@@ -1923,7 +1936,6 @@ var require_decodeText = __commonJS({
             return decoders.utf8;
           case "latin1":
           case "ascii":
-          // TODO: Make these a separate, strict decoder?
           case "us-ascii":
           case "iso-8859-1":
           case "iso8859-1":
@@ -2616,20 +2628,19 @@ var require_parseParams = __commonJS({
 var require_basename = __commonJS({
   "node_modules/@fastify/busboy/lib/utils/basename.js"(exports2, module2) {
     "use strict";
-    module2.exports = function basename2(path8) {
-      if (typeof path8 !== "string") {
+    module2.exports = function basename2(path9) {
+      if (typeof path9 !== "string") {
         return "";
       }
-      for (var i = path8.length - 1; i >= 0; --i) {
-        switch (path8.charCodeAt(i)) {
+      for (var i = path9.length - 1; i >= 0; --i) {
+        switch (path9.charCodeAt(i)) {
           case 47:
-          // '/'
           case 92:
-            path8 = path8.slice(i + 1);
-            return path8 === ".." || path8 === "." ? "" : path8;
+            path9 = path9.slice(i + 1);
+            return path9 === ".." || path9 === "." ? "" : path9;
         }
       }
-      return path8 === ".." || path8 === "." ? "" : path8;
+      return path9 === ".." || path9 === "." ? "" : path9;
     };
   }
 });
@@ -3858,21 +3869,7 @@ var require_util2 = __commonJS({
           return referrerOrigin;
         }
         case "strict-origin":
-        // eslint-disable-line
-        /**
-           * 1. If referrerURL is a potentially trustworthy URL and
-           * request’s current URL is not a potentially trustworthy URL,
-           * then return no referrer.
-           * 2. Return referrerOrigin
-          */
         case "no-referrer-when-downgrade":
-        // eslint-disable-line
-        /**
-         * 1. If referrerURL is a potentially trustworthy URL and
-         * request’s current URL is not a potentially trustworthy URL,
-         * then return no referrer.
-         * 2. Return referrerOrigin
-        */
         default:
           return isNonPotentiallyTrustWorthy ? "no-referrer" : referrerOrigin;
       }
@@ -3898,11 +3895,14 @@ var require_util2 = __commonJS({
       if (url.href === "about:blank" || url.href === "about:srcdoc") {
         return true;
       }
-      if (url.protocol === "data:") return true;
-      if (url.protocol === "file:") return true;
+      if (url.protocol === "data:")
+        return true;
+      if (url.protocol === "file:")
+        return true;
       return isOriginPotentiallyTrustworthy(url.origin);
       function isOriginPotentiallyTrustworthy(origin) {
-        if (origin == null || origin === "null") return false;
+        if (origin == null || origin === "null")
+          return false;
         const originAsURL = new URL(origin);
         if (originAsURL.protocol === "https:" || originAsURL.protocol === "wss:") {
           return true;
@@ -4872,10 +4872,12 @@ var require_dataURL = __commonJS({
       let lead = 0;
       let trail = str2.length - 1;
       if (leading) {
-        for (; lead < str2.length && isHTTPWhiteSpace(str2[lead]); lead++) ;
+        for (; lead < str2.length && isHTTPWhiteSpace(str2[lead]); lead++)
+          ;
       }
       if (trailing) {
-        for (; trail > 0 && isHTTPWhiteSpace(str2[trail]); trail--) ;
+        for (; trail > 0 && isHTTPWhiteSpace(str2[trail]); trail--)
+          ;
       }
       return str2.slice(lead, trail + 1);
     }
@@ -4886,10 +4888,12 @@ var require_dataURL = __commonJS({
       let lead = 0;
       let trail = str2.length - 1;
       if (leading) {
-        for (; lead < str2.length && isASCIIWhitespace(str2[lead]); lead++) ;
+        for (; lead < str2.length && isASCIIWhitespace(str2[lead]); lead++)
+          ;
       }
       if (trailing) {
-        for (; trail > 0 && isASCIIWhitespace(str2[trail]); trail--) ;
+        for (; trail > 0 && isASCIIWhitespace(str2[trail]); trail--)
+          ;
       }
       return str2.slice(lead, trail + 1);
     }
@@ -5490,7 +5494,8 @@ Content-Type: ${value.type || "application/octet-stream"}\r
           const contentType = this.headers.get("Content-Type");
           if (/multipart\/form-data/.test(contentType)) {
             const headers = {};
-            for (const [key, value] of this.headers) headers[key.toLowerCase()] = value;
+            for (const [key, value] of this.headers)
+              headers[key.toLowerCase()] = value;
             const responseFormData = new FormData();
             let busboy;
             try {
@@ -5531,7 +5536,9 @@ Content-Type: ${value.type || "application/octet-stream"}\r
               busboy.on("finish", resolve2);
               busboy.on("error", (err) => reject(new TypeError(err)));
             });
-            if (this.body !== null) for await (const chunk of consumeBody(this[kState].body)) busboy.write(chunk);
+            if (this.body !== null)
+              for await (const chunk of consumeBody(this[kState].body))
+                busboy.write(chunk);
             busboy.end();
             await busboyResolve;
             return responseFormData;
@@ -5659,7 +5666,7 @@ var require_request = __commonJS({
     }
     var Request = class _Request {
       constructor(origin, {
-        path: path8,
+        path: path9,
         method,
         body,
         headers,
@@ -5673,11 +5680,11 @@ var require_request = __commonJS({
         throwOnError,
         expectContinue
       }, handler) {
-        if (typeof path8 !== "string") {
+        if (typeof path9 !== "string") {
           throw new InvalidArgumentError("path must be a string");
-        } else if (path8[0] !== "/" && !(path8.startsWith("http://") || path8.startsWith("https://")) && method !== "CONNECT") {
+        } else if (path9[0] !== "/" && !(path9.startsWith("http://") || path9.startsWith("https://")) && method !== "CONNECT") {
           throw new InvalidArgumentError("path must be an absolute URL or start with a slash");
-        } else if (invalidPathRegex.exec(path8) !== null) {
+        } else if (invalidPathRegex.exec(path9) !== null) {
           throw new InvalidArgumentError("invalid request path");
         }
         if (typeof method !== "string") {
@@ -5740,7 +5747,7 @@ var require_request = __commonJS({
         this.completed = false;
         this.aborted = false;
         this.upgrade = upgrade || null;
-        this.path = query ? util2.buildURL(path8, query) : path8;
+        this.path = query ? util2.buildURL(path9, query) : path9;
         this.origin = origin;
         this.idempotent = idempotent == null ? method === "HEAD" || method === "GET" : idempotent;
         this.blocking = blocking == null ? false : blocking;
@@ -5921,9 +5928,12 @@ var require_request = __commonJS({
         const headers = {};
         for (const header of rawHeaders) {
           const [key, value] = header.split(": ");
-          if (value == null || value.length === 0) continue;
-          if (headers[key]) headers[key] += `,${value}`;
-          else headers[key] = value;
+          if (value == null || value.length === 0)
+            continue;
+          if (headers[key])
+            headers[key] += `,${value}`;
+          else
+            headers[key] = value;
         }
         return headers;
       }
@@ -5957,8 +5967,10 @@ var require_request = __commonJS({
         }
       } else if (request.contentType === null && key.length === 12 && key.toLowerCase() === "content-type") {
         request.contentType = val;
-        if (skipAppend) request.headers[key] = processHeaderValue(key, val, skipAppend);
-        else request.headers += processHeaderValue(key, val);
+        if (skipAppend)
+          request.headers[key] = processHeaderValue(key, val, skipAppend);
+        else
+          request.headers += processHeaderValue(key, val);
       } else if (key.length === 17 && key.toLowerCase() === "transfer-encoding") {
         throw new InvalidArgumentError("invalid transfer-encoding header");
       } else if (key.length === 10 && key.toLowerCase() === "connection") {
@@ -5980,15 +5992,19 @@ var require_request = __commonJS({
         if (Array.isArray(val)) {
           for (let i = 0; i < val.length; i++) {
             if (skipAppend) {
-              if (request.headers[key]) request.headers[key] += `,${processHeaderValue(key, val[i], skipAppend)}`;
-              else request.headers[key] = processHeaderValue(key, val[i], skipAppend);
+              if (request.headers[key])
+                request.headers[key] += `,${processHeaderValue(key, val[i], skipAppend)}`;
+              else
+                request.headers[key] = processHeaderValue(key, val[i], skipAppend);
             } else {
               request.headers += processHeaderValue(key, val[i]);
             }
           }
         } else {
-          if (skipAppend) request.headers[key] = processHeaderValue(key, val, skipAppend);
-          else request.headers += processHeaderValue(key, val);
+          if (skipAppend)
+            request.headers[key] = processHeaderValue(key, val, skipAppend);
+          else
+            request.headers += processHeaderValue(key, val);
         }
       }
     }
@@ -6748,9 +6764,9 @@ var require_RedirectHandler = __commonJS({
           return this.handler.onHeaders(statusCode, headers, resume, statusText);
         }
         const { origin, pathname, search } = util2.parseURL(new URL(this.location, this.opts.origin && new URL(this.opts.path, this.opts.origin)));
-        const path8 = search ? `${pathname}${search}` : pathname;
+        const path9 = search ? `${pathname}${search}` : pathname;
         this.opts.headers = cleanRequestHeaders(this.opts.headers, statusCode === 303, this.opts.origin !== origin);
-        this.opts.path = path8;
+        this.opts.path = path9;
         this.opts.origin = origin;
         this.opts.maxRedirections = 0;
         this.opts.query = null;
@@ -7990,7 +8006,7 @@ var require_client = __commonJS({
         writeH2(client, client[kHTTP2Session], request);
         return;
       }
-      const { body, method, path: path8, host, upgrade, headers, blocking, reset } = request;
+      const { body, method, path: path9, host, upgrade, headers, blocking, reset } = request;
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH";
       if (body && typeof body.read === "function") {
         body.read(0);
@@ -8040,7 +8056,7 @@ var require_client = __commonJS({
       if (blocking) {
         socket[kBlocking] = true;
       }
-      let header = `${method} ${path8} HTTP/1.1\r
+      let header = `${method} ${path9} HTTP/1.1\r
 `;
       if (typeof host === "string") {
         header += `host: ${host}\r
@@ -8103,10 +8119,12 @@ upgrade: ${upgrade}\r
       return true;
     }
     function writeH2(client, session, request) {
-      const { body, method, path: path8, host, upgrade, expectContinue, signal, headers: reqHeaders } = request;
+      const { body, method, path: path9, host, upgrade, expectContinue, signal, headers: reqHeaders } = request;
       let headers;
-      if (typeof reqHeaders === "string") headers = Request[kHTTP2CopyHeaders](reqHeaders.trim());
-      else headers = reqHeaders;
+      if (typeof reqHeaders === "string")
+        headers = Request[kHTTP2CopyHeaders](reqHeaders.trim());
+      else
+        headers = reqHeaders;
       if (upgrade) {
         errorRequest(client, request, new Error("Upgrade not supported for H2"));
         return false;
@@ -8142,11 +8160,12 @@ upgrade: ${upgrade}\r
         }
         stream.once("close", () => {
           h2State.openStreams -= 1;
-          if (h2State.openStreams === 0) session.unref();
+          if (h2State.openStreams === 0)
+            session.unref();
         });
         return true;
       }
-      headers[HTTP2_HEADER_PATH] = path8;
+      headers[HTTP2_HEADER_PATH] = path9;
       headers[HTTP2_HEADER_SCHEME] = "https";
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH";
       if (body && typeof body.read === "function") {
@@ -8931,7 +8950,8 @@ var require_balanced_pool = __commonJS({
     var kMaxWeightPerServer = Symbol("kMaxWeightPerServer");
     var kErrorPenalty = Symbol("kErrorPenalty");
     function getGreatestCommonDivisor(a, b) {
-      if (b === 0) return a;
+      if (b === 0)
+        return a;
       return getGreatestCommonDivisor(b, a % b);
     }
     function defaultFactory(origin, opts) {
@@ -10386,20 +10406,20 @@ var require_mock_utils = __commonJS({
       }
       return true;
     }
-    function safeUrl(path8) {
-      if (typeof path8 !== "string") {
-        return path8;
+    function safeUrl(path9) {
+      if (typeof path9 !== "string") {
+        return path9;
       }
-      const pathSegments = path8.split("?");
+      const pathSegments = path9.split("?");
       if (pathSegments.length !== 2) {
-        return path8;
+        return path9;
       }
       const qp = new URLSearchParams(pathSegments.pop());
       qp.sort();
       return [...pathSegments, qp.toString()].join("?");
     }
-    function matchKey(mockDispatch2, { path: path8, method, body, headers }) {
-      const pathMatch = matchValue(mockDispatch2.path, path8);
+    function matchKey(mockDispatch2, { path: path9, method, body, headers }) {
+      const pathMatch = matchValue(mockDispatch2.path, path9);
       const methodMatch = matchValue(mockDispatch2.method, method);
       const bodyMatch = typeof mockDispatch2.body !== "undefined" ? matchValue(mockDispatch2.body, body) : true;
       const headersMatch = matchHeaders(mockDispatch2, headers);
@@ -10417,7 +10437,7 @@ var require_mock_utils = __commonJS({
     function getMockDispatch(mockDispatches, key) {
       const basePath = key.query ? buildURL(key.path, key.query) : key.path;
       const resolvedPath = typeof basePath === "string" ? safeUrl(basePath) : basePath;
-      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path: path8 }) => matchValue(safeUrl(path8), resolvedPath));
+      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path: path9 }) => matchValue(safeUrl(path9), resolvedPath));
       if (matchedMockDispatches.length === 0) {
         throw new MockNotMatchedError(`Mock dispatch not matched for path '${resolvedPath}'`);
       }
@@ -10454,9 +10474,9 @@ var require_mock_utils = __commonJS({
       }
     }
     function buildKey(opts) {
-      const { path: path8, method, body, headers, query } = opts;
+      const { path: path9, method, body, headers, query } = opts;
       return {
-        path: path8,
+        path: path9,
         method,
         body,
         headers,
@@ -10750,7 +10770,7 @@ var require_mock_interceptor = __commonJS({
 var require_mock_client = __commonJS({
   "node_modules/undici/lib/mock/mock-client.js"(exports2, module2) {
     "use strict";
-    var { promisify } = require("util");
+    var { promisify: promisify2 } = require("util");
     var Client = require_client();
     var { buildMockDispatch } = require_mock_utils();
     var {
@@ -10790,7 +10810,7 @@ var require_mock_client = __commonJS({
         return new MockInterceptor(opts, this[kDispatches]);
       }
       async [kClose]() {
-        await promisify(this[kOriginalClose])();
+        await promisify2(this[kOriginalClose])();
         this[kConnected] = 0;
         this[kMockAgent][Symbols.kClients].delete(this[kOrigin]);
       }
@@ -10803,7 +10823,7 @@ var require_mock_client = __commonJS({
 var require_mock_pool = __commonJS({
   "node_modules/undici/lib/mock/mock-pool.js"(exports2, module2) {
     "use strict";
-    var { promisify } = require("util");
+    var { promisify: promisify2 } = require("util");
     var Pool = require_pool();
     var { buildMockDispatch } = require_mock_utils();
     var {
@@ -10843,7 +10863,7 @@ var require_mock_pool = __commonJS({
         return new MockInterceptor(opts, this[kDispatches]);
       }
       async [kClose]() {
-        await promisify(this[kOriginalClose])();
+        await promisify2(this[kOriginalClose])();
         this[kConnected] = 0;
         this[kMockAgent][Symbols.kClients].delete(this[kOrigin]);
       }
@@ -10905,10 +10925,10 @@ var require_pending_interceptors_formatter = __commonJS({
       }
       format(pendingInterceptors) {
         const withPrettyHeaders = pendingInterceptors.map(
-          ({ method, path: path8, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
+          ({ method, path: path9, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
             Method: method,
             Origin: origin,
-            Path: path8,
+            Path: path9,
             "Status code": statusCode,
             Persistent: persist ? "\u2705" : "\u274C",
             Invocations: timesInvoked,
@@ -11303,7 +11323,8 @@ var require_RetryHandler = __commonJS({
         }
       }
       onBodySent(chunk) {
-        if (this.handler.onBodySent) return this.handler.onBodySent(chunk);
+        if (this.handler.onBodySent)
+          return this.handler.onBodySent(chunk);
       }
       static [kRetryHandlerDefaultRetry](err, { state, opts }, cb) {
         const { statusCode, code, headers } = err;
@@ -11567,8 +11588,10 @@ var require_headers = __commonJS({
     function headerValueNormalize(potentialValue) {
       let i = 0;
       let j = potentialValue.length;
-      while (j > i && isHTTPWhiteSpaceCharCode(potentialValue.charCodeAt(j - 1))) --j;
-      while (j > i && isHTTPWhiteSpaceCharCode(potentialValue.charCodeAt(i))) ++i;
+      while (j > i && isHTTPWhiteSpaceCharCode(potentialValue.charCodeAt(j - 1)))
+        --j;
+      while (j > i && isHTTPWhiteSpaceCharCode(potentialValue.charCodeAt(i)))
+        ++i;
       return i === 0 && j === potentialValue.length ? potentialValue : potentialValue.substring(i, j);
     }
     function fill(headers, object) {
@@ -14886,7 +14909,8 @@ var require_cache = __commonJS({
       }
       async matchAll(request = void 0, options = {}) {
         webidl.brandCheck(this, _Cache);
-        if (request !== void 0) request = webidl.converters.RequestInfo(request);
+        if (request !== void 0)
+          request = webidl.converters.RequestInfo(request);
         options = webidl.converters.CacheQueryOptions(options);
         let r = null;
         if (request !== void 0) {
@@ -15155,7 +15179,8 @@ var require_cache = __commonJS({
        */
       async keys(request = void 0, options = {}) {
         webidl.brandCheck(this, _Cache);
-        if (request !== void 0) request = webidl.converters.RequestInfo(request);
+        if (request !== void 0)
+          request = webidl.converters.RequestInfo(request);
         options = webidl.converters.CacheQueryOptions(options);
         let r = null;
         if (request !== void 0) {
@@ -15528,8 +15553,8 @@ var require_util6 = __commonJS({
         }
       }
     }
-    function validateCookiePath(path8) {
-      for (const char of path8) {
+    function validateCookiePath(path9) {
+      for (const char of path9) {
         const code = char.charCodeAt(0);
         if (code < 33 || char === ";") {
           throw new Error("Invalid cookie path");
@@ -17209,11 +17234,11 @@ var require_undici = __commonJS({
           if (typeof opts.path !== "string") {
             throw new InvalidArgumentError("invalid opts.path");
           }
-          let path8 = opts.path;
+          let path9 = opts.path;
           if (!opts.path.startsWith("/")) {
-            path8 = `/${path8}`;
+            path9 = `/${path9}`;
           }
-          url = new URL(util2.parseOrigin(url).origin + path8);
+          url = new URL(util2.parseOrigin(url).origin + path9);
         } else {
           if (!opts) {
             opts = typeof url === "object" ? url : {};
@@ -17293,7 +17318,8 @@ var require_lib = __commonJS({
   "node_modules/@actions/http-client/lib/index.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
+      if (k2 === void 0)
+        k2 = k;
       var desc = Object.getOwnPropertyDescriptor(m, k);
       if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
         desc = { enumerable: true, get: function() {
@@ -17302,7 +17328,8 @@ var require_lib = __commonJS({
       }
       Object.defineProperty(o, k2, desc);
     } : function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
+      if (k2 === void 0)
+        k2 = k;
       o[k2] = m[k];
     });
     var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? function(o, v) {
@@ -17311,10 +17338,13 @@ var require_lib = __commonJS({
       o["default"] = v;
     });
     var __importStar = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule) return mod;
+      if (mod && mod.__esModule)
+        return mod;
       var result = {};
       if (mod != null) {
-        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+        for (var k in mod)
+          if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
+            __createBinding(result, mod, k);
       }
       __setModuleDefault(result, mod);
       return result;
@@ -18408,7 +18438,8 @@ var require_path_utils = __commonJS({
   "node_modules/@actions/core/lib/path-utils.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
+      if (k2 === void 0)
+        k2 = k;
       var desc = Object.getOwnPropertyDescriptor(m, k);
       if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
         desc = { enumerable: true, get: function() {
@@ -18417,7 +18448,8 @@ var require_path_utils = __commonJS({
       }
       Object.defineProperty(o, k2, desc);
     } : function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
+      if (k2 === void 0)
+        k2 = k;
       o[k2] = m[k];
     });
     var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? function(o, v) {
@@ -18426,17 +18458,20 @@ var require_path_utils = __commonJS({
       o["default"] = v;
     });
     var __importStar = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule) return mod;
+      if (mod && mod.__esModule)
+        return mod;
       var result = {};
       if (mod != null) {
-        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+        for (var k in mod)
+          if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
+            __createBinding(result, mod, k);
       }
       __setModuleDefault(result, mod);
       return result;
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.toPlatformPath = exports2.toWin32Path = exports2.toPosixPath = void 0;
-    var path8 = __importStar(require("path"));
+    var path9 = __importStar(require("path"));
     function toPosixPath(pth) {
       return pth.replace(/[\\]/g, "/");
     }
@@ -18446,7 +18481,7 @@ var require_path_utils = __commonJS({
     }
     exports2.toWin32Path = toWin32Path;
     function toPlatformPath(pth) {
-      return pth.replace(/[/\\]/g, path8.sep);
+      return pth.replace(/[/\\]/g, path9.sep);
     }
     exports2.toPlatformPath = toPlatformPath;
   }
@@ -18457,12 +18492,14 @@ var require_io_util = __commonJS({
   "node_modules/@actions/io/lib/io-util.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
+      if (k2 === void 0)
+        k2 = k;
       Object.defineProperty(o, k2, { enumerable: true, get: function() {
         return m[k];
       } });
     } : function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
+      if (k2 === void 0)
+        k2 = k;
       o[k2] = m[k];
     });
     var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? function(o, v) {
@@ -18471,10 +18508,13 @@ var require_io_util = __commonJS({
       o["default"] = v;
     });
     var __importStar = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule) return mod;
+      if (mod && mod.__esModule)
+        return mod;
       var result = {};
       if (mod != null) {
-        for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+        for (var k in mod)
+          if (k !== "default" && Object.hasOwnProperty.call(mod, k))
+            __createBinding(result, mod, k);
       }
       __setModuleDefault(result, mod);
       return result;
@@ -18510,7 +18550,7 @@ var require_io_util = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.getCmdPath = exports2.tryGetExecutablePath = exports2.isRooted = exports2.isDirectory = exports2.exists = exports2.READONLY = exports2.UV_FS_O_EXLOCK = exports2.IS_WINDOWS = exports2.unlink = exports2.symlink = exports2.stat = exports2.rmdir = exports2.rm = exports2.rename = exports2.readlink = exports2.readdir = exports2.open = exports2.mkdir = exports2.lstat = exports2.copyFile = exports2.chmod = void 0;
     var fs8 = __importStar(require("fs"));
-    var path8 = __importStar(require("path"));
+    var path9 = __importStar(require("path"));
     _a = fs8.promises, exports2.chmod = _a.chmod, exports2.copyFile = _a.copyFile, exports2.lstat = _a.lstat, exports2.mkdir = _a.mkdir, exports2.open = _a.open, exports2.readdir = _a.readdir, exports2.readlink = _a.readlink, exports2.rename = _a.rename, exports2.rm = _a.rm, exports2.rmdir = _a.rmdir, exports2.stat = _a.stat, exports2.symlink = _a.symlink, exports2.unlink = _a.unlink;
     exports2.IS_WINDOWS = process.platform === "win32";
     exports2.UV_FS_O_EXLOCK = 268435456;
@@ -18559,7 +18599,7 @@ var require_io_util = __commonJS({
         }
         if (stats && stats.isFile()) {
           if (exports2.IS_WINDOWS) {
-            const upperExt = path8.extname(filePath).toUpperCase();
+            const upperExt = path9.extname(filePath).toUpperCase();
             if (extensions.some((validExt) => validExt.toUpperCase() === upperExt)) {
               return filePath;
             }
@@ -18583,11 +18623,11 @@ var require_io_util = __commonJS({
           if (stats && stats.isFile()) {
             if (exports2.IS_WINDOWS) {
               try {
-                const directory = path8.dirname(filePath);
-                const upperName = path8.basename(filePath).toUpperCase();
+                const directory = path9.dirname(filePath);
+                const upperName = path9.basename(filePath).toUpperCase();
                 for (const actualName of yield exports2.readdir(directory)) {
                   if (upperName === actualName.toUpperCase()) {
-                    filePath = path8.join(directory, actualName);
+                    filePath = path9.join(directory, actualName);
                     break;
                   }
                 }
@@ -18630,12 +18670,14 @@ var require_io = __commonJS({
   "node_modules/@actions/io/lib/io.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
+      if (k2 === void 0)
+        k2 = k;
       Object.defineProperty(o, k2, { enumerable: true, get: function() {
         return m[k];
       } });
     } : function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
+      if (k2 === void 0)
+        k2 = k;
       o[k2] = m[k];
     });
     var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? function(o, v) {
@@ -18644,10 +18686,13 @@ var require_io = __commonJS({
       o["default"] = v;
     });
     var __importStar = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule) return mod;
+      if (mod && mod.__esModule)
+        return mod;
       var result = {};
       if (mod != null) {
-        for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+        for (var k in mod)
+          if (k !== "default" && Object.hasOwnProperty.call(mod, k))
+            __createBinding(result, mod, k);
       }
       __setModuleDefault(result, mod);
       return result;
@@ -18682,7 +18727,7 @@ var require_io = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.findInPath = exports2.which = exports2.mkdirP = exports2.rmRF = exports2.mv = exports2.cp = void 0;
     var assert_1 = require("assert");
-    var path8 = __importStar(require("path"));
+    var path9 = __importStar(require("path"));
     var ioUtil = __importStar(require_io_util());
     function cp(source, dest, options = {}) {
       return __awaiter(this, void 0, void 0, function* () {
@@ -18691,7 +18736,7 @@ var require_io = __commonJS({
         if (destStat && destStat.isFile() && !force) {
           return;
         }
-        const newDest = destStat && destStat.isDirectory() && copySourceDirectory ? path8.join(dest, path8.basename(source)) : dest;
+        const newDest = destStat && destStat.isDirectory() && copySourceDirectory ? path9.join(dest, path9.basename(source)) : dest;
         if (!(yield ioUtil.exists(source))) {
           throw new Error(`no such file or directory: ${source}`);
         }
@@ -18703,7 +18748,7 @@ var require_io = __commonJS({
             yield cpDirRecursive(source, newDest, 0, force);
           }
         } else {
-          if (path8.relative(source, newDest) === "") {
+          if (path9.relative(source, newDest) === "") {
             throw new Error(`'${newDest}' and '${source}' are the same file`);
           }
           yield copyFile(source, newDest, force);
@@ -18716,7 +18761,7 @@ var require_io = __commonJS({
         if (yield ioUtil.exists(dest)) {
           let destExists = true;
           if (yield ioUtil.isDirectory(dest)) {
-            dest = path8.join(dest, path8.basename(source));
+            dest = path9.join(dest, path9.basename(source));
             destExists = yield ioUtil.exists(dest);
           }
           if (destExists) {
@@ -18727,7 +18772,7 @@ var require_io = __commonJS({
             }
           }
         }
-        yield mkdirP(path8.dirname(dest));
+        yield mkdirP(path9.dirname(dest));
         yield ioUtil.rename(source, dest);
       });
     }
@@ -18790,7 +18835,7 @@ var require_io = __commonJS({
         }
         const extensions = [];
         if (ioUtil.IS_WINDOWS && process.env["PATHEXT"]) {
-          for (const extension of process.env["PATHEXT"].split(path8.delimiter)) {
+          for (const extension of process.env["PATHEXT"].split(path9.delimiter)) {
             if (extension) {
               extensions.push(extension);
             }
@@ -18803,12 +18848,12 @@ var require_io = __commonJS({
           }
           return [];
         }
-        if (tool.includes(path8.sep)) {
+        if (tool.includes(path9.sep)) {
           return [];
         }
         const directories = [];
         if (process.env.PATH) {
-          for (const p of process.env.PATH.split(path8.delimiter)) {
+          for (const p of process.env.PATH.split(path9.delimiter)) {
             if (p) {
               directories.push(p);
             }
@@ -18816,7 +18861,7 @@ var require_io = __commonJS({
         }
         const matches = [];
         for (const directory of directories) {
-          const filePath = yield ioUtil.tryGetExecutablePath(path8.join(directory, tool), extensions);
+          const filePath = yield ioUtil.tryGetExecutablePath(path9.join(directory, tool), extensions);
           if (filePath) {
             matches.push(filePath);
           }
@@ -18878,12 +18923,14 @@ var require_toolrunner = __commonJS({
   "node_modules/@actions/exec/lib/toolrunner.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
+      if (k2 === void 0)
+        k2 = k;
       Object.defineProperty(o, k2, { enumerable: true, get: function() {
         return m[k];
       } });
     } : function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
+      if (k2 === void 0)
+        k2 = k;
       o[k2] = m[k];
     });
     var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? function(o, v) {
@@ -18892,10 +18939,13 @@ var require_toolrunner = __commonJS({
       o["default"] = v;
     });
     var __importStar = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule) return mod;
+      if (mod && mod.__esModule)
+        return mod;
       var result = {};
       if (mod != null) {
-        for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+        for (var k in mod)
+          if (k !== "default" && Object.hasOwnProperty.call(mod, k))
+            __createBinding(result, mod, k);
       }
       __setModuleDefault(result, mod);
       return result;
@@ -18932,7 +18982,7 @@ var require_toolrunner = __commonJS({
     var os3 = __importStar(require("os"));
     var events = __importStar(require("events"));
     var child = __importStar(require("child_process"));
-    var path8 = __importStar(require("path"));
+    var path9 = __importStar(require("path"));
     var io = __importStar(require_io());
     var ioUtil = __importStar(require_io_util());
     var timers_1 = require("timers");
@@ -19147,7 +19197,7 @@ var require_toolrunner = __commonJS({
       exec() {
         return __awaiter(this, void 0, void 0, function* () {
           if (!ioUtil.isRooted(this.toolPath) && (this.toolPath.includes("/") || IS_WINDOWS && this.toolPath.includes("\\"))) {
-            this.toolPath = path8.resolve(process.cwd(), this.options.cwd || process.cwd(), this.toolPath);
+            this.toolPath = path9.resolve(process.cwd(), this.options.cwd || process.cwd(), this.toolPath);
           }
           this.toolPath = yield io.which(this.toolPath, true);
           return new Promise((resolve2, reject) => __awaiter(this, void 0, void 0, function* () {
@@ -19362,12 +19412,14 @@ var require_exec = __commonJS({
   "node_modules/@actions/exec/lib/exec.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
+      if (k2 === void 0)
+        k2 = k;
       Object.defineProperty(o, k2, { enumerable: true, get: function() {
         return m[k];
       } });
     } : function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
+      if (k2 === void 0)
+        k2 = k;
       o[k2] = m[k];
     });
     var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? function(o, v) {
@@ -19376,10 +19428,13 @@ var require_exec = __commonJS({
       o["default"] = v;
     });
     var __importStar = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule) return mod;
+      if (mod && mod.__esModule)
+        return mod;
       var result = {};
       if (mod != null) {
-        for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+        for (var k in mod)
+          if (k !== "default" && Object.hasOwnProperty.call(mod, k))
+            __createBinding(result, mod, k);
       }
       __setModuleDefault(result, mod);
       return result;
@@ -19415,7 +19470,7 @@ var require_exec = __commonJS({
     exports2.getExecOutput = exports2.exec = void 0;
     var string_decoder_1 = require("string_decoder");
     var tr = __importStar(require_toolrunner());
-    function exec(commandLine, args, options) {
+    function exec2(commandLine, args, options) {
       return __awaiter(this, void 0, void 0, function* () {
         const commandArgs = tr.argStringToArray(commandLine);
         if (commandArgs.length === 0) {
@@ -19427,7 +19482,7 @@ var require_exec = __commonJS({
         return runner.exec();
       });
     }
-    exports2.exec = exec;
+    exports2.exec = exec2;
     function getExecOutput(commandLine, args, options) {
       var _a, _b;
       return __awaiter(this, void 0, void 0, function* () {
@@ -19450,7 +19505,7 @@ var require_exec = __commonJS({
           }
         };
         const listeners = Object.assign(Object.assign({}, options === null || options === void 0 ? void 0 : options.listeners), { stdout: stdOutListener, stderr: stdErrListener });
-        const exitCode = yield exec(commandLine, args, Object.assign(Object.assign({}, options), { listeners }));
+        const exitCode = yield exec2(commandLine, args, Object.assign(Object.assign({}, options), { listeners }));
         stdout += stdoutDecoder.end();
         stderr += stderrDecoder.end();
         return {
@@ -19469,7 +19524,8 @@ var require_platform = __commonJS({
   "node_modules/@actions/core/lib/platform.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
+      if (k2 === void 0)
+        k2 = k;
       var desc = Object.getOwnPropertyDescriptor(m, k);
       if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
         desc = { enumerable: true, get: function() {
@@ -19478,7 +19534,8 @@ var require_platform = __commonJS({
       }
       Object.defineProperty(o, k2, desc);
     } : function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
+      if (k2 === void 0)
+        k2 = k;
       o[k2] = m[k];
     });
     var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? function(o, v) {
@@ -19487,10 +19544,13 @@ var require_platform = __commonJS({
       o["default"] = v;
     });
     var __importStar = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule) return mod;
+      if (mod && mod.__esModule)
+        return mod;
       var result = {};
       if (mod != null) {
-        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+        for (var k in mod)
+          if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
+            __createBinding(result, mod, k);
       }
       __setModuleDefault(result, mod);
       return result;
@@ -19528,12 +19588,12 @@ var require_platform = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.getDetails = exports2.isLinux = exports2.isMacOS = exports2.isWindows = exports2.arch = exports2.platform = void 0;
     var os_1 = __importDefault(require("os"));
-    var exec = __importStar(require_exec());
+    var exec2 = __importStar(require_exec());
     var getWindowsInfo = () => __awaiter(void 0, void 0, void 0, function* () {
-      const { stdout: version } = yield exec.getExecOutput('powershell -command "(Get-CimInstance -ClassName Win32_OperatingSystem).Version"', void 0, {
+      const { stdout: version } = yield exec2.getExecOutput('powershell -command "(Get-CimInstance -ClassName Win32_OperatingSystem).Version"', void 0, {
         silent: true
       });
-      const { stdout: name } = yield exec.getExecOutput('powershell -command "(Get-CimInstance -ClassName Win32_OperatingSystem).Caption"', void 0, {
+      const { stdout: name } = yield exec2.getExecOutput('powershell -command "(Get-CimInstance -ClassName Win32_OperatingSystem).Caption"', void 0, {
         silent: true
       });
       return {
@@ -19543,7 +19603,7 @@ var require_platform = __commonJS({
     });
     var getMacOsInfo = () => __awaiter(void 0, void 0, void 0, function* () {
       var _a, _b, _c, _d;
-      const { stdout } = yield exec.getExecOutput("sw_vers", void 0, {
+      const { stdout } = yield exec2.getExecOutput("sw_vers", void 0, {
         silent: true
       });
       const version = (_b = (_a = stdout.match(/ProductVersion:\s*(.+)/)) === null || _a === void 0 ? void 0 : _a[1]) !== null && _b !== void 0 ? _b : "";
@@ -19554,7 +19614,7 @@ var require_platform = __commonJS({
       };
     });
     var getLinuxInfo = () => __awaiter(void 0, void 0, void 0, function* () {
-      const { stdout } = yield exec.getExecOutput("lsb_release", ["-i", "-r", "-s"], {
+      const { stdout } = yield exec2.getExecOutput("lsb_release", ["-i", "-r", "-s"], {
         silent: true
       });
       const [name, version] = stdout.trim().split("\n");
@@ -19588,7 +19648,8 @@ var require_core = __commonJS({
   "node_modules/@actions/core/lib/core.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
+      if (k2 === void 0)
+        k2 = k;
       var desc = Object.getOwnPropertyDescriptor(m, k);
       if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
         desc = { enumerable: true, get: function() {
@@ -19597,7 +19658,8 @@ var require_core = __commonJS({
       }
       Object.defineProperty(o, k2, desc);
     } : function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
+      if (k2 === void 0)
+        k2 = k;
       o[k2] = m[k];
     });
     var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? function(o, v) {
@@ -19606,10 +19668,13 @@ var require_core = __commonJS({
       o["default"] = v;
     });
     var __importStar = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule) return mod;
+      if (mod && mod.__esModule)
+        return mod;
       var result = {};
       if (mod != null) {
-        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+        for (var k in mod)
+          if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
+            __createBinding(result, mod, k);
       }
       __setModuleDefault(result, mod);
       return result;
@@ -19647,7 +19712,7 @@ var require_core = __commonJS({
     var file_command_1 = require_file_command();
     var utils_1 = require_utils();
     var os3 = __importStar(require("os"));
-    var path8 = __importStar(require("path"));
+    var path9 = __importStar(require("path"));
     var oidc_utils_1 = require_oidc_utils();
     var ExitCode;
     (function(ExitCode2) {
@@ -19675,7 +19740,7 @@ var require_core = __commonJS({
       } else {
         (0, command_1.issueCommand)("add-path", {}, inputPath);
       }
-      process.env["PATH"] = `${inputPath}${path8.delimiter}${process.env["PATH"]}`;
+      process.env["PATH"] = `${inputPath}${path9.delimiter}${process.env["PATH"]}`;
     }
     exports2.addPath = addPath;
     function getInput2(name, options) {
@@ -20050,7 +20115,8 @@ var require_eventemitter3 = __commonJS({
     }
     if (Object.create) {
       Events.prototype = /* @__PURE__ */ Object.create(null);
-      if (!new Events().__proto__) prefix = false;
+      if (!new Events().__proto__)
+        prefix = false;
     }
     function EE(fn, context2, once) {
       this.fn = fn;
@@ -20062,14 +20128,19 @@ var require_eventemitter3 = __commonJS({
         throw new TypeError("The listener must be a function");
       }
       var listener = new EE(fn, context2 || emitter, once), evt = prefix ? prefix + event : event;
-      if (!emitter._events[evt]) emitter._events[evt] = listener, emitter._eventsCount++;
-      else if (!emitter._events[evt].fn) emitter._events[evt].push(listener);
-      else emitter._events[evt] = [emitter._events[evt], listener];
+      if (!emitter._events[evt])
+        emitter._events[evt] = listener, emitter._eventsCount++;
+      else if (!emitter._events[evt].fn)
+        emitter._events[evt].push(listener);
+      else
+        emitter._events[evt] = [emitter._events[evt], listener];
       return emitter;
     }
     function clearEvent(emitter, evt) {
-      if (--emitter._eventsCount === 0) emitter._events = new Events();
-      else delete emitter._events[evt];
+      if (--emitter._eventsCount === 0)
+        emitter._events = new Events();
+      else
+        delete emitter._events[evt];
     }
     function EventEmitter2() {
       this._events = new Events();
@@ -20077,9 +20148,11 @@ var require_eventemitter3 = __commonJS({
     }
     EventEmitter2.prototype.eventNames = function eventNames() {
       var names = [], events, name;
-      if (this._eventsCount === 0) return names;
+      if (this._eventsCount === 0)
+        return names;
       for (name in events = this._events) {
-        if (has.call(events, name)) names.push(prefix ? name.slice(1) : name);
+        if (has.call(events, name))
+          names.push(prefix ? name.slice(1) : name);
       }
       if (Object.getOwnPropertySymbols) {
         return names.concat(Object.getOwnPropertySymbols(events));
@@ -20088,8 +20161,10 @@ var require_eventemitter3 = __commonJS({
     };
     EventEmitter2.prototype.listeners = function listeners(event) {
       var evt = prefix ? prefix + event : event, handlers = this._events[evt];
-      if (!handlers) return [];
-      if (handlers.fn) return [handlers.fn];
+      if (!handlers)
+        return [];
+      if (handlers.fn)
+        return [handlers.fn];
       for (var i = 0, l = handlers.length, ee = new Array(l); i < l; i++) {
         ee[i] = handlers[i].fn;
       }
@@ -20097,16 +20172,20 @@ var require_eventemitter3 = __commonJS({
     };
     EventEmitter2.prototype.listenerCount = function listenerCount(event) {
       var evt = prefix ? prefix + event : event, listeners = this._events[evt];
-      if (!listeners) return 0;
-      if (listeners.fn) return 1;
+      if (!listeners)
+        return 0;
+      if (listeners.fn)
+        return 1;
       return listeners.length;
     };
     EventEmitter2.prototype.emit = function emit(event, a1, a2, a3, a4, a5) {
       var evt = prefix ? prefix + event : event;
-      if (!this._events[evt]) return false;
+      if (!this._events[evt])
+        return false;
       var listeners = this._events[evt], len = arguments.length, args, i;
       if (listeners.fn) {
-        if (listeners.once) this.removeListener(event, listeners.fn, void 0, true);
+        if (listeners.once)
+          this.removeListener(event, listeners.fn, void 0, true);
         switch (len) {
           case 1:
             return listeners.fn.call(listeners.context), true;
@@ -20128,7 +20207,8 @@ var require_eventemitter3 = __commonJS({
       } else {
         var length = listeners.length, j;
         for (i = 0; i < length; i++) {
-          if (listeners[i].once) this.removeListener(event, listeners[i].fn, void 0, true);
+          if (listeners[i].once)
+            this.removeListener(event, listeners[i].fn, void 0, true);
           switch (len) {
             case 1:
               listeners[i].fn.call(listeners[i].context);
@@ -20143,9 +20223,10 @@ var require_eventemitter3 = __commonJS({
               listeners[i].fn.call(listeners[i].context, a1, a2, a3);
               break;
             default:
-              if (!args) for (j = 1, args = new Array(len - 1); j < len; j++) {
-                args[j - 1] = arguments[j];
-              }
+              if (!args)
+                for (j = 1, args = new Array(len - 1); j < len; j++) {
+                  args[j - 1] = arguments[j];
+                }
               listeners[i].fn.apply(listeners[i].context, args);
           }
         }
@@ -20160,7 +20241,8 @@ var require_eventemitter3 = __commonJS({
     };
     EventEmitter2.prototype.removeListener = function removeListener(event, fn, context2, once) {
       var evt = prefix ? prefix + event : event;
-      if (!this._events[evt]) return this;
+      if (!this._events[evt])
+        return this;
       if (!fn) {
         clearEvent(this, evt);
         return this;
@@ -20176,8 +20258,10 @@ var require_eventemitter3 = __commonJS({
             events.push(listeners[i]);
           }
         }
-        if (events.length) this._events[evt] = events.length === 1 ? events[0] : events;
-        else clearEvent(this, evt);
+        if (events.length)
+          this._events[evt] = events.length === 1 ? events[0] : events;
+        else
+          clearEvent(this, evt);
       }
       return this;
     };
@@ -20185,7 +20269,8 @@ var require_eventemitter3 = __commonJS({
       var evt;
       if (event) {
         evt = prefix ? prefix + event : event;
-        if (this._events[evt]) clearEvent(this, evt);
+        if (this._events[evt])
+          clearEvent(this, evt);
       } else {
         this._events = new Events();
         this._eventsCount = 0;
@@ -20221,8 +20306,8 @@ var require_context = __commonJS({
           if ((0, fs_1.existsSync)(process.env.GITHUB_EVENT_PATH)) {
             this.payload = JSON.parse((0, fs_1.readFileSync)(process.env.GITHUB_EVENT_PATH, { encoding: "utf8" }));
           } else {
-            const path8 = process.env.GITHUB_EVENT_PATH;
-            process.stdout.write(`GITHUB_EVENT_PATH ${path8} does not exist${os_1.EOL}`);
+            const path9 = process.env.GITHUB_EVENT_PATH;
+            process.stdout.write(`GITHUB_EVENT_PATH ${path9} does not exist${os_1.EOL}`);
           }
         }
         this.eventName = process.env.GITHUB_EVENT_NAME;
@@ -20266,7 +20351,8 @@ var require_utils3 = __commonJS({
   "node_modules/@actions/github/lib/internal/utils.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
+      if (k2 === void 0)
+        k2 = k;
       var desc = Object.getOwnPropertyDescriptor(m, k);
       if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
         desc = { enumerable: true, get: function() {
@@ -20275,7 +20361,8 @@ var require_utils3 = __commonJS({
       }
       Object.defineProperty(o, k2, desc);
     } : function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
+      if (k2 === void 0)
+        k2 = k;
       o[k2] = m[k];
     });
     var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? function(o, v) {
@@ -20284,10 +20371,13 @@ var require_utils3 = __commonJS({
       o["default"] = v;
     });
     var __importStar = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule) return mod;
+      if (mod && mod.__esModule)
+        return mod;
       var result = {};
       if (mod != null) {
-        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+        for (var k in mod)
+          if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
+            __createBinding(result, mod, k);
       }
       __setModuleDefault(result, mod);
       return result;
@@ -20887,7 +20977,8 @@ var require_wrappy = __commonJS({
   "node_modules/wrappy/wrappy.js"(exports2, module2) {
     module2.exports = wrappy;
     function wrappy(fn, cb) {
-      if (fn && cb) return wrappy(fn)(cb);
+      if (fn && cb)
+        return wrappy(fn)(cb);
       if (typeof fn !== "function")
         throw new TypeError("need wrapper function");
       Object.keys(fn).forEach(function(k) {
@@ -20934,7 +21025,8 @@ var require_once = __commonJS({
     });
     function once(fn) {
       var f = function() {
-        if (f.called) return f.value;
+        if (f.called)
+          return f.value;
         f.called = true;
         return f.value = fn.apply(this, arguments);
       };
@@ -21328,7 +21420,8 @@ var require_dist_node6 = __commonJS({
           );
         }
         for (const key in options) {
-          if (!FORBIDDEN_VARIABLE_OPTIONS.includes(key)) continue;
+          if (!FORBIDDEN_VARIABLE_OPTIONS.includes(key))
+            continue;
           return Promise.reject(
             new Error(
               `[@octokit/graphql] "${key}" cannot be used as variable name`
@@ -24172,7 +24265,8 @@ var require_utils4 = __commonJS({
   "node_modules/@actions/github/lib/utils.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
+      if (k2 === void 0)
+        k2 = k;
       var desc = Object.getOwnPropertyDescriptor(m, k);
       if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
         desc = { enumerable: true, get: function() {
@@ -24181,7 +24275,8 @@ var require_utils4 = __commonJS({
       }
       Object.defineProperty(o, k2, desc);
     } : function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
+      if (k2 === void 0)
+        k2 = k;
       o[k2] = m[k];
     });
     var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? function(o, v) {
@@ -24190,10 +24285,13 @@ var require_utils4 = __commonJS({
       o["default"] = v;
     });
     var __importStar = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule) return mod;
+      if (mod && mod.__esModule)
+        return mod;
       var result = {};
       if (mod != null) {
-        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+        for (var k in mod)
+          if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
+            __createBinding(result, mod, k);
       }
       __setModuleDefault(result, mod);
       return result;
@@ -24232,7 +24330,8 @@ var require_github = __commonJS({
   "node_modules/@actions/github/lib/github.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
+      if (k2 === void 0)
+        k2 = k;
       var desc = Object.getOwnPropertyDescriptor(m, k);
       if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
         desc = { enumerable: true, get: function() {
@@ -24241,7 +24340,8 @@ var require_github = __commonJS({
       }
       Object.defineProperty(o, k2, desc);
     } : function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
+      if (k2 === void 0)
+        k2 = k;
       o[k2] = m[k];
     });
     var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? function(o, v) {
@@ -24250,10 +24350,13 @@ var require_github = __commonJS({
       o["default"] = v;
     });
     var __importStar = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule) return mod;
+      if (mod && mod.__esModule)
+        return mod;
       var result = {};
       if (mod != null) {
-        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+        for (var k in mod)
+          if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
+            __createBinding(result, mod, k);
       }
       __setModuleDefault(result, mod);
       return result;
@@ -24286,8 +24389,10 @@ function isObject(subject) {
   return typeof subject === "object" && subject !== null;
 }
 function toArray(sequence) {
-  if (Array.isArray(sequence)) return sequence;
-  else if (isNothing(sequence)) return [];
+  if (Array.isArray(sequence))
+    return sequence;
+  else if (isNothing(sequence))
+    return [];
   return [sequence];
 }
 function extend(target, source) {
@@ -24327,7 +24432,8 @@ var common = {
 };
 function formatError(exception2, compact) {
   var where = "", message = exception2.reason || "(unknown reason)";
-  if (!exception2.mark) return message;
+  if (!exception2.mark)
+    return message;
   if (exception2.mark.name) {
     where += 'in "' + exception2.mark.name + '" ';
   }
@@ -24378,11 +24484,16 @@ function padStart(string, max) {
 }
 function makeSnippet(mark, options) {
   options = Object.create(options || null);
-  if (!mark.buffer) return null;
-  if (!options.maxLength) options.maxLength = 79;
-  if (typeof options.indent !== "number") options.indent = 1;
-  if (typeof options.linesBefore !== "number") options.linesBefore = 3;
-  if (typeof options.linesAfter !== "number") options.linesAfter = 2;
+  if (!mark.buffer)
+    return null;
+  if (!options.maxLength)
+    options.maxLength = 79;
+  if (typeof options.indent !== "number")
+    options.indent = 1;
+  if (typeof options.linesBefore !== "number")
+    options.linesBefore = 3;
+  if (typeof options.linesAfter !== "number")
+    options.linesAfter = 2;
   var re = /\r?\n|\r|\0/g;
   var lineStarts = [0];
   var lineEnds = [];
@@ -24395,12 +24506,14 @@ function makeSnippet(mark, options) {
       foundLineNo = lineStarts.length - 2;
     }
   }
-  if (foundLineNo < 0) foundLineNo = lineStarts.length - 1;
+  if (foundLineNo < 0)
+    foundLineNo = lineStarts.length - 1;
   var result = "", i, line;
   var lineNoLength = Math.min(mark.line + options.linesAfter, lineEnds.length).toString().length;
   var maxLineLength = options.maxLength - (options.indent + lineNoLength + 3);
   for (i = 1; i <= options.linesBefore; i++) {
-    if (foundLineNo - i < 0) break;
+    if (foundLineNo - i < 0)
+      break;
     line = getLine(
       mark.buffer,
       lineStarts[foundLineNo - i],
@@ -24414,7 +24527,8 @@ function makeSnippet(mark, options) {
   result += common.repeat(" ", options.indent) + padStart((mark.line + 1).toString(), lineNoLength) + " | " + line.str + "\n";
   result += common.repeat("-", options.indent + lineNoLength + 3 + line.pos) + "^\n";
   for (i = 1; i <= options.linesAfter; i++) {
-    if (foundLineNo + i >= lineEnds.length) break;
+    if (foundLineNo + i >= lineEnds.length)
+      break;
     line = getLine(
       mark.buffer,
       lineStarts[foundLineNo + i],
@@ -24533,8 +24647,10 @@ Schema$1.prototype.extend = function extend2(definition) {
   } else if (Array.isArray(definition)) {
     explicit = explicit.concat(definition);
   } else if (definition && (Array.isArray(definition.implicit) || Array.isArray(definition.explicit))) {
-    if (definition.implicit) implicit = implicit.concat(definition.implicit);
-    if (definition.explicit) explicit = explicit.concat(definition.explicit);
+    if (definition.implicit)
+      implicit = implicit.concat(definition.implicit);
+    if (definition.explicit)
+      explicit = explicit.concat(definition.explicit);
   } else {
     throw new exception("Schema.extend argument should be a Type, [ Type ], or a schema definition ({ implicit: [...], explicit: [...] })");
   }
@@ -24589,7 +24705,8 @@ var failsafe = new schema({
   ]
 });
 function resolveYamlNull(data) {
-  if (data === null) return true;
+  if (data === null)
+    return true;
   var max = data.length;
   return max === 1 && data === "~" || max === 4 && (data === "null" || data === "Null" || data === "NULL");
 }
@@ -24624,7 +24741,8 @@ var _null = new type("tag:yaml.org,2002:null", {
   defaultStyle: "lowercase"
 });
 function resolveYamlBoolean(data) {
-  if (data === null) return false;
+  if (data === null)
+    return false;
   var max = data.length;
   return max === 4 && (data === "true" || data === "True" || data === "TRUE") || max === 5 && (data === "false" || data === "False" || data === "FALSE");
 }
@@ -24662,22 +24780,27 @@ function isDecCode(c) {
   return 48 <= c && c <= 57;
 }
 function resolveYamlInteger(data) {
-  if (data === null) return false;
+  if (data === null)
+    return false;
   var max = data.length, index = 0, hasDigits = false, ch;
-  if (!max) return false;
+  if (!max)
+    return false;
   ch = data[index];
   if (ch === "-" || ch === "+") {
     ch = data[++index];
   }
   if (ch === "0") {
-    if (index + 1 === max) return true;
+    if (index + 1 === max)
+      return true;
     ch = data[++index];
     if (ch === "b") {
       index++;
       for (; index < max; index++) {
         ch = data[index];
-        if (ch === "_") continue;
-        if (ch !== "0" && ch !== "1") return false;
+        if (ch === "_")
+          continue;
+        if (ch !== "0" && ch !== "1")
+          return false;
         hasDigits = true;
       }
       return hasDigits && ch !== "_";
@@ -24686,8 +24809,10 @@ function resolveYamlInteger(data) {
       index++;
       for (; index < max; index++) {
         ch = data[index];
-        if (ch === "_") continue;
-        if (!isHexCode(data.charCodeAt(index))) return false;
+        if (ch === "_")
+          continue;
+        if (!isHexCode(data.charCodeAt(index)))
+          return false;
         hasDigits = true;
       }
       return hasDigits && ch !== "_";
@@ -24696,23 +24821,28 @@ function resolveYamlInteger(data) {
       index++;
       for (; index < max; index++) {
         ch = data[index];
-        if (ch === "_") continue;
-        if (!isOctCode(data.charCodeAt(index))) return false;
+        if (ch === "_")
+          continue;
+        if (!isOctCode(data.charCodeAt(index)))
+          return false;
         hasDigits = true;
       }
       return hasDigits && ch !== "_";
     }
   }
-  if (ch === "_") return false;
+  if (ch === "_")
+    return false;
   for (; index < max; index++) {
     ch = data[index];
-    if (ch === "_") continue;
+    if (ch === "_")
+      continue;
     if (!isDecCode(data.charCodeAt(index))) {
       return false;
     }
     hasDigits = true;
   }
-  if (!hasDigits || ch === "_") return false;
+  if (!hasDigits || ch === "_")
+    return false;
   return true;
 }
 function constructYamlInteger(data) {
@@ -24722,15 +24852,20 @@ function constructYamlInteger(data) {
   }
   ch = value[0];
   if (ch === "-" || ch === "+") {
-    if (ch === "-") sign = -1;
+    if (ch === "-")
+      sign = -1;
     value = value.slice(1);
     ch = value[0];
   }
-  if (value === "0") return 0;
+  if (value === "0")
+    return 0;
   if (ch === "0") {
-    if (value[1] === "b") return sign * parseInt(value.slice(2), 2);
-    if (value[1] === "x") return sign * parseInt(value.slice(2), 16);
-    if (value[1] === "o") return sign * parseInt(value.slice(2), 8);
+    if (value[1] === "b")
+      return sign * parseInt(value.slice(2), 2);
+    if (value[1] === "x")
+      return sign * parseInt(value.slice(2), 16);
+    if (value[1] === "o")
+      return sign * parseInt(value.slice(2), 8);
   }
   return sign * parseInt(value, 10);
 }
@@ -24770,7 +24905,8 @@ var YAML_FLOAT_PATTERN = new RegExp(
   "^(?:[-+]?(?:[0-9][0-9_]*)(?:\\.[0-9_]*)?(?:[eE][-+]?[0-9]+)?|\\.[0-9_]+(?:[eE][-+]?[0-9]+)?|[-+]?\\.(?:inf|Inf|INF)|\\.(?:nan|NaN|NAN))$"
 );
 function resolveYamlFloat(data) {
-  if (data === null) return false;
+  if (data === null)
+    return false;
   if (!YAML_FLOAT_PATTERN.test(data) || // Quick hack to not allow integers end with `_`
   // Probably should update regexp & check speed
   data[data.length - 1] === "_") {
@@ -24855,16 +24991,21 @@ var YAML_TIMESTAMP_REGEXP = new RegExp(
   "^([0-9][0-9][0-9][0-9])-([0-9][0-9]?)-([0-9][0-9]?)(?:[Tt]|[ \\t]+)([0-9][0-9]?):([0-9][0-9]):([0-9][0-9])(?:\\.([0-9]*))?(?:[ \\t]*(Z|([-+])([0-9][0-9]?)(?::([0-9][0-9]))?))?$"
 );
 function resolveYamlTimestamp(data) {
-  if (data === null) return false;
-  if (YAML_DATE_REGEXP.exec(data) !== null) return true;
-  if (YAML_TIMESTAMP_REGEXP.exec(data) !== null) return true;
+  if (data === null)
+    return false;
+  if (YAML_DATE_REGEXP.exec(data) !== null)
+    return true;
+  if (YAML_TIMESTAMP_REGEXP.exec(data) !== null)
+    return true;
   return false;
 }
 function constructYamlTimestamp(data) {
   var match, year, month, day, hour, minute, second, fraction = 0, delta = null, tz_hour, tz_minute, date;
   match = YAML_DATE_REGEXP.exec(data);
-  if (match === null) match = YAML_TIMESTAMP_REGEXP.exec(data);
-  if (match === null) throw new Error("Date resolve error");
+  if (match === null)
+    match = YAML_TIMESTAMP_REGEXP.exec(data);
+  if (match === null)
+    throw new Error("Date resolve error");
   year = +match[1];
   month = +match[2] - 1;
   day = +match[3];
@@ -24885,10 +25026,12 @@ function constructYamlTimestamp(data) {
     tz_hour = +match[10];
     tz_minute = +(match[11] || 0);
     delta = (tz_hour * 60 + tz_minute) * 6e4;
-    if (match[9] === "-") delta = -delta;
+    if (match[9] === "-")
+      delta = -delta;
   }
   date = new Date(Date.UTC(year, month, day, hour, minute, second, fraction));
-  if (delta) date.setTime(date.getTime() - delta);
+  if (delta)
+    date.setTime(date.getTime() - delta);
   return date;
 }
 function representYamlTimestamp(object) {
@@ -24910,12 +25053,15 @@ var merge = new type("tag:yaml.org,2002:merge", {
 });
 var BASE64_MAP = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=\n\r";
 function resolveYamlBinary(data) {
-  if (data === null) return false;
+  if (data === null)
+    return false;
   var code, idx, bitlen = 0, max = data.length, map2 = BASE64_MAP;
   for (idx = 0; idx < max; idx++) {
     code = map2.indexOf(data.charAt(idx));
-    if (code > 64) continue;
-    if (code < 0) return false;
+    if (code > 64)
+      continue;
+    if (code < 0)
+      return false;
     bitlen += 6;
   }
   return bitlen % 8 === 0;
@@ -24986,21 +25132,28 @@ var binary = new type("tag:yaml.org,2002:binary", {
 var _hasOwnProperty$3 = Object.prototype.hasOwnProperty;
 var _toString$2 = Object.prototype.toString;
 function resolveYamlOmap(data) {
-  if (data === null) return true;
+  if (data === null)
+    return true;
   var objectKeys = [], index, length, pair, pairKey, pairHasKey, object = data;
   for (index = 0, length = object.length; index < length; index += 1) {
     pair = object[index];
     pairHasKey = false;
-    if (_toString$2.call(pair) !== "[object Object]") return false;
+    if (_toString$2.call(pair) !== "[object Object]")
+      return false;
     for (pairKey in pair) {
       if (_hasOwnProperty$3.call(pair, pairKey)) {
-        if (!pairHasKey) pairHasKey = true;
-        else return false;
+        if (!pairHasKey)
+          pairHasKey = true;
+        else
+          return false;
       }
     }
-    if (!pairHasKey) return false;
-    if (objectKeys.indexOf(pairKey) === -1) objectKeys.push(pairKey);
-    else return false;
+    if (!pairHasKey)
+      return false;
+    if (objectKeys.indexOf(pairKey) === -1)
+      objectKeys.push(pairKey);
+    else
+      return false;
   }
   return true;
 }
@@ -25014,20 +25167,24 @@ var omap = new type("tag:yaml.org,2002:omap", {
 });
 var _toString$1 = Object.prototype.toString;
 function resolveYamlPairs(data) {
-  if (data === null) return true;
+  if (data === null)
+    return true;
   var index, length, pair, keys, result, object = data;
   result = new Array(object.length);
   for (index = 0, length = object.length; index < length; index += 1) {
     pair = object[index];
-    if (_toString$1.call(pair) !== "[object Object]") return false;
+    if (_toString$1.call(pair) !== "[object Object]")
+      return false;
     keys = Object.keys(pair);
-    if (keys.length !== 1) return false;
+    if (keys.length !== 1)
+      return false;
     result[index] = [keys[0], pair[keys[0]]];
   }
   return true;
 }
 function constructYamlPairs(data) {
-  if (data === null) return [];
+  if (data === null)
+    return [];
   var index, length, pair, keys, result, object = data;
   result = new Array(object.length);
   for (index = 0, length = object.length; index < length; index += 1) {
@@ -25044,11 +25201,13 @@ var pairs = new type("tag:yaml.org,2002:pairs", {
 });
 var _hasOwnProperty$2 = Object.prototype.hasOwnProperty;
 function resolveYamlSet(data) {
-  if (data === null) return true;
+  if (data === null)
+    return true;
   var key, object = data;
   for (key in object) {
     if (_hasOwnProperty$2.call(object, key)) {
-      if (object[key] !== null) return false;
+      if (object[key] !== null)
+        return false;
     }
   }
   return true;
@@ -25712,7 +25871,8 @@ function readBlockScalar(state, nodeIndent) {
 }
 function readBlockSequence(state, nodeIndent) {
   var _line, _tag = state.tag, _anchor = state.anchor, _result = [], following, detected = false, ch;
-  if (state.firstTabInLine !== -1) return false;
+  if (state.firstTabInLine !== -1)
+    return false;
   if (state.anchor !== null) {
     state.anchorMap[state.anchor] = _result;
   }
@@ -25760,7 +25920,8 @@ function readBlockSequence(state, nodeIndent) {
 }
 function readBlockMapping(state, nodeIndent, flowIndent) {
   var following, allowCompact, _line, _keyLine, _keyLineStart, _keyPos, _tag = state.tag, _anchor = state.anchor, _result = {}, overridableKeys = /* @__PURE__ */ Object.create(null), keyTag = null, keyNode = null, valueNode = null, atExplicitKey = false, detected = false, ch;
-  if (state.firstTabInLine !== -1) return false;
+  if (state.firstTabInLine !== -1)
+    return false;
   if (state.anchor !== null) {
     state.anchorMap[state.anchor] = _result;
   }
@@ -25870,7 +26031,8 @@ function readBlockMapping(state, nodeIndent, flowIndent) {
 function readTagProperty(state) {
   var _position, isVerbatim = false, isNamed = false, tagHandle, tagName, ch;
   ch = state.input.charCodeAt(state.position);
-  if (ch !== 33) return false;
+  if (ch !== 33)
+    return false;
   if (state.tag !== null) {
     throwError(state, "duplication of a tag property");
   }
@@ -25941,7 +26103,8 @@ function readTagProperty(state) {
 function readAnchorProperty(state) {
   var _position, ch;
   ch = state.input.charCodeAt(state.position);
-  if (ch !== 38) return false;
+  if (ch !== 38)
+    return false;
   if (state.anchor !== null) {
     throwError(state, "duplication of an anchor property");
   }
@@ -25959,7 +26122,8 @@ function readAnchorProperty(state) {
 function readAlias(state) {
   var _position, alias, ch;
   ch = state.input.charCodeAt(state.position);
-  if (ch !== 42) return false;
+  if (ch !== 42)
+    return false;
   ch = state.input.charCodeAt(++state.position);
   _position = state.position;
   while (ch !== 0 && !is_WS_OR_EOL(ch) && !is_FLOW_INDICATOR(ch)) {
@@ -26135,14 +26299,16 @@ function readDocument(state) {
         } while (ch !== 0 && !is_EOL(ch));
         break;
       }
-      if (is_EOL(ch)) break;
+      if (is_EOL(ch))
+        break;
       _position = state.position;
       while (ch !== 0 && !is_WS_OR_EOL(ch)) {
         ch = state.input.charCodeAt(++state.position);
       }
       directiveArgs.push(state.input.slice(_position, state.position));
     }
-    if (ch !== 0) readLineBreak(state);
+    if (ch !== 0)
+      readLineBreak(state);
     if (_hasOwnProperty$1.call(directiveHandlers, directiveName)) {
       directiveHandlers[directiveName](state, directiveName, directiveArgs);
     } else {
@@ -26294,7 +26460,8 @@ var DEPRECATED_BOOLEANS_SYNTAX = [
 var DEPRECATED_BASE60_SYNTAX = /^[-+]?[0-9_]+(?::[0-9_]+)+(?:\.[0-9_]*)?$/;
 function compileStyleMap(schema2, map2) {
   var result, keys, index, length, tag, style, type2;
-  if (map2 === null) return {};
+  if (map2 === null)
+    return {};
   result = {};
   keys = Object.keys(map2);
   for (index = 0, length = keys.length; index < length; index += 1) {
@@ -26363,7 +26530,8 @@ function indentString(string, spaces) {
       line = string.slice(position, next + 1);
       position = next + 1;
     }
-    if (line.length && line !== "\n") result += ind;
+    if (line.length && line !== "\n")
+      result += ind;
     result += line;
   }
   return result;
@@ -26547,7 +26715,8 @@ function foldString(string, width) {
   return result;
 }
 function foldLine(line, width) {
-  if (line === "" || line[0] === " ") return line;
+  if (line === "" || line[0] === " ")
+    return line;
   var breakRe = / [^ ]/g;
   var match;
   var start = 0, end, curr = 0, next = 0;
@@ -26578,7 +26747,8 @@ function escapeString(string) {
     escapeSeq = ESCAPE_SEQUENCES[char];
     if (!escapeSeq && isPrintable(char)) {
       result += string[i];
-      if (char >= 65536) result += string[i + 1];
+      if (char >= 65536)
+        result += string[i + 1];
     } else {
       result += escapeSeq || encodeHex(char);
     }
@@ -26593,7 +26763,8 @@ function writeFlowSequence(state, level, object) {
       value = state.replacer.call(object, String(index), value);
     }
     if (writeNode(state, level, value, false, false) || typeof value === "undefined" && writeNode(state, level, null, false, false)) {
-      if (_result !== "") _result += "," + (!state.condenseFlow ? " " : "");
+      if (_result !== "")
+        _result += "," + (!state.condenseFlow ? " " : "");
       _result += state.dump;
     }
   }
@@ -26626,8 +26797,10 @@ function writeFlowMapping(state, level, object) {
   var _result = "", _tag = state.tag, objectKeyList = Object.keys(object), index, length, objectKey, objectValue, pairBuffer;
   for (index = 0, length = objectKeyList.length; index < length; index += 1) {
     pairBuffer = "";
-    if (_result !== "") pairBuffer += ", ";
-    if (state.condenseFlow) pairBuffer += '"';
+    if (_result !== "")
+      pairBuffer += ", ";
+    if (state.condenseFlow)
+      pairBuffer += '"';
     objectKey = objectKeyList[index];
     objectValue = object[objectKey];
     if (state.replacer) {
@@ -26636,7 +26809,8 @@ function writeFlowMapping(state, level, object) {
     if (!writeNode(state, level, objectKey, false, false)) {
       continue;
     }
-    if (state.dump.length > 1024) pairBuffer += "? ";
+    if (state.dump.length > 1024)
+      pairBuffer += "? ";
     pairBuffer += state.dump + (state.condenseFlow ? '"' : "") + ":" + (state.condenseFlow ? "" : " ");
     if (!writeNode(state, level, objectValue, false, false)) {
       continue;
@@ -26787,7 +26961,8 @@ function writeNode(state, level, object, block, compact, iskey, isblockseq) {
     } else if (type2 === "[object Undefined]") {
       return false;
     } else {
-      if (state.skipInvalid) return false;
+      if (state.skipInvalid)
+        return false;
       throw new exception("unacceptable kind of an object to dump " + type2);
     }
     if (state.tag !== null && state.tag !== "?") {
@@ -26840,12 +27015,14 @@ function inspectNode(object, objects, duplicatesIndexes) {
 function dump$1(input, options) {
   options = options || {};
   var state = new State(options);
-  if (!state.noRefs) getDuplicateReferences(input, state);
+  if (!state.noRefs)
+    getDuplicateReferences(input, state);
   var value = input;
   if (state.replacer) {
     value = state.replacer.call({ "": value }, "", value);
   }
-  if (writeNode(state, 0, value, true, true)) return state.dump + "\n";
+  if (writeNode(state, 0, value, true, true))
+    return state.dump + "\n";
   return "";
 }
 var dump_1 = dump$1;
@@ -26866,19 +27043,11 @@ var safeDump = renamed("safeDump", "dump");
 
 // src/config/defaults.ts
 var DEFAULT_CONFIG = {
-  providers: [
-    "openrouter/google/gemini-2.0-flash-exp:free",
-    "openrouter/mistralai/devstral-2512:free",
-    "openrouter/xiaomi/mimo-v2-flash:free",
-    "openrouter/qwen/qwen-2.5-coder-32b-instruct:free",
-    "openrouter/deepseek/deepseek-r1-distill-llama-70b:free",
-    "openrouter/meta-llama/llama-3.1-70b-instruct:free"
-  ],
+  // Empty array triggers dynamic model discovery
+  // Will auto-discover best free models from OpenRouter API and OpenCode CLI
+  providers: [],
   synthesisModel: "openrouter/google/gemini-2.0-flash-exp:free",
-  fallbackProviders: [
-    "openrouter/microsoft/phi-4:free",
-    "openrouter/nvidia/llama-3.1-nemotron-70b-instruct:free"
-  ],
+  fallbackProviders: [],
   providerAllowlist: [],
   providerBlocklist: [],
   providerLimit: 6,
@@ -26922,6 +27091,10 @@ var DEFAULT_CONFIG = {
   pluginBlocklist: [],
   dryRun: false
 };
+var FALLBACK_STATIC_PROVIDERS = [
+  "openrouter/mistralai/devstral-2512:free",
+  "openrouter/xiaomi/mimo-v2-flash:free"
+];
 
 // node_modules/zod/v3/external.js
 var external_exports = {};
@@ -27401,8 +27574,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path8, errorMaps, issueData } = params;
-  const fullPath = [...path8, ...issueData.path || []];
+  const { data, path: path9, errorMaps, issueData } = params;
+  const fullPath = [...path9, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -27518,11 +27691,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path8, key) {
+  constructor(parent, value, path9, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path8;
+    this._path = path9;
     this._key = key;
   }
   get path() {
@@ -31293,7 +31466,8 @@ var ConfigLoader = class {
   static loadFromFile() {
     for (const relPath of this.CONFIG_PATHS) {
       const fullPath = path.join(process.cwd(), relPath);
-      if (!fs.existsSync(fullPath)) continue;
+      if (!fs.existsSync(fullPath))
+        continue;
       try {
         const raw = fs.readFileSync(fullPath, "utf8");
         const parsed = load(raw);
@@ -31382,7 +31556,8 @@ var ConfigLoader = class {
     return overrides.reduce((acc, curr) => {
       const next = {};
       for (const [key, value] of Object.entries(curr)) {
-        if (value === void 0 || value === null) continue;
+        if (value === void 0 || value === null)
+          continue;
         const typedKey = key;
         next[typedKey] = value;
       }
@@ -31390,25 +31565,30 @@ var ConfigLoader = class {
     }, defaults);
   }
   static parseArray(value) {
-    if (!value) return void 0;
+    if (!value)
+      return void 0;
     return value.split(",").map((v) => v.trim()).filter(Boolean);
   }
   static parseBoolean(value) {
-    if (value === void 0) return void 0;
+    if (value === void 0)
+      return void 0;
     return value.toLowerCase() === "true";
   }
   static parseNumber(value) {
-    if (!value) return void 0;
+    if (!value)
+      return void 0;
     const num = parseInt(value, 10);
     return Number.isFinite(num) ? num : void 0;
   }
   static parseFloat(value) {
-    if (!value) return void 0;
+    if (!value)
+      return void 0;
     const num = Number.parseFloat(value);
     return Number.isFinite(num) ? num : void 0;
   }
   static parseSeverity(value) {
-    if (!value) return void 0;
+    if (!value)
+      return void 0;
     const normalized = value.toLowerCase();
     if (normalized === "critical" || normalized === "major" || normalized === "minor") {
       return normalized;
@@ -31630,8 +31810,10 @@ var OpenRouterProvider = class _OpenRouterProvider extends Provider {
           retries: 1,
           retryOn: (error2) => {
             const err = error2;
-            if (err instanceof RateLimitError) return false;
-            if (err.name === "AbortError") return false;
+            if (err instanceof RateLimitError)
+              return false;
+            if (err.name === "AbortError")
+              return false;
             return true;
           }
         }
@@ -31676,11 +31858,13 @@ var OpenRouterProvider = class _OpenRouterProvider extends Provider {
       const jsonMatch = content.match(/```json\s*([\s\S]*?)```/i);
       if (jsonMatch) {
         const parsed2 = JSON.parse(jsonMatch[1]);
-        if (Array.isArray(parsed2)) return parsed2;
+        if (Array.isArray(parsed2))
+          return parsed2;
         return parsed2.findings || [];
       }
       const parsed = JSON.parse(content);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed))
+        return parsed;
       return parsed.findings || [];
     } catch (error2) {
       logger.debug("Failed to parse findings from content", error2);
@@ -31799,11 +31983,13 @@ var OpenCodeProvider = class extends Provider {
       const match = content.match(/```json\s*([\s\S]*?)```/i);
       if (match) {
         const parsed2 = JSON.parse(match[1]);
-        if (Array.isArray(parsed2)) return parsed2;
+        if (Array.isArray(parsed2))
+          return parsed2;
         return parsed2.findings || [];
       }
       const parsed = JSON.parse(content);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed))
+        return parsed;
       return parsed.findings || [];
     } catch (error2) {
       logger.debug("Failed to parse findings from OpenCode response", error2);
@@ -31879,12 +32065,14 @@ var PricingService = class _PricingService {
     };
   }
   async refresh() {
-    if (!this.apiKey) return;
+    if (!this.apiKey)
+      return;
     try {
       const response = await fetch("https://openrouter.ai/api/v1/models", {
         headers: { Authorization: `Bearer ${this.apiKey}` }
       });
-      if (!response.ok) return;
+      if (!response.ok)
+        return;
       const data = await response.json();
       for (const model of data.data || []) {
         const pricing = model.pricing || {};
@@ -31901,6 +32089,244 @@ var PricingService = class _PricingService {
   }
 };
 
+// src/providers/openrouter-models.ts
+async function fetchOpenRouterModels(timeoutMs = 5e3) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/models", {
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json"
+      }
+    });
+    if (!response.ok) {
+      throw new Error(`OpenRouter API error: ${response.status} ${response.statusText}`);
+    }
+    const data = await response.json();
+    return data.data || [];
+  } catch (error2) {
+    if (error2 instanceof Error && error2.name === "AbortError") {
+      logger.warn("OpenRouter model fetch timed out");
+    } else {
+      logger.warn("Failed to fetch OpenRouter models", error2);
+    }
+    return [];
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+function isFreeModel(model) {
+  return model.pricing.prompt === "0" && model.pricing.completion === "0";
+}
+function rankModel(model) {
+  let score = 0;
+  const contextLength = model.context_length || model.top_provider?.context_length || 0;
+  score += Math.min(100, contextLength / 128e3 * 100);
+  if (model.architecture?.instruct_type) {
+    score += 20;
+  }
+  if (model.id.toLowerCase().includes("code") || model.name.toLowerCase().includes("code")) {
+    score += 30;
+  }
+  if (model.id.includes("2.5") || model.id.includes("3.") || model.id.includes("4.")) {
+    score += 10;
+  }
+  if (contextLength < 4e3) {
+    score -= 50;
+  }
+  return score;
+}
+async function getBestFreeModels(count = 4, timeoutMs = 5e3) {
+  logger.info("Fetching OpenRouter model list from API...");
+  const models = await fetchOpenRouterModels(timeoutMs);
+  if (models.length === 0) {
+    logger.warn("No models fetched from OpenRouter API, using fallback");
+    return getFallbackModels(count);
+  }
+  logger.info(`Fetched ${models.length} total models from OpenRouter`);
+  const freeModels = models.filter(isFreeModel);
+  if (freeModels.length === 0) {
+    logger.warn("No free models available from OpenRouter, using fallback");
+    return getFallbackModels(count);
+  }
+  logger.info(`Found ${freeModels.length} free OpenRouter models`);
+  const rankedModels = freeModels.map((model) => ({
+    modelId: `openrouter/${model.id}`,
+    score: rankModel(model),
+    contextLength: model.context_length || 0,
+    isFree: true
+  }));
+  rankedModels.sort((a, b) => b.score - a.score);
+  const selectedModels = rankedModels.slice(0, count).map((m) => m.modelId);
+  logger.info(
+    `Selected ${selectedModels.length}/${count} best free OpenRouter models: ${selectedModels.join(", ")}`
+  );
+  return selectedModels;
+}
+function getFallbackModels(count = 4) {
+  const fallbacks = [
+    "openrouter/mistralai/devstral-2512:free",
+    "openrouter/xiaomi/mimo-v2-flash:free",
+    "openrouter/microsoft/phi-4:free",
+    "openrouter/google/gemini-2.0-flash-exp:free"
+  ];
+  return fallbacks.slice(0, count);
+}
+var modelCache = null;
+var CACHE_TTL_MS = 60 * 60 * 1e3;
+async function getBestFreeModelsCached(count = 4, timeoutMs = 5e3) {
+  const now = Date.now();
+  if (modelCache && now - modelCache.timestamp < CACHE_TTL_MS) {
+    logger.debug("Using cached OpenRouter model list");
+    return modelCache.models.slice(0, count);
+  }
+  const models = await getBestFreeModels(count, timeoutMs);
+  modelCache = {
+    models,
+    timestamp: now
+  };
+  return models;
+}
+
+// src/providers/opencode-models.ts
+var import_child_process2 = require("child_process");
+var import_util4 = require("util");
+var execAsync = (0, import_util4.promisify)(import_child_process2.exec);
+function parseOpenCodeModels(output) {
+  const models = [];
+  const lines = output.split("\n");
+  let currentModel = null;
+  let jsonLines = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.match(/^[a-z][a-z0-9-]+\//)) {
+      if (jsonLines.length > 0 && currentModel) {
+        try {
+          const jsonStr = jsonLines.join("\n");
+          const parsed = JSON.parse(jsonStr);
+          const provider = currentModel.split("/")[0];
+          if (provider === "opencode" && parsed.cost && parsed.cost.input === 0) {
+            models.push({
+              id: currentModel,
+              provider,
+              isFree: true,
+              contextWindow: parsed.limit?.context
+            });
+          }
+        } catch (e) {
+        }
+      }
+      currentModel = line.trim();
+      jsonLines = [];
+    } else if (currentModel && line.trim()) {
+      jsonLines.push(line);
+    }
+  }
+  if (jsonLines.length > 0 && currentModel) {
+    try {
+      const jsonStr = jsonLines.join("\n");
+      const parsed = JSON.parse(jsonStr);
+      const provider = currentModel.split("/")[0];
+      if (provider === "opencode" && parsed.cost && parsed.cost.input === 0) {
+        models.push({
+          id: currentModel,
+          provider,
+          isFree: true,
+          contextWindow: parsed.limit?.context
+        });
+      }
+    } catch (e) {
+    }
+  }
+  return models;
+}
+async function fetchOpenCodeModels(timeoutMs = 1e4) {
+  logger.info("Attempting to fetch OpenCode models via CLI with --verbose...");
+  try {
+    const { stdout, stderr } = await execAsync("opencode models --verbose", {
+      timeout: timeoutMs,
+      maxBuffer: 5 * 1024 * 1024
+      // 5MB buffer for verbose output
+    });
+    if (stderr) {
+      logger.debug(`OpenCode CLI stderr: ${stderr}`);
+    }
+    const models = parseOpenCodeModels(stdout);
+    logger.info(`Discovered ${models.length} free OpenCode models from CLI (cost.input === 0)`);
+    if (models.length > 0) {
+      logger.debug(`OpenCode free models: ${models.map((m) => m.id).join(", ")}`);
+    }
+    return models;
+  } catch (error2) {
+    if (error2 instanceof Error) {
+      if (error2.message.includes("ENOENT") || error2.message.includes("command not found")) {
+        logger.info("OpenCode CLI not installed, skipping OpenCode model discovery");
+      } else if (error2.message.includes("timeout")) {
+        logger.warn(`OpenCode CLI timeout after ${timeoutMs}ms`);
+      } else {
+        logger.warn("Failed to fetch OpenCode models", error2);
+      }
+    }
+    return [];
+  }
+}
+function rankOpenCodeModel(model) {
+  let score = 0;
+  if (model.isFree) {
+    score += 100;
+  }
+  const modelLower = model.id.toLowerCase();
+  if (modelLower.includes("claude")) {
+    score += 50;
+  } else if (modelLower.includes("gpt-4")) {
+    score += 40;
+  } else if (modelLower.includes("gemini")) {
+    score += 35;
+  } else if (modelLower.includes("deepseek")) {
+    score += 30;
+  } else if (modelLower.includes("qwen")) {
+    score += 25;
+  }
+  if (modelLower.includes("code")) {
+    score += 20;
+  }
+  return score;
+}
+async function getBestFreeOpenCodeModels(count = 4, timeoutMs = 1e4) {
+  const models = await fetchOpenCodeModels(timeoutMs);
+  if (models.length === 0) {
+    logger.info("No free OpenCode models available - CLI may not be installed or accessible");
+    return [];
+  }
+  logger.info(`Found ${models.length} free OpenCode models (cost.input === 0)`);
+  const ranked = models.map((model) => ({
+    modelId: model.id,
+    score: rankOpenCodeModel(model)
+  }));
+  ranked.sort((a, b) => b.score - a.score);
+  const selected = ranked.slice(0, count).map((r) => r.modelId);
+  logger.info(
+    `Selected ${selected.length}/${count} best free OpenCode models: ${selected.join(", ")}`
+  );
+  return selected;
+}
+var modelCache2 = null;
+var CACHE_TTL_MS2 = 60 * 60 * 1e3;
+async function getBestFreeOpenCodeModelsCached(count = 4, timeoutMs = 1e4) {
+  const now = Date.now();
+  if (modelCache2 && now - modelCache2.timestamp < CACHE_TTL_MS2) {
+    logger.debug("Using cached OpenCode model list");
+    return modelCache2.models.slice(0, count);
+  }
+  const models = await getBestFreeOpenCodeModels(count, timeoutMs);
+  modelCache2 = {
+    models,
+    timestamp: now
+  };
+  return models;
+}
+
 // src/providers/registry.ts
 var ProviderRegistry = class {
   constructor(pluginLoader) {
@@ -31913,13 +32339,40 @@ var ProviderRegistry = class {
     let providers = this.instantiate(config.providers);
     const userProvidedList = Boolean(process.env.REVIEW_PROVIDERS);
     const usingDefaults = this.usesDefaultProviders(config.providers);
-    if (process.env.OPENROUTER_API_KEY && providers.length === 0 && usingDefaults && !userProvidedList) {
-      providers.push(...this.instantiate(DEFAULT_CONFIG.providers));
-      const freeModels = await this.fetchFreeOpenRouterModels();
-      providers.push(...this.instantiate(freeModels));
+    if (providers.length === 0 && usingDefaults && !userProvidedList) {
+      logger.info("\u{1F50D} No providers specified, starting dynamic model discovery...");
+      const discoveredModels = [];
+      if (process.env.OPENROUTER_API_KEY) {
+        logger.info("Discovering OpenRouter models...");
+        const openRouterModels = await getBestFreeModelsCached(4, 5e3);
+        if (openRouterModels.length > 0) {
+          logger.info(`\u2705 Discovered ${openRouterModels.length} OpenRouter models`);
+          discoveredModels.push(...openRouterModels);
+        } else {
+          logger.warn("\u26A0\uFE0F  No OpenRouter models discovered (API may be unavailable)");
+        }
+      } else {
+        logger.info("Skipping OpenRouter discovery (no API key)");
+      }
+      logger.info("Discovering OpenCode models...");
+      const openCodeModels = await getBestFreeOpenCodeModelsCached(4, 1e4);
+      if (openCodeModels.length > 0) {
+        logger.info(`\u2705 Discovered ${openCodeModels.length} OpenCode models`);
+        discoveredModels.push(...openCodeModels);
+      } else {
+        logger.info("\u2139\uFE0F  No OpenCode models discovered (CLI may not be installed)");
+      }
+      if (discoveredModels.length > 0) {
+        logger.info(`\u{1F3AF} Total discovered: ${discoveredModels.length} free models`);
+        logger.info(`   Models: ${discoveredModels.join(", ")}`);
+        providers.push(...this.instantiate(discoveredModels));
+      } else {
+        logger.warn("\u26A0\uFE0F  Dynamic discovery found no models, using static fallbacks");
+      }
     }
     if (providers.length === 0) {
-      providers = this.instantiate(DEFAULT_CONFIG.providers);
+      logger.warn("Using static fallback providers as last resort");
+      providers = this.instantiate(FALLBACK_STATIC_PROVIDERS);
     }
     providers = this.dedupeProviders(providers);
     providers = this.applyAllowBlock(providers, config);
@@ -31956,7 +32409,9 @@ var ProviderRegistry = class {
     const list = [];
     for (const name of names) {
       if (this.pluginLoader?.hasProvider(name)) {
-        const apiKey = process.env.PLUGIN_API_KEY || "";
+        const pluginName = name.split("/")[0];
+        const pluginEnvVar = `PLUGIN_${pluginName.toUpperCase().replace(/-/g, "_")}_API_KEY`;
+        const apiKey = process.env[pluginEnvVar] || process.env.PLUGIN_API_KEY || "";
         const provider = this.pluginLoader.createProvider(name, apiKey);
         if (provider) {
           list.push(provider);
@@ -32006,7 +32461,8 @@ var ProviderRegistry = class {
     const available = [];
     for (const provider of providers) {
       const limited = await this.rateLimiter.isRateLimited(provider.name);
-      if (!limited) available.push(provider);
+      if (!limited)
+        available.push(provider);
     }
     return available;
   }
@@ -32028,33 +32484,16 @@ var ProviderRegistry = class {
     const seen = /* @__PURE__ */ new Set();
     const result = [];
     for (const p of providers) {
-      if (seen.has(p.name)) continue;
+      if (seen.has(p.name))
+        continue;
       seen.add(p.name);
       result.push(p);
     }
     return result;
   }
-  async fetchFreeOpenRouterModels() {
-    try {
-      const response = await fetch("https://openrouter.ai/api/v1/models", {
-        headers: { Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}` }
-      });
-      if (!response.ok) {
-        logger.warn(`Failed to fetch OpenRouter models: HTTP ${response.status}`);
-        return [];
-      }
-      const data = await response.json();
-      const free = (data.data || []).filter((model) => model.id.includes(":free") || model.pricing?.prompt === "0" && model.pricing?.completion === "0").map((model) => `openrouter/${model.id}`);
-      const unique = Array.from(new Set(free));
-      const target = Math.max(8, Math.min(unique.length, 12));
-      return unique.slice(0, target);
-    } catch (error2) {
-      logger.warn("Error fetching OpenRouter models", error2);
-      return [];
-    }
-  }
   usesDefaultProviders(list) {
-    if (!Array.isArray(list) || list.length !== DEFAULT_CONFIG.providers.length) return false;
+    if (!Array.isArray(list) || list.length !== DEFAULT_CONFIG.providers.length)
+      return false;
     return list.every((p) => DEFAULT_CONFIG.providers.includes(p));
   }
 };
@@ -32062,7 +32501,8 @@ var ProviderRegistry = class {
 // src/utils/diff.ts
 function trimDiff(diff, maxBytes) {
   const buf = Buffer.from(diff, "utf8");
-  if (buf.byteLength <= maxBytes) return diff;
+  if (buf.byteLength <= maxBytes)
+    return diff;
   const fileChunks = [];
   const lines = diff.split("\n");
   let currentChunk = [];
@@ -32099,7 +32539,8 @@ function trimDiff(diff, maxBytes) {
   return includedChunks.join("\n");
 }
 function mapAddedLines(patch) {
-  if (!patch) return [];
+  if (!patch)
+    return [];
   const lines = patch.split("\n");
   const added = [];
   let currentNew = 0;
@@ -32122,7 +32563,8 @@ function mapAddedLines(patch) {
 }
 function mapLinesToPositions(patch) {
   const map2 = /* @__PURE__ */ new Map();
-  if (!patch) return map2;
+  if (!patch)
+    return map2;
   const lines = patch.split("\n");
   let currentNew = 0;
   let position = 0;
@@ -32696,8 +33138,10 @@ var LLMExecutor = class {
           const result = await withRetry(runner, {
             retries: Math.max(0, this.config.providerRetries - 1),
             retryOn: (error2) => {
-              if (error2 instanceof RateLimitError) return false;
-              if (error2.message.includes("timed out after")) return false;
+              if (error2 instanceof RateLimitError)
+                return false;
+              if (error2.message.includes("timed out after"))
+                return false;
               return true;
             }
           });
@@ -32772,9 +33216,12 @@ var ConsensusEngine = class {
       const key = `${finding.file}:${finding.line}:${finding.title}`;
       const existing = grouped.get(key);
       const providers = /* @__PURE__ */ new Set();
-      if (finding.providers) finding.providers.forEach((p) => providers.add(p));
-      if (finding.provider) providers.add(finding.provider);
-      if (providers.size === 0) providers.add("static");
+      if (finding.providers)
+        finding.providers.forEach((p) => providers.add(p));
+      if (finding.provider)
+        providers.add(finding.provider);
+      if (providers.size === 0)
+        providers.add("static");
       if (!existing) {
         grouped.set(key, {
           ...finding,
@@ -32797,9 +33244,11 @@ var ConsensusEngine = class {
     return SEVERITY_ORDER[severity] >= SEVERITY_ORDER[this.options.minSeverity];
   }
   meetsAgreement(providers) {
-    if (providers.includes("static")) return true;
+    if (providers.includes("static"))
+      return true;
     const count = providers.length;
-    if (count >= this.options.minAgreement) return true;
+    if (count >= this.options.minAgreement)
+      return true;
     return count === 1;
   }
 };
@@ -32921,8 +33370,10 @@ var TestCoverageAnalyzer = class _TestCoverageAnalyzer {
   analyze(files) {
     const hints = [];
     for (const file of files) {
-      if (!this.isCodeFile(file.filename)) continue;
-      if (this.isTestFile(file.filename)) continue;
+      if (!this.isCodeFile(file.filename))
+        continue;
+      if (this.isTestFile(file.filename))
+        continue;
       const existing = this.findTestFile(file.filename);
       if (!existing) {
         hints.push({
@@ -32956,7 +33407,8 @@ var TestCoverageAnalyzer = class _TestCoverageAnalyzer {
     ];
     for (const candidate of candidates) {
       const full = path4.join(dir, candidate);
-      if (fs4.existsSync(full)) return full;
+      if (fs4.existsSync(full))
+        return full;
     }
     return null;
   }
@@ -32964,14 +33416,18 @@ var TestCoverageAnalyzer = class _TestCoverageAnalyzer {
     const dir = path4.dirname(filename);
     const base = path4.basename(filename, path4.extname(filename));
     const ext = path4.extname(filename);
-    if (ext === ".ts" || ext === ".tsx") return path4.join(dir, `${base}.test.ts`);
-    if (ext === ".py") return path4.join(dir, `test_${base}.py`);
+    if (ext === ".ts" || ext === ".tsx")
+      return path4.join(dir, `${base}.test.ts`);
+    if (ext === ".py")
+      return path4.join(dir, `test_${base}.py`);
     return path4.join(dir, `${base}.test${ext}`);
   }
   getPattern(filename) {
     const ext = path4.extname(filename);
-    if (ext === ".ts" || ext === ".tsx") return "Jest: *.test.ts or __tests__/*.ts";
-    if (ext === ".py") return "pytest: test_*.py or *_test.py";
+    if (ext === ".ts" || ext === ".tsx")
+      return "Jest: *.test.ts or __tests__/*.ts";
+    if (ext === ".py")
+      return "pytest: test_*.py or *_test.py";
     return `*.test${ext}`;
   }
 };
@@ -32998,7 +33454,8 @@ var PATTERNS = [
   }
 ];
 function detectPatternFindings(filename, addedLines) {
-  if (filename.includes("analysis/ast/patterns.ts")) return [];
+  if (filename.includes("analysis/ast/patterns.ts"))
+    return [];
   const findings = [];
   for (const { line, content } of addedLines) {
     for (const pattern of PATTERNS) {
@@ -33020,39 +33477,49 @@ function detectPatternFindings(filename, addedLines) {
 
 // src/analysis/ast/parsers.ts
 function detectLanguage(filename) {
-  if (filename.endsWith(".ts") || filename.endsWith(".tsx")) return "typescript";
-  if (filename.endsWith(".js") || filename.endsWith(".jsx")) return "javascript";
-  if (filename.endsWith(".py")) return "python";
-  if (filename.endsWith(".go")) return "go";
-  if (filename.endsWith(".rs")) return "rust";
+  if (filename.endsWith(".ts") || filename.endsWith(".tsx"))
+    return "typescript";
+  if (filename.endsWith(".js") || filename.endsWith(".jsx"))
+    return "javascript";
+  if (filename.endsWith(".py"))
+    return "python";
+  if (filename.endsWith(".go"))
+    return "go";
+  if (filename.endsWith(".rs"))
+    return "rust";
   return "unknown";
 }
 function getParser(language) {
   const Parser = loadModule("tree-sitter");
-  if (!Parser) return null;
+  if (!Parser)
+    return null;
   const parser = new Parser();
   try {
     if (language === "typescript" || language === "javascript") {
       const ts = loadModule("tree-sitter-typescript");
-      if (!ts?.typescript) return null;
+      if (!ts?.typescript)
+        return null;
       parser.setLanguage(ts.typescript);
       return parser;
     }
     if (language === "python") {
       const py = loadModule("tree-sitter-python");
-      if (!py) return null;
+      if (!py)
+        return null;
       parser.setLanguage(py);
       return parser;
     }
     if (language === "go") {
       const go = loadModule("tree-sitter-go");
-      if (!go) return null;
+      if (!go)
+        return null;
       parser.setLanguage(go);
       return parser;
     }
     if (language === "rust") {
       const rust = loadModule("tree-sitter-rust");
-      if (!rust) return null;
+      if (!rust)
+        return null;
       parser.setLanguage(rust);
       return parser;
     }
@@ -33090,7 +33557,8 @@ var ASTAnalyzer = class {
   runLanguageChecks(filename, language, addedLines) {
     const findings = [];
     const code = addedLines.map((l) => l.content).join("\n");
-    if (!code.trim()) return findings;
+    if (!code.trim())
+      return findings;
     const parser = getParser(language);
     if (!parser) {
       return this.runHeuristics(filename, addedLines);
@@ -33100,7 +33568,8 @@ var ASTAnalyzer = class {
     const stack = [tree.rootNode];
     while (stack.length > 0) {
       const node = stack.pop();
-      if (!node) continue;
+      if (!node)
+        continue;
       if (language !== "python") {
         if (node.type === "call_expression") {
           const fnNode = node.childForFieldName("function");
@@ -33280,7 +33749,8 @@ var CacheManager = class {
   async load(pr) {
     const key = buildCacheKey(pr);
     const raw = await this.storage.read(key);
-    if (!raw) return null;
+    if (!raw)
+      return null;
     try {
       const parsed = JSON.parse(raw);
       logger.info(`Loaded cached findings for ${key}`);
@@ -33301,7 +33771,7 @@ var CacheManager = class {
 };
 
 // src/cache/incremental.ts
-var import_child_process2 = require("child_process");
+var import_child_process3 = require("child_process");
 var IncrementalReviewer = class _IncrementalReviewer {
   constructor(storage = new CacheStorage(), config = { enabled: true, cacheTtlDays: 7 }) {
     this.storage = storage;
@@ -33343,7 +33813,8 @@ var IncrementalReviewer = class _IncrementalReviewer {
   async getLastReview(prNumber) {
     const key = this.buildCacheKey(prNumber);
     const raw = await this.storage.read(key);
-    if (!raw) return null;
+    if (!raw)
+      return null;
     try {
       const data = JSON.parse(raw);
       return data;
@@ -33385,7 +33856,7 @@ var IncrementalReviewer = class _IncrementalReviewer {
         throw new Error(`Invalid PR head SHA: ${pr.headSha}`);
       }
       logger.debug(`Running git diff --name-status ${lastCommit.substring(0, 7)}...${pr.headSha.substring(0, 7)}`);
-      const output = (0, import_child_process2.execFileSync)("git", ["diff", "--name-status", `${lastCommit}...${pr.headSha}`], {
+      const output = (0, import_child_process3.execFileSync)("git", ["diff", "--name-status", `${lastCommit}...${pr.headSha}`], {
         encoding: "utf8",
         cwd: process.cwd()
       });
@@ -33465,7 +33936,8 @@ var CostTracker = class {
   totalTokens = 0;
   breakdown = {};
   async record(provider, usage) {
-    if (!usage) return;
+    if (!usage)
+      return;
     const pricing = await this.pricing.getPricing(provider.replace("openrouter/", ""));
     const cost = pricing.promptPrice / 1e6 * usage.promptTokens + pricing.completionPrice / 1e6 * usage.completionTokens;
     this.totalCost += cost;
@@ -33706,7 +34178,8 @@ ${content.substring(0, 500)}...`);
     }
   }
   async postInline(prNumber, comments, files) {
-    if (comments.length === 0) return;
+    if (comments.length === 0)
+      return;
     const positionMaps = /* @__PURE__ */ new Map();
     for (const file of files) {
       positionMaps.set(file.filename, mapLinesToPositions(file.patch));
@@ -33772,7 +34245,8 @@ ${comment.body.substring(0, 200)}...`);
         current += para + "\n\n";
       }
     }
-    if (current.trim()) chunks.push(current.trim());
+    if (current.trim())
+      chunks.push(current.trim());
     logger.info(`Prepared ${chunks.length} comment chunk(s)`);
     return chunks;
   }
@@ -33883,7 +34357,8 @@ var MarkdownFormatter = class {
     return lines.join("\n");
   }
   printSeveritySection(lines, title, findings) {
-    if (findings.length === 0) return;
+    if (findings.length === 0)
+      return;
     lines.push(`
 ### ${title}`);
     findings.forEach((f) => {
@@ -33911,7 +34386,8 @@ var ContextRetriever = class {
     for (const file of files) {
       const snippets = this.buildSnippets(file);
       const downstreamConsumers = this.graph ? this.extractImportsFromGraph(file.filename) : this.extractImports(file.patch);
-      if (snippets.length === 0 && downstreamConsumers.length === 0) continue;
+      if (snippets.length === 0 && downstreamConsumers.length === 0)
+        continue;
       contexts.push({
         file: file.filename,
         relationship: downstreamConsumers.length > 0 ? "dependency" : "consumer",
@@ -33924,7 +34400,8 @@ var ContextRetriever = class {
   }
   buildSnippets(file) {
     const added = mapAddedLines(file.patch);
-    if (added.length === 0) return [];
+    if (added.length === 0)
+      return [];
     return added.map((line) => ({
       filename: file.filename,
       startLine: line.line,
@@ -33933,11 +34410,13 @@ var ContextRetriever = class {
     }));
   }
   extractImports(patch) {
-    if (!patch) return [];
+    if (!patch)
+      return [];
     const imports = [];
     const regexes = [/import .*?from ['"](.+?)['"]/, /require\\(['"](.+?)['"]\\)/];
     for (const raw of patch.split("\n")) {
-      if (!raw.startsWith("+")) continue;
+      if (!raw.startsWith("+"))
+        continue;
       for (const rx of regexes) {
         const match = raw.match(rx);
         if (match && match[1]) {
@@ -34012,9 +34491,12 @@ var ImpactAnalyzer = class {
   calculateImpact(total, files) {
     const additions = files.reduce((sum, f) => sum + f.additions, 0);
     const weight = total + additions / 50;
-    if (weight > 20) return "critical";
-    if (weight > 12) return "high";
-    if (weight > 4) return "medium";
+    if (weight > 20)
+      return "critical";
+    if (weight > 12)
+      return "high";
+    if (weight > 4)
+      return "medium";
     return "low";
   }
 };
@@ -34025,10 +34507,14 @@ var EvidenceScorer = class {
     const agreement = providerCount > 0 ? (finding.providers?.length || 0) / providerCount : 0;
     const confidence = agreement * 0.3 + (astConfirmed ? 0.25 : 0) + (graphConfirmed ? 0.25 : 0) + (hasDirectEvidence ? 0.2 : 0);
     const reasons = [];
-    if (agreement >= 0.5) reasons.push(`${Math.round(agreement * 100)}% provider agreement`);
-    if (astConfirmed) reasons.push("confirmed by AST analysis");
-    if (graphConfirmed) reasons.push("validated by dependency graph");
-    if (hasDirectEvidence) reasons.push("direct evidence in changed code");
+    if (agreement >= 0.5)
+      reasons.push(`${Math.round(agreement * 100)}% provider agreement`);
+    if (astConfirmed)
+      reasons.push("confirmed by AST analysis");
+    if (graphConfirmed)
+      reasons.push("validated by dependency graph");
+    if (hasDirectEvidence)
+      reasons.push("direct evidence in changed code");
     return {
       confidence: Math.min(1, confidence),
       reasoning: reasons.join(", ") || "limited evidence",
@@ -34036,8 +34522,10 @@ var EvidenceScorer = class {
     };
   }
   getBadge(confidence) {
-    if (confidence >= 0.8) return "\u{1F7E2} High Confidence";
-    if (confidence >= 0.5) return "\u{1F7E1} Medium Confidence";
+    if (confidence >= 0.8)
+      return "\u{1F7E2} High Confidence";
+    if (confidence >= 0.5)
+      return "\u{1F7E1} Medium Confidence";
     return "\u{1F7E0} Low Confidence";
   }
 };
@@ -34045,7 +34533,8 @@ var EvidenceScorer = class {
 // src/output/mermaid.ts
 var MermaidGenerator = class {
   generateImpactDiagram(files, context2) {
-    if (files.length > 30) return "";
+    if (files.length > 30)
+      return "";
     const lines = ["graph TD"];
     const fileNodes = /* @__PURE__ */ new Set();
     const usedIds = /* @__PURE__ */ new Set();
@@ -34130,10 +34619,10 @@ var FeedbackFilter = class {
     const signature = this.signatureFromComment(comment.path, comment.line, comment.body);
     return !suppressed.has(signature);
   }
-  signatureFromComment(path8, line, body) {
+  signatureFromComment(path9, line, body) {
     const titleMatch = body.match(/\*\*(.+?)\*\*/);
     const title = titleMatch ? titleMatch[1] : body.split("\n")[0] || "unknown";
-    return `${(path8 || "unknown").toLowerCase()}:${line ?? 0}:${title.toLowerCase()}`;
+    return `${(path9 || "unknown").toLowerCase()}:${line ?? 0}:${title.toLowerCase()}`;
   }
 };
 
@@ -34409,6 +34898,17 @@ var QuietModeFilter = class {
 };
 
 // src/analysis/context/graph-builder.ts
+var path6 = __toESM(require("path"));
+function resolveImportPath(importerFile, moduleSpecifier) {
+  if (moduleSpecifier.startsWith(".")) {
+    const importerDir = path6.dirname(importerFile);
+    if (importerDir && importerDir !== "." && importerDir !== importerFile) {
+      const resolved = path6.join(importerDir, moduleSpecifier);
+      return resolved.replace(/\\/g, "/");
+    }
+  }
+  return moduleSpecifier;
+}
 var CodeGraph = class {
   // file → symbols defined
   constructor(files = [], buildTime = 0) {
@@ -34439,9 +34939,10 @@ var CodeGraph = class {
    * Add an import relationship
    */
   addImport(fromFile, toFile) {
+    const normalizedPath = resolveImportPath(fromFile, toFile);
     const imported = this.imports.get(fromFile) || [];
-    if (!imported.includes(toFile)) {
-      imported.push(toFile);
+    if (!imported.includes(normalizedPath)) {
+      imported.push(normalizedPath);
       this.imports.set(fromFile, imported);
     }
   }
@@ -34485,8 +34986,16 @@ var CodeGraph = class {
    */
   findConsumers(file) {
     const consumers = [];
+    const normalizedFile = file.replace(/\\/g, "/");
     for (const [fromFile, toFiles] of this.imports) {
-      if (toFiles.includes(file)) {
+      const hasMatch = toFiles.some((importedPath) => {
+        if (importedPath === normalizedFile)
+          return true;
+        if (importedPath.endsWith(normalizedFile))
+          return true;
+        return false;
+      });
+      if (hasMatch) {
         consumers.push({
           file: fromFile,
           line: 1,
@@ -34526,8 +35035,16 @@ var CodeGraph = class {
    */
   getDependents(file) {
     const dependents = [];
+    const normalizedFile = file.replace(/\\/g, "/");
     for (const [fromFile, toFiles] of this.imports) {
-      if (toFiles.includes(file)) {
+      const hasMatch = toFiles.some((importedPath) => {
+        if (importedPath === normalizedFile)
+          return true;
+        if (importedPath.endsWith(normalizedFile))
+          return true;
+        return false;
+      });
+      if (hasMatch) {
         dependents.push(fromFile);
       }
     }
@@ -34593,6 +35110,18 @@ var CodeGraph = class {
       buildTimeMs: this.buildTime
     };
   }
+  /**
+   * Copy graph data from another CodeGraph instance
+   * Type-safe alternative to direct private field assignment
+   */
+  copyFrom(other) {
+    this.definitions = new Map(other.definitions);
+    this.imports = new Map(other.imports.entries());
+    this.exports = new Map(other.exports.entries());
+    this.calls = new Map(other.calls.entries());
+    this.callers = new Map(other.callers.entries());
+    this.fileSymbols = new Map(other.fileSymbols.entries());
+  }
 };
 var CodeGraphBuilder = class {
   constructor(maxDepth = 5, timeoutMs = 1e4) {
@@ -34600,6 +35129,7 @@ var CodeGraphBuilder = class {
     this.timeoutMs = timeoutMs;
   }
   tsParser = null;
+  tsxParser = null;
   pyParser = null;
   parsersInitialized = false;
   /**
@@ -34615,8 +35145,10 @@ var CodeGraphBuilder = class {
       const PythonParser = await import("tree-sitter-python");
       const Parser = ParserModule.default;
       this.tsParser = new Parser();
+      this.tsxParser = new Parser();
       this.pyParser = new Parser();
       this.tsParser.setLanguage(TypeScriptParser.default.typescript);
+      this.tsxParser.setLanguage(TypeScriptParser.default.tsx);
       this.pyParser.setLanguage(PythonParser.default);
       this.parsersInitialized = true;
     } catch (error2) {
@@ -34647,12 +35179,7 @@ var CodeGraphBuilder = class {
       files.map((f) => f.filename),
       buildTime
     );
-    finalGraph.definitions = graph.definitions;
-    finalGraph.imports = graph.imports;
-    finalGraph.exports = graph.exports;
-    finalGraph.calls = graph.calls;
-    finalGraph.callers = graph.callers;
-    finalGraph.fileSymbols = graph.fileSymbols;
+    finalGraph.copyFrom(graph);
     logger.info(`Code graph built in ${buildTime}ms: ${graph.getStats().definitions} definitions, ${graph.getStats().imports} imports`);
     return finalGraph;
   }
@@ -34680,7 +35207,9 @@ var CodeGraphBuilder = class {
     await this.initParsers();
     const ext = file.filename.split(".").pop()?.toLowerCase();
     let parser = null;
-    if (ext === "ts" || ext === "tsx" || ext === "js" || ext === "jsx") {
+    if (ext === "tsx" || ext === "jsx") {
+      parser = this.tsxParser;
+    } else if (ext === "ts" || ext === "js") {
       parser = this.tsParser;
     } else if (ext === "py") {
       parser = this.pyParser;
@@ -34735,6 +35264,20 @@ var CodeGraphBuilder = class {
       if (sourceNode) {
         const source = sourceNode.text.replace(/['"]/g, "");
         graph.addImport(file, source);
+      } else {
+        const dottedName = node.childForFieldName("dotted_name");
+        if (dottedName) {
+          graph.addImport(file, dottedName.text);
+        }
+        for (let i = 0; i < node.childCount; i++) {
+          const child = node.child(i);
+          if (child && child.type === "aliased_import") {
+            const nameNode = child.childForFieldName("name");
+            if (nameNode) {
+              graph.addImport(file, nameNode.text);
+            }
+          }
+        }
       }
     }
     if (node.type === "import_from_statement") {
@@ -35421,7 +35964,7 @@ var MetricsCollector = class _MetricsCollector {
 
 // src/plugins/plugin-loader.ts
 var fs6 = __toESM(require("fs/promises"));
-var path6 = __toESM(require("path"));
+var path7 = __toESM(require("path"));
 var PluginLoader = class {
   // provider name -> plugin name
   constructor(config) {
@@ -35438,7 +35981,7 @@ var PluginLoader = class {
       return;
     }
     try {
-      const pluginDir = path6.resolve(this.config.pluginDir);
+      const pluginDir = path7.resolve(this.config.pluginDir);
       logger.info(`Loading plugins from: ${pluginDir}`);
       try {
         await fs6.access(pluginDir);
@@ -35448,8 +35991,9 @@ var PluginLoader = class {
       }
       const entries = await fs6.readdir(pluginDir, { withFileTypes: true });
       for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
-        const pluginPath = path6.join(pluginDir, entry.name);
+        if (!entry.isDirectory())
+          continue;
+        const pluginPath = path7.join(pluginDir, entry.name);
         await this.loadPlugin(pluginPath);
       }
       logger.info(`Loaded ${this.plugins.size} plugins`);
@@ -35463,7 +36007,7 @@ var PluginLoader = class {
    */
   async loadPlugin(pluginPath) {
     try {
-      const indexPath = path6.join(pluginPath, "index.js");
+      const indexPath = path7.join(pluginPath, "index.js");
       try {
         await fs6.access(indexPath);
       } catch (error2) {
@@ -35643,7 +36187,8 @@ async function createComponents(config, githubToken) {
 function extractFindings(results) {
   const findings = [];
   for (const result of results) {
-    if (result.status !== "success" || !result.result?.findings) continue;
+    if (result.status !== "success" || !result.result?.findings)
+      continue;
     for (const finding of result.result.findings) {
       findings.push({
         ...finding,
@@ -35665,7 +36210,8 @@ function summarizeAIDetection(results) {
     }
   }
   const providers = Object.keys(estimates);
-  if (providers.length === 0) return void 0;
+  if (providers.length === 0)
+    return void 0;
   const average = providers.reduce((sum, key) => sum + estimates[key], 0) / providers.length;
   const consensus = average > 0.7 ? "High" : average > 0.4 ? "Medium" : "Low";
   return {
@@ -35720,8 +36266,10 @@ function buildSarif(findings) {
   };
 }
 function severityToLevel(severity) {
-  if (severity === "critical") return "error";
-  if (severity === "major") return "warning";
+  if (severity === "critical")
+    return "error";
+  if (severity === "major")
+    return "warning";
   return "note";
 }
 
@@ -35925,8 +36473,10 @@ var ReviewOrchestrator = class {
   }
   shouldSkip(pr) {
     const { config } = this.components;
-    if (config.skipDrafts && pr.draft) return "PR is a draft";
-    if (config.skipBots && this.isBot(pr.author)) return `Author ${pr.author} is a bot`;
+    if (config.skipDrafts && pr.draft)
+      return "PR is a draft";
+    if (config.skipBots && this.isBot(pr.author))
+      return `Author ${pr.author} is a bot`;
     if (config.skipLabels.length > 0) {
       for (const label of pr.labels) {
         if (config.skipLabels.includes(label)) {
@@ -35948,7 +36498,8 @@ var ReviewOrchestrator = class {
     return ["bot", "dependabot", "renovate", "github-actions", "[bot]"].some((p) => lower.includes(p));
   }
   async ensureBudget(config) {
-    if (config.budgetMaxUsd <= 0) return;
+    if (config.budgetMaxUsd <= 0)
+      return;
   }
   estimateTokens(text) {
     return Math.ceil(Buffer.byteLength(text, "utf8") / 4);
@@ -35959,14 +36510,16 @@ var ReviewOrchestrator = class {
    * Uses indexOf instead of regex to avoid ReDoS and improve memory efficiency
    */
   filterDiffByFiles(diff, files) {
-    if (files.length === 0) return "";
+    if (files.length === 0)
+      return "";
     const fileNames = new Set(files.map((f) => f.filename));
     const diffChunks = [];
     const DIFF_MARKER = "diff --git ";
     let startIdx = 0;
     while (startIdx < diff.length) {
       const markerIdx = diff.indexOf(DIFF_MARKER, startIdx);
-      if (markerIdx === -1) break;
+      if (markerIdx === -1)
+        break;
       if (markerIdx > 0 && diff[markerIdx - 1] !== "\n") {
         startIdx = markerIdx + DIFF_MARKER.length;
         continue;
@@ -36022,7 +36575,8 @@ var ReviewOrchestrator = class {
     };
   }
   async applyQuietMode(findings, config) {
-    if (!config.quietModeEnabled) return findings;
+    if (!config.quietModeEnabled)
+      return findings;
     if (this.components.quietModeFilter) {
       const filtered = await this.components.quietModeFilter.filterByConfidence(findings);
       const filterStats = await this.components.quietModeFilter.getFilterStats(findings);

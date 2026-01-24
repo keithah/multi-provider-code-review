@@ -17,42 +17,65 @@ export interface OpenCodeModel {
 }
 
 /**
- * Parse OpenCode models output
- * Expected format: lines like "provider/model-name" or "provider/model-name (free)"
+ * Parse OpenCode models --verbose output
+ * Format: model ID line followed by JSON object with cost data
  */
 function parseOpenCodeModels(output: string): OpenCodeModel[] {
   const models: OpenCodeModel[] = [];
-  const lines = output.split('\n').filter(line => line.trim());
+  const lines = output.split('\n');
 
-  for (const line of lines) {
-    // Skip header lines
-    if (line.includes('Available models') || line.includes('===') || line.includes('---')) {
-      continue;
+  let currentModel: string | null = null;
+  let jsonLines: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Model ID line (format: provider/model-name)
+    if (line.match(/^[a-z][a-z0-9-]+\//)) {
+      // Parse previous model's JSON if we have it
+      if (jsonLines.length > 0 && currentModel) {
+        try {
+          const jsonStr = jsonLines.join('\n');
+          const parsed = JSON.parse(jsonStr);
+          // Only include models from opencode provider with cost.input === 0
+          const provider = currentModel.split('/')[0];
+          if (provider === 'opencode' && parsed.cost && parsed.cost.input === 0) {
+            models.push({
+              id: currentModel,
+              provider,
+              isFree: true,
+              contextWindow: parsed.limit?.context,
+            });
+          }
+        } catch (e) {
+          // Ignore parse errors
+        }
+      }
+
+      currentModel = line.trim();
+      jsonLines = [];
+    } else if (currentModel && line.trim()) {
+      // Collect lines that belong to the JSON object
+      jsonLines.push(line);
     }
+  }
 
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-
-    // Check if it's a free model (contains "free" or "$0")
-    const isFree =
-      trimmed.toLowerCase().includes('free') ||
-      trimmed.includes('$0.00') ||
-      trimmed.includes('$0/');
-
-    // Extract model ID (before any pricing or description)
-    let modelId = trimmed.split(/\s+/)[0];
-
-    // Remove any parentheses or extra info
-    modelId = modelId.replace(/[()]/g, '').trim();
-
-    if (modelId && modelId.includes('/')) {
-      const [provider] = modelId.split('/');
-
-      models.push({
-        id: `opencode/${modelId}`,
-        provider,
-        isFree,
-      });
+  // Parse the last model
+  if (jsonLines.length > 0 && currentModel) {
+    try {
+      const jsonStr = jsonLines.join('\n');
+      const parsed = JSON.parse(jsonStr);
+      const provider = currentModel.split('/')[0];
+      if (provider === 'opencode' && parsed.cost && parsed.cost.input === 0) {
+        models.push({
+          id: currentModel,
+          provider,
+          isFree: true,
+          contextWindow: parsed.limit?.context,
+        });
+      }
+    } catch (e) {
+      // Ignore parse errors
     }
   }
 
@@ -63,12 +86,12 @@ function parseOpenCodeModels(output: string): OpenCodeModel[] {
  * Fetch available models from OpenCode CLI
  */
 export async function fetchOpenCodeModels(timeoutMs = 10000): Promise<OpenCodeModel[]> {
-  logger.info('Attempting to fetch OpenCode models via CLI...');
+  logger.info('Attempting to fetch OpenCode models via CLI with --verbose...');
 
   try {
-    const { stdout, stderr } = await execAsync('opencode models', {
+    const { stdout, stderr } = await execAsync('opencode models --verbose', {
       timeout: timeoutMs,
-      maxBuffer: 1024 * 1024, // 1MB buffer
+      maxBuffer: 5 * 1024 * 1024, // 5MB buffer for verbose output
     });
 
     if (stderr) {
@@ -76,10 +99,10 @@ export async function fetchOpenCodeModels(timeoutMs = 10000): Promise<OpenCodeMo
     }
 
     const models = parseOpenCodeModels(stdout);
-    logger.info(`Discovered ${models.length} OpenCode models from CLI`);
+    logger.info(`Discovered ${models.length} free OpenCode models from CLI (cost.input === 0)`);
 
     if (models.length > 0) {
-      logger.debug(`OpenCode models: ${models.map(m => m.id).join(', ')}`);
+      logger.debug(`OpenCode free models: ${models.map(m => m.id).join(', ')}`);
     }
 
     return models;
@@ -141,24 +164,15 @@ export async function getBestFreeOpenCodeModels(
   const models = await fetchOpenCodeModels(timeoutMs);
 
   if (models.length === 0) {
-    logger.info('No OpenCode models available - CLI may not be installed or accessible');
+    logger.info('No free OpenCode models available - CLI may not be installed or accessible');
     return [];
   }
 
-  logger.info(`Found ${models.length} total OpenCode models`);
-
-  // Filter for free models
-  const freeModels = models.filter(m => m.isFree);
-
-  if (freeModels.length === 0) {
-    logger.warn(`Found ${models.length} OpenCode models but none are free`);
-    return [];
-  }
-
-  logger.info(`Found ${freeModels.length} free OpenCode models`);
+  // All models from fetchOpenCodeModels are already free (cost.input === 0)
+  logger.info(`Found ${models.length} free OpenCode models (cost.input === 0)`);
 
   // Rank and sort
-  const ranked = freeModels.map(model => ({
+  const ranked = models.map(model => ({
     modelId: model.id,
     score: rankOpenCodeModel(model),
   }));
