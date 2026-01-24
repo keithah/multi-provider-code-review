@@ -493,10 +493,13 @@ export class CodeGraphBuilder {
       return;
     }
 
-    // LIMITATION: We only have patch (diff) content, not full file content
-    // This means AST analysis will be incomplete and may miss context
-    // For production use, fetch full file content from GitHub API
-    logger.debug(`Analyzing patch for ${file.filename} (limited AST due to patch-only content)`);
+    // CRITICAL LIMITATION: We only have patch (diff) content, not full file content
+    // This means AST analysis will be incomplete and may produce misleading results
+    // TODO: [#XXX] Fetch full file content from GitHub API for reliable analysis
+    //       - Use GitHub API: GET /repos/{owner}/{repo}/contents/{path}?ref={sha}
+    //       - Cache full file contents to reduce API calls
+    //       - Fallback to patch-only for rate limit/error cases
+    logger.warn(`Analyzing patch-only for ${file.filename} - AST may be incomplete/invalid`);
 
     // Try to extract added lines from patch for partial analysis
     const addedLines = this.extractAddedLines(file.patch);
@@ -507,6 +510,13 @@ export class CodeGraphBuilder {
 
     // Parse added lines only (best-effort analysis)
     const codeToAnalyze = addedLines.join('\n');
+
+    // Fail-fast: Skip AST analysis if code looks like a fragment
+    if (this.looksLikeFragment(codeToAnalyze)) {
+      logger.warn(`Skipping AST analysis for ${file.filename}: code appears to be a fragment (unbalanced braces or no top-level declarations)`);
+      return;
+    }
+
     const tree = parser.parse(codeToAnalyze);
     const root = tree.rootNode;
 
@@ -706,5 +716,36 @@ export class CodeGraphBuilder {
     }
 
     return addedLines;
+  }
+
+  /**
+   * Check if code looks like a fragment that would produce invalid AST
+   * Returns true if code has unbalanced braces or lacks top-level declarations
+   */
+  private looksLikeFragment(code: string): boolean {
+    // Check for unbalanced braces
+    let braceCount = 0;
+    let parenCount = 0;
+    let bracketCount = 0;
+
+    for (const char of code) {
+      if (char === '{') braceCount++;
+      else if (char === '}') braceCount--;
+      else if (char === '(') parenCount++;
+      else if (char === ')') parenCount--;
+      else if (char === '[') bracketCount++;
+      else if (char === ']') bracketCount--;
+    }
+
+    // If any brackets are unbalanced, it's a fragment
+    if (braceCount !== 0 || parenCount !== 0 || bracketCount !== 0) {
+      return true;
+    }
+
+    // Check for presence of top-level declarations
+    // At minimum, we expect function/class/const/let/var/type/interface/export
+    const hasTopLevelDeclaration = /^\s*(export\s+)?(function|class|const|let|var|type|interface|async\s+function)\s+/m.test(code);
+
+    return !hasTopLevelDeclaration;
   }
 }
