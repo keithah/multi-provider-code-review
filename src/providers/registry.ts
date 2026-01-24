@@ -5,7 +5,7 @@ import { ReviewConfig } from '../types';
 import { RateLimiter } from './rate-limiter';
 import { logger } from '../utils/logger';
 import { PricingService } from '../cost/pricing';
-import { DEFAULT_CONFIG } from '../config/defaults';
+import { DEFAULT_CONFIG, FALLBACK_STATIC_PROVIDERS } from '../config/defaults';
 import { PluginLoader } from '../plugins';
 import { getBestFreeModelsCached as getBestFreeOpenRouterModels } from './openrouter-models';
 import { getBestFreeOpenCodeModelsCached as getBestFreeOpenCodeModels } from './opencode-models';
@@ -25,30 +25,47 @@ export class ProviderRegistry {
 
     // Dynamically fetch best free models when defaults are in use and no explicit env override
     if (providers.length === 0 && usingDefaults && !userProvidedList) {
-      logger.info('No providers specified, dynamically discovering best free models...');
+      logger.info('🔍 No providers specified, starting dynamic model discovery...');
 
       const discoveredModels: string[] = [];
 
       // Fetch best free OpenRouter models (if API key available)
       if (process.env.OPENROUTER_API_KEY) {
+        logger.info('Discovering OpenRouter models...');
         const openRouterModels = await getBestFreeOpenRouterModels(4, 5000);
-        discoveredModels.push(...openRouterModels);
+        if (openRouterModels.length > 0) {
+          logger.info(`✅ Discovered ${openRouterModels.length} OpenRouter models`);
+          discoveredModels.push(...openRouterModels);
+        } else {
+          logger.warn('⚠️  No OpenRouter models discovered (API may be unavailable)');
+        }
+      } else {
+        logger.info('Skipping OpenRouter discovery (no API key)');
       }
 
       // Fetch best free OpenCode models (if CLI available)
-      const openCodeModels = await getBestFreeOpenCodeModels(3, 10000);
-      discoveredModels.push(...openCodeModels);
+      logger.info('Discovering OpenCode models...');
+      const openCodeModels = await getBestFreeOpenCodeModels(4, 10000);
+      if (openCodeModels.length > 0) {
+        logger.info(`✅ Discovered ${openCodeModels.length} OpenCode models`);
+        discoveredModels.push(...openCodeModels);
+      } else {
+        logger.info('ℹ️  No OpenCode models discovered (CLI may not be installed)');
+      }
 
       if (discoveredModels.length > 0) {
-        logger.info(`Discovered ${discoveredModels.length} free models: ${discoveredModels.join(', ')}`);
+        logger.info(`🎯 Total discovered: ${discoveredModels.length} free models`);
+        logger.info(`   Models: ${discoveredModels.join(', ')}`);
         providers.push(...this.instantiate(discoveredModels));
+      } else {
+        logger.warn('⚠️  Dynamic discovery found no models, using static fallbacks');
       }
     }
 
-    // Ensure we have at least some providers; if discovery failed, fall back to defaults.
+    // Ensure we have at least some providers; if discovery failed, use static fallbacks
     if (providers.length === 0) {
-      logger.warn('No providers discovered, falling back to default config');
-      providers = this.instantiate(DEFAULT_CONFIG.providers);
+      logger.warn('Using static fallback providers as last resort');
+      providers = this.instantiate(FALLBACK_STATIC_PROVIDERS);
     }
 
     // De-dup providers

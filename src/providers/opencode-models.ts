@@ -63,19 +63,32 @@ function parseOpenCodeModels(output: string): OpenCodeModel[] {
  * Fetch available models from OpenCode CLI
  */
 export async function fetchOpenCodeModels(timeoutMs = 10000): Promise<OpenCodeModel[]> {
+  logger.info('Attempting to fetch OpenCode models via CLI...');
+
   try {
-    const { stdout } = await execAsync('opencode models', {
+    const { stdout, stderr } = await execAsync('opencode models', {
       timeout: timeoutMs,
       maxBuffer: 1024 * 1024, // 1MB buffer
     });
 
+    if (stderr) {
+      logger.debug(`OpenCode CLI stderr: ${stderr}`);
+    }
+
     const models = parseOpenCodeModels(stdout);
-    logger.debug(`Discovered ${models.length} OpenCode models`);
+    logger.info(`Discovered ${models.length} OpenCode models from CLI`);
+
+    if (models.length > 0) {
+      logger.debug(`OpenCode models: ${models.map(m => m.id).join(', ')}`);
+    }
+
     return models;
   } catch (error) {
     if (error instanceof Error) {
-      if (error.message.includes('ENOENT')) {
-        logger.debug('OpenCode CLI not installed, skipping OpenCode models');
+      if (error.message.includes('ENOENT') || error.message.includes('command not found')) {
+        logger.info('OpenCode CLI not installed, skipping OpenCode model discovery');
+      } else if (error.message.includes('timeout')) {
+        logger.warn(`OpenCode CLI timeout after ${timeoutMs}ms`);
       } else {
         logger.warn('Failed to fetch OpenCode models', error);
       }
@@ -122,23 +135,27 @@ function rankOpenCodeModel(model: OpenCodeModel): number {
  * Get the best free OpenCode models
  */
 export async function getBestFreeOpenCodeModels(
-  count = 3,
+  count = 4,
   timeoutMs = 10000
 ): Promise<string[]> {
   const models = await fetchOpenCodeModels(timeoutMs);
 
   if (models.length === 0) {
-    logger.debug('No OpenCode models available');
+    logger.info('No OpenCode models available - CLI may not be installed or accessible');
     return [];
   }
+
+  logger.info(`Found ${models.length} total OpenCode models`);
 
   // Filter for free models
   const freeModels = models.filter(m => m.isFree);
 
   if (freeModels.length === 0) {
-    logger.debug('No free OpenCode models found');
+    logger.warn(`Found ${models.length} OpenCode models but none are free`);
     return [];
   }
+
+  logger.info(`Found ${freeModels.length} free OpenCode models`);
 
   // Rank and sort
   const ranked = freeModels.map(model => ({
@@ -151,7 +168,7 @@ export async function getBestFreeOpenCodeModels(
   const selected = ranked.slice(0, count).map(r => r.modelId);
 
   logger.info(
-    `Selected ${selected.length} best free OpenCode models: ${selected.join(', ')}`
+    `Selected ${selected.length}/${count} best free OpenCode models: ${selected.join(', ')}`
   );
 
   return selected;
@@ -167,7 +184,7 @@ const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
  * Get best free OpenCode models with caching
  */
 export async function getBestFreeOpenCodeModelsCached(
-  count = 3,
+  count = 4,
   timeoutMs = 10000
 ): Promise<string[]> {
   const now = Date.now();

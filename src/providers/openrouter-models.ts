@@ -115,12 +115,15 @@ export async function getBestFreeModels(
   count = 4,
   timeoutMs = 5000
 ): Promise<string[]> {
+  logger.info('Fetching OpenRouter model list from API...');
   const models = await fetchOpenRouterModels(timeoutMs);
 
   if (models.length === 0) {
-    logger.warn('No models fetched from OpenRouter, using fallback');
+    logger.warn('No models fetched from OpenRouter API, using fallback');
     return getFallbackModels(count);
   }
+
+  logger.info(`Fetched ${models.length} total models from OpenRouter`);
 
   // Filter for free models
   const freeModels = models.filter(isFreeModel);
@@ -129,6 +132,8 @@ export async function getBestFreeModels(
     logger.warn('No free models available from OpenRouter, using fallback');
     return getFallbackModels(count);
   }
+
+  logger.info(`Found ${freeModels.length} free OpenRouter models`);
 
   // Rank and sort models
   const rankedModels: ModelRanking[] = freeModels.map(model => ({
@@ -143,7 +148,7 @@ export async function getBestFreeModels(
   const selectedModels = rankedModels.slice(0, count).map(m => m.modelId);
 
   logger.info(
-    `Selected ${selectedModels.length} best free OpenRouter models: ${selectedModels.join(', ')}`
+    `Selected ${selectedModels.length}/${count} best free OpenRouter models: ${selectedModels.join(', ')}`
   );
 
   return selectedModels;

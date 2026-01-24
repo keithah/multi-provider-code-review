@@ -1,19 +1,11 @@
 import { ReviewConfig } from '../types';
 
 export const DEFAULT_CONFIG: ReviewConfig = {
-  providers: [
-    'openrouter/google/gemini-2.0-flash-exp:free',
-    'openrouter/mistralai/devstral-2512:free',
-    'openrouter/xiaomi/mimo-v2-flash:free',
-    'openrouter/qwen/qwen-2.5-coder-32b-instruct:free',
-    'openrouter/deepseek/deepseek-r1-distill-llama-70b:free',
-    'openrouter/meta-llama/llama-3.1-70b-instruct:free',
-  ],
+  // Empty array triggers dynamic model discovery
+  // Will auto-discover best free models from OpenRouter API and OpenCode CLI
+  providers: [],
   synthesisModel: 'openrouter/google/gemini-2.0-flash-exp:free',
-  fallbackProviders: [
-    'openrouter/microsoft/phi-4:free',
-    'openrouter/nvidia/llama-3.1-nemotron-70b-instruct:free',
-  ],
+  fallbackProviders: [],
   providerAllowlist: [],
   providerBlocklist: [],
   providerLimit: 6,
@@ -68,3 +60,12 @@ export const DEFAULT_CONFIG: ReviewConfig = {
 
   dryRun: false,
 };
+
+/**
+ * Static fallback providers used only if dynamic discovery fails
+ * (e.g., network issues, API unavailable, CLI not installed)
+ */
+export const FALLBACK_STATIC_PROVIDERS = [
+  'openrouter/mistralai/devstral-2512:free',
+  'openrouter/xiaomi/mimo-v2-flash:free',
+];
