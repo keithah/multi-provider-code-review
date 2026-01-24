@@ -265,7 +265,11 @@ export class ReviewOrchestrator {
     if (config.generateFixPrompts && this.components.promptGenerator) {
       const fixPrompts = this.components.promptGenerator.generateFixPrompts(review.findings);
       if (fixPrompts.length > 0) {
-        const fixPromptsPath = path.join(process.cwd(), `${process.env.REPORT_BASENAME || 'multi-provider-review'}-fix-prompts.md`);
+        // Sanitize REPORT_BASENAME to prevent path traversal
+        const basename = (process.env.REPORT_BASENAME || 'multi-provider-review')
+          .replace(/[^a-zA-Z0-9_-]/g, '-')
+          .substring(0, 50);
+        const fixPromptsPath = path.join(process.cwd(), `${basename}-fix-prompts.md`);
         const format = (config.fixPromptFormat as 'cursor' | 'copilot' | 'plain') || 'plain';
         await this.components.promptGenerator.saveToFile(fixPrompts, fixPromptsPath, format);
         logger.info(`Generated ${fixPrompts.length} fix prompts: ${fixPromptsPath}`);
@@ -471,7 +475,10 @@ export class ReviewOrchestrator {
   }
 
   private async writeReports(review: Review): Promise<void> {
-    const base = process.env.REPORT_BASENAME || 'multi-provider-review';
+    // Sanitize REPORT_BASENAME to prevent path traversal
+    const base = (process.env.REPORT_BASENAME || 'multi-provider-review')
+      .replace(/[^a-zA-Z0-9_-]/g, '-')
+      .substring(0, 50);
     const sarifPath = path.join(process.cwd(), `${base}.sarif`);
     const jsonPath = path.join(process.cwd(), `${base}.json`);
 

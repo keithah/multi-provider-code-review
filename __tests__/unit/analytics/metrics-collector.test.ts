@@ -11,9 +11,12 @@ describe('MetricsCollector', () => {
   describe('recordReview', () => {
     it('should record a review metric', async () => {
       const review: Partial<Review> = {
-        prNumber: 123,
         findings: [{} as any, {} as any],
         metrics: {
+          totalFindings: 2,
+          critical: 0,
+          major: 1,
+          minor: 1,
           durationSeconds: 30,
           totalCost: 0.05,
           totalTokens: 1000,
@@ -26,7 +29,7 @@ describe('MetricsCollector', () => {
         } as any,
       };
 
-      await collector.recordReview(review as Review);
+      await collector.recordReview(review as Review, 123);
 
       const metrics = await collector.getMetrics();
       expect(metrics).toHaveLength(1);
@@ -36,11 +39,25 @@ describe('MetricsCollector', () => {
 
     it('should limit stored metrics to max count', async () => {
       // Test that old metrics are pruned when max is reached
-      const review = { prNumber: 1, findings: [], metrics: { totalCost: 0 } } as any;
+      const review = {
+        findings: [],
+        metrics: {
+          totalFindings: 0,
+          critical: 0,
+          major: 0,
+          minor: 0,
+          durationSeconds: 0,
+          totalCost: 0,
+          totalTokens: 0,
+          providersUsed: 0,
+          providersSuccess: 0,
+          providersFailed: 0,
+        }
+      } as any;
 
       // Record more than max
       for (let i = 0; i < 1100; i++) {
-        await collector.recordReview({ ...review, prNumber: i });
+        await collector.recordReview(review, i);
       }
 
       const metrics = await collector.getMetrics();
@@ -55,8 +72,24 @@ describe('MetricsCollector', () => {
     });
 
     it('should return metrics in chronological order', async () => {
-      await collector.recordReview({ prNumber: 1 } as any);
-      await collector.recordReview({ prNumber: 2 } as any);
+      const review = {
+        findings: [],
+        metrics: {
+          totalFindings: 0,
+          critical: 0,
+          major: 0,
+          minor: 0,
+          durationSeconds: 0,
+          totalCost: 0,
+          totalTokens: 0,
+          providersUsed: 0,
+          providersSuccess: 0,
+          providersFailed: 0,
+        }
+      } as any;
+
+      await collector.recordReview(review, 1);
+      await collector.recordReview(review, 2);
 
       const metrics = await collector.getMetrics();
       expect(metrics[0].prNumber).toBeLessThan(metrics[1].prNumber);

@@ -20,12 +20,12 @@ describe('ContextRetriever', () => {
       },
     ];
 
-    const context = await retriever.getContext(files);
+    const context = retriever.findRelatedContext(files);
     expect(context).toBeDefined();
   });
 
-  it('should handle empty file list', async () => {
-    const context = await retriever.getContext([]);
+  it('should handle empty file list', () => {
+    const context = retriever.findRelatedContext([]);
     expect(context).toBeDefined();
   });
 });

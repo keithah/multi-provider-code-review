@@ -5,6 +5,8 @@
 ARG BUILD_DATE
 ARG VERSION=0.2.1
 
+# Use node:20-alpine (pinned to Node.js v20.x LTS, not "latest")
+# Alpine provides a minimal, secure base image
 FROM node:20-alpine AS builder
 
 # Install build dependencies
