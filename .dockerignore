@@ -16,7 +16,10 @@ coverage/
 .git/
 .github/
 .vscode/
-*.md
+# Markdown files (except README.md which is needed for documentation)
+DEVELOPMENT_PLAN_V2.1.md
+CONTRIBUTING.md
+CHANGELOG.md
 !README.md
 
 # Environment

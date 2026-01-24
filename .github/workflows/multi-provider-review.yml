@@ -67,10 +67,13 @@ jobs:
           # Dynamic Model Discovery (DEFAULT_CONFIG.providers = [])
           # 1. Fetches best free models from OpenRouter API (if OPENROUTER_API_KEY set)
           # 2. Fetches best free models from OpenCode CLI (if installed)
-          # 3. Falls back to FALLBACK_STATIC_PROVIDERS if discovery fails:
+          # 3. Falls back to FALLBACK_STATIC_PROVIDERS (hardcoded in src/config/defaults.ts):
           #    - openrouter/mistralai/devstral-2512:free
           #    - openrouter/xiaomi/mimo-v2-flash:free
-          # 4. Final fallback: opencode/minimax-m2.1-free
-          # See: src/config/defaults.ts and src/providers/registry.ts
+          #    Note: These are automatic fallbacks, not configurable via env vars
+          # 4. Final fallback: opencode/minimax-m2.1-free (hardcoded in src/providers/registry.ts)
+          #
+          # To override: Set REVIEW_PROVIDERS env var with comma-separated model list
+          # See: src/config/defaults.ts and src/providers/registry.ts for implementation
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}

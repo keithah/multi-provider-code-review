@@ -287,7 +287,7 @@ describe('OpenRouterProvider Integration', () => {
                 headers: new Map()
               });
             }
-          }, 5000); // 5 seconds - much longer than 2s timeout
+          }, 3000); // 3 seconds - longer than 1s timeout to ensure abort fires
 
           // Listen for abort
           if (options.signal) {
@@ -301,9 +301,9 @@ describe('OpenRouterProvider Integration', () => {
         });
       });
 
-      // Set timeout (2s) - should abort before 5s mock response
-      // Using longer timeout to avoid flakiness in slow CI environments
-      await expect(provider.review('test', 2000)).rejects.toThrow();
+      // Set 1s timeout - should abort before 3s mock response completes
+      // Mock delay (3s) is 3x the timeout to ensure abort triggers reliably
+      await expect(provider.review('test', 1000)).rejects.toThrow();
     });
 
     it('should handle network errors', async () => {

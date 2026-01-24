@@ -202,6 +202,54 @@ Skip with: `git commit --no-verify`
 
 See [DEVELOPMENT_PLAN_V2.1.md](./DEVELOPMENT_PLAN_V2.1.md) for detailed roadmap.
 
+## Analytics Dashboard
+
+Track costs, performance, and ROI with the built-in analytics dashboard.
+
+### Quick Access
+
+```bash
+# Generate interactive HTML dashboard
+mpr analytics generate
+
+# View summary in terminal
+mpr analytics summary
+
+# Generate CSV export for spreadsheets
+mpr analytics generate --format csv
+```
+
+### Dashboard Includes
+
+- **Cost Trends**: Daily cost and review count over time
+- **Performance**: Review speed, cache hit rates, optimization trends
+- **ROI Analysis**: Automatic calculation of cost vs time saved
+- **Provider Performance**: Success rates, costs, and reliability by provider
+- **Findings Distribution**: Issues by severity and category
+- **Summary Cards**: Total reviews, costs, findings, cache effectiveness
+
+### Output Files
+
+- `reports/analytics-dashboard.html` - Interactive HTML dashboard (open in browser)
+- `reports/analytics-export.csv` - Spreadsheet-compatible data
+- `reports/analytics-metrics.json` - Raw metrics for custom processing
+
+### Configuration
+
+```yaml
+# Enable analytics (default: true)
+ANALYTICS_ENABLED: 'true'
+
+# Maximum reviews to store (default: 1000)
+ANALYTICS_MAX_REVIEWS: '1000'
+```
+
+**See [Analytics Guide](./docs/analytics.md) for complete documentation including:**
+- GitHub Actions integration for automated reports
+- Slack/email notifications
+- Cost optimization strategies
+- Custom data processing examples
+
 ## Documentation
 
 ### Getting Started
