@@ -157,82 +157,28 @@ describe('MarkdownFormatter', () => {
     });
   });
 
-  describe('Action Items', () => {
-    it('includes action items in collapsible section', () => {
+  describe('Removed Sections', () => {
+    it('does not include Action Items (removed for simplicity)', () => {
       const review = createMinimalReview();
-      review.actionItems = ['Fix security issue', 'Update dependencies'];
-
-      const output = formatter.format(review);
-
-      expect(output).toContain('<details><summary>Action Items</summary>');
-      expect(output).toContain('- Fix security issue');
-      expect(output).toContain('- Update dependencies');
-      expect(output).toContain('</details>');
-    });
-
-    it('deduplicates action items', () => {
-      const review = createMinimalReview();
-      review.actionItems = ['Fix bug', 'Fix bug', 'Add tests'];
-
-      const output = formatter.format(review);
-
-      const matches = output.match(/- Fix bug/g);
-      expect(matches).toHaveLength(1);
-      expect(output).toContain('- Add tests');
-    });
-
-    it('omits action items section when empty', () => {
-      const review = createMinimalReview();
-      review.actionItems = [];
+      review.actionItems = ['Fix security issue'];
 
       const output = formatter.format(review);
 
       expect(output).not.toContain('Action Items');
     });
-  });
 
-  describe('Test Hints', () => {
-    it('includes test hints in collapsible section', () => {
+    it('does not include Test Coverage (removed for simplicity)', () => {
       const review = createMinimalReview();
       review.testHints = [
-        {
-          file: 'src/utils.ts',
-          suggestedTestFile: '__tests__/utils.test.ts',
-          testPattern: 'unit',
-        },
+        { file: 'src/test.ts', suggestedTestFile: '__tests__/test.test.ts', testPattern: 'unit' },
       ];
-
-      const output = formatter.format(review);
-
-      expect(output).toContain('<details><summary>Test Coverage</summary>');
-      expect(output).toContain('1 areas need tests');
-      expect(output).toContain('src/utils.ts → add __tests__/utils.test.ts (unit)');
-    });
-
-    it('counts multiple test hints', () => {
-      const review = createMinimalReview();
-      review.testHints = [
-        { file: 'src/a.ts', suggestedTestFile: '__tests__/a.test.ts', testPattern: 'unit' },
-        { file: 'src/b.ts', suggestedTestFile: '__tests__/b.test.ts', testPattern: 'unit' },
-      ];
-
-      const output = formatter.format(review);
-
-      expect(output).toContain('2 areas need tests');
-    });
-
-    it('omits test hints section when empty', () => {
-      const review = createMinimalReview();
-      review.testHints = [];
 
       const output = formatter.format(review);
 
       expect(output).not.toContain('Test Coverage');
     });
-  });
 
-  describe('Impact Analysis', () => {
-    it('includes impact analysis when present', () => {
+    it('does not include Impact Analysis (removed for simplicity)', () => {
       const review = createMinimalReview();
       review.impactAnalysis = {
         file: 'src/auth.ts',
@@ -246,9 +192,7 @@ describe('MarkdownFormatter', () => {
 
       const output = formatter.format(review);
 
-      expect(output).toContain('### Impact');
-      expect(output).toContain('Level: high');
-      expect(output).toContain('Changes affect critical authentication flow');
+      expect(output).not.toContain('### Impact');
     });
   });
 

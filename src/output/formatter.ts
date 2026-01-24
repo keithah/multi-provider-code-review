@@ -15,17 +15,6 @@ export class MarkdownFormatter {
     this.printSeveritySection(lines, 'Major', major);
     this.printSeveritySection(lines, 'Minor', minor);
 
-    if (review.testHints && review.testHints.length > 0) {
-      lines.push('\n<details><summary>Test Coverage</summary>');
-      lines.push('');
-      lines.push(`- ${review.testHints.length} areas need tests`);
-      lines.push('');
-      review.testHints.forEach(hint =>
-        lines.push(`  - ${hint.file} → add ${hint.suggestedTestFile} (${hint.testPattern})`)
-      );
-      lines.push('</details>');
-    }
-
     if (review.mermaidDiagram && review.mermaidDiagram.trim()) {
       lines.push('\n<details><summary>Impact graph</summary>');
       lines.push('```mermaid');
