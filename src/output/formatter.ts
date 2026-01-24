@@ -7,11 +7,6 @@ export class MarkdownFormatter {
     lines.push('');
     lines.push(review.summary);
 
-    if (review.impactAnalysis) {
-      lines.push('\n### Impact');
-      lines.push(`- Level: ${review.impactAnalysis.impactLevel} • ${review.impactAnalysis.summary}`);
-    }
-
     const critical = review.findings.filter(f => f.severity === 'critical');
     const major = review.findings.filter(f => f.severity === 'major');
     const minor = review.findings.filter(f => f.severity === 'minor');
@@ -19,14 +14,6 @@ export class MarkdownFormatter {
     this.printSeveritySection(lines, 'Critical', critical);
     this.printSeveritySection(lines, 'Major', major);
     this.printSeveritySection(lines, 'Minor', minor);
-
-    const uniqueActions = Array.from(new Set(review.actionItems || []));
-    if (uniqueActions.length > 0) {
-      lines.push('\n<details><summary>Action Items</summary>');
-      lines.push('');
-      uniqueActions.forEach(item => lines.push(`- ${item}`));
-      lines.push('</details>');
-    }
 
     if (review.testHints && review.testHints.length > 0) {
       lines.push('\n<details><summary>Test Coverage</summary>');

@@ -261,4 +261,4 @@ ANALYTICS_MAX_REVIEWS: '1000'
 - **[DEVELOPMENT_PLAN_V2.1.md](./DEVELOPMENT_PLAN_V2.1.md)** - Complete development roadmap and status
 - **[INCREMENTAL_REVIEW.md](./INCREMENTAL_REVIEW.md)** - Incremental review system documentation
 - **[scripts/README.md](./scripts/README.md)** - Development scripts and hooks
-- **[__tests__/benchmarks/README.md](./__tests__/benchmarks/README.md)** - Performance benchmarking guide
+- **[`__tests__/benchmarks/README.md`](./__tests__/benchmarks/README.md)** - Performance benchmarking guide

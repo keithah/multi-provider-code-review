@@ -272,7 +272,7 @@ async function runBenchmark(
     evidenceScorer: new EvidenceScorer(),
     mermaidGenerator: new MermaidGenerator(),
     feedbackFilter: new NoopFeedbackFilter() as unknown as ReviewComponents['feedbackFilter'],
-    incrementalReviewer: new MockIncrementalReviewer() as any,
+    incrementalReviewer: new MockIncrementalReviewer() as unknown as ReviewComponents['incrementalReviewer'],
   };
 
   const orchestrator = new ReviewOrchestrator(components);

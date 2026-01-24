@@ -54,9 +54,7 @@ EXPOSE 3000
 # Health check - verifies Node.js runtime, core modules, and application files
 # Checks: 1) Node.js runtime works, 2) Core modules load, 3) Application dist exists
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
-  CMD node -e "const fs=require('fs'); const path=require('path'); \
-  if(!fs.existsSync('dist/index.js')) process.exit(1); \
-  process.exit(0)" || exit 1
+  CMD node -e "const fs=require('fs'); const path=require('path'); if(!fs.existsSync('dist/index.js')) process.exit(1); process.exit(0)" || exit 1
 
 # Default command (can be overridden)
 CMD ["node", "dist/index.js"]

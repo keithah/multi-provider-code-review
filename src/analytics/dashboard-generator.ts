@@ -86,18 +86,33 @@ export class DashboardGenerator {
 
     const rows = metrics.map((m) => [
       new Date(m.timestamp).toISOString(),
-      m.prNumber,
-      m.filesReviewed,
-      m.findingsCount,
+      m.prNumber.toString(),
+      m.filesReviewed.toString(),
+      m.findingsCount.toString(),
       m.costUsd.toFixed(4),
       m.durationSeconds.toFixed(2),
-      m.providersUsed,
+      m.providersUsed.toString(),
       m.cacheHit ? 'Yes' : 'No',
     ]);
 
-    const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    // Escape and join CSV rows
+    const csv = [
+      headers.map(h => this.escapeCSVField(h)).join(','),
+      ...rows.map((r) => r.map(f => this.escapeCSVField(f)).join(','))
+    ].join('\n');
 
     return csv;
+  }
+
+  /**
+   * Escape a CSV field value to handle commas, quotes, and newlines
+   */
+  private escapeCSVField(value: string): string {
+    // If the value contains comma, quote, or newline, wrap in quotes and escape internal quotes
+    if (value.includes(',') || value.includes('"') || value.includes('\n') || value.includes('\r')) {
+      return `"${value.replace(/"/g, '""')}"`;
+    }
+    return value;
   }
 
   /**

@@ -92,6 +92,45 @@ export class CodeGraph {
   }
 
   /**
+   * Remove all data for a file from the graph
+   * Used when re-analyzing a file to avoid stale data
+   */
+  removeFile(file: string): void {
+    // Remove all definitions for this file
+    const symbolNames = this.fileSymbols.get(file) || [];
+    for (const name of symbolNames) {
+      this.definitions.delete(`${file}:${name}`);
+    }
+    this.fileSymbols.delete(file);
+
+    // Remove imports from this file
+    this.imports.delete(file);
+
+    // Remove exports from this file
+    this.exports.delete(file);
+
+    // Remove calls made from functions in this file
+    // Note: This is a simplified approach - ideally we'd track which calls come from which file
+    for (const [caller, callees] of this.calls.entries()) {
+      if (caller.startsWith(`${file}:`)) {
+        // Remove this caller's calls
+        for (const callee of callees) {
+          const callerList = this.callers.get(callee);
+          if (callerList) {
+            const filtered = callerList.filter(c => c !== caller);
+            if (filtered.length > 0) {
+              this.callers.set(callee, filtered);
+            } else {
+              this.callers.delete(callee);
+            }
+          }
+        }
+        this.calls.delete(caller);
+      }
+    }
+  }
+
+  /**
    * Add an import relationship
    */
   addImport(fromFile: string, toFile: string): void {
@@ -407,10 +446,13 @@ export class CodeGraphBuilder {
 
     logger.info(`Updating code graph with ${changedFiles.length} changed files`);
 
-    // For now, rebuild from scratch for changed files
-    // TODO: Implement incremental update
+    // Remove stale data and re-analyze changed files
     for (const file of changedFiles) {
       try {
+        // Remove old data for this file to avoid stale entries
+        graph.removeFile(file.filename);
+
+        // Re-analyze the file with fresh data
         await this.analyzeFile(file, graph);
       } catch (error) {
         logger.warn(`Failed to analyze ${file.filename}`, error as Error);
@@ -446,9 +488,21 @@ export class CodeGraphBuilder {
       return;
     }
 
-    // Parse the entire file content (not just patch)
-    // Note: In real usage, we'd need the full file content
-    const tree = parser.parse(file.patch);
+    // LIMITATION: We only have patch (diff) content, not full file content
+    // This means AST analysis will be incomplete and may miss context
+    // For production use, fetch full file content from GitHub API
+    logger.debug(`Analyzing patch for ${file.filename} (limited AST due to patch-only content)`);
+
+    // Try to extract added lines from patch for partial analysis
+    const addedLines = this.extractAddedLines(file.patch);
+    if (addedLines.length === 0) {
+      logger.debug(`No added lines found in patch for ${file.filename}, skipping AST analysis`);
+      return;
+    }
+
+    // Parse added lines only (best-effort analysis)
+    const codeToAnalyze = addedLines.join('\n');
+    const tree = parser.parse(codeToAnalyze);
     const root = tree.rootNode;
 
     // Extract definitions
@@ -554,9 +608,12 @@ export class CodeGraphBuilder {
     if (node.type === 'call_expression') {
       const functionNode = node.childForFieldName('function');
       if (functionNode) {
-        // TODO: Track the caller context (which function is making this call)
-        // const callee = functionNode.text;
-        // For now, we'll just track the call exists
+        const callee = functionNode.text;
+        // Find the enclosing function (caller)
+        const caller = this.findEnclosingFunction(node);
+        if (caller && callee) {
+          graph.addCall(caller, callee);
+        }
       }
     }
 
@@ -564,6 +621,48 @@ export class CodeGraphBuilder {
     for (let i = 0; i < node.childCount; i++) {
       this.extractCalls(node.child(i)!, file, graph);
     }
+  }
+
+  /**
+   * Find the name of the enclosing function for a given node
+   * Returns '<top>' for top-level calls
+   */
+  private findEnclosingFunction(node: SyntaxNode): string | null {
+    let current: SyntaxNode | null = node.parent;
+
+    while (current) {
+      // Check for function declaration
+      if (current.type === 'function_declaration' || current.type === 'function') {
+        const nameNode = current.childForFieldName('name');
+        if (nameNode) {
+          return nameNode.text;
+        }
+      }
+
+      // Check for method definition
+      if (current.type === 'method_definition') {
+        const nameNode = current.childForFieldName('name');
+        if (nameNode) {
+          return nameNode.text;
+        }
+      }
+
+      // Check for arrow function assigned to variable
+      if (current.type === 'lexical_declaration' || current.type === 'variable_declaration') {
+        const declarator = current.childForFieldName('declarator');
+        if (declarator) {
+          const nameNode = declarator.childForFieldName('name');
+          if (nameNode) {
+            return nameNode.text;
+          }
+        }
+      }
+
+      current = current.parent;
+    }
+
+    // Top-level call (not inside any function)
+    return '<top>';
   }
 
   /**
@@ -579,5 +678,28 @@ export class CodeGraphBuilder {
       current = current.parent;
     }
     return false;
+  }
+
+  /**
+   * Extract added lines from a unified diff patch
+   * Returns lines that start with '+' (excluding the '+' prefix)
+   */
+  private extractAddedLines(patch: string): string[] {
+    const lines = patch.split('\n');
+    const addedLines: string[] = [];
+
+    for (const line of lines) {
+      // Skip diff headers (@@ lines) and context lines
+      if (line.startsWith('@@')) {
+        continue;
+      }
+      // Extract added lines (start with +, but not ++)
+      if (line.startsWith('+') && !line.startsWith('++')) {
+        // Remove the + prefix
+        addedLines.push(line.substring(1));
+      }
+    }
+
+    return addedLines;
   }
 }
