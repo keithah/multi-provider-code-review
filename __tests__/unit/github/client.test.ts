@@ -42,6 +42,16 @@ describe('GitHubClient', () => {
       expect(client.owner).toBe('invalid-format');
       expect(client.repo).toBeUndefined();
     });
+
+    it('handles GITHUB_REPOSITORY not set', () => {
+      delete process.env.GITHUB_REPOSITORY;
+
+      const client = new GitHubClient(mockToken);
+
+      // When GITHUB_REPOSITORY is undefined, should handle gracefully
+      expect(client.owner).toBe('');
+      expect(client.repo).toBe('');
+    });
   });
 
   describe('Octokit Integration', () => {

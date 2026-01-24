@@ -9,9 +9,20 @@ export class GitHubClient {
 
   constructor(token: string) {
     this.octokit = github.getOctokit(token) as unknown as Octokit;
-    const repoEnv = process.env.GITHUB_REPOSITORY || github.context.repo.owner + '/' + github.context.repo.repo;
+
+    // Try to get repository from environment or GitHub context
+    let repoEnv = process.env.GITHUB_REPOSITORY;
+    if (!repoEnv) {
+      try {
+        repoEnv = `${github.context.repo.owner}/${github.context.repo.repo}`;
+      } catch {
+        // If GitHub context is not available, use empty strings
+        repoEnv = '/';
+      }
+    }
+
     const [owner, repo] = repoEnv.split('/');
-    this.owner = owner;
+    this.owner = owner || '';
     this.repo = repo;
 
     core.debug(`GitHub client initialized for ${owner}/${repo}`);

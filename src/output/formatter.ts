@@ -46,6 +46,15 @@ export class MarkdownFormatter {
       lines.push('</details>');
     }
 
+    if (review.mermaidDiagram && review.mermaidDiagram.trim()) {
+      lines.push('\n<details><summary>Impact graph</summary>');
+      lines.push('');
+      lines.push('```mermaid');
+      lines.push(review.mermaidDiagram);
+      lines.push('```');
+      lines.push('</details>');
+    }
+
     if (review.providerResults && review.providerResults.length > 0) {
       lines.push('\n<details><summary>Raw provider outputs</summary>');
       lines.push('');
