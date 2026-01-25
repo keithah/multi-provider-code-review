@@ -141,7 +141,7 @@ export class ReviewOrchestrator {
     let llmFindings: Finding[] = [];
     let providerResults: ProviderResult[] = [];
     let aiAnalysis: ReturnType<typeof summarizeAIDetection> | undefined;
-    let providers = await this.components.providerRegistry.createProviders(config);
+    const providers = await this.components.providerRegistry.createProviders(config);
 
     if (filesToReview.length === 0) {
       logger.info('No files to review in incremental update, using cached findings only');

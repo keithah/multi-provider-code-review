@@ -119,18 +119,21 @@ jobs:
           echo ""
           echo "Posting notification comment to PR..."
 
-          # Post a notification comment to the PR
-          gh pr comment ${{ steps.resolve-pr.outputs.pr }} --body "## ⚠️ Automated Code Review Skipped
+          # Post a notification comment to the PR using heredoc for multiline body
+          gh pr comment ${{ steps.resolve-pr.outputs.pr }} --body "$(cat <<'EOF'
+          ## ⚠️ Automated Code Review Skipped
 
-This PR is from a fork and cannot access repository secrets for security reasons.
+          This PR is from a fork and cannot access repository secrets for security reasons.
 
-The automated code review requires API credentials (OPENROUTER_API_KEY) which are not available to fork PRs to prevent unauthorized access.
+          The automated code review requires API credentials (OPENROUTER_API_KEY) which are not available to fork PRs to prevent unauthorized access.
 
-**For maintainers:** You can:
-- Manually trigger a review using workflow_dispatch after reviewing the changes
-- Add OPENROUTER_API_KEY to repository secrets to enable reviews for trusted forks
+          **For maintainers:** You can:
+          - Manually trigger a review using workflow_dispatch after reviewing the changes
+          - Add OPENROUTER_API_KEY to repository secrets to enable reviews for trusted forks
 
-**For contributors:** Maintainers will review your code manually or trigger an automated review after initial verification."
+          **For contributors:** Maintainers will review your code manually or trigger an automated review after initial verification.
+          EOF
+          )"
 
       - name: Multi-Provider Code Review
         # Run if:
