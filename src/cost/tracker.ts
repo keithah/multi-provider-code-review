@@ -16,7 +16,8 @@ export class CostTracker {
       (pricing.completionPrice / 1_000_000) * usage.completionTokens;
 
     const projectedTotal = this.totalCost + cost;
-    if (budgetMaxUsd && budgetMaxUsd > 0 && projectedTotal > budgetMaxUsd) {
+    // Check budget cap - explicitly test for null/undefined to allow zero as a valid cap
+    if (budgetMaxUsd !== null && budgetMaxUsd !== undefined && projectedTotal > budgetMaxUsd) {
       throw new Error(
         `Budget exceeded: projected $${projectedTotal.toFixed(4)} would exceed cap $${budgetMaxUsd.toFixed(2)} (current $${this.totalCost.toFixed(4)})`
       );

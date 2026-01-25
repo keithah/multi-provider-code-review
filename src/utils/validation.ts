@@ -218,7 +218,13 @@ export function validateTimeout(timeoutMs: number): void {
   }
 }
 
-export function validateFilePath(filePath: unknown): string {
+/**
+ * Validate file path and check for directory traversal attacks
+ * @param filePath - Path to validate
+ * @param baseDir - Optional base directory to restrict paths to. When provided, returns absolute resolved path.
+ * @returns Validated path (absolute if baseDir provided, original otherwise)
+ */
+export function validateFilePath(filePath: unknown, baseDir?: string): string {
   if (typeof filePath !== 'string') {
     throw new ValidationError(
       'File path must be a string',
@@ -234,13 +240,53 @@ export function validateFilePath(filePath: unknown): string {
     );
   }
 
-  // Check for potential security issues
+  // Basic security check for directory traversal attempts
   if (filePath.includes('..')) {
     throw new ValidationError(
       'File path contains directory traversal',
       'filePath',
       `Path "${filePath}" contains ".." which may be a security risk`
     );
+  }
+
+  // If baseDir is provided, perform enhanced validation with path resolution
+  if (baseDir) {
+    // Import path module for resolution
+    const path = require('path');
+
+    // Resolve to absolute path to normalize and detect traversal
+    const basePath = path.resolve(baseDir);
+    const resolvedPath = path.resolve(basePath, filePath);
+
+    // Check for directory traversal - resolved path must be within baseDir
+    if (!resolvedPath.startsWith(basePath + path.sep) && resolvedPath !== basePath) {
+      throw new ValidationError(
+        'File path escapes base directory',
+        'filePath',
+        `Resolved path "${resolvedPath}" is outside base directory "${basePath}". ` +
+        `This may be a directory traversal attack.`
+      );
+    }
+
+    // Additional checks for suspicious patterns
+    const suspiciousPatterns = [
+      /\/\.\//,         // Current directory reference
+      /\/\//,           // Double slashes
+      /\0/,             // Null bytes
+      /[\x00-\x1f]/,    // Control characters
+    ];
+
+    for (const pattern of suspiciousPatterns) {
+      if (pattern.test(filePath)) {
+        throw new ValidationError(
+          'File path contains suspicious patterns',
+          'filePath',
+          `Path "${filePath}" contains potentially malicious characters or patterns`
+        );
+      }
+    }
+
+    return resolvedPath;
   }
 
   return filePath;

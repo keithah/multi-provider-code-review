@@ -28,14 +28,31 @@ export interface ProviderMetric {
   avgDuration: number;
 }
 
+/**
+ * Aggregated metrics data
+ *
+ * IMPORTANT: This represents a sliding window, not lifetime totals!
+ *
+ * The "total" fields (totalReviews, totalCost, totalFindings) are calculated
+ * from the retained reviews array only (up to analyticsMaxReviews, default 1000).
+ * Older reviews beyond this limit are discarded to prevent unbounded growth.
+ *
+ * This means:
+ * - totalReviews = count of reviews in the sliding window
+ * - totalCost = sum of costs for reviews in the sliding window
+ * - totalFindings = sum of findings for reviews in the sliding window
+ *
+ * These are NOT cumulative lifetime values. They represent recent activity
+ * within the configured retention window.
+ */
 export interface MetricsData {
   reviews: ReviewMetric[];
-  totalReviews: number;
-  totalCost: number;
-  totalFindings: number;
-  avgReviewTime: number;
-  cacheHitRate: number;
-  lastUpdated: number;
+  totalReviews: number;        // Count of reviews in sliding window
+  totalCost: number;            // Sum of costs in sliding window
+  totalFindings: number;        // Sum of findings in sliding window
+  avgReviewTime: number;        // Average duration across window
+  cacheHitRate: number;         // % of cached reviews in window
+  lastUpdated: number;          // Timestamp of last update
 }
 
 /**

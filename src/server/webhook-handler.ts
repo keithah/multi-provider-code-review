@@ -3,7 +3,7 @@
  * Receives and processes GitHub webhook events for automated code reviews
  */
 
-import { createHmac } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { logger } from '../utils/logger';
 import { ReviewOrchestrator } from '../core/orchestrator';
 
@@ -65,6 +65,7 @@ export class WebhookHandler {
 
   /**
    * Verify webhook signature using HMAC-SHA256
+   * Uses Node.js's built-in timingSafeEqual for cryptographically secure comparison
    */
   verifySignature(payload: string, signature: string): boolean {
     if (!signature || !signature.startsWith('sha256=')) {
@@ -78,16 +79,20 @@ export class WebhookHandler {
     const calculated = hmac.digest('hex');
 
     // Use timing-safe comparison to prevent timing attacks
+    // timingSafeEqual requires buffers of equal length
     if (calculated.length !== expected.length) {
       return false;
     }
 
-    let mismatch = 0;
-    for (let i = 0; i < calculated.length; i++) {
-      mismatch |= calculated.charCodeAt(i) ^ expected.charCodeAt(i);
+    try {
+      // Convert to buffers for timingSafeEqual
+      const calculatedBuf = Buffer.from(calculated, 'utf8');
+      const expectedBuf = Buffer.from(expected, 'utf8');
+      return timingSafeEqual(calculatedBuf, expectedBuf);
+    } catch (error) {
+      logger.error('Signature verification error', error as Error);
+      return false;
     }
-
-    return mismatch === 0;
   }
 
   /**

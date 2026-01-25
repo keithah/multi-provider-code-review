@@ -60,19 +60,7 @@ jobs:
           echo "pr=" >> "$GITHUB_OUTPUT"
       - name: Validate Review Providers Input
         if: ${{ inputs.review_providers != '' }}
-        run: |
-          # Validate REVIEW_PROVIDERS against the same pattern used in code (Provider.validate)
-          # Allowed: openrouter/<vendor>/<model>[:tag], opencode/<model>[:tag]
-          PROVIDERS="${{ inputs.review_providers }}"
-          IFS=',' read -ra MODELS <<< "$PROVIDERS"
-          for MODEL in "${MODELS[@]}"; do
-            if ! echo "$MODEL" | grep -qE '^(openrouter|opencode)/[A-Za-z0-9._:-/]+$'; then
-              echo "Error: Invalid provider name: $MODEL"
-              echo "Expected format: openrouter/vendor/model:tag or opencode/model[:tag]"
-              exit 1
-            fi
-          done
-          echo "Providers validated: $PROVIDERS"
+        run: node scripts/validate-providers.js "${{ inputs.review_providers }}"
       - name: Validate Secrets and Configuration
         run: |
           # Check if OPENROUTER_API_KEY is available for fork PRs
@@ -95,8 +83,34 @@ jobs:
       - name: Install OpenCode CLI
         run: npm install -g opencode-ai@1.1.32
       # Run review if: PR number found. Fork PRs are allowed without OpenRouter key (falls back to free providers).
+      - name: Skip Fork PR Without Secrets
+        if: |
+          ${{
+            steps.resolve-pr.outputs.pr != '' &&
+            github.event.pull_request.head.repo.fork == true &&
+            secrets.OPENROUTER_API_KEY == ''
+          }}
+        run: |
+          echo "⚠️  Skipping review for fork PR without OPENROUTER_API_KEY"
+          echo "Fork PRs cannot access repository secrets for security reasons."
+          echo "The review will not run to avoid API calls without credentials."
+          echo ""
+          echo "To enable review for fork PRs:"
+          echo "1. Repository maintainers can add OPENROUTER_API_KEY to repository secrets"
+          echo "2. Or use workflow_dispatch to manually trigger reviews with approval"
+
       - name: Multi-Provider Code Review
-        if: ${{ steps.resolve-pr.outputs.pr != '' }}
+        # Run if:
+        # 1. PR exists, AND
+        # 2. Either not a fork OR (is a fork AND has OPENROUTER_API_KEY)
+        if: |
+          ${{
+            steps.resolve-pr.outputs.pr != '' &&
+            (
+              github.event.pull_request.head.repo.fork != true ||
+              secrets.OPENROUTER_API_KEY != ''
+            )
+          }}
         uses: ./
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

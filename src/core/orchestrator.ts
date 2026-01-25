@@ -90,6 +90,7 @@ export class ReviewOrchestrator {
 
     // Build code graph if enabled
     let codeGraph: CodeGraph | undefined;
+    let contextRetriever = this.components.contextRetriever;
     if (config.graphEnabled && this.components.graphBuilder) {
       try {
         const graphStart = Date.now();
@@ -97,9 +98,9 @@ export class ReviewOrchestrator {
         const graphTime = Date.now() - graphStart;
         logger.info(`Code graph built in ${graphTime}ms: ${codeGraph.getStats().definitions} definitions, ${codeGraph.getStats().imports} imports`);
 
-        // Update context retriever with graph
+        // Create new context retriever with graph for this review (don't mutate shared component)
         if (codeGraph) {
-          this.components.contextRetriever = new ContextRetriever(codeGraph);
+          contextRetriever = new ContextRetriever(codeGraph);
         }
       } catch (error) {
         logger.warn('Failed to build code graph, falling back to regex-based context', error as Error);
@@ -173,7 +174,7 @@ export class ReviewOrchestrator {
     const astFindings = config.enableAstAnalysis ? this.components.astAnalyzer.analyze(filesToReview) : [];
     const ruleFindings = this.components.rules.run(filesToReview);
     const securityFindings = config.enableSecurity ? this.components.security.scan(filesToReview) : [];
-    const context = this.components.contextRetriever.findRelatedContext(filesToReview);
+    const context = contextRetriever.findRelatedContext(filesToReview);
 
     const combinedFindings = [
       ...astFindings,

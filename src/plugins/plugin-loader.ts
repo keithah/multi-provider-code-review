@@ -21,6 +21,7 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import * as crypto from 'crypto';
 import { logger } from '../utils/logger';
 import { Provider } from '../providers/base';
 
@@ -58,6 +59,21 @@ export class PluginLoader {
     if (!this.config.enabled) {
       logger.debug('Plugins disabled, skipping load');
       return;
+    }
+
+    // Require explicit security acknowledgment
+    const securityAcknowledged = process.env.PLUGIN_SECURITY_ACKNOWLEDGED === 'true';
+    if (!securityAcknowledged) {
+      logger.error(
+        'Plugin loading requires explicit security acknowledgment. ' +
+        'Plugins execute arbitrary code with full system access. ' +
+        'Set PLUGIN_SECURITY_ACKNOWLEDGED=true environment variable only if you understand the risks ' +
+        'and have reviewed all plugin code.'
+      );
+      throw new Error(
+        'Plugin security not acknowledged. Set PLUGIN_SECURITY_ACKNOWLEDGED=true to enable plugins. ' +
+        'Only use plugins in trusted, private environments.'
+      );
     }
 
     try {
@@ -102,6 +118,9 @@ export class PluginLoader {
         logger.debug(`Plugin at ${pluginPath} missing index.js, skipping`);
         return;
       }
+
+      // Verify plugin integrity if manifest exists
+      await this.verifyPluginIntegrity(pluginPath, indexPath);
 
       // Dynamically import plugin
       const pluginModule = await import(indexPath);
@@ -163,6 +182,56 @@ export class PluginLoader {
       );
     } catch (error) {
       logger.error(`Failed to load plugin at ${pluginPath}`, error as Error);
+    }
+  }
+
+  /**
+   * Verify plugin integrity using optional manifest file
+   * Manifest file format (plugin-manifest.json):
+   * {
+   *   "sha256": "checksum of index.js file",
+   *   "created": "ISO timestamp"
+   * }
+   */
+  private async verifyPluginIntegrity(pluginPath: string, indexPath: string): Promise<void> {
+    const manifestPath = path.join(pluginPath, 'plugin-manifest.json');
+
+    try {
+      await fs.access(manifestPath);
+    } catch (error) {
+      // Manifest is optional - if it doesn't exist, skip verification
+      logger.debug(`No manifest found for plugin at ${pluginPath}, skipping integrity check`);
+      return;
+    }
+
+    try {
+      // Read manifest
+      const manifestContent = await fs.readFile(manifestPath, 'utf8');
+      const manifest = JSON.parse(manifestContent);
+
+      if (!manifest.sha256 || typeof manifest.sha256 !== 'string') {
+        throw new Error('Manifest missing valid sha256 checksum');
+      }
+
+      // Calculate actual checksum of index.js
+      const pluginCode = await fs.readFile(indexPath, 'utf8');
+      const hash = crypto.createHash('sha256');
+      hash.update(pluginCode);
+      const actualChecksum = hash.digest('hex');
+
+      // Compare checksums
+      if (actualChecksum !== manifest.sha256) {
+        throw new Error(
+          `Plugin integrity verification failed! ` +
+          `Expected: ${manifest.sha256}, Got: ${actualChecksum}. ` +
+          `Plugin code may have been tampered with.`
+        );
+      }
+
+      logger.info(`Plugin integrity verified: ${pluginPath}`);
+    } catch (error) {
+      logger.error(`Plugin integrity verification failed for ${pluginPath}`, error as Error);
+      throw new Error(`Plugin integrity check failed: ${(error as Error).message}`);
     }
   }
 

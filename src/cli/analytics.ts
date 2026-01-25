@@ -32,6 +32,10 @@ async function generateAnalytics(options: AnalyticsOptions = {}): Promise<void> 
     const metricsCollector = new MetricsCollector(cacheStorage, config);
     const dashboardGenerator = new DashboardGenerator(metricsCollector);
 
+    // Ensure output directory exists
+    const fs = await import('fs/promises');
+    await fs.mkdir(output, { recursive: true });
+
     // Generate output based on format
     if (format === 'html') {
       const outputPath = path.join(output, 'analytics-dashboard.html');
@@ -46,7 +50,6 @@ async function generateAnalytics(options: AnalyticsOptions = {}): Promise<void> 
       const metrics = await metricsCollector.getMetrics(fromTimestamp);
       const outputPath = path.join(output, 'analytics-metrics.json');
 
-      const fs = await import('fs/promises');
       await fs.writeFile(outputPath, JSON.stringify(metrics, null, 2), 'utf8');
       logger.info(`JSON metrics generated: ${outputPath}`);
     }
@@ -81,8 +84,8 @@ async function printSummary(days: number = 30): Promise<void> {
     console.log(`Cache Hit Rate: ${(metrics.filter(m => m.cacheHit).length / Math.max(metrics.length, 1) * 100).toFixed(1)}%`);
     console.log(`\nROI:`);
     console.log(`  Total Cost: $${roi.totalCost.toFixed(2)}`);
-    console.log(`  Estimated Time Saved: ${roi.estimatedTimeSaved.toFixed(1)} hours`);
-    console.log(`  ROI: ${roi.roi.toFixed(0)}x`);
+    console.log(`  Estimated Time Saved: ${roi.estimatedTimeSaved.toFixed(0)} minutes (${(roi.estimatedTimeSaved / 60).toFixed(1)} hours)`);
+    console.log(`  ROI: ${roi.roi.toFixed(0)}%`);
     console.log(`\nTop Providers:`);
     providerStats.slice(0, 5).forEach((p, i) => {
       console.log(`  ${i + 1}. ${p.provider}: ${p.totalReviews} reviews, ${(p.successRate * 100).toFixed(1)}% success`);
@@ -95,6 +98,33 @@ async function printSummary(days: number = 30): Promise<void> {
 }
 
 /**
+ * Safely parse and validate days value
+ * Returns a valid positive integer or the default value
+ */
+function parseDays(value: string | undefined, defaultDays: number = 30): number {
+  if (!value) {
+    return defaultDays;
+  }
+
+  const parsed = parseInt(value, 10);
+
+  // Check for NaN, negative, or zero
+  if (isNaN(parsed) || parsed <= 0) {
+    logger.warn(`Invalid days value: "${value}". Using default: ${defaultDays}`);
+    return defaultDays;
+  }
+
+  // Reasonable maximum to prevent excessive data processing
+  const MAX_DAYS = 365;
+  if (parsed > MAX_DAYS) {
+    logger.warn(`Days value ${parsed} exceeds maximum ${MAX_DAYS}. Using maximum.`);
+    return MAX_DAYS;
+  }
+
+  return parsed;
+}
+
+/**
  * CLI entry point
  */
 async function main() {
@@ -102,7 +132,7 @@ async function main() {
   const command = args[0];
 
   if (command === 'summary') {
-    const days = parseInt(args[1]) || 30;
+    const days = parseDays(args[1], 30);
     await printSummary(days);
     return;
   }
@@ -120,7 +150,7 @@ async function main() {
       } else if (args[i] === '--format' || args[i] === '-f') {
         options.format = args[++i] as 'html' | 'csv' | 'json';
       } else if (args[i] === '--days' || args[i] === '-d') {
-        options.days = parseInt(args[++i]);
+        options.days = parseDays(args[++i], 30);
       }
     }
 

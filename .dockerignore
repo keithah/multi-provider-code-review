@@ -23,8 +23,9 @@ CHANGELOG.md
 !README.md
 
 # Environment
+# Exclude ALL .env files including .env.example to prevent accidental credential leakage
+# Users should reference .env.example from the git repository or documentation
 .env*
-!.env.example
 
 # Cache
 .cache/
