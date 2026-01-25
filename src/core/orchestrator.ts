@@ -280,6 +280,10 @@ export class ReviewOrchestrator {
     let aiAnalysis: ReturnType<typeof summarizeAIDetection> | undefined;
     let providers = await this.components.providerRegistry.createProviders(config);
     providers = await this.applyReliabilityFilters(providers);
+    if (providers.length === 0) {
+      logger.warn('All providers filtered out by circuit breakers/reliability; skipping LLM execution');
+      await progressTracker?.updateProgress('llm', 'failed', 'No available providers after reliability filtering');
+    }
 
     const batchOrchestrator =
       this.components.batchOrchestrator ||
