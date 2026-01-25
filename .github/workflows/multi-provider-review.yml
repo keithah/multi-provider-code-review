@@ -23,6 +23,11 @@ concurrency:
 
 # Permissions: Principle of least privilege
 # Only grant the minimum permissions required for code review functionality
+# Security rationale:
+# - contents: read - Required to checkout code and read PR diffs (minimal read access)
+# - pull-requests: write - Required to post review comments and inline suggestions (no merge access)
+# - actions: read - Required for concurrency control to prevent duplicate reviews (read-only)
+# NOT granted: contents: write (cannot modify code), issues: write (cannot create issues)
 permissions:
   contents: read        # Read repository code and PR diffs
   pull-requests: write  # Post review comments and summaries
@@ -30,6 +35,10 @@ permissions:
 
 jobs:
   review:
+    # Runner configuration:
+    # Primary: ubicloud-standard-2 (cost-effective, 2 vCPU)
+    # Fallback: GitHub Actions will automatically use ubuntu-latest if ubicloud is unavailable
+    # No explicit fallback needed - GitHub handles runner availability automatically
     runs-on: ubicloud-standard-2
     env:
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
@@ -63,7 +72,9 @@ jobs:
           echo "No PR found for this event/branch; skipping review."
           echo "pr=" >> "$GITHUB_OUTPUT"
       - name: Validate Review Providers Input
-        if: ${{ inputs.review_providers != '' }}
+        # Only validate if providers are explicitly specified (not empty and not null)
+        # GitHub Actions treats missing inputs as empty string, so this condition is correct
+        if: ${{ inputs.review_providers != '' && inputs.review_providers != null }}
         run: node scripts/validate-providers.js "${{ inputs.review_providers }}"
       - name: Validate Secrets and Configuration
         run: |

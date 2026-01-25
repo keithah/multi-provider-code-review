@@ -38,21 +38,31 @@ export class LLMExecutor {
             healthyProviders.push(provider);
             logger.info(`✓ Provider ${provider.name} health check passed (${duration}ms)`);
           } else {
+            // Health check returned false - likely timed out
             const result: ProviderResult = {
               name: provider.name,
-              status: 'error',
-              error: new Error('Health check failed - provider did not respond within timeout'),
+              status: 'timeout',
+              error: new Error(`Health check timed out after ${duration}ms - provider did not respond within timeout`),
               durationSeconds: duration / 1000,
             };
             healthCheckResults.push(result);
-            logger.warn(`✗ Provider ${provider.name} health check failed (${duration}ms)`);
+            logger.warn(`✗ Provider ${provider.name} health check timed out (${duration}ms)`);
           }
         } catch (error) {
           const duration = Date.now() - started;
           const err = error as Error;
+
+          // Determine if this is a timeout error
+          let status: ProviderResult['status'] = 'error';
+          if (err.message.toLowerCase().includes('timed out') ||
+              err.message.toLowerCase().includes('timeout') ||
+              (err as any).code === 'ETIMEDOUT') {
+            status = 'timeout';
+          }
+
           const result: ProviderResult = {
             name: provider.name,
-            status: 'error',
+            status,
             error: err,
             durationSeconds: duration / 1000,
           };

@@ -2,21 +2,32 @@
  * Plugin Loader System
  * Dynamically loads and registers custom provider plugins
  *
- * ⚠️  SECURITY WARNING ⚠️
+ * ⚠️  EXTREME SECURITY WARNING ⚠️
  *
  * This module loads and executes arbitrary JavaScript code from the filesystem.
- * Plugins have FULL system access with no sandboxing or isolation.
+ * Plugins have FULL system access with NO sandboxing, isolation, or permission restrictions.
+ *
+ * SANDBOXING LIMITATIONS:
+ * - NO sandboxing: Node.js does not provide a secure sandbox for dynamic code execution
+ * - NO isolation: Plugins run in the same process with full memory and filesystem access
+ * - NO permission restrictions: Plugins can read/write any file, make network requests, execute shell commands
+ * - NO resource limits: Plugins can consume unlimited CPU, memory, and disk I/O
+ * - Plugins can access process.env, require() any module, and modify global state
+ * - Technical alternatives like VM2 are no longer maintained due to security issues
+ * - Worker threads provide isolation but not security boundaries
  *
  * CRITICAL SECURITY CONSIDERATIONS:
- * - Only load plugins from trusted sources you control
- * - Never use in public GitHub Actions workflows where untrusted PRs could influence plugin loading
+ * - Only load plugins from trusted sources you fully control
+ * - NEVER use in public GitHub Actions workflows where untrusted PRs could influence plugin loading
  * - Plugins can execute ANY Node.js code with the same permissions as this process
  * - Review all plugin code before deployment
  * - Use allowlist/blocklist to restrict which plugins can be loaded
+ * - Security acknowledgment (PLUGIN_SECURITY_ACKNOWLEDGED=true) is REQUIRED and enforced at runtime
  *
  * RECOMMENDED USAGE:
  * - Private, controlled environments only (self-hosted runners, internal CI/CD)
- * - Consider requiring explicit acknowledgment via PLUGIN_SECURITY_ACKNOWLEDGED env var
+ * - Never enable plugins in shared or untrusted environments
+ * - Treat plugin directory as part of your codebase security perimeter
  */
 
 import * as fs from 'fs/promises';
@@ -64,6 +75,7 @@ export class PluginLoader {
 
     // Require explicit security acknowledgment
     // CRITICAL: Plugins execute with full system access, no sandboxing
+    // This is a HARD SECURITY REQUIREMENT - plugins will not load without acknowledgment
     const securityAcknowledged = process.env.PLUGIN_SECURITY_ACKNOWLEDGED;
 
     // Fail fast with explicit validation - must be exactly 'true' (case-sensitive)

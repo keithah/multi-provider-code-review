@@ -100,13 +100,13 @@ async function run(): Promise<void> {
       }
     }
 
-    process.exit(1);
+    // core.setFailed() sets process.exitCode, so explicit process.exit() is unnecessary
+    // Removed process.exit(1) to allow proper cleanup and resource disposal
   }
 }
 
-run().then(() => {
-  process.exit(0);
-}).catch((error) => {
+// core.setFailed() in run() sets process.exitCode, so we don't need explicit process.exit()
+// This allows proper cleanup and is the recommended pattern for GitHub Actions
+run().catch((error) => {
   core.setFailed(`Unhandled error: ${error.message}`);
-  process.exit(1);
 });

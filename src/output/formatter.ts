@@ -66,15 +66,16 @@ export class MarkdownFormatter {
           // Success: show review content
           lines.push(result.result.content.trim());
         } else if (result.error) {
-          // Failure: show error details
+          // Failure: show error message only (not stack trace)
+          // Stack traces are logged server-side for diagnostics
           lines.push('```');
           lines.push(`Error: ${result.error.message}`);
-          if (result.error.stack) {
-            lines.push('');
-            lines.push('Stack trace:');
-            lines.push(result.error.stack);
-          }
           lines.push('```');
+
+          // Log full error details server-side for debugging
+          if (result.error.stack) {
+            console.error(`Provider ${result.name} failed with stack trace:`, result.error.stack);
+          }
         } else {
           // No content and no error (shouldn't happen)
           lines.push('_no content_');

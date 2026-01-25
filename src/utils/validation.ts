@@ -180,6 +180,22 @@ export function validateModelId(modelId: string): void {
   }
 }
 
+/**
+ * Validate API key format and length
+ *
+ * Provider-specific key formats (for reference):
+ * - OpenAI: sk-... or sk-proj-... (48+ chars)
+ * - Anthropic: sk-ant-... (108+ chars)
+ * - OpenRouter: sk-or-v1-... (64+ chars)
+ * - Groq: gsk_... (56+ chars)
+ * - Cohere: Variable length (32+ chars)
+ *
+ * We use generic validation (length > 10) rather than strict regex patterns because:
+ * - Provider key formats change over time (OpenAI changed from sk-... to sk-proj-...)
+ * - Overly strict validation breaks when providers update their key format
+ * - Length check catches most common errors (empty, truncated, placeholder values)
+ * - Provider SDKs perform their own validation on actual API calls
+ */
 export function validateApiKey(apiKey: unknown, provider: string): string {
   if (typeof apiKey !== 'string' || apiKey.trim() === '') {
     throw new ValidationError(

@@ -54,12 +54,33 @@ export class WebhookHandler {
    * Validate configuration on initialization
    */
   private validateConfig(): void {
+    // Check secret length
     if (this.config.secret.length < WebhookHandler.MIN_SECRET_LENGTH) {
       throw new Error(
         `Webhook secret must be at least ${WebhookHandler.MIN_SECRET_LENGTH} characters. ` +
         `Current length: ${this.config.secret.length}. ` +
         `Generate a secure secret with: openssl rand -hex 32`
       );
+    }
+
+    // Reject placeholder values to prevent accidental use in production
+    const forbiddenPatterns = [
+      /INVALID/i,
+      /PLACEHOLDER/i,
+      /REPLACE/i,
+      /GENERATE/i,
+      /YOUR_.*_HERE/i,
+      /CHANGE.*ME/i,
+    ];
+
+    for (const pattern of forbiddenPatterns) {
+      if (pattern.test(this.config.secret)) {
+        throw new Error(
+          `Webhook secret appears to be a placeholder value: "${this.config.secret}". ` +
+          `This is not allowed in production. ` +
+          `Generate a secure random secret with: openssl rand -hex 32`
+        );
+      }
     }
   }
 
@@ -68,12 +89,30 @@ export class WebhookHandler {
    * Uses Node.js's built-in timingSafeEqual for cryptographically secure comparison
    */
   verifySignature(payload: string, signature: string): boolean {
-    if (!signature || !signature.startsWith('sha256=')) {
-      logger.warn('Invalid signature format');
+    // Validate signature format and length
+    if (!signature || typeof signature !== 'string') {
+      logger.warn('Missing or invalid signature type');
+      return false;
+    }
+
+    if (!signature.startsWith('sha256=')) {
+      logger.warn('Invalid signature format - must start with sha256=');
       return false;
     }
 
     const expected = signature.substring(7);
+
+    // SHA-256 HMAC produces a 64-character hex string
+    if (expected.length !== 64) {
+      logger.warn(`Invalid signature length: ${expected.length} (expected 64)`);
+      return false;
+    }
+
+    // Validate hex format (only 0-9, a-f characters)
+    if (!/^[0-9a-f]{64}$/i.test(expected)) {
+      logger.warn('Invalid signature format - must be 64-character hex string');
+      return false;
+    }
     const hmac = createHmac('sha256', this.config.secret);
     hmac.update(payload, 'utf8');
     const calculated = hmac.digest('hex');
