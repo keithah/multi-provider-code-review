@@ -1,6 +1,39 @@
 import { TrivialDetector, createDefaultTrivialConfig } from '../../../src/analysis/trivial-detector';
 import { FileChange } from '../../../src/types';
 
+/**
+ * TrivialDetector Test Suite
+ *
+ * COVERAGE: 47 tests covering:
+ * ✓ Dependency updates (3 tests) - package-lock.json, yarn.lock, etc.
+ * ✓ Documentation (4 tests) - *.md, README, CHANGELOG, docs/
+ * ✓ Test fixtures (3 tests) - __snapshots__, __mocks__, *.snap
+ * ✓ Config files (5 tests) - .eslintrc, tsconfig.json, .gitignore
+ * ✓ Build artifacts (3 tests) - dist/, build/, *.min.js
+ * ✓ Formatting detection (7 tests) - whitespace changes, semantic analysis
+ * ✓ Custom patterns (4 tests) - regex validation, literal fallback
+ * ✓ Mixed scenarios (8 tests) - trivial + non-trivial combinations
+ * ✓ Skip flag combinations (10 tests) - individual flags, all flags, mixed
+ *
+ * FLAG INTERACTION TESTED:
+ * - skipDependencyUpdates: enabled/disabled
+ * - skipDocumentationOnly: enabled/disabled
+ * - skipTestFixtures: enabled/disabled
+ * - skipConfigFiles: enabled/disabled
+ * - skipBuildArtifacts: enabled/disabled
+ * - skipFormattingOnly: enabled/disabled
+ * - All flags enabled (default behavior)
+ * - All flags disabled (review everything)
+ * - Mixed flag scenarios (partial skip)
+ *
+ * SECURITY TESTED:
+ * - Custom pattern validation via isValidRegexPattern()
+ * - Graceful degradation to literal matching on error
+ * - ReDoS pattern rejection
+ * - Error logging for invalid patterns
+ *
+ * See docs/SECURITY_PATTERNS.md for security rationale.
+ */
 describe('TrivialDetector', () => {
   const createFile = (filename: string, patch?: string): FileChange => ({
     filename,

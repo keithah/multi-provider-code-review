@@ -1,6 +1,32 @@
-import { PathMatcher, PathPattern, createDefaultPathMatcherConfig } from '../../../src/analysis/path-matcher';
+import { PathMatcher, PathPattern, createDefaultPathMatcherConfig, MAX_PATTERN_LENGTH, MAX_COMPLEXITY_SCORE } from '../../../src/analysis/path-matcher';
 import { FileChange } from '../../../src/types';
 
+/**
+ * PathMatcher Test Suite
+ *
+ * COVERAGE: 30 tests covering:
+ * ✓ Core functionality (6 tests) - intensity determination, pattern matching
+ * ✓ Glob patterns (4 tests) - **, *, exact, extensions
+ * ✓ Default config (4 tests) - auth, test, infrastructure paths
+ * ✓ Real-world scenarios (3 tests) - mixed intensity, test-only, critical PRs
+ * ✓ Pattern validation (5 tests) - length, complexity, control chars
+ * ✓ Caching behavior (2 tests) - deduplication, efficiency
+ * ✓ Edge cases (6 tests) - empty lists, no matches, boundaries
+ *
+ * VALIDATION TESTED:
+ * - Length limit: 500 characters (MAX_PATTERN_LENGTH)
+ * - Complexity limit: score ≤ 50 (MAX_COMPLEXITY_SCORE)
+ * - Control character rejection: 0x00-0x1F
+ * - Boundary conditions: exactly at limits (500 chars, score 50)
+ * - Over-limit rejection: 501+ chars, score 51+
+ *
+ * SECURITY TESTED:
+ * - ReDoS prevention via minimatch library
+ * - Pattern injection prevention via validation
+ * - Control character filtering
+ *
+ * See docs/SECURITY_PATTERNS.md for security rationale.
+ */
 describe('PathMatcher', () => {
   const createFile = (filename: string): FileChange => ({
     filename,
@@ -354,7 +380,7 @@ describe('PathMatcher', () => {
 
   describe('pattern validation', () => {
     it('should reject patterns that are too long', () => {
-      const longPattern = 'a'.repeat(600);
+      const longPattern = 'a'.repeat(MAX_PATTERN_LENGTH + 100); // 600 chars
 
       expect(() => {
         new PathMatcher({
@@ -366,8 +392,8 @@ describe('PathMatcher', () => {
     });
 
     it('should reject patterns that are too complex', () => {
-      // Pattern with excessive wildcards and braces (score > 50)
-      // 30 wildcards * 2 + 5 braces * 3 = 75
+      // Pattern with excessive wildcards and braces (score > MAX_COMPLEXITY_SCORE)
+      // 30 wildcards * 2 + 5 braces * 3 = 75 (exceeds limit of 50)
       const complexPattern = '**/*/**/*/**/*/**/*/**/*/**/*/**/*/**/*/**/*/{a,b,c}/{d,e,f}/{g,h,i}/{j,k}/**/*';
 
       expect(() => {
@@ -481,8 +507,8 @@ describe('PathMatcher', () => {
       expect(result.matchedPaths).toHaveLength(0);
     });
 
-    it('should handle boundary pattern length (exactly 500 chars)', () => {
-      const boundaryPattern = 'a'.repeat(500);
+    it('should handle boundary pattern length (exactly MAX_PATTERN_LENGTH)', () => {
+      const boundaryPattern = 'a'.repeat(MAX_PATTERN_LENGTH); // Exactly 500 chars
 
       expect(() => {
         new PathMatcher({
@@ -493,8 +519,8 @@ describe('PathMatcher', () => {
       }).not.toThrow();
     });
 
-    it('should handle boundary complexity score (exactly 50)', () => {
-      // 25 wildcards * 2 = 50 (exactly at limit)
+    it('should handle boundary complexity score (exactly MAX_COMPLEXITY_SCORE)', () => {
+      // 25 wildcards * 2 = 50 (exactly at MAX_COMPLEXITY_SCORE)
       // Pattern: a*b*c*d*e*f*g*h*i*j*k*l*m*n*o*p*q*r*s*t*u*v*w*x*y*
       const boundaryPattern = 'a*b*c*d*e*f*g*h*i*j*k*l*m*n*o*p*q*r*s*t*u*v*w*x*y*';
 
@@ -507,8 +533,8 @@ describe('PathMatcher', () => {
       }).not.toThrow();
     });
 
-    it('should reject pattern at complexity score 51+', () => {
-      // 26 wildcards * 2 = 52 (over limit)
+    it('should reject pattern exceeding MAX_COMPLEXITY_SCORE', () => {
+      // 26 wildcards * 2 = 52 (exceeds MAX_COMPLEXITY_SCORE of 50)
       const overLimitPattern = 'a*b*c*d*e*f*g*h*i*j*k*l*m*n*o*p*q*r*s*t*u*v*w*x*y*z*';
 
       expect(() => {
