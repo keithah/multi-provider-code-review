@@ -374,8 +374,8 @@ export class ReviewOrchestrator {
             (batchQueue as any).clear();
           } else {
             // Best-effort cleanup for older p-queue versions
-            batchQueue.pause();
-            batchQueue.removeAllListeners();
+            (batchQueue as any)._pending?.clear?.();
+            (batchQueue as any)._queue?.clear?.();
           }
         }
         llmFindings.push(...extractFindings(batchResults));

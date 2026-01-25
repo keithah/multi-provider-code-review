@@ -24,6 +24,6 @@ jobs:
       - run: npm run typecheck
       # Run tests with CI-optimized settings:
       # --maxWorkers=2: Limit parallelism to reduce resource contention
-      # --detectOpenHandles surfaces lingering async resources; --forceExit prevents stuck CI
-      - run: npm run test -- --maxWorkers=2 --detectOpenHandles --forceExit
+      # --detectOpenHandles surfaces lingering async resources
+      - run: npm run test -- --maxWorkers=2 --detectOpenHandles
       - run: npm run build
