@@ -129,7 +129,12 @@ describe('GitHub integration mock (no network)', () => {
     fakeOctokit.issues = fakeOctokit.rest.issues;
     fakeOctokit.pulls = fakeOctokit.rest.pulls;
 
-    const fakeClient = { octokit: fakeOctokit, owner: 'owner', repo: 'repo' } as any;
+    const fakeClient = {
+      octokit: fakeOctokit,
+      owner: 'owner',
+      repo: 'repo',
+      getFileContent: async () => null, // Mock getFileContent method
+    } as any;
 
     const components: ReviewComponents = {
       config,
