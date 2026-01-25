@@ -224,19 +224,61 @@ export class TrivialDetector {
   private matchesCustomPattern(filename: string): boolean {
     return this.config.customTrivialPatterns.some(pattern => {
       try {
+        // Validate pattern to prevent regex injection and ReDoS
+        if (!this.isValidRegexPattern(pattern)) {
+          console.warn(`Invalid trivial pattern "${pattern}": treating as literal string`);
+          return filename.includes(pattern);
+        }
+
         const regex = new RegExp(pattern);
         return regex.test(filename);
-      } catch {
+      } catch (error) {
         // Invalid regex, treat as literal string match
+        console.warn(`Failed to compile regex pattern "${pattern}": ${(error as Error).message}`);
         return filename.includes(pattern);
       }
     });
   }
 
   /**
+   * Validate regex pattern to prevent ReDoS attacks
+   */
+  private isValidRegexPattern(pattern: string): boolean {
+    // Check for empty or non-string patterns
+    if (!pattern || typeof pattern !== 'string') {
+      return false;
+    }
+
+    // Limit pattern length to prevent complexity attacks
+    if (pattern.length > 500) {
+      return false;
+    }
+
+    // Check for suspicious patterns that could cause ReDoS
+    const suspiciousPatterns = [
+      /(\*\*){3,}/, // Multiple consecutive **
+      /(\+\+){3,}/, // Multiple consecutive ++
+      /(\*){10,}/, // Too many consecutive *
+      /(\+){10,}/, // Too many consecutive +
+      /(.)\1{20,}/, // Excessive character repetition
+      /(\.\*){5,}/, // Too many .* patterns
+    ];
+
+    for (const suspicious of suspiciousPatterns) {
+      if (suspicious.test(pattern)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
    * Check if changes are formatting-only (whitespace, indentation, etc.)
-   * Uses a diff-based approach: if all additions have corresponding removals
-   * with identical trimmed content, it's likely just formatting.
+   * Improved algorithm to reduce false positives:
+   * 1. Checks if only whitespace differs between lines
+   * 2. Uses ordered comparison to detect semantic changes
+   * 3. Validates that changes are truly formatting-related
    */
   private isFormattingOnly(file: FileChange): boolean {
     if (!file.patch) return false;
@@ -249,27 +291,40 @@ export class TrivialDetector {
     if (actualChanges.length === 0) return true;
 
     // Separate additions and deletions
-    const additions = actualChanges.filter(line => line.startsWith('+')).map(line => line.substring(1).trim());
-    const deletions = actualChanges.filter(line => line.startsWith('-')).map(line => line.substring(1).trim());
+    const additions = actualChanges.filter(line => line.startsWith('+')).map(line => line.substring(1));
+    const deletions = actualChanges.filter(line => line.startsWith('-')).map(line => line.substring(1));
 
     // If different number of additions vs deletions, not just formatting
     if (additions.length !== deletions.length) return false;
 
-    // Check if all additions have matching deletions (after trimming)
-    const additionSet = new Set(additions.filter(line => line.length > 0));
-    const deletionSet = new Set(deletions.filter(line => line.length > 0));
+    // Check each pair of lines to see if they differ only in whitespace
+    for (let i = 0; i < additions.length; i++) {
+      const added = additions[i];
+      const deleted = deletions[i];
 
-    // If sets are equal, changes are only whitespace/formatting
-    if (additionSet.size !== deletionSet.size) return false;
+      // Get normalized versions (remove all whitespace)
+      const normalizedAdded = this.normalizeWhitespace(added);
+      const normalizedDeleted = this.normalizeWhitespace(deleted);
 
-    for (const addition of additionSet) {
-      if (!deletionSet.has(addition)) {
-        return false; // Found a line that was actually changed
+      // If normalized content differs, this is not just formatting
+      if (normalizedAdded !== normalizedDeleted) {
+        // Additional check: allow completely empty lines to be added/removed
+        if (normalizedAdded.length > 0 || normalizedDeleted.length > 0) {
+          return false;
+        }
       }
     }
 
-    // All non-empty lines have matching trimmed content
+    // All lines differ only in whitespace
     return true;
+  }
+
+  /**
+   * Normalize whitespace for comparison
+   * Removes all whitespace to detect semantic changes
+   */
+  private normalizeWhitespace(text: string): string {
+    return text.replace(/\s+/g, '');
   }
 
   /**

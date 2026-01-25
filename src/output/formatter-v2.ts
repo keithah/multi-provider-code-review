@@ -37,10 +37,6 @@ export class MarkdownFormatterV2 {
     }
 
     // Findings by severity with visual indicators
-    const hasCritical = review.findings.some(f => f.severity === 'critical');
-    const hasMajor = review.findings.some(f => f.severity === 'major');
-    const hasMinor = review.findings.some(f => f.severity === 'minor');
-
     if (review.findings.length > 0) {
       lines.push('## Findings');
       lines.push('');
@@ -154,14 +150,14 @@ export class MarkdownFormatterV2 {
 
     if (significant.length === 0) return '';
 
-    // Group by category
+    // Group by category (skip findings without category)
     const byCategory = new Map<string, Finding[]>();
     significant.forEach(f => {
-      const category = f.category || 'General';
-      if (!byCategory.has(category)) {
-        byCategory.set(category, []);
+      if (!f.category) return; // Skip findings without category
+      if (!byCategory.has(f.category)) {
+        byCategory.set(f.category, []);
       }
-      byCategory.get(category)!.push(f);
+      byCategory.get(f.category)!.push(f);
     });
 
     byCategory.forEach((findings, category) => {
@@ -187,7 +183,7 @@ export class MarkdownFormatterV2 {
     lines.push('');
 
     findings.forEach((finding, index) => {
-      lines.push(this.formatFinding(finding, severity, index + 1));
+      lines.push(this.formatFinding(finding, severity));
       if (index < findings.length - 1) {
         lines.push('');
       }
@@ -200,8 +196,7 @@ export class MarkdownFormatterV2 {
 
   private formatFinding(
     finding: Finding,
-    severity: 'critical' | 'major' | 'minor',
-    index: number
+    severity: 'critical' | 'major' | 'minor'
   ): string {
     const lines: string[] = [];
 

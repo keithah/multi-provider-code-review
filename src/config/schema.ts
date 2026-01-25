@@ -1,5 +1,45 @@
 import { z } from 'zod';
 
+/**
+ * Validate regex pattern for safety against ReDoS attacks
+ */
+function isValidRegexPattern(pattern: string): boolean {
+  // Check for empty or non-string patterns
+  if (!pattern || typeof pattern !== 'string') {
+    return false;
+  }
+
+  // Limit pattern length to prevent complexity attacks
+  if (pattern.length > 500) {
+    return false;
+  }
+
+  // Check for suspicious patterns that could cause ReDoS
+  const suspiciousPatterns = [
+    /(\*\*){3,}/, // Multiple consecutive **
+    /(\+\+){3,}/, // Multiple consecutive ++
+    /(\*){10,}/, // Too many consecutive *
+    /(\+){10,}/, // Too many consecutive +
+    /(.)\1{20,}/, // Excessive character repetition
+    /(\.\*){5,}/, // Too many .* patterns
+    /(\.\+){5,}/, // Too many .+ patterns
+  ];
+
+  for (const suspicious of suspiciousPatterns) {
+    if (suspicious.test(pattern)) {
+      return false;
+    }
+  }
+
+  // Try to compile the pattern
+  try {
+    new RegExp(pattern);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export const ReviewConfigSchema = z.object({
   providers: z.array(z.string()).optional(),
   synthesis_model: z.string().optional(),
@@ -66,15 +106,8 @@ export const ReviewConfigSchema = z.object({
   skip_config_files: z.boolean().optional(),
   skip_build_artifacts: z.boolean().optional(),
   trivial_patterns: z.array(z.string().refine(
-    (pattern) => {
-      try {
-        new RegExp(pattern);
-        return true;
-      } catch {
-        return false;
-      }
-    },
-    { message: 'Invalid regex pattern' }
+    (pattern) => isValidRegexPattern(pattern),
+    { message: 'Invalid or unsafe regex pattern (check for ReDoS vulnerabilities)' }
   )).optional(),
 
   path_based_intensity: z.boolean().optional(),

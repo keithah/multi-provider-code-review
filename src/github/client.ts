@@ -45,6 +45,12 @@ export class GitHubClient {
 
       // Check if the response is a file (not a directory)
       if ('content' in response.data && !Array.isArray(response.data)) {
+        // Handle empty content or encoding "none" for large files
+        if (!response.data.content || response.data.content === '' || response.data.encoding === 'none') {
+          // File is empty or too large
+          core.debug(`File content empty or encoding 'none': ${filePath}`);
+          return '';
+        }
         // Content is base64 encoded
         return Buffer.from(response.data.content, 'base64').toString('utf-8');
       }

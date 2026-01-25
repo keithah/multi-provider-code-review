@@ -157,7 +157,7 @@ describe('Trivial Detection Integration', () => {
       // Should have attempted to review the source file
       // (may have 0 findings if providers fail, but should not be trivial)
       expect(review.summary).not.toContain('only trivial changes');
-    }, 60000); // 60 second timeout for provider health checks
+    }, 20000); // 20 second timeout for provider health checks
 
     it('should not mutate original PR context', async () => {
       const originalFiles = [
@@ -172,7 +172,7 @@ describe('Trivial Detection Integration', () => {
       expect(pr.files).toHaveLength(2);
       expect(pr.files[0].filename).toBe('src/app.ts');
       expect(pr.files[1].filename).toBe('package-lock.json');
-    }, 60000); // 60 second timeout for provider health checks
+    }, 20000); // 20 second timeout for provider health checks
   });
 
   describe('configuration', () => {
@@ -194,7 +194,7 @@ describe('Trivial Detection Integration', () => {
 
       // Should not skip review (though may have no findings)
       expect(review.summary).not.toContain('only trivial changes');
-    }, 60000); // 60 second timeout for provider health checks
+    }, 20000); // 20 second timeout for provider health checks
 
     it('should respect custom trivial patterns', async () => {
       const customConfig: ReviewConfig = {
@@ -218,6 +218,6 @@ describe('Trivial Detection Integration', () => {
 
       expect(review.findings).toHaveLength(0);
       expect(review.summary).toContain('trivial changes');
-    }, 60000); // 60 second timeout for provider health checks
+    }, 20000); // 20 second timeout for provider health checks
   });
 });

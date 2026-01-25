@@ -619,7 +619,7 @@ fi
 
 ## Features Intentionally Deferred
 
-**Not in this 14-week plan:**
+**Not in this 14-week plan (v0.2.1):**
 - Complex ML learning (beyond reaction-based weights)
 - Full code modification autofix (too risky)
 - Up-to-date library docs fetching (complex)
@@ -627,16 +627,97 @@ fi
 - Advanced rule inference from comments
 - Semantic finding deduplication (embeddings)
 
-**Why defer:**
-- Lower ROI than included features
-- Higher risk / complexity
-- Need user feedback first
-- Better as v2.2+ features
+**Deferred to v0.3.0 (Next Release):**
 
-**When to build:**
-- After v2.1 has 100+ active users
-- When feedback shows clear demand
-- When resources are available
+### 1. Commit Suggestion Button
+**Description:** GitHub inline code suggestions using ```suggestion``` blocks
+**Technical Approach:**
+- Modify formatter to output GitHub-compatible suggestion blocks
+- For each finding with a suggestion, output:
+  ```markdown
+  ```suggestion
+  <suggested code>
+  ```
+  ```
+- Automatically pulls from finding.suggestion field
+- Users can click "Commit suggestion" button in GitHub PR comments
+- Single-click fix application without opening IDE
+
+**Implementation Notes:**
+- Low complexity (~2 days work)
+- High user value (one-click fixes)
+- Requires careful formatting to match GitHub's exact syntax
+- Need to handle multi-line suggestions properly
+- Should respect inline comment limits (don't spam suggestions)
+
+**Blocked by:** Nothing - ready to implement when prioritized
+
+### 2. Interactive Bot Conversation Mode
+**Description:** Allow users to respond to bot comments with questions/requests
+**Technical Approach:**
+- GitHub comment webhook integration
+- Parse user replies to bot comments (using @bot mentions or reply threads)
+- Support commands like:
+  - "explain this finding"
+  - "show me examples"
+  - "suggest a fix"
+  - "run tests on this change"
+- Maintain conversation context across replies
+- Use synthesis model for natural language understanding
+
+**Implementation Notes:**
+- Medium complexity (~1-2 weeks)
+- High engagement value (conversational UX)
+- Requires webhook server setup (may need GitHub App)
+- Need to handle rate limits and abuse
+- Consider cost implications of LLM calls per reply
+
+**Blocked by:** Webhook infrastructure, GitHub App permissions
+
+### 3. Visual Progress Tracking with Checkboxes
+**Description:** Show task progress with GitHub checkboxes in PR comments
+**Technical Approach:**
+- Extend formatter to generate markdown checkbox lists
+- For action items and findings, output:
+  ```markdown
+  - [ ] Fix security vulnerability in auth.ts:123
+  - [x] Update test coverage for utils.ts
+  ```
+- Users can check off items as they complete them
+- Bot can detect checkbox state changes via webhooks
+- Update review summary as items are resolved
+
+**Implementation Notes:**
+- Low complexity (~1-3 days)
+- Good visual feedback for users
+- Integrates well with GitHub's task list feature
+- Could tie into feedback learning system (checkbox = resolved)
+- Consider auto-checking based on commits that fix issues
+
+**Blocked by:** Nothing - ready to implement when prioritized
+
+---
+
+**Why defer these features:**
+- Lower ROI than v0.2.1 core features
+- Higher risk / complexity for interactive features
+- Need user feedback on current UX first
+- Better as incremental improvements in v0.3.0
+- Want to validate current feature adoption before expanding
+
+**When to build (v0.3.0 timeline):**
+- After v0.2.1 has been used in production for 2-4 weeks
+- When feedback shows clear demand for interactive features
+- When resources are available (estimated 2-3 weeks total)
+- Priority order: (1) Commit Suggestions, (2) Visual Progress, (3) Interactive Bot
+
+**Original Deferred Features (v2.2+):**
+- Complex ML learning - Needs 100+ active users for data
+- Full code modification autofix - Too risky without extensive testing
+- Up-to-date library docs fetching - Complex integration
+- VS Code extension - Separate project scope
+- Advanced rule inference - Needs ML/NLP expertise
+- Semantic deduplication with embeddings - Performance/cost concerns
 
 ---
 
@@ -1042,14 +1123,14 @@ Total: 9 commits on `feature/v0.2.1-release-prep` branch
 8. Troubleshooting guide (earlier)
 9. CHANGELOG.md
 
-### Production Ready Enhancements
+### Production-ready enhancements
 
 - ✅ All documentation comprehensive and cross-linked
 - ✅ Security audit complete (3 moderate vulnerabilities documented)
 - ✅ All user-facing features documented
 - ✅ Troubleshooting coverage for common issues
-- ✅ Performance optimization strategies documented
-- ✅ Error recovery patterns documented
+- ✅ Performance-optimization strategies documented
+- ✅ Error-recovery patterns documented
 - ✅ 100% test pass rate achieved
 
 **Achievement date:** 2026-01-25

@@ -31,7 +31,7 @@ import { PromptGenerator } from '../autofix/prompt-generator';
 import { ReliabilityTracker } from '../providers/reliability-tracker';
 import { MetricsCollector } from '../analytics/metrics-collector';
 import { TrivialDetector } from '../analysis/trivial-detector';
-import { PathMatcher } from '../analysis/path-matcher';
+import { PathMatcher, createDefaultPathMatcherConfig } from '../analysis/path-matcher';
 import { ReviewConfig, Review, PRContext, RunDetails, Finding, FileChange, UnchangedContext, ProviderResult } from '../types';
 import { logger } from '../utils/logger';
 import { mapAddedLines } from '../utils/diff';
@@ -166,6 +166,8 @@ export class ReviewOrchestrator {
           patterns = JSON.parse(config.pathIntensityPatterns);
         } catch (error) {
           logger.warn('Failed to parse pathIntensityPatterns, using defaults', error as Error);
+          // Fallback to default patterns on parse failure
+          patterns = createDefaultPathMatcherConfig().patterns;
         }
       }
 

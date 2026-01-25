@@ -239,7 +239,7 @@ permissions:
 3. New token generated for next run
 
 **If PAT is used and compromised:**
-1. Revoke immediately at https://github.com/settings/tokens
+1. Revoke immediately at <https://github.com/settings/tokens>
 2. Audit Actions logs for unauthorized access
 3. Generate new PAT with minimal permissions
 4. Update repository secrets
@@ -335,13 +335,30 @@ iptables -P OUTPUT DROP
 **Webhook validation:**
 ```typescript
 // Verify GitHub webhook signature
-import { createHmac } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 
 function verifyWebhook(payload: string, signature: string, secret: string): boolean {
   const hmac = createHmac('sha256', secret);
   hmac.update(payload);
-  const expectedSignature = `sha256=${hmac.digest('hex')}`;
-  return signature === expectedSignature;
+  const expectedSignature = hmac.digest('hex');
+
+  // Extract signature without "sha256=" prefix
+  const providedSignature = signature.startsWith('sha256=')
+    ? signature.slice(7)
+    : signature;
+
+  // Convert to buffers for constant-time comparison
+  const expectedBuffer = Buffer.from(expectedSignature, 'hex');
+  const providedBuffer = Buffer.from(providedSignature, 'hex');
+
+  // If lengths differ, compare against zero-filled buffer to avoid timing leaks
+  if (expectedBuffer.length !== providedBuffer.length) {
+    const zeroBuffer = Buffer.alloc(expectedBuffer.length);
+    timingSafeEqual(expectedBuffer, zeroBuffer);
+    return false;
+  }
+
+  return timingSafeEqual(expectedBuffer, providedBuffer);
 }
 ```
 

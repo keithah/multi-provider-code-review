@@ -19,7 +19,7 @@ This guide helps you diagnose and fix common issues with Multi-Provider Code Rev
 ### Problem: `npm install` fails with dependency errors
 
 **Symptoms:**
-```
+```text
 npm ERR! code ERESOLVE
 npm ERR! ERESOLVE unable to resolve dependency tree
 ```
@@ -45,7 +45,7 @@ npm ERR! ERESOLVE unable to resolve dependency tree
 ### Problem: Tree-sitter installation fails
 
 **Symptoms:**
-```
+```text
 Error: Cannot find module 'tree-sitter'
 gyp ERR! build error
 ```
@@ -70,7 +70,7 @@ gyp ERR! build error
 ### Problem: `OPENROUTER_API_KEY` not found or invalid
 
 **Symptoms:**
-```
+```text
 Error: OPENROUTER_API_KEY is required
 Error: API key for openrouter is required
 ```
@@ -95,7 +95,7 @@ Error: API key for openrouter is required
 ### Problem: Rate limiting errors
 
 **Symptoms:**
-```
+```text
 Error: Rate limit exceeded
 status: 'rate-limited'
 ```
@@ -128,7 +128,7 @@ status: 'rate-limited'
 ### Problem: All providers fail
 
 **Symptoms:**
-```
+```text
 Providers used: 3 (success 0, failed 3)
 Review completed with 0 findings
 ```
@@ -157,7 +157,7 @@ Check the "Raw provider outputs" section in the PR comment for specific error me
 ### Problem: Specific provider times out
 
 **Symptoms:**
-```
+```text
 Provider openrouter/model: timeout (30.0s)
 ```
 
@@ -180,7 +180,7 @@ Provider openrouter/model: timeout (30.0s)
 ### Problem: Free providers not working
 
 **Symptoms:**
-```
+```text
 Error: Model requires credits
 Error: No free credits available
 ```
@@ -206,7 +206,7 @@ Error: No free credits available
 
 **Diagnosis:**
 Check review duration in PR comment:
-```
+```text
 Duration: 300.0s • Cost: $0.1234 • Tokens: 50000
 ```
 
@@ -240,7 +240,7 @@ Duration: 300.0s • Cost: $0.1234 • Tokens: 50000
 ### Problem: High API costs
 
 **Symptoms:**
-```
+```text
 Cost: $5.00 per review
 Total monthly cost: $500+
 ```
@@ -276,7 +276,7 @@ Total monthly cost: $500+
 ### Problem: Action runs out of memory
 
 **Symptoms:**
-```
+```text
 Error: JavaScript heap out of memory
 FATAL ERROR: Reached heap limit
 ```
@@ -363,7 +363,7 @@ FATAL ERROR: Reached heap limit
 ### Problem: Fork PRs fail with secrets error
 
 **Symptoms:**
-```
+```text
 ⚠️  Skipping review for fork PR without OPENROUTER_API_KEY
 Fork PRs cannot access repository secrets
 ```
@@ -383,7 +383,7 @@ This is expected behavior for security. Fork PRs don't have access to repository
 ### Problem: Docker container won't start
 
 **Symptoms:**
-```
+```text
 Error: Cannot find module './dist/index.js'
 Container exits immediately
 ```
@@ -414,7 +414,7 @@ Container exits immediately
 ### Problem: Webhook server returns 401 Unauthorized
 
 **Symptoms:**
-```
+```text
 Webhook delivery failed: 401 Unauthorized
 GitHub shows webhook delivery failure
 ```
@@ -438,7 +438,7 @@ GitHub shows webhook delivery failure
 ### Problem: Rate limit errors in self-hosted mode
 
 **Symptoms:**
-```
+```text
 Error: Rate limit exceeded for PR #123
 Too many reviews per minute
 ```

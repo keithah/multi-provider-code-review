@@ -66,16 +66,19 @@ export class PathMatcher {
     // Use default intensity if no patterns matched
     const finalIntensity = highestIntensity ?? this.config.defaultIntensity;
 
-    const reason = this.buildReason(finalIntensity, matchedPatterns, matchedPaths);
+    // Deduplicate matched paths before using them
+    const uniqueMatchedPaths = [...new Set(matchedPaths)];
+
+    const reason = this.buildReason(finalIntensity, matchedPatterns, uniqueMatchedPaths);
 
     logger.info(`Path-based intensity: ${finalIntensity}`, {
-      matchedPaths: matchedPaths.length,
+      matchedPaths: uniqueMatchedPaths.length,
       patterns: matchedPatterns.map(p => p.pattern),
     });
 
     return {
       intensity: finalIntensity,
-      matchedPaths: [...new Set(matchedPaths)], // Deduplicate
+      matchedPaths: uniqueMatchedPaths,
       reason,
     };
   }
@@ -88,15 +91,45 @@ export class PathMatcher {
    * - Exact matches
    */
   private matchesPattern(filePath: string, pattern: string): boolean {
-    // Convert glob pattern to regex
-    const regexPattern = this.globToRegex(pattern);
-    return regexPattern.test(filePath);
+    try {
+      // Convert glob pattern to regex
+      const regexPattern = this.globToRegex(pattern);
+      return regexPattern.test(filePath);
+    } catch (error) {
+      // Log error and return false for invalid patterns
+      console.warn(`Invalid glob pattern "${pattern}": ${(error as Error).message}`);
+      return false;
+    }
   }
 
   /**
    * Convert glob pattern to regular expression
+   * Validates input to prevent regex injection and ReDoS attacks
    */
   private globToRegex(pattern: string): RegExp {
+    // Validate pattern to prevent regex injection
+    if (!pattern || typeof pattern !== 'string') {
+      throw new Error('Invalid glob pattern: must be a non-empty string');
+    }
+
+    // Limit pattern length to prevent complexity attacks
+    if (pattern.length > 500) {
+      throw new Error('Invalid glob pattern: pattern too long (max 500 characters)');
+    }
+
+    // Check for suspicious patterns that could cause ReDoS
+    const suspiciousPatterns = [
+      /(\*\*){3,}/, // Multiple consecutive **
+      /(\*){10,}/, // Too many consecutive *
+      /(.)\1{20,}/, // Excessive character repetition
+    ];
+
+    for (const suspicious of suspiciousPatterns) {
+      if (suspicious.test(pattern)) {
+        throw new Error('Invalid glob pattern: potentially malicious pattern detected');
+      }
+    }
+
     // Escape special regex characters except * and /
     let regexStr = pattern
       .replace(/[.+?^${}()|[\]\\]/g, '\\$&') // Escape special chars
@@ -107,7 +140,11 @@ export class PathMatcher {
     // Anchor the pattern
     regexStr = `^${regexStr}$`;
 
-    return new RegExp(regexStr);
+    try {
+      return new RegExp(regexStr);
+    } catch (error) {
+      throw new Error(`Invalid glob pattern: failed to compile regex - ${(error as Error).message}`);
+    }
   }
 
   /**
@@ -204,7 +241,22 @@ export function createDefaultPathMatcherConfig(): PathMatcherConfig {
         description: 'Kubernetes configs need careful review',
       },
       {
+        pattern: 'Dockerfile',
+        intensity: 'thorough',
+        description: 'Docker configs need security review',
+      },
+      {
+        pattern: '**/Dockerfile',
+        intensity: 'thorough',
+        description: 'Docker configs need security review',
+      },
+      {
         pattern: '*.Dockerfile',
+        intensity: 'thorough',
+        description: 'Docker configs need security review',
+      },
+      {
+        pattern: '**/*.Dockerfile',
         intensity: 'thorough',
         description: 'Docker configs need security review',
       },

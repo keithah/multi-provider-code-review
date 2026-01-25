@@ -299,7 +299,6 @@ describe('PathMatcher', () => {
 
   describe('real-world scenarios', () => {
     it('should handle mixed intensity PR correctly', () => {
-      const matcher = new PathMatcher(createDefaultPathMatcherConfig());
       const config = createDefaultPathMatcherConfig();
       config.enabled = true;
 

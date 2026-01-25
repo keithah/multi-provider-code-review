@@ -44,9 +44,9 @@ const GRAY = '\x1b[90m';
 
 // Background colors
 const BG_RED = '\x1b[41m';
-const BG_GREEN = '\x1b[42m';
+const _BG_GREEN = '\x1b[42m'; // Reserved for future use
 const BG_YELLOW = '\x1b[43m';
-const BG_BLUE = '\x1b[44m';
+const _BG_BLUE = '\x1b[44m'; // Reserved for future use
 
 /**
  * Apply color to text
