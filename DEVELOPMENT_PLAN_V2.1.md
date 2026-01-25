@@ -636,10 +636,15 @@ fi
 **Technical Approach:**
 - Modify formatter to output GitHub-compatible suggestion blocks
 - For each finding with a suggestion, output suggestion code blocks
-- Example format (with triple backticks followed by "suggestion"):
-  - Opening: three backticks + "suggestion"
-  - Content: suggested code
-  - Closing: three backticks
+- Example format:
+
+````markdown
+```suggestion
+// Suggested code goes here
+const fixed = true;
+```
+````
+
 - Automatically pulls from finding.suggestion field
 - Users can click "Commit suggestion" button in GitHub PR comments
 - Single-click fix application without opening IDE
@@ -1139,4 +1144,4 @@ Total: 9 commits on `feature/v0.2.1-release-prep` branch
 
 2026-01-25
 
-**Ready for v0.2.1 release tag**
+## Ready for v0.2.1 release tag
