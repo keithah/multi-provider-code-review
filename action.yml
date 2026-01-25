@@ -2,7 +2,7 @@ name: "Multi-Provider Code Review"
 description: "Hybrid AST + LLM code review with multiple providers"
 author: "Keith Herrington"
 branding:
-  icon: "code-review"
+  icon: "check-circle"
   color: "blue"
 
 inputs:
