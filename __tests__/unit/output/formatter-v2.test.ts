@@ -44,10 +44,10 @@ describe('MarkdownFormatterV2', () => {
       const review = createMockReview();
       const output = formatter.format(review);
 
-      expect(output).toContain('# 🤖 Multi-Provider Code Review');
-      expect(output).toContain('## ✅ All Clear!');
-      expect(output).toContain('No issues found. Great job! 🎉');
-      expect(output).toContain('📊 Performance Metrics');
+      expect(output).toContain('# Multi-Provider Code Review');
+      expect(output).toContain('## All Clear!');
+      expect(output).toContain('No issues found. Great job!');
+      expect(output).toContain('Performance Metrics');
     });
 
     it('should include quick stats summary', () => {
@@ -76,7 +76,7 @@ describe('MarkdownFormatterV2', () => {
       expect(output).toContain('🔴 **1 Critical**');
       expect(output).toContain('🟡 **1 Major**');
       expect(output).toContain('🔵 1 Minor');
-      expect(output).toContain('⏱️ 10.5s');
+      expect(output).toContain('10.5s');
       expect(output).toContain('$0.0100');
     });
 
@@ -102,7 +102,7 @@ describe('MarkdownFormatterV2', () => {
 
       expect(output).toContain('### 🔴 Critical (1)');
       expect(output).toContain('#### 🔴 Security Vulnerability');
-      expect(output).toContain('📍 `src/auth.ts:123`');
+      expect(output).toContain('**Location:** `src/auth.ts:123`');
       expect(output).toContain('SQL injection risk detected');
     });
 
@@ -164,7 +164,7 @@ describe('MarkdownFormatterV2', () => {
 
       const output = formatter.format(review);
 
-      expect(output).toContain('**💡 Suggested Fix:**');
+      expect(output).toContain('**Suggested Fix:**');
       expect(output).toContain('Use const instead of let');
     });
 
@@ -188,9 +188,9 @@ describe('MarkdownFormatterV2', () => {
 
       const output = formatter.format(review);
 
-      expect(output).toContain('**🔍 Evidence:**');
+      expect(output).toContain('**Evidence:**');
       expect(output).toContain('⭐ High Confidence');
-      expect(output).toContain('🟢 85% confidence');
+      expect(output).toContain('(85% confidence)');
       expect(output).toContain('View reasoning');
       expect(output).toContain('Multiple providers agree');
     });
@@ -225,7 +225,7 @@ describe('MarkdownFormatterV2', () => {
 
       const output = formatter.format(review);
 
-      expect(output).toContain('## 📌 Action Items');
+      expect(output).toContain('## Action Items');
       expect(output).toContain('- [ ] Update dependencies');
       expect(output).toContain('- [ ] Add missing tests');
       expect(output).toContain('- [ ] Fix security issues');
@@ -249,12 +249,12 @@ describe('MarkdownFormatterV2', () => {
 
       const output = formatter.format(review);
 
-      expect(output).toContain('📊 Performance Metrics');
+      expect(output).toContain('Performance Metrics');
       expect(output).toContain('| Metric | Value |');
-      expect(output).toContain('| ⏱️ Duration | 15.75s |');
-      expect(output).toContain('| 💰 Cost | $0.0250 |');
-      expect(output).toContain('| 🔢 Tokens | 5,000 |');
-      expect(output).toContain('| 🤖 Providers Used | 2/3 |');
+      expect(output).toContain('| Duration | 15.75s |');
+      expect(output).toContain('| Cost | $0.0250 |');
+      expect(output).toContain('| Tokens | 5,000 |');
+      expect(output).toContain('| Providers | 2/3 |');
     });
 
     it('should show cache hit indicator', () => {
@@ -272,7 +272,7 @@ describe('MarkdownFormatterV2', () => {
 
       const output = formatter.format(review);
 
-      expect(output).toContain('⚡ Cache | Hit (6x faster!)');
+      expect(output).toContain('| Cache | Hit |');
     });
 
     it('should format provider performance details', () => {
@@ -307,7 +307,7 @@ describe('MarkdownFormatterV2', () => {
       expect(output).toContain('**Provider Performance:**');
       expect(output).toContain('✅ **provider-1** (3.50s, $0.0050, 500 tokens)');
       expect(output).toContain('⏱️ **provider-2** (30.00s)');
-      expect(output).toContain('⚠️ Request timed out after 30s');
+      expect(output).toContain('Request timed out after 30s');
     });
 
     it('should include AI analysis if present', () => {
@@ -324,7 +324,7 @@ describe('MarkdownFormatterV2', () => {
 
       const output = formatter.format(review);
 
-      expect(output).toContain('🤖 AI-Generated Code Analysis');
+      expect(output).toContain('AI-Generated Code Analysis');
       expect(output).toContain('**Overall Likelihood:** 75.0%');
       expect(output).toContain('**Consensus:** Likely AI-generated');
       expect(output).toContain('provider-1: 80.0%');
@@ -338,7 +338,7 @@ describe('MarkdownFormatterV2', () => {
 
       const output = formatter.format(review);
 
-      expect(output).toContain('📈 Impact Analysis Graph');
+      expect(output).toContain('Impact Analysis Graph');
       expect(output).toContain('```mermaid');
       expect(output).toContain('graph TD');
       expect(output).toContain('A --> B');
@@ -366,7 +366,7 @@ describe('MarkdownFormatterV2', () => {
 
       const output = formatter.format(review);
 
-      expect(output).toContain('🔍 Raw Provider Outputs');
+      expect(output).toContain('Raw Provider Outputs');
       expect(output).toContain('✅ provider-1 [success] (3.50s)');
       expect(output).toContain('This is the provider review content');
       expect(output).toContain('❌ provider-2 [error] (1.00s)');
@@ -396,7 +396,7 @@ describe('MarkdownFormatterV2', () => {
 
       const output = formatter.format(review);
 
-      expect(output).toContain('## 📝 Summary');
+      expect(output).toContain('## Summary');
       expect(output).toContain('**1 critical issue** require immediate attention');
       expect(output).toContain('1 major issue should be addressed');
       expect(output).toContain('1 minor improvement suggested');
@@ -433,7 +433,7 @@ describe('MarkdownFormatterV2', () => {
 
       const output = formatter.format(review);
 
-      expect(output).toContain('## 📋 Release Notes');
+      expect(output).toContain('## Release Notes');
       expect(output).toContain('**Security:**');
       expect(output).toContain('🔴 Security fix required');
       expect(output).toContain('**API:**');
@@ -444,9 +444,9 @@ describe('MarkdownFormatterV2', () => {
       const review = createMockReview();
       const output = formatter.format(review);
 
-      expect(output).toContain('🤖 Powered by Multi-Provider Code Review');
+      expect(output).toContain('Powered by Multi-Provider Code Review');
       expect(output).toContain('Dismiss a finding');
-      expect(output).toContain('with 👎');
+      expect(output).toContain('by reacting with 👎');
     });
 
     it('should use collapsible sections for long content', () => {

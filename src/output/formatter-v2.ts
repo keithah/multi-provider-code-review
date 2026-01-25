@@ -4,18 +4,18 @@ import { Review, Finding } from '../types';
  * Enhanced Markdown Formatter
  * Inspired by Claude Code Action and CodeRabbit
  * Features:
- * - Emoji section headers
- * - Visual severity indicators
+ * - Clean, professional formatting
+ * - Visual severity indicators (🔴 🟡 🔵)
  * - PR summary and release notes
  * - Collapsible sections
- * - Professional formatting
+ * - Minimal emoji usage
  */
 export class MarkdownFormatterV2 {
   format(review: Review): string {
     const lines: string[] = [];
 
     // Header with branding
-    lines.push('# 🤖 Multi-Provider Code Review');
+    lines.push('# Multi-Provider Code Review');
     lines.push('');
 
     // Quick stats summary
@@ -23,14 +23,14 @@ export class MarkdownFormatterV2 {
     lines.push('');
 
     // PR Summary section
-    lines.push('## 📝 Summary');
+    lines.push('## Summary');
     lines.push('');
     lines.push(`> ${this.generatePRSummary(review)}`);
     lines.push('');
 
     // Release notes (if significant changes)
     if (this.hasSignificantChanges(review)) {
-      lines.push('## 📋 Release Notes');
+      lines.push('## Release Notes');
       lines.push('');
       lines.push(this.generateReleaseNotes(review));
       lines.push('');
@@ -42,7 +42,7 @@ export class MarkdownFormatterV2 {
     const hasMinor = review.findings.some(f => f.severity === 'minor');
 
     if (review.findings.length > 0) {
-      lines.push('## 🔍 Findings');
+      lines.push('## Findings');
       lines.push('');
 
       const critical = review.findings.filter(f => f.severity === 'critical');
@@ -61,15 +61,15 @@ export class MarkdownFormatterV2 {
         lines.push(this.formatSeveritySection('🔵 Minor', minor, 'minor'));
       }
     } else {
-      lines.push('## ✅ All Clear!');
+      lines.push('## All Clear!');
       lines.push('');
-      lines.push('> No issues found. Great job! 🎉');
+      lines.push('> No issues found. Great job!');
       lines.push('');
     }
 
     // Action items (if any)
     if (review.actionItems && review.actionItems.length > 0) {
-      lines.push('## 📌 Action Items');
+      lines.push('## Action Items');
       lines.push('');
       review.actionItems.forEach(item => {
         lines.push(`- [ ] ${item}`);
@@ -87,7 +87,7 @@ export class MarkdownFormatterV2 {
     // Footer
     lines.push('---');
     lines.push('');
-    lines.push('*🤖 Powered by Multi-Provider Code Review* • [Dismiss a finding](https://github.com/your-repo/multi-provider-code-review/blob/main/docs/user-guide.md#dismissing-findings) with 👎');
+    lines.push('*Powered by Multi-Provider Code Review* • [Dismiss a finding](https://github.com/your-repo/multi-provider-code-review/blob/main/docs/user-guide.md#dismissing-findings) by reacting with 👎');
 
     return lines.join('\n');
   }
@@ -108,11 +108,7 @@ export class MarkdownFormatterV2 {
       ? `🔵 ${minorCount} Minor`
       : `~~${minorCount} Minor~~`;
 
-    const costBadge = metrics.totalCost > 0.01
-      ? `💰 $${metrics.totalCost.toFixed(4)}`
-      : `💚 $${metrics.totalCost.toFixed(4)}`;
-
-    return `${criticalBadge} • ${majorBadge} • ${minorBadge} • ⏱️ ${metrics.durationSeconds.toFixed(1)}s • ${costBadge}`;
+    return `${criticalBadge} • ${majorBadge} • ${minorBadge} • ${metrics.durationSeconds.toFixed(1)}s • $${metrics.totalCost.toFixed(4)}`;
   }
 
   private generatePRSummary(review: Review): string {
@@ -214,7 +210,7 @@ export class MarkdownFormatterV2 {
     const location = `\`${finding.file}:${finding.line}\``;
 
     lines.push(`#### ${emoji} ${finding.title}`);
-    lines.push(`📍 ${location}${finding.category ? ` • 🏷️ ${finding.category}` : ''}`);
+    lines.push(`**Location:** ${location}${finding.category ? ` • **Category:** ${finding.category}` : ''}`);
     lines.push('');
 
     // Message
@@ -223,7 +219,7 @@ export class MarkdownFormatterV2 {
 
     // Suggestion (if present)
     if (finding.suggestion) {
-      lines.push('**💡 Suggested Fix:**');
+      lines.push('**Suggested Fix:**');
       lines.push('```');
       lines.push(finding.suggestion);
       lines.push('```');
@@ -233,9 +229,8 @@ export class MarkdownFormatterV2 {
     // Evidence (if present)
     if (finding.evidence) {
       const confidence = Math.round(finding.evidence.confidence * 100);
-      const confidenceEmoji = confidence >= 80 ? '🟢' : confidence >= 50 ? '🟡' : '🟠';
 
-      lines.push(`**🔍 Evidence:** ${finding.evidence.badge} ${confidenceEmoji} ${confidence}% confidence`);
+      lines.push(`**Evidence:** ${finding.evidence.badge} (${confidence}% confidence)`);
       if (finding.evidence.reasoning) {
         lines.push(`<details><summary>View reasoning</summary>`);
         lines.push('');
@@ -260,17 +255,17 @@ export class MarkdownFormatterV2 {
     const { metrics, runDetails } = review;
 
     lines.push('<details>');
-    lines.push('<summary>📊 Performance Metrics</summary>');
+    lines.push('<summary>Performance Metrics</summary>');
     lines.push('');
     lines.push('| Metric | Value |');
     lines.push('|--------|-------|');
-    lines.push(`| ⏱️ Duration | ${metrics.durationSeconds.toFixed(2)}s |`);
-    lines.push(`| 💰 Cost | $${metrics.totalCost.toFixed(4)} |`);
-    lines.push(`| 🔢 Tokens | ${metrics.totalTokens.toLocaleString()} |`);
-    lines.push(`| 🤖 Providers Used | ${metrics.providersSuccess}/${metrics.providersUsed} |`);
+    lines.push(`| Duration | ${metrics.durationSeconds.toFixed(2)}s |`);
+    lines.push(`| Cost | $${metrics.totalCost.toFixed(4)} |`);
+    lines.push(`| Tokens | ${metrics.totalTokens.toLocaleString()} |`);
+    lines.push(`| Providers | ${metrics.providersSuccess}/${metrics.providersUsed} |`);
 
     if (runDetails?.cacheHit) {
-      lines.push(`| ⚡ Cache | Hit (6x faster!) |`);
+      lines.push(`| Cache | Hit |`);
     }
 
     lines.push('');
@@ -292,7 +287,7 @@ export class MarkdownFormatterV2 {
         lines.push(`- ${statusEmoji} **${p.name}** (${p.durationSeconds.toFixed(2)}s${costStr}${tokensStr})`);
 
         if (p.errorMessage) {
-          lines.push(`  <sub>⚠️ ${p.errorMessage}</sub>`);
+          lines.push(`  <sub>${p.errorMessage}</sub>`);
         }
       });
 
@@ -310,7 +305,7 @@ export class MarkdownFormatterV2 {
     // AI Analysis
     if (review.aiAnalysis) {
       lines.push('<details>');
-      lines.push('<summary>🤖 AI-Generated Code Analysis</summary>');
+      lines.push('<summary>AI-Generated Code Analysis</summary>');
       lines.push('');
       lines.push(`**Overall Likelihood:** ${(review.aiAnalysis.averageLikelihood * 100).toFixed(1)}%`);
       lines.push('');
@@ -332,7 +327,7 @@ export class MarkdownFormatterV2 {
     // Impact Graph
     if (review.mermaidDiagram && review.mermaidDiagram.trim()) {
       lines.push('<details>');
-      lines.push('<summary>📈 Impact Analysis Graph</summary>');
+      lines.push('<summary>Impact Analysis Graph</summary>');
       lines.push('');
       lines.push('```mermaid');
       lines.push(review.mermaidDiagram);
@@ -344,7 +339,7 @@ export class MarkdownFormatterV2 {
     // Raw Provider Outputs
     if (review.providerResults && review.providerResults.length > 0) {
       lines.push('<details>');
-      lines.push('<summary>🔍 Raw Provider Outputs</summary>');
+      lines.push('<summary>Raw Provider Outputs</summary>');
       lines.push('');
 
       review.providerResults.forEach(result => {
