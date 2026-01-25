@@ -46,25 +46,49 @@ export class PathMatcher {
    */
   private validatePatterns(): void {
     for (const pathPattern of this.config.patterns) {
-      const pattern = pathPattern.pattern;
+      this.validateSinglePattern(pathPattern.pattern);
+    }
+  }
 
-      // Security: Limit pattern length to prevent DoS
-      if (pattern.length > 500) {
-        throw new Error(`Pattern too long (${pattern.length} chars, max 500): ${pattern}`);
-      }
+  /**
+   * Validate a single pattern for security issues
+   */
+  private validateSinglePattern(pattern: string): void {
+    this.checkPatternLength(pattern);
+    this.checkPatternComplexity(pattern);
+    this.checkControlCharacters(pattern);
+  }
 
-      // Security: Check for suspicious complexity
-      const wildcardCount = (pattern.match(/\*/g) || []).length;
-      const braceCount = (pattern.match(/\{/g) || []).length;
-      const complexityScore = wildcardCount * 2 + braceCount * 3;
+  /**
+   * Check if pattern exceeds maximum length
+   */
+  private checkPatternLength(pattern: string): void {
+    const MAX_LENGTH = 500;
+    if (pattern.length > MAX_LENGTH) {
+      throw new Error(`Pattern too long (${pattern.length} chars, max ${MAX_LENGTH}): ${pattern}`);
+    }
+  }
 
-      if (complexityScore > 50) {
-        throw new Error(`Pattern too complex (score ${complexityScore}): ${pattern}`);
-      }
+  /**
+   * Check if pattern complexity is within acceptable limits
+   */
+  private checkPatternComplexity(pattern: string): void {
+    const wildcardCount = (pattern.match(/\*/g) || []).length;
+    const braceCount = (pattern.match(/\{/g) || []).length;
+    const complexityScore = wildcardCount * 2 + braceCount * 3;
+    const MAX_COMPLEXITY = 50;
 
-      // Security: Disallow control characters (using unicode escapes for ESLint)
-      // eslint-disable-next-line no-control-regex
-      if (/[\u0000-\u001F]/.test(pattern)) {
+    if (complexityScore > MAX_COMPLEXITY) {
+      throw new Error(`Pattern too complex (score ${complexityScore}): ${pattern}`);
+    }
+  }
+
+  /**
+   * Check for control characters in pattern
+   */
+  private checkControlCharacters(pattern: string): void {
+    for (let i = 0; i < pattern.length; i++) {
+      if (pattern.charCodeAt(i) <= 0x1F) {
         throw new Error(`Pattern contains control characters: ${pattern}`);
       }
     }
@@ -75,14 +99,42 @@ export class PathMatcher {
    */
   determineIntensity(files: FileChange[]): IntensityResult {
     if (!this.config.enabled || this.config.patterns.length === 0) {
-      return {
-        intensity: this.config.defaultIntensity,
-        matchedPaths: [],
-        reason: 'Path-based intensity disabled or no patterns configured',
-      };
+      return this.createDefaultResult();
     }
 
-    // Check each file against patterns, taking the highest intensity match
+    const matches = this.findMatchingPatterns(files);
+    const finalIntensity = matches.highestIntensity ?? this.config.defaultIntensity;
+    const uniqueMatchedPaths = [...new Set(matches.matchedPaths)];
+    const reason = this.buildReason(finalIntensity, matches.matchedPatterns, uniqueMatchedPaths);
+
+    this.logIntensityDecision(finalIntensity, uniqueMatchedPaths, matches.matchedPatterns);
+
+    return {
+      intensity: finalIntensity,
+      matchedPaths: uniqueMatchedPaths,
+      reason,
+    };
+  }
+
+  /**
+   * Create default result when path matching is disabled
+   */
+  private createDefaultResult(): IntensityResult {
+    return {
+      intensity: this.config.defaultIntensity,
+      matchedPaths: [],
+      reason: 'Path-based intensity disabled or no patterns configured',
+    };
+  }
+
+  /**
+   * Find all patterns that match the given files
+   */
+  private findMatchingPatterns(files: FileChange[]): {
+    highestIntensity: ReviewIntensity | null;
+    matchedPaths: string[];
+    matchedPatterns: PathPattern[];
+  } {
     let highestIntensity: ReviewIntensity | null = null;
     const matchedPaths: string[] = [];
     const matchedPatterns: PathPattern[] = [];
@@ -93,32 +145,35 @@ export class PathMatcher {
           matchedPaths.push(file.filename);
           matchedPatterns.push(pathPattern);
 
-          // Update highest intensity (thorough > standard > light)
-          if (highestIntensity === null || this.compareIntensity(pathPattern.intensity, highestIntensity) > 0) {
+          if (this.isHigherIntensity(pathPattern.intensity, highestIntensity)) {
             highestIntensity = pathPattern.intensity;
           }
         }
       }
     }
 
-    // Use default intensity if no patterns matched
-    const finalIntensity = highestIntensity ?? this.config.defaultIntensity;
+    return { highestIntensity, matchedPaths, matchedPatterns };
+  }
 
-    // Deduplicate matched paths before using them
-    const uniqueMatchedPaths = [...new Set(matchedPaths)];
+  /**
+   * Check if intensity A is higher than intensity B
+   */
+  private isHigherIntensity(a: ReviewIntensity, b: ReviewIntensity | null): boolean {
+    return b === null || this.compareIntensity(a, b) > 0;
+  }
 
-    const reason = this.buildReason(finalIntensity, matchedPatterns, uniqueMatchedPaths);
-
-    logger.info(`Path-based intensity: ${finalIntensity}`, {
-      matchedPaths: uniqueMatchedPaths.length,
+  /**
+   * Log the intensity decision for debugging
+   */
+  private logIntensityDecision(
+    intensity: ReviewIntensity,
+    matchedPaths: string[],
+    matchedPatterns: PathPattern[]
+  ): void {
+    logger.info(`Path-based intensity: ${intensity}`, {
+      matchedPaths: matchedPaths.length,
       patterns: matchedPatterns.map(p => p.pattern),
     });
-
-    return {
-      intensity: finalIntensity,
-      matchedPaths: uniqueMatchedPaths,
-      reason,
-    };
   }
 
   /**
@@ -279,6 +334,11 @@ export function createDefaultPathMatcherConfig(): PathMatcherConfig {
       },
       {
         pattern: 'docker-compose*.yml',
+        intensity: 'thorough',
+        description: 'Docker Compose configs need security review',
+      },
+      {
+        pattern: 'docker-compose*.yaml',
         intensity: 'thorough',
         description: 'Docker Compose configs need security review',
       },

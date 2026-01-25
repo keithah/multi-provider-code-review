@@ -143,44 +143,37 @@ export class TrivialDetector {
    * Check if a single file is trivial
    */
   private isFileTrivial(file: FileChange): boolean {
-    const filename = file.filename;
+    return (
+      this.isFileTrivialByType(file.filename) ||
+      this.isFileTrivialByContent(file)
+    );
+  }
 
-    // Dependency lock files
-    if (this.config.skipDependencyUpdates && this.isDependencyLockFile(filename)) {
-      return true;
-    }
+  /**
+   * Check if file is trivial based on file type/path
+   */
+  private isFileTrivialByType(filename: string): boolean {
+    const checks = [
+      { enabled: this.config.skipDependencyUpdates, check: () => this.isDependencyLockFile(filename) },
+      { enabled: this.config.skipDocumentationOnly, check: () => this.isDocumentationFile(filename) },
+      { enabled: this.config.skipTestFixtures, check: () => this.isTestFixture(filename) },
+      { enabled: this.config.skipConfigFiles, check: () => this.isConfigFile(filename) },
+      { enabled: this.config.skipBuildArtifacts, check: () => this.isBuildArtifact(filename) },
+      { enabled: true, check: () => this.matchesCustomPattern(filename) },
+    ];
 
-    // Documentation files
-    if (this.config.skipDocumentationOnly && this.isDocumentationFile(filename)) {
-      return true;
-    }
+    return checks.some(({ enabled, check }) => enabled && check());
+  }
 
-    // Test fixtures
-    if (this.config.skipTestFixtures && this.isTestFixture(filename)) {
-      return true;
-    }
-
-    // Config files
-    if (this.config.skipConfigFiles && this.isConfigFile(filename)) {
-      return true;
-    }
-
-    // Build artifacts
-    if (this.config.skipBuildArtifacts && this.isBuildArtifact(filename)) {
-      return true;
-    }
-
-    // Custom patterns
-    if (this.matchesCustomPattern(filename)) {
-      return true;
-    }
-
-    // Formatting-only changes (requires patch analysis)
-    if (this.config.skipFormattingOnly && file.patch && this.isFormattingOnly(file)) {
-      return true;
-    }
-
-    return false;
+  /**
+   * Check if file is trivial based on content changes
+   */
+  private isFileTrivialByContent(file: FileChange): boolean {
+    return (
+      this.config.skipFormattingOnly &&
+      file.patch !== undefined &&
+      this.isFormattingOnly(file)
+    );
   }
 
   /**
@@ -266,54 +259,73 @@ export class TrivialDetector {
   private isFormattingOnly(file: FileChange): boolean {
     if (!file.patch) return false;
 
-    // Extract added/removed lines from patch
-    const lines = file.patch.split('\n');
-    const changes = lines.filter(line => line.startsWith('+') || line.startsWith('-'));
+    const { additions, deletions } = this.extractChangesFromPatch(file.patch);
 
-    // Filter out diff metadata headers with strict pattern matching
-    // Only exclude lines that are diff metadata (not code that happens to start with +++/---)
-    const actualChanges = changes.filter(line => {
-      // Exclude diff file headers: "+++ " or "--- " (with space after)
-      if (/^(\+\+\+ |--- )/.test(line)) return false;
-      // Exclude hunk headers: "@@ ... @@"
-      if (/^@@/.test(line)) return false;
-      return true;
-    });
-
-    if (actualChanges.length === 0) return true;
-
-    // Separate additions and deletions
-    const additions = actualChanges.filter(line => line.startsWith('+')).map(line => line.substring(1));
-    const deletions = actualChanges.filter(line => line.startsWith('-')).map(line => line.substring(1));
-
-    // If different number of additions vs deletions, not just formatting
+    if (additions.length === 0 && deletions.length === 0) return true;
     if (additions.length !== deletions.length) return false;
 
-    // Check each pair of lines to see if they differ only in whitespace
+    return this.allLinesAreFormattingChanges(additions, deletions);
+  }
+
+  /**
+   * Extract actual code changes from patch, filtering out diff metadata
+   */
+  private extractChangesFromPatch(patch: string): { additions: string[]; deletions: string[] } {
+    const lines = patch.split('\n');
+    const changes = lines.filter(line => line.startsWith('+') || line.startsWith('-'));
+
+    const actualChanges = changes.filter(line => !this.isDiffMetadata(line));
+
+    const additions = actualChanges
+      .filter(line => line.startsWith('+'))
+      .map(line => line.substring(1));
+    const deletions = actualChanges
+      .filter(line => line.startsWith('-'))
+      .map(line => line.substring(1));
+
+    return { additions, deletions };
+  }
+
+  /**
+   * Check if a line is diff metadata (not actual code change)
+   */
+  private isDiffMetadata(line: string): boolean {
+    // Exclude diff file headers: "+++ " or "--- " (with space after)
+    if (/^(\+\+\+ |--- )/.test(line)) return true;
+    // Exclude hunk headers: "@@ ... @@"
+    if (/^@@/.test(line)) return true;
+    return false;
+  }
+
+  /**
+   * Check if all line pairs differ only in formatting
+   */
+  private allLinesAreFormattingChanges(additions: string[], deletions: string[]): boolean {
     for (let i = 0; i < additions.length; i++) {
-      const added = additions[i];
-      const deleted = deletions[i];
-
-      // Get normalized versions (remove all whitespace)
-      const normalizedAdded = this.normalizeWhitespace(added);
-      const normalizedDeleted = this.normalizeWhitespace(deleted);
-
-      // If normalized content differs, this is not just formatting
-      if (normalizedAdded !== normalizedDeleted) {
-        // Additional check: allow completely empty lines to be added/removed
-        if (normalizedAdded.length > 0 || normalizedDeleted.length > 0) {
-          return false;
-        }
+      if (!this.isFormattingChange(additions[i], deletions[i])) {
+        return false;
       }
+    }
+    return true;
+  }
 
-      // Additional semantic checks - catch changes that normalized comparison might miss
-      if (!this.areSemanticallySame(added, deleted)) {
+  /**
+   * Check if two lines differ only in formatting (whitespace)
+   */
+  private isFormattingChange(added: string, deleted: string): boolean {
+    const normalizedAdded = this.normalizeWhitespace(added);
+    const normalizedDeleted = this.normalizeWhitespace(deleted);
+
+    // If normalized content differs
+    if (normalizedAdded !== normalizedDeleted) {
+      // Allow completely empty lines to be added/removed
+      if (normalizedAdded.length > 0 || normalizedDeleted.length > 0) {
         return false;
       }
     }
 
-    // All lines differ only in whitespace
-    return true;
+    // Additional semantic checks
+    return this.areSemanticallySame(added, deleted);
   }
 
   /**
@@ -416,53 +428,61 @@ export class TrivialDetector {
    * Generate a human-readable reason for why PR is trivial
    */
   private getTrivialReason(files: FileChange[]): string {
-    const reasons: string[] = [];
-
-    const hasOnlyDeps = files.every(f => this.isDependencyLockFile(f.filename));
-    const hasOnlyDocs = files.every(f => this.isDocumentationFile(f.filename));
-    const hasOnlyFixtures = files.every(f => this.isTestFixture(f.filename));
-    const hasOnlyConfig = files.every(f => this.isConfigFile(f.filename));
-    const hasOnlyBuildArtifacts = files.every(f => this.isBuildArtifact(f.filename));
-
-    if (hasOnlyDeps) {
-      reasons.push('dependency lock file updates only');
+    const singleTypeReason = this.getSingleTypeReason(files);
+    if (singleTypeReason) {
+      return singleTypeReason;
     }
 
-    if (hasOnlyDocs) {
-      reasons.push('documentation changes only');
-    }
+    return this.getMixedTypeReason(files);
+  }
 
-    if (hasOnlyFixtures) {
-      reasons.push('test fixture updates only');
-    }
+  /**
+   * Get reason if all files are of a single trivial type
+   */
+  private getSingleTypeReason(files: FileChange[]): string | null {
+    const checks = [
+      { check: (f: string) => this.isDependencyLockFile(f), reason: 'dependency lock file updates only' },
+      { check: (f: string) => this.isDocumentationFile(f), reason: 'documentation changes only' },
+      { check: (f: string) => this.isTestFixture(f), reason: 'test fixture updates only' },
+      { check: (f: string) => this.isConfigFile(f), reason: 'configuration file changes only' },
+      { check: (f: string) => this.isBuildArtifact(f), reason: 'build artifact updates only' },
+    ];
 
-    if (hasOnlyConfig) {
-      reasons.push('configuration file changes only');
-    }
-
-    if (hasOnlyBuildArtifacts) {
-      reasons.push('build artifact updates only');
-    }
-
-    if (reasons.length === 0) {
-      // Mixed trivial types
-      const types = new Set<string>();
-      files.forEach(f => {
-        if (this.isDependencyLockFile(f.filename)) types.add('dependency locks');
-        if (this.isDocumentationFile(f.filename)) types.add('documentation');
-        if (this.isTestFixture(f.filename)) types.add('test fixtures');
-        if (this.isConfigFile(f.filename)) types.add('config files');
-        if (this.isBuildArtifact(f.filename)) types.add('build artifacts');
-      });
-
-      if (types.size > 0) {
-        return `trivial changes only (${Array.from(types).join(', ')})`;
+    for (const { check, reason } of checks) {
+      if (files.every(f => check(f.filename))) {
+        return reason;
       }
-
-      return 'trivial changes detected';
     }
 
-    return reasons.join(', ');
+    return null;
+  }
+
+  /**
+   * Get reason for mixed trivial types
+   */
+  private getMixedTypeReason(files: FileChange[]): string {
+    const typeChecks = [
+      { check: (f: string) => this.isDependencyLockFile(f), name: 'dependency locks' },
+      { check: (f: string) => this.isDocumentationFile(f), name: 'documentation' },
+      { check: (f: string) => this.isTestFixture(f), name: 'test fixtures' },
+      { check: (f: string) => this.isConfigFile(f), name: 'config files' },
+      { check: (f: string) => this.isBuildArtifact(f), name: 'build artifacts' },
+    ];
+
+    const types = new Set<string>();
+    for (const file of files) {
+      for (const { check, name } of typeChecks) {
+        if (check(file.filename)) {
+          types.add(name);
+        }
+      }
+    }
+
+    if (types.size > 0) {
+      return `trivial changes only (${Array.from(types).join(', ')})`;
+    }
+
+    return 'trivial changes detected';
   }
 
   /**

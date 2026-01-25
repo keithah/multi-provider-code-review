@@ -37044,29 +37044,27 @@ var TrivialDetector = class {
    * Check if a single file is trivial
    */
   isFileTrivial(file) {
-    const filename = file.filename;
-    if (this.config.skipDependencyUpdates && this.isDependencyLockFile(filename)) {
-      return true;
-    }
-    if (this.config.skipDocumentationOnly && this.isDocumentationFile(filename)) {
-      return true;
-    }
-    if (this.config.skipTestFixtures && this.isTestFixture(filename)) {
-      return true;
-    }
-    if (this.config.skipConfigFiles && this.isConfigFile(filename)) {
-      return true;
-    }
-    if (this.config.skipBuildArtifacts && this.isBuildArtifact(filename)) {
-      return true;
-    }
-    if (this.matchesCustomPattern(filename)) {
-      return true;
-    }
-    if (this.config.skipFormattingOnly && file.patch && this.isFormattingOnly(file)) {
-      return true;
-    }
-    return false;
+    return this.isFileTrivialByType(file.filename) || this.isFileTrivialByContent(file);
+  }
+  /**
+   * Check if file is trivial based on file type/path
+   */
+  isFileTrivialByType(filename) {
+    const checks = [
+      { enabled: this.config.skipDependencyUpdates, check: () => this.isDependencyLockFile(filename) },
+      { enabled: this.config.skipDocumentationOnly, check: () => this.isDocumentationFile(filename) },
+      { enabled: this.config.skipTestFixtures, check: () => this.isTestFixture(filename) },
+      { enabled: this.config.skipConfigFiles, check: () => this.isConfigFile(filename) },
+      { enabled: this.config.skipBuildArtifacts, check: () => this.isBuildArtifact(filename) },
+      { enabled: true, check: () => this.matchesCustomPattern(filename) }
+    ];
+    return checks.some(({ enabled, check }) => enabled && check());
+  }
+  /**
+   * Check if file is trivial based on content changes
+   */
+  isFileTrivialByContent(file) {
+    return this.config.skipFormattingOnly && file.patch !== void 0 && this.isFormattingOnly(file);
   }
   /**
    * Check if file is a dependency lock file
@@ -37141,32 +37139,53 @@ var TrivialDetector = class {
    */
   isFormattingOnly(file) {
     if (!file.patch) return false;
-    const lines = file.patch.split("\n");
+    const { additions, deletions } = this.extractChangesFromPatch(file.patch);
+    if (additions.length === 0 && deletions.length === 0) return true;
+    if (additions.length !== deletions.length) return false;
+    return this.allLinesAreFormattingChanges(additions, deletions);
+  }
+  /**
+   * Extract actual code changes from patch, filtering out diff metadata
+   */
+  extractChangesFromPatch(patch) {
+    const lines = patch.split("\n");
     const changes = lines.filter((line) => line.startsWith("+") || line.startsWith("-"));
-    const actualChanges = changes.filter((line) => {
-      if (/^(\+\+\+ |--- )/.test(line)) return false;
-      if (/^@@/.test(line)) return false;
-      return true;
-    });
-    if (actualChanges.length === 0) return true;
+    const actualChanges = changes.filter((line) => !this.isDiffMetadata(line));
     const additions = actualChanges.filter((line) => line.startsWith("+")).map((line) => line.substring(1));
     const deletions = actualChanges.filter((line) => line.startsWith("-")).map((line) => line.substring(1));
-    if (additions.length !== deletions.length) return false;
+    return { additions, deletions };
+  }
+  /**
+   * Check if a line is diff metadata (not actual code change)
+   */
+  isDiffMetadata(line) {
+    if (/^(\+\+\+ |--- )/.test(line)) return true;
+    if (/^@@/.test(line)) return true;
+    return false;
+  }
+  /**
+   * Check if all line pairs differ only in formatting
+   */
+  allLinesAreFormattingChanges(additions, deletions) {
     for (let i = 0; i < additions.length; i++) {
-      const added = additions[i];
-      const deleted = deletions[i];
-      const normalizedAdded = this.normalizeWhitespace(added);
-      const normalizedDeleted = this.normalizeWhitespace(deleted);
-      if (normalizedAdded !== normalizedDeleted) {
-        if (normalizedAdded.length > 0 || normalizedDeleted.length > 0) {
-          return false;
-        }
-      }
-      if (!this.areSemanticallySame(added, deleted)) {
+      if (!this.isFormattingChange(additions[i], deletions[i])) {
         return false;
       }
     }
     return true;
+  }
+  /**
+   * Check if two lines differ only in formatting (whitespace)
+   */
+  isFormattingChange(added, deleted) {
+    const normalizedAdded = this.normalizeWhitespace(added);
+    const normalizedDeleted = this.normalizeWhitespace(deleted);
+    if (normalizedAdded !== normalizedDeleted) {
+      if (normalizedAdded.length > 0 || normalizedDeleted.length > 0) {
+        return false;
+      }
+    }
+    return this.areSemanticallySame(added, deleted);
   }
   /**
    * Check if two lines are semantically the same (beyond whitespace)
@@ -37239,42 +37258,53 @@ var TrivialDetector = class {
    * Generate a human-readable reason for why PR is trivial
    */
   getTrivialReason(files) {
-    const reasons = [];
-    const hasOnlyDeps = files.every((f) => this.isDependencyLockFile(f.filename));
-    const hasOnlyDocs = files.every((f) => this.isDocumentationFile(f.filename));
-    const hasOnlyFixtures = files.every((f) => this.isTestFixture(f.filename));
-    const hasOnlyConfig = files.every((f) => this.isConfigFile(f.filename));
-    const hasOnlyBuildArtifacts = files.every((f) => this.isBuildArtifact(f.filename));
-    if (hasOnlyDeps) {
-      reasons.push("dependency lock file updates only");
+    const singleTypeReason = this.getSingleTypeReason(files);
+    if (singleTypeReason) {
+      return singleTypeReason;
     }
-    if (hasOnlyDocs) {
-      reasons.push("documentation changes only");
-    }
-    if (hasOnlyFixtures) {
-      reasons.push("test fixture updates only");
-    }
-    if (hasOnlyConfig) {
-      reasons.push("configuration file changes only");
-    }
-    if (hasOnlyBuildArtifacts) {
-      reasons.push("build artifact updates only");
-    }
-    if (reasons.length === 0) {
-      const types2 = /* @__PURE__ */ new Set();
-      files.forEach((f) => {
-        if (this.isDependencyLockFile(f.filename)) types2.add("dependency locks");
-        if (this.isDocumentationFile(f.filename)) types2.add("documentation");
-        if (this.isTestFixture(f.filename)) types2.add("test fixtures");
-        if (this.isConfigFile(f.filename)) types2.add("config files");
-        if (this.isBuildArtifact(f.filename)) types2.add("build artifacts");
-      });
-      if (types2.size > 0) {
-        return `trivial changes only (${Array.from(types2).join(", ")})`;
+    return this.getMixedTypeReason(files);
+  }
+  /**
+   * Get reason if all files are of a single trivial type
+   */
+  getSingleTypeReason(files) {
+    const checks = [
+      { check: (f) => this.isDependencyLockFile(f), reason: "dependency lock file updates only" },
+      { check: (f) => this.isDocumentationFile(f), reason: "documentation changes only" },
+      { check: (f) => this.isTestFixture(f), reason: "test fixture updates only" },
+      { check: (f) => this.isConfigFile(f), reason: "configuration file changes only" },
+      { check: (f) => this.isBuildArtifact(f), reason: "build artifact updates only" }
+    ];
+    for (const { check, reason } of checks) {
+      if (files.every((f) => check(f.filename))) {
+        return reason;
       }
-      return "trivial changes detected";
     }
-    return reasons.join(", ");
+    return null;
+  }
+  /**
+   * Get reason for mixed trivial types
+   */
+  getMixedTypeReason(files) {
+    const typeChecks = [
+      { check: (f) => this.isDependencyLockFile(f), name: "dependency locks" },
+      { check: (f) => this.isDocumentationFile(f), name: "documentation" },
+      { check: (f) => this.isTestFixture(f), name: "test fixtures" },
+      { check: (f) => this.isConfigFile(f), name: "config files" },
+      { check: (f) => this.isBuildArtifact(f), name: "build artifacts" }
+    ];
+    const types2 = /* @__PURE__ */ new Set();
+    for (const file of files) {
+      for (const { check, name } of typeChecks) {
+        if (check(file.filename)) {
+          types2.add(name);
+        }
+      }
+    }
+    if (types2.size > 0) {
+      return `trivial changes only (${Array.from(types2).join(", ")})`;
+    }
+    return "trivial changes detected";
   }
   /**
    * Filter out trivial files from a file list
@@ -38851,17 +38881,44 @@ var PathMatcher = class {
    */
   validatePatterns() {
     for (const pathPattern of this.config.patterns) {
-      const pattern = pathPattern.pattern;
-      if (pattern.length > 500) {
-        throw new Error(`Pattern too long (${pattern.length} chars, max 500): ${pattern}`);
-      }
-      const wildcardCount = (pattern.match(/\*/g) || []).length;
-      const braceCount = (pattern.match(/\{/g) || []).length;
-      const complexityScore = wildcardCount * 2 + braceCount * 3;
-      if (complexityScore > 50) {
-        throw new Error(`Pattern too complex (score ${complexityScore}): ${pattern}`);
-      }
-      if (/[\u0000-\u001F]/.test(pattern)) {
+      this.validateSinglePattern(pathPattern.pattern);
+    }
+  }
+  /**
+   * Validate a single pattern for security issues
+   */
+  validateSinglePattern(pattern) {
+    this.checkPatternLength(pattern);
+    this.checkPatternComplexity(pattern);
+    this.checkControlCharacters(pattern);
+  }
+  /**
+   * Check if pattern exceeds maximum length
+   */
+  checkPatternLength(pattern) {
+    const MAX_LENGTH = 500;
+    if (pattern.length > MAX_LENGTH) {
+      throw new Error(`Pattern too long (${pattern.length} chars, max ${MAX_LENGTH}): ${pattern}`);
+    }
+  }
+  /**
+   * Check if pattern complexity is within acceptable limits
+   */
+  checkPatternComplexity(pattern) {
+    const wildcardCount = (pattern.match(/\*/g) || []).length;
+    const braceCount = (pattern.match(/\{/g) || []).length;
+    const complexityScore = wildcardCount * 2 + braceCount * 3;
+    const MAX_COMPLEXITY = 50;
+    if (complexityScore > MAX_COMPLEXITY) {
+      throw new Error(`Pattern too complex (score ${complexityScore}): ${pattern}`);
+    }
+  }
+  /**
+   * Check for control characters in pattern
+   */
+  checkControlCharacters(pattern) {
+    for (let i = 0; i < pattern.length; i++) {
+      if (pattern.charCodeAt(i) <= 31) {
         throw new Error(`Pattern contains control characters: ${pattern}`);
       }
     }
@@ -38871,12 +38928,33 @@ var PathMatcher = class {
    */
   determineIntensity(files) {
     if (!this.config.enabled || this.config.patterns.length === 0) {
-      return {
-        intensity: this.config.defaultIntensity,
-        matchedPaths: [],
-        reason: "Path-based intensity disabled or no patterns configured"
-      };
+      return this.createDefaultResult();
     }
+    const matches = this.findMatchingPatterns(files);
+    const finalIntensity = matches.highestIntensity ?? this.config.defaultIntensity;
+    const uniqueMatchedPaths = [...new Set(matches.matchedPaths)];
+    const reason = this.buildReason(finalIntensity, matches.matchedPatterns, uniqueMatchedPaths);
+    this.logIntensityDecision(finalIntensity, uniqueMatchedPaths, matches.matchedPatterns);
+    return {
+      intensity: finalIntensity,
+      matchedPaths: uniqueMatchedPaths,
+      reason
+    };
+  }
+  /**
+   * Create default result when path matching is disabled
+   */
+  createDefaultResult() {
+    return {
+      intensity: this.config.defaultIntensity,
+      matchedPaths: [],
+      reason: "Path-based intensity disabled or no patterns configured"
+    };
+  }
+  /**
+   * Find all patterns that match the given files
+   */
+  findMatchingPatterns(files) {
     let highestIntensity = null;
     const matchedPaths = [];
     const matchedPatterns = [];
@@ -38885,24 +38963,28 @@ var PathMatcher = class {
         if (this.matchesPattern(file.filename, pathPattern.pattern)) {
           matchedPaths.push(file.filename);
           matchedPatterns.push(pathPattern);
-          if (highestIntensity === null || this.compareIntensity(pathPattern.intensity, highestIntensity) > 0) {
+          if (this.isHigherIntensity(pathPattern.intensity, highestIntensity)) {
             highestIntensity = pathPattern.intensity;
           }
         }
       }
     }
-    const finalIntensity = highestIntensity ?? this.config.defaultIntensity;
-    const uniqueMatchedPaths = [...new Set(matchedPaths)];
-    const reason = this.buildReason(finalIntensity, matchedPatterns, uniqueMatchedPaths);
-    logger.info(`Path-based intensity: ${finalIntensity}`, {
-      matchedPaths: uniqueMatchedPaths.length,
+    return { highestIntensity, matchedPaths, matchedPatterns };
+  }
+  /**
+   * Check if intensity A is higher than intensity B
+   */
+  isHigherIntensity(a, b) {
+    return b === null || this.compareIntensity(a, b) > 0;
+  }
+  /**
+   * Log the intensity decision for debugging
+   */
+  logIntensityDecision(intensity, matchedPaths, matchedPatterns) {
+    logger.info(`Path-based intensity: ${intensity}`, {
+      matchedPaths: matchedPaths.length,
       patterns: matchedPatterns.map((p) => p.pattern)
     });
-    return {
-      intensity: finalIntensity,
-      matchedPaths: uniqueMatchedPaths,
-      reason
-    };
   }
   /**
    * Match a file path against a glob-style pattern using minimatch library
@@ -39040,6 +39122,11 @@ function createDefaultPathMatcherConfig() {
       },
       {
         pattern: "docker-compose*.yml",
+        intensity: "thorough",
+        description: "Docker Compose configs need security review"
+      },
+      {
+        pattern: "docker-compose*.yaml",
         intensity: "thorough",
         description: "Docker Compose configs need security review"
       },
