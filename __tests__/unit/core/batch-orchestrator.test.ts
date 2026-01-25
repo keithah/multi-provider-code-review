@@ -48,4 +48,39 @@ describe('BatchOrchestrator', () => {
     const batches = orchestrator.createBatches(files, batchSize);
     expect(batches.every(batch => batch.length === 1)).toBe(true);
   });
+
+  it('returns empty batches for empty file list', () => {
+    const orchestrator = new BatchOrchestrator({ defaultBatchSize: 3 });
+    const batches = orchestrator.createBatches([], 3);
+    expect(batches).toEqual([]);
+  });
+
+  it('throws on invalid batch sizes to avoid infinite loops', () => {
+    const orchestrator = new BatchOrchestrator({ defaultBatchSize: 3 });
+    expect(() => orchestrator.createBatches(makeFiles(2), 0)).toThrow(/invalid batch size/i);
+    expect(() => orchestrator.createBatches(makeFiles(2), Number.NaN)).toThrow(/invalid batch size/i);
+  });
+
+  it('caps batch size using maxBatchSize even when overrides are larger', () => {
+    const orchestrator = new BatchOrchestrator({
+      defaultBatchSize: 25,
+      maxBatchSize: 10,
+      providerOverrides: { 'openrouter': 15 },
+    });
+
+    const batchSize = orchestrator.getBatchSize(['openrouter/model-x']);
+    expect(batchSize).toBe(10); // capped by maxBatchSize
+  });
+
+  it('chooses the smallest override across mixed provider names', () => {
+    const orchestrator = new BatchOrchestrator({
+      defaultBatchSize: 8,
+      providerOverrides: { openrouter: 5, opencode: 3 },
+    });
+
+    const batchSize = orchestrator.getBatchSize(['unknown', 'opencode/fast', 'openrouter/model']);
+    expect(batchSize).toBe(3);
+    const batches = orchestrator.createBatches(makeFiles(7), batchSize);
+    expect(batches).toHaveLength(3);
+  });
 });

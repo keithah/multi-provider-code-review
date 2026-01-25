@@ -330,6 +330,9 @@ export class ReviewOrchestrator {
 
         const batchResults = (await Promise.all(batchPromises)).flat();
         await batchQueue.onIdle();
+        if (typeof (batchQueue as any).clear === 'function') {
+          (batchQueue as any).clear(); // p-queue v7 supports clear(); guard for older versions
+        }
         llmFindings.push(...extractFindings(batchResults));
         providerResults = [...healthCheckResults, ...batchResults];
         await this.recordReliability(providerResults);

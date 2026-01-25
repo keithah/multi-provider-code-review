@@ -1,4 +1,5 @@
 import { CircuitBreaker } from '../../../src/providers/circuit-breaker';
+import { encodeURIComponentSafe } from '../../../src/utils/sanitize';
 
 class MemoryStorage {
   private store = new Map<string, string>();
@@ -7,6 +8,9 @@ class MemoryStorage {
   }
   async write(key: string, value: string): Promise<void> {
     this.store.set(key, value);
+  }
+  keys(): string[] {
+    return [...this.store.keys()];
   }
 }
 
@@ -44,5 +48,59 @@ describe('CircuitBreaker', () => {
     await breaker.recordFailure(id);
     await breaker.recordFailure(id);
     expect(await breaker.isOpen(id)).toBe(false); // threshold not reached yet
+  });
+
+  it('re-opens immediately on failure while half-open', async () => {
+    const storage = new MemoryStorage();
+    const breaker = new CircuitBreaker(storage as any, { failureThreshold: 2, openDurationMs: 1000 });
+    const id = 'openrouter/test';
+
+    await breaker.recordFailure(id);
+    await breaker.recordFailure(id);
+    expect(await breaker.isOpen(id)).toBe(true);
+
+    jest.advanceTimersByTime(1001); // move to half-open
+    expect(await breaker.isOpen(id)).toBe(false);
+
+    await breaker.recordFailure(id); // first attempt in half-open
+    expect(await breaker.isOpen(id)).toBe(true); // should re-open immediately
+  });
+
+  it('serializes concurrent updates without losing failures', async () => {
+    const storage = new MemoryStorage();
+    const breaker = new CircuitBreaker(storage as any, { failureThreshold: 10 });
+    const id = 'race/provider';
+    const key = `circuit-breaker-${encodeURIComponentSafe(id).replace(/\./g, '_')}`;
+
+    await Promise.all(Array.from({ length: 5 }).map(() => breaker.recordFailure(id)));
+    const state = JSON.parse((await storage.read(key)) as string);
+    expect(state.failures).toBe(5);
+  });
+
+  it('sanitizes provider ids when writing state', async () => {
+    const storage = new MemoryStorage();
+    const breaker = new CircuitBreaker(storage as any);
+    const id = '../openrouter/foo.bar';
+
+    await breaker.recordFailure(id);
+
+    const keys = storage.keys();
+    expect(keys).toHaveLength(1);
+    expect(keys[0]).toMatch(/^circuit-breaker-/);
+    expect(keys[0]).not.toMatch(/[\\/]{2,}|\\.\\./);
+  });
+
+  it('clears internal locks after operations to avoid leaks', async () => {
+    const storage = new MemoryStorage();
+    const breaker = new CircuitBreaker(storage as any, { failureThreshold: 5 });
+    const id = 'locks/provider';
+
+    await Promise.all([
+      breaker.recordFailure(id),
+      breaker.recordFailure(id),
+      breaker.recordSuccess(id),
+    ]);
+
+    expect((breaker as any).locks.size).toBe(0);
   });
 });

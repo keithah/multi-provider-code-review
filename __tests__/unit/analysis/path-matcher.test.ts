@@ -595,5 +595,26 @@ describe('PathMatcher', () => {
         });
       }).toThrow(/path traversal/i);
     });
+
+    it('allows brace and bracket glob tokens used by minimatch', () => {
+      const matcher = new PathMatcher({
+        enabled: true,
+        defaultIntensity: 'standard',
+        patterns: [
+          { pattern: 'src/{api,[a-z]*}/**/*.{ts,js}', intensity: 'thorough' },
+        ],
+      });
+
+      const files = [
+        createFile('src/api/user.ts'),
+        createFile('src/alpha/index.js'),
+      ];
+
+      const result = matcher.determineIntensity(files);
+      expect(result.intensity).toBe('thorough');
+      expect(result.matchedPaths).toEqual(
+        expect.arrayContaining(['src/api/user.ts', 'src/alpha/index.js'])
+      );
+    });
   });
 });
