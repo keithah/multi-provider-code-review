@@ -1,13 +1,19 @@
 import { CodeSnippet, FileChange, UnchangedContext } from '../types';
 import { mapAddedLines } from '../utils/diff';
+import { CodeGraph } from './context/graph-builder';
+import { logger } from '../utils/logger';
 
 export class ContextRetriever {
+  constructor(private readonly graph?: CodeGraph) {}
+
   findRelatedContext(files: FileChange[]): UnchangedContext[] {
     const contexts: UnchangedContext[] = [];
 
     for (const file of files) {
       const snippets = this.buildSnippets(file);
-      const downstreamConsumers = this.extractImports(file.patch);
+      const downstreamConsumers = this.graph
+        ? this.extractImportsFromGraph(file.filename)
+        : this.extractImports(file.patch);
 
       if (snippets.length === 0 && downstreamConsumers.length === 0) continue;
 
@@ -52,5 +58,47 @@ export class ContextRetriever {
     }
 
     return Array.from(new Set(imports));
+  }
+
+  /**
+   * Extract imports using code graph (more accurate than regex)
+   */
+  private extractImportsFromGraph(filename: string): string[] {
+    if (!this.graph) {
+      return [];
+    }
+
+    const dependencies = this.graph.getDependencies(filename);
+    logger.debug(`Graph-based import extraction for ${filename}: ${dependencies.length} imports`);
+    return dependencies;
+  }
+
+  /**
+   * Find all files that depend on the given file
+   */
+  findDependents(filename: string): string[] {
+    if (!this.graph) {
+      logger.debug('No code graph available, cannot find dependents');
+      return [];
+    }
+
+    return this.graph.getDependents(filename);
+  }
+
+  /**
+   * Find all places where a symbol is used
+   */
+  findUsages(symbolName: string): CodeSnippet[] {
+    if (!this.graph) {
+      return [];
+    }
+
+    const callers = this.graph.findCallers(symbolName);
+    return callers.map((snippet) => ({
+      filename: snippet.file,
+      startLine: snippet.line,
+      endLine: snippet.line,
+      code: snippet.code,
+    }));
   }
 }

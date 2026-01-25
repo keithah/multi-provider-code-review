@@ -5,12 +5,17 @@ import { ReviewConfig } from '../types';
 import { RateLimiter } from './rate-limiter';
 import { logger } from '../utils/logger';
 import { PricingService } from '../cost/pricing';
-import { DEFAULT_CONFIG } from '../config/defaults';
+import { DEFAULT_CONFIG, FALLBACK_STATIC_PROVIDERS } from '../config/defaults';
+import { PluginLoader } from '../plugins';
+import { getBestFreeModelsCached as getBestFreeOpenRouterModels } from './openrouter-models';
+import { getBestFreeOpenCodeModelsCached as getBestFreeOpenCodeModels } from './opencode-models';
 
 export class ProviderRegistry {
   private readonly rateLimiter = new RateLimiter();
   private rotationIndex = 0;
   private openRouterPricing = new PricingService(process.env.OPENROUTER_API_KEY);
+
+  constructor(private readonly pluginLoader?: PluginLoader) {}
 
   async createProviders(config: ReviewConfig): Promise<Provider[]> {
     let providers = this.instantiate(config.providers);
@@ -18,16 +23,49 @@ export class ProviderRegistry {
     const userProvidedList = Boolean(process.env.REVIEW_PROVIDERS);
     const usingDefaults = this.usesDefaultProviders(config.providers);
 
-    // Only fetch OpenRouter models when defaults are in use and no explicit env override.
-    if (process.env.OPENROUTER_API_KEY && providers.length === 0 && usingDefaults && !userProvidedList) {
-      providers.push(...this.instantiate(DEFAULT_CONFIG.providers));
-      const freeModels = await this.fetchFreeOpenRouterModels();
-      providers.push(...this.instantiate(freeModels));
+    // Dynamically fetch best free models when defaults are in use and no explicit env override
+    if (providers.length === 0 && usingDefaults && !userProvidedList) {
+      logger.info('🔍 No providers specified, starting dynamic model discovery...');
+
+      const discoveredModels: string[] = [];
+
+      // Fetch best free OpenRouter models (if API key available)
+      if (process.env.OPENROUTER_API_KEY) {
+        logger.info('Discovering OpenRouter models...');
+        const openRouterModels = await getBestFreeOpenRouterModels(4, 5000);
+        if (openRouterModels.length > 0) {
+          logger.info(`✅ Discovered ${openRouterModels.length} OpenRouter models`);
+          discoveredModels.push(...openRouterModels);
+        } else {
+          logger.warn('⚠️  No OpenRouter models discovered (API may be unavailable)');
+        }
+      } else {
+        logger.info('Skipping OpenRouter discovery (no API key)');
+      }
+
+      // Fetch best free OpenCode models (if CLI available)
+      logger.info('Discovering OpenCode models...');
+      const openCodeModels = await getBestFreeOpenCodeModels(4, 10000);
+      if (openCodeModels.length > 0) {
+        logger.info(`✅ Discovered ${openCodeModels.length} OpenCode models`);
+        discoveredModels.push(...openCodeModels);
+      } else {
+        logger.info('ℹ️  No OpenCode models discovered (CLI may not be installed)');
+      }
+
+      if (discoveredModels.length > 0) {
+        logger.info(`🎯 Total discovered: ${discoveredModels.length} free models`);
+        logger.info(`   Models: ${discoveredModels.join(', ')}`);
+        providers.push(...this.instantiate(discoveredModels));
+      } else {
+        logger.warn('⚠️  Dynamic discovery found no models, using static fallbacks');
+      }
     }
 
-    // Ensure we have at least some providers; if user list is empty, fall back to defaults.
+    // Ensure we have at least some providers; if discovery failed, use static fallbacks
     if (providers.length === 0) {
-      providers = this.instantiate(DEFAULT_CONFIG.providers);
+      logger.warn('Using static fallback providers as last resort');
+      providers = this.instantiate(FALLBACK_STATIC_PROVIDERS);
     }
 
     // De-dup providers
@@ -76,6 +114,24 @@ export class ProviderRegistry {
     const list: Provider[] = [];
 
     for (const name of names) {
+      // Check if provider is provided by a plugin first (before validation)
+      if (this.pluginLoader?.hasProvider(name)) {
+        // Extract plugin name from provider name (e.g., "custom/my-provider" -> "custom")
+        const pluginName = name.split('/')[0];
+        // Support per-plugin API keys: PLUGIN_CUSTOM_API_KEY, fallback to shared PLUGIN_API_KEY
+        const pluginEnvVar = `PLUGIN_${pluginName.toUpperCase().replace(/-/g, '_')}_API_KEY`;
+        const apiKey = process.env[pluginEnvVar] || process.env.PLUGIN_API_KEY || '';
+        const provider = this.pluginLoader.createProvider(name, apiKey);
+        if (provider) {
+          list.push(provider);
+          continue;
+        } else {
+          logger.warn(`Failed to create provider ${name} from plugin`);
+          continue;
+        }
+      }
+
+      // Validate built-in providers (opencode/, openrouter/)
       if (!Provider.validate(name)) {
         logger.warn(`Skipping invalid provider name: ${name}`);
         continue;
@@ -154,29 +210,6 @@ export class ProviderRegistry {
       result.push(p);
     }
     return result;
-  }
-
-  private async fetchFreeOpenRouterModels(): Promise<string[]> {
-    try {
-      const response = await fetch('https://openrouter.ai/api/v1/models', {
-        headers: { Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}` },
-      });
-      if (!response.ok) {
-        logger.warn(`Failed to fetch OpenRouter models: HTTP ${response.status}`);
-        return [];
-      }
-      const data = (await response.json()) as { data?: Array<{ id: string; pricing?: { prompt?: string; completion?: string } }> };
-      const free = (data.data || [])
-        .filter(model => model.id.includes(':free') || (model.pricing?.prompt === '0' && model.pricing?.completion === '0'))
-        .map(model => `openrouter/${model.id}`);
-      // ensure uniqueness and at least 8 if available
-      const unique = Array.from(new Set(free));
-      const target = Math.max(8, Math.min(unique.length, 12));
-      return unique.slice(0, target);
-    } catch (error) {
-      logger.warn('Error fetching OpenRouter models', error as Error);
-      return [];
-    }
   }
 
   private usesDefaultProviders(list: string[]): boolean {

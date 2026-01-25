@@ -2,6 +2,7 @@
  * Validation utilities with helpful error messages
  */
 
+import * as path from 'path';
 import { logger } from './logger';
 
 export class ValidationError extends Error {
@@ -179,6 +180,22 @@ export function validateModelId(modelId: string): void {
   }
 }
 
+/**
+ * Validate API key format and length
+ *
+ * Provider-specific key formats (for reference):
+ * - OpenAI: sk-... or sk-proj-... (48+ chars)
+ * - Anthropic: sk-ant-... (108+ chars)
+ * - OpenRouter: sk-or-v1-... (64+ chars)
+ * - Groq: gsk_... (56+ chars)
+ * - Cohere: Variable length (32+ chars)
+ *
+ * We use generic validation (length > 10) rather than strict regex patterns because:
+ * - Provider key formats change over time (OpenAI changed from sk-... to sk-proj-...)
+ * - Overly strict validation breaks when providers update their key format
+ * - Length check catches most common errors (empty, truncated, placeholder values)
+ * - Provider SDKs perform their own validation on actual API calls
+ */
 export function validateApiKey(apiKey: unknown, provider: string): string {
   if (typeof apiKey !== 'string' || apiKey.trim() === '') {
     throw new ValidationError(
@@ -218,7 +235,26 @@ export function validateTimeout(timeoutMs: number): void {
   }
 }
 
-export function validateFilePath(filePath: unknown): string {
+/**
+ * Check if a string contains control characters (ASCII 0x00-0x1F)
+ */
+function containsControlCharacters(str: string): boolean {
+  for (let i = 0; i < str.length; i++) {
+    const code = str.charCodeAt(i);
+    if (code >= 0x00 && code <= 0x1f) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Validate file path and check for directory traversal attacks
+ * @param filePath - Path to validate
+ * @param baseDir - Optional base directory to restrict paths to. When provided, returns absolute resolved path.
+ * @returns Validated path (absolute if baseDir provided, original otherwise)
+ */
+export function validateFilePath(filePath: unknown, baseDir?: string): string {
   if (typeof filePath !== 'string') {
     throw new ValidationError(
       'File path must be a string',
@@ -234,13 +270,59 @@ export function validateFilePath(filePath: unknown): string {
     );
   }
 
-  // Check for potential security issues
+  // Basic security check for directory traversal attempts
   if (filePath.includes('..')) {
     throw new ValidationError(
       'File path contains directory traversal',
       'filePath',
       `Path "${filePath}" contains ".." which may be a security risk`
     );
+  }
+
+  // If baseDir is provided, perform enhanced validation with path resolution
+  if (baseDir) {
+    // Resolve to absolute path to normalize and detect traversal
+    const basePath = path.resolve(baseDir);
+    const resolvedPath = path.resolve(basePath, filePath);
+
+    // Check for directory traversal using path.relative
+    // If the relative path starts with '..' or equals '..', the resolved path escapes baseDir
+    const relativePath = path.relative(basePath, resolvedPath);
+    if (relativePath.startsWith('..') || relativePath === '..') {
+      throw new ValidationError(
+        'File path escapes base directory',
+        'filePath',
+        `Resolved path "${resolvedPath}" is outside base directory "${basePath}". ` +
+        `This may be a directory traversal attack.`
+      );
+    }
+
+    // Additional checks for suspicious patterns
+    const suspiciousPatterns = [
+      /\/?\.\//,        // Current directory reference (with or without leading slash)
+      /\/\//,           // Double slashes
+    ];
+
+    for (const pattern of suspiciousPatterns) {
+      if (pattern.test(filePath)) {
+        throw new ValidationError(
+          'File path contains suspicious patterns',
+          'filePath',
+          `Path "${filePath}" contains potentially malicious characters or patterns`
+        );
+      }
+    }
+
+    // Check for control characters using helper function
+    if (containsControlCharacters(filePath)) {
+      throw new ValidationError(
+        'File path contains control characters',
+        'filePath',
+        `Path "${filePath}" contains control characters (ASCII 0x00-0x1F) which are not allowed`
+      );
+    }
+
+    return resolvedPath;
   }
 
   return filePath;
@@ -272,8 +354,9 @@ export function formatValidationError(error: ValidationError | Error): string {
  */
 export function validateConfig(config: Record<string, unknown>): void {
   // Validate providers
+  // Note: Empty array is valid - it enables dynamic model discovery
   if (config.providers) {
-    const providers = validateNonEmptyArray(config.providers, 'providers');
+    const providers = validateArray(config.providers, 'providers');
     validateStringArray(providers, 'providers');
 
     providers.forEach((p: unknown) => {

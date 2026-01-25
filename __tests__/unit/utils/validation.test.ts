@@ -276,9 +276,9 @@ describe('Validation Utilities', () => {
       expect(() => validateConfig(config)).not.toThrow();
     });
 
-    it('throws for empty providers array', () => {
+    it('allows empty providers array for dynamic model discovery', () => {
       const config = { providers: [] };
-      expect(() => validateConfig(config)).toThrow();
+      expect(() => validateConfig(config)).not.toThrow();
     });
 
     it('throws for non-string provider', () => {

@@ -8,14 +8,22 @@ export class CostTracker {
 
   constructor(private readonly pricing: PricingService) {}
 
-  async record(provider: string, usage?: TokenUsage): Promise<void> {
+  async record(provider: string, usage?: TokenUsage, budgetMaxUsd?: number): Promise<void> {
     if (!usage) return;
     const pricing = await this.pricing.getPricing(provider.replace('openrouter/', ''));
     const cost =
       (pricing.promptPrice / 1_000_000) * usage.promptTokens +
       (pricing.completionPrice / 1_000_000) * usage.completionTokens;
 
-    this.totalCost += cost;
+    const projectedTotal = this.totalCost + cost;
+    // Check budget cap - explicitly test for null/undefined to allow zero as a valid cap
+    if (budgetMaxUsd !== null && budgetMaxUsd !== undefined && projectedTotal > budgetMaxUsd) {
+      throw new Error(
+        `Budget exceeded: projected $${projectedTotal.toFixed(4)} would exceed cap $${budgetMaxUsd.toFixed(2)} (current $${this.totalCost.toFixed(4)})`
+      );
+    }
+
+    this.totalCost = projectedTotal;
     this.totalTokens += usage.totalTokens;
     this.breakdown[provider] = (this.breakdown[provider] || 0) + cost;
   }

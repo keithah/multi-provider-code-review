@@ -13,13 +13,29 @@ inputs:
     description: "Pull request number"
     required: true
   REVIEW_PROVIDERS:
-    description: "Comma-separated provider list"
+    description: |
+      Comma-separated provider list (e.g., "openrouter/model1,opencode/model2").
+
+      BEHAVIOR CHANGE (v0.2.0+):
+      - Previously: Defaulted to specific hardcoded providers
+      - Now: Defaults to empty string (enables dynamic discovery)
+
+      DEFAULT (empty): Enables dynamic provider discovery - automatically selects best free models
+      from OpenRouter API (if OPENROUTER_API_KEY set), OpenCode CLI, and hardcoded fallbacks.
+      Well-tested and recommended for most users.
+
+      CUSTOM: Override discovery with specific providers. Disables automatic fallback chain.
+      Use when you need specific models or want predictable provider selection.
     required: false
-    default: "openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free,openrouter/xiaomi/mimo-v2-flash:free,openrouter/qwen/qwen-2.5-coder-32b-instruct:free,openrouter/deepseek/deepseek-r1-distill-llama-70b:free,openrouter/meta-llama/llama-3.1-70b-instruct:free"
+    default: ""
   FALLBACK_PROVIDERS:
-    description: "Comma-separated fallback providers"
+    description: |
+      Comma-separated fallback providers used when primary providers fail.
+      DEFAULT (empty): Uses automatic fallback discovery (same mechanism as REVIEW_PROVIDERS).
+      CUSTOM: Override with specific fallback models.
+      Only used when REVIEW_PROVIDERS is also set (custom mode).
     required: false
-    default: "openrouter/microsoft/phi-4:free,openrouter/nvidia/llama-3.1-nemotron-70b-instruct:free"
+    default: ""
   SYNTHESIS_MODEL:
     description: "Model used for synthesis/prompts"
     required: false
@@ -100,6 +116,38 @@ inputs:
     description: "Days to keep incremental review cache"
     required: false
     default: "7"
+  LEARNING_ENABLED:
+    description: "Enable feedback learning system"
+    required: false
+    default: "true"
+  LEARNING_MIN_FEEDBACK_COUNT:
+    description: "Minimum feedback count before adjusting confidence"
+    required: false
+    default: "5"
+  QUIET_USE_LEARNING:
+    description: "Use learned confidence thresholds in quiet mode"
+    required: false
+    default: "true"
+  QUIET_MIN_CONFIDENCE:
+    description: "Minimum confidence threshold for quiet mode filtering (0.0-1.0)"
+    required: false
+    default: "0.5"
+  GRAPH_ENABLED:
+    description: "Enable code graph for dependency tracking"
+    required: false
+    default: "true"
+  GRAPH_CACHE_ENABLED:
+    description: "Cache code graph between runs"
+    required: false
+    default: "true"
+  GRAPH_MAX_DEPTH:
+    description: "Maximum depth for dependency traversal"
+    required: false
+    default: "5"
+  GRAPH_TIMEOUT_SECONDS:
+    description: "Timeout for graph building in seconds"
+    required: false
+    default: "10"
   REPORT_BASENAME:
     description: "Base name for JSON/SARIF reports"
     required: false

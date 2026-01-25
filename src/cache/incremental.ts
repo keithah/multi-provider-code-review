@@ -118,10 +118,18 @@ export class IncrementalReviewer {
       // Get the diff between last reviewed commit and current HEAD
       logger.debug(`Running git diff --name-status ${lastCommit.substring(0, 7)}...${pr.headSha.substring(0, 7)}`);
 
-      const output = execFileSync('git', ['diff', '--name-status', `${lastCommit}...${pr.headSha}`], {
-        encoding: 'utf8',
-        cwd: process.cwd(),
-      });
+      let output: string;
+      try {
+        output = execFileSync('git', ['diff', '--name-status', `${lastCommit}...${pr.headSha}`], {
+          encoding: 'utf8',
+          cwd: process.cwd(),
+          timeout: 10000, // 10 second timeout
+        });
+      } catch (error) {
+        logger.warn(`Failed to get git diff: ${error instanceof Error ? error.message : String(error)}`);
+        // If git diff fails, fall back to reviewing all files
+        return pr.files;
+      }
 
       const changedFiles: FileChange[] = [];
       const lines = output.trim().split('\n').filter(Boolean);

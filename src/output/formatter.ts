@@ -7,11 +7,6 @@ export class MarkdownFormatter {
     lines.push('');
     lines.push(review.summary);
 
-    if (review.impactAnalysis) {
-      lines.push('\n### Impact');
-      lines.push(`- Level: ${review.impactAnalysis.impactLevel} • ${review.impactAnalysis.summary}`);
-    }
-
     const critical = review.findings.filter(f => f.severity === 'critical');
     const major = review.findings.filter(f => f.severity === 'major');
     const minor = review.findings.filter(f => f.severity === 'minor');
@@ -19,33 +14,6 @@ export class MarkdownFormatter {
     this.printSeveritySection(lines, 'Critical', critical);
     this.printSeveritySection(lines, 'Major', major);
     this.printSeveritySection(lines, 'Minor', minor);
-
-    const uniqueActions = Array.from(new Set(review.actionItems || []));
-    if (uniqueActions.length > 0) {
-      lines.push('\n<details><summary>Action Items</summary>');
-      lines.push('');
-      uniqueActions.forEach(item => lines.push(`- ${item}`));
-      lines.push('</details>');
-    }
-
-    if (review.testHints && review.testHints.length > 0) {
-      lines.push('\n<details><summary>Test Coverage</summary>');
-      lines.push('');
-      lines.push(`- ${review.testHints.length} areas need tests`);
-      lines.push('');
-      review.testHints.forEach(hint =>
-        lines.push(`  - ${hint.file} → add ${hint.suggestedTestFile} (${hint.testPattern})`)
-      );
-      lines.push('</details>');
-    }
-
-    if (review.mermaidDiagram && review.mermaidDiagram.trim()) {
-      lines.push('\n<details><summary>Impact graph</summary>');
-      lines.push('```mermaid');
-      lines.push(review.mermaidDiagram);
-      lines.push('```');
-      lines.push('</details>');
-    }
 
     lines.push('\n---');
     lines.push('<details><summary>Run details (usage, cost, providers, status)</summary>');
@@ -78,18 +46,41 @@ export class MarkdownFormatter {
       lines.push('</details>');
     }
 
+    if (review.mermaidDiagram && review.mermaidDiagram.trim()) {
+      lines.push('\n<details><summary>Impact graph</summary>');
+      lines.push('');
+      lines.push('```mermaid');
+      lines.push(review.mermaidDiagram);
+      lines.push('```');
+      lines.push('</details>');
+    }
+
     if (review.providerResults && review.providerResults.length > 0) {
       lines.push('\n<details><summary>Raw provider outputs</summary>');
       lines.push('');
       for (const result of review.providerResults) {
         lines.push(`<details><summary>${result.name} [${result.status}] (${result.durationSeconds.toFixed(1)}s)</summary>`);
         lines.push('');
+
         if (result.result?.content) {
-          // Content may already have code fences - just output as-is
+          // Success: show review content
           lines.push(result.result.content.trim());
+        } else if (result.error) {
+          // Failure: show error message only (not stack trace)
+          // Stack traces are logged server-side for diagnostics
+          lines.push('```');
+          lines.push(`Error: ${result.error.message}`);
+          lines.push('```');
+
+          // Log full error details server-side for debugging
+          if (result.error.stack) {
+            console.error(`Provider ${result.name} failed with stack trace:`, result.error.stack);
+          }
         } else {
+          // No content and no error (shouldn't happen)
           lines.push('_no content_');
         }
+
         lines.push('</details>');
         lines.push('');
       }

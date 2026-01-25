@@ -10,6 +10,10 @@ on:
       pr_number:
         description: "Pull request number to review"
         required: true
+      review_providers:
+        description: "Comma-separated list of model providers (validated against allowed patterns)"
+        required: false
+        type: string
 
 # Cancel in-progress runs for the same PR to prevent duplicate reviews
 # Use PR number + head SHA (not merge commit SHA) for uniqueness per commit
@@ -17,14 +21,27 @@ concurrency:
   group: review-${{ github.event.pull_request.number || inputs.pr_number }}-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
+# Permissions: Principle of least privilege
+# Only grant the minimum permissions required for code review functionality
+# Security rationale:
+# - contents: read - Required to checkout code and read PR diffs (minimal read access)
+# - pull-requests: write - Required to post review comments and inline suggestions (no merge access)
+# - actions: read - Required for concurrency control to prevent duplicate reviews (read-only)
+# NOT granted: contents: write (cannot modify code), issues: write (cannot create issues)
 permissions:
-  contents: read
-  pull-requests: write
-  actions: read
+  contents: read        # Read repository code and PR diffs
+  pull-requests: write  # Post review comments and summaries
+  actions: read         # Check workflow status (for concurrency control)
 
 jobs:
   review:
+    # Runner configuration:
+    # Primary: ubicloud-standard-2 (cost-effective, 2 vCPU)
+    # Fallback: GitHub Actions will automatically use ubuntu-latest if ubicloud is unavailable
+    # No explicit fallback needed - GitHub handles runner availability automatically
     runs-on: ubicloud-standard-2
+    env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -54,17 +71,90 @@ jobs:
           fi
           echo "No PR found for this event/branch; skipping review."
           echo "pr=" >> "$GITHUB_OUTPUT"
+      - name: Validate Review Providers Input
+        # Only validate if providers are explicitly specified (not empty and not null)
+        # GitHub Actions treats missing inputs as empty string, so this condition is correct
+        if: ${{ inputs.review_providers != '' && inputs.review_providers != null }}
+        run: node scripts/validate-providers.js "${{ inputs.review_providers }}"
+      - name: Validate Secrets and Configuration
+        run: |
+          # Check if OPENROUTER_API_KEY is available for fork PRs
+          if [ "${{ github.event.pull_request.head.repo.fork }}" = "true" ]; then
+            echo "⚠️  Fork PR detected - secrets are not available"
+            echo "Review will be skipped (see next step for details)"
+          elif [ -z "$OPENROUTER_API_KEY" ]; then
+            echo "⚠️  Warning: OPENROUTER_API_KEY not set. OpenRouter providers will be skipped; free OpenCode providers will be used."
+          else
+            echo "✅ OPENROUTER_API_KEY available - full provider access enabled"
+          fi
+
+          # Log provider discovery strategy
+          if [ -n "${{ inputs.review_providers }}" ]; then
+            echo "📋 Using explicit providers: ${{ inputs.review_providers }}"
+          else
+            echo "🔍 Using dynamic provider discovery (see workflow comments for fallback chain)"
+          fi
       - name: Install OpenCode CLI
+        # Version pinning strategy:
+        # - Pinned to v1.1.32 for compatibility with dynamic provider discovery
+        # - This version supports the `opencode run` command format we use
+        # - Update strategy: Test with newer versions quarterly (Jan, Apr, Jul, Oct)
+        # - Before updating: Run full test suite + manual smoke tests
+        # - Check for breaking changes in opencode-ai changelog
+        # - Verify dynamic discovery still works with new version
         run: npm install -g opencode-ai@1.1.32
-      # Run review if: (1) PR number found, AND (2) either not a fork PR OR has OpenRouter API key
-      # Fork PRs can run using free opencode providers if OPENROUTER_API_KEY is not available
+      # Run review if: PR number found. Fork PRs are allowed without OpenRouter key (falls back to free providers).
+      - name: Skip Fork PR Without Secrets
+        if: steps.resolve-pr.outputs.pr != '' && github.event.pull_request.head.repo.fork == true && env.OPENROUTER_API_KEY == ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "⚠️  Skipping review for fork PR without OPENROUTER_API_KEY"
+          echo "Fork PRs cannot access repository secrets for security reasons."
+          echo "The review will not run to avoid API calls without credentials."
+          echo ""
+          echo "To enable review for fork PRs:"
+          echo "1. Repository maintainers can add OPENROUTER_API_KEY to repository secrets"
+          echo "2. Or use workflow_dispatch to manually trigger reviews with approval"
+          echo ""
+          echo "Posting notification comment to PR..."
+
+          # Post a notification comment to the PR using heredoc for multiline body
+          gh pr comment ${{ steps.resolve-pr.outputs.pr }} --body "$(cat <<'EOF'
+          ## ⚠️ Automated Code Review Skipped
+
+          This PR is from a fork and cannot access repository secrets for security reasons.
+
+          The automated code review requires API credentials (OPENROUTER_API_KEY) which are not available to fork PRs to prevent unauthorized access.
+
+          **For maintainers:** You can:
+          - Manually trigger a review using workflow_dispatch after reviewing the changes
+          - Add OPENROUTER_API_KEY to repository secrets to enable reviews for trusted forks
+
+          **For contributors:** Maintainers will review your code manually or trigger an automated review after initial verification.
+          EOF
+          )"
+
       - name: Multi-Provider Code Review
-        if: ${{ steps.resolve-pr.outputs.pr != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false || env.OPENROUTER_API_KEY != '') }}
+        # Run if:
+        # 1. PR exists, AND
+        # 2. Either not a fork OR (is a fork AND has OPENROUTER_API_KEY)
+        if: steps.resolve-pr.outputs.pr != '' && (github.event.pull_request.head.repo.fork != true || env.OPENROUTER_API_KEY != '')
         uses: ./
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.resolve-pr.outputs.pr }}
-          REVIEW_PROVIDERS: openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free,openrouter/xiaomi/mimo-v2-flash:free,openrouter/qwen/qwen-2.5-coder-32b-instruct:free,openrouter/deepseek/deepseek-r1-distill-llama-70b:free,openrouter/meta-llama/llama-3.1-70b-instruct:free
-          FALLBACK_PROVIDERS: openrouter/microsoft/phi-4:free,openrouter/nvidia/llama-3.1-nemotron-70b-instruct:free
+          REVIEW_PROVIDERS: ${{ inputs.review_providers }}
+          # Dynamic Model Discovery:
+          # By default (when REVIEW_PROVIDERS is empty or not set), the system automatically
+          # discovers and selects the best available free models through a multi-tier fallback:
+          # 1. OpenRouter API (if OPENROUTER_API_KEY is set)
+          # 2. OpenCode CLI free models (if opencode-ai is installed)
+          # 3. Hardcoded fallback providers (see src/config/defaults.ts)
+          #
+          # To use specific providers instead of auto-discovery:
+          # - Set inputs.review_providers for workflow_dispatch
+          # - syncEnvFromInputs() in main.ts reads this input and sets process.env.REVIEW_PROVIDERS
+          # See documentation for provider string format and available models
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}

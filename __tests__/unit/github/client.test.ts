@@ -33,20 +33,24 @@ describe('GitHubClient', () => {
       expect(client.repo).toBe('test-repo');
     });
 
-    it('throws error if GITHUB_REPOSITORY not set', () => {
-      delete process.env.GITHUB_REPOSITORY;
-
-      expect(() => new GitHubClient(mockToken)).toThrow('GITHUB_REPOSITORY');
-    });
-
     it('handles GITHUB_REPOSITORY without slash', () => {
       process.env.GITHUB_REPOSITORY = 'invalid-format';
 
       const client = new GitHubClient(mockToken);
 
-      // When there's no '/', split returns the whole string as first element
+      // When there's no '/', split returns the whole string as first element, repo is empty string
       expect(client.owner).toBe('invalid-format');
-      expect(client.repo).toBeUndefined();
+      expect(client.repo).toBe('');
+    });
+
+    it('handles GITHUB_REPOSITORY not set', () => {
+      delete process.env.GITHUB_REPOSITORY;
+
+      const client = new GitHubClient(mockToken);
+
+      // When GITHUB_REPOSITORY is undefined, should handle gracefully
+      expect(client.owner).toBe('');
+      expect(client.repo).toBe('');
     });
   });
 

@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Tests
+__tests__/
+*.test.ts
+*.test.js
+coverage/
+
+# Development
+.git/
+.github/
+.vscode/
+# Markdown files
+# Keep README.md for documentation, exclude development docs
+DEVELOPMENT_PLAN_V2.1.md
+CONTRIBUTING.md
+CHANGELOG.md
+
+# Environment
+# Exclude actual environment files but preserve the template
+# .env.example is safe to include as it contains no real credentials
+.env
+.env.local
+.env.*.local
+
+# Cache
+.cache/
+*.log
+
+# Reports
+reports/
+*.sarif
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore

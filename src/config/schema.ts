@@ -11,6 +11,10 @@ export const ReviewConfigSchema = z.object({
   provider_max_parallel: z.number().int().min(1).optional(),
   quiet_mode_enabled: z.boolean().optional(),
   quiet_min_confidence: z.number().min(0).max(1).optional(),
+  quiet_use_learning: z.boolean().optional(),
+  learning_enabled: z.boolean().optional(),
+  learning_min_feedback_count: z.number().int().min(1).optional(),
+  learning_lookback_days: z.number().int().min(1).optional(),
 
   inline_max_comments: z.number().int().min(0).optional(),
   inline_min_severity: z.enum(['critical', 'major', 'minor']).optional(),
@@ -35,6 +39,24 @@ export const ReviewConfigSchema = z.object({
 
   incremental_enabled: z.boolean().optional(),
   incremental_cache_ttl_days: z.number().int().min(1).max(30).optional(),
+
+  graph_enabled: z.boolean().optional(),
+  graph_cache_enabled: z.boolean().optional(),
+  graph_max_depth: z.number().int().min(1).max(10).optional(),
+  graph_timeout_seconds: z.number().int().min(1).max(60).optional(),
+
+  generate_fix_prompts: z.boolean().optional(),
+  fix_prompt_format: z.enum(['cursor', 'copilot', 'plain']).optional(),
+
+  analytics_enabled: z.boolean().optional(),
+  analytics_max_reviews: z.number().int().min(100).max(10000).optional(),
+  analytics_developer_rate: z.number().min(0).optional(),
+  analytics_manual_review_time: z.number().min(0).optional(),
+
+  plugins_enabled: z.boolean().optional(),
+  plugin_dir: z.string().optional(),
+  plugin_allowlist: z.array(z.string()).optional(),
+  plugin_blocklist: z.array(z.string()).optional(),
 
   dry_run: z.boolean().optional(),
 });

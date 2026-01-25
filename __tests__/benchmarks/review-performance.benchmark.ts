@@ -11,7 +11,7 @@
  */
 
 import { ReviewOrchestrator, ReviewComponents } from '../../src/core/orchestrator';
-import { ReviewConfig, PRContext, Finding, ProviderResult, FileChange } from '../../src/types';
+import { ReviewConfig, PRContext, Finding, ProviderResult, FileChange, ReviewResult, Review } from '../../src/types';
 import { ConsensusEngine } from '../../src/analysis/consensus';
 import { Deduplicator } from '../../src/analysis/deduplicator';
 import { SynthesisEngine } from '../../src/analysis/synthesis';
@@ -19,6 +19,7 @@ import { TestCoverageAnalyzer } from '../../src/analysis/test-coverage';
 import { ASTAnalyzer } from '../../src/analysis/ast/analyzer';
 import { CacheManager } from '../../src/cache/manager';
 import { CostTracker } from '../../src/cost/tracker';
+import { PricingService } from '../../src/cost/pricing';
 import { SecurityScanner } from '../../src/security/scanner';
 import { RulesEngine } from '../../src/rules/engine';
 import { PromptBuilder } from '../../src/analysis/llm/prompt-builder';
@@ -39,21 +40,69 @@ interface BenchmarkResult {
   cacheHit: boolean;
 }
 
+/**
+ * Benchmark pricing service that returns fixed prices for performance testing
+ * Extends PricingService to match type requirements for CostTracker
+ */
+class BenchmarkPricingService extends PricingService {
+  constructor() {
+    // Pass undefined apiKey to avoid network calls in benchmarks
+    super(undefined);
+  }
+
+  async getPricing(_modelId: string) {
+    // Return fixed pricing for consistent benchmark results
+    return { modelId: 'mock', promptPrice: 0.001, completionPrice: 0.002, isFree: false };
+  }
+}
+
+/**
+ * Mock IncrementalReviewer for benchmarks
+ * Configurable mode allows benchmarking both incremental and full review paths
+ */
+class MockIncrementalReviewer {
+  constructor(private readonly enableIncremental: boolean = false) {}
+
+  async shouldUseIncremental(_pr: PRContext): Promise<boolean> {
+    // Default false for full review benchmarks
+    // Set to true to benchmark incremental review performance
+    return this.enableIncremental;
+  }
+
+  async getLastReview(_prNumber: number): Promise<null> {
+    // Always return null to simulate no previous review
+    // For real incremental benchmarks, this would return cached review data
+    return null;
+  }
+
+  async saveReview(_pr: PRContext, _review: Review): Promise<void> {
+    // No-op for benchmarks
+  }
+
+  async getChangedFilesSince(_pr: PRContext, _lastCommit: string): Promise<FileChange[]> {
+    return [];
+  }
+}
+
 class MockProvider extends Provider {
   constructor(name: string, private readonly latencyMs: number) {
     super(name);
   }
 
-  async review(): Promise<{
-    content: string;
-    findings: Array<{ file: string; line: number; severity: string; title: string; message: string }>;
-    durationSeconds: number;
-  }> {
+  async review(_prompt: string, _timeoutMs: number): Promise<ReviewResult> {
     await new Promise(resolve => setTimeout(resolve, this.latencyMs));
     return {
       content: 'Review complete',
       findings: [
-        { file: 'src/test.ts', line: 10, severity: 'major', title: 'Issue', message: 'Found issue' },
+        {
+          file: 'src/test.ts',
+          line: 10,
+          severity: 'major' as const,
+          title: 'Issue',
+          message: 'Found issue',
+          category: 'test',
+          evidence: { confidence: 0.8, reasoning: 'mock', badge: 'test' },
+        },
       ],
       durationSeconds: this.latencyMs / 1000,
     };
@@ -206,6 +255,8 @@ async function runBenchmark(
     enableCaching: !!cache,
     enableTestHints: false,
     enableAiDetection: false,
+    incrementalEnabled: false,
+    incrementalCacheTtlDays: 7,
     dryRun: false,
   };
 
@@ -220,9 +271,7 @@ async function runBenchmark(
     testCoverage: new TestCoverageAnalyzer(),
     astAnalyzer: new ASTAnalyzer(),
     cache: cache || new NoopCache(),
-    costTracker: new CostTracker({
-      getPricing: async () => ({ modelId: 'mock', promptPrice: 0.001, completionPrice: 0.002, isFree: false }),
-    } as ReviewComponents['costTracker']['rateLimiter']),
+    costTracker: new CostTracker(new BenchmarkPricingService()),
     security: new SecurityScanner(),
     rules: new RulesEngine([]),
     prLoader: new BenchmarkPRLoader(prContext) as unknown as ReviewComponents['prLoader'],
@@ -233,6 +282,7 @@ async function runBenchmark(
     evidenceScorer: new EvidenceScorer(),
     mermaidGenerator: new MermaidGenerator(),
     feedbackFilter: new NoopFeedbackFilter() as unknown as ReviewComponents['feedbackFilter'],
+    incrementalReviewer: new MockIncrementalReviewer() as unknown as ReviewComponents['incrementalReviewer'],
   };
 
   const orchestrator = new ReviewOrchestrator(components);

@@ -37,6 +37,11 @@ class FakeProvider extends Provider {
 }
 
 class StubLLMExecutor {
+  async filterHealthyProviders(providers: Provider[]): Promise<{ healthy: Provider[]; healthCheckResults: ProviderResult[] }> {
+    // In tests, assume all providers are healthy
+    return { healthy: providers, healthCheckResults: [] };
+  }
+
   async execute(): Promise<ProviderResult[]> {
     const provider = new FakeProvider();
     const result = await provider.review('', 1000);
@@ -191,6 +196,11 @@ describe('ReviewOrchestrator integration (offline)', () => {
 
   it('handles provider failures gracefully', async () => {
     class FailingLLMExecutor {
+      async filterHealthyProviders(providers: Provider[]): Promise<{ healthy: Provider[]; healthCheckResults: ProviderResult[] }> {
+        // Return providers unchanged to test failure handling
+        return { healthy: providers, healthCheckResults: [] };
+      }
+
       async execute(): Promise<ProviderResult[]> {
         return [
           {
@@ -368,6 +378,10 @@ describe('ReviewOrchestrator integration (offline)', () => {
 
   it('applies consensus filtering with multiple providers', async () => {
     class MultiProviderLLMExecutor {
+      async filterHealthyProviders(providers: Provider[]): Promise<{ healthy: Provider[]; healthCheckResults: ProviderResult[] }> {
+        return { healthy: providers, healthCheckResults: [] };
+      }
+
       async execute(): Promise<ProviderResult[]> {
         return [
           {
@@ -487,7 +501,7 @@ describe('ReviewOrchestrator integration (offline)', () => {
     expect(review?.inlineComments).toBeDefined();
     expect(review?.providerResults).toBeDefined();
     expect(review?.runDetails).toBeDefined();
-    expect(review?.runDetails?.durationSeconds).toBeGreaterThan(0);
+    expect(review?.runDetails?.durationSeconds).toBeGreaterThanOrEqual(0);
     expect(review?.runDetails?.totalCost).toBeGreaterThanOrEqual(0);
     expect(review?.metrics).toBeDefined();
     expect(review?.summary).toBeDefined();

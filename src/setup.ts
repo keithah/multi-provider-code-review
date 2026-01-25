@@ -25,6 +25,13 @@ import { EvidenceScorer } from './analysis/evidence';
 import { MermaidGenerator } from './output/mermaid';
 import { FeedbackFilter } from './github/feedback';
 import { ConfigLoader } from './config/loader';
+import { FeedbackTracker } from './learning/feedback-tracker';
+import { QuietModeFilter } from './learning/quiet-mode';
+import { CodeGraphBuilder } from './analysis/context/graph-builder';
+import { PromptGenerator } from './autofix/prompt-generator';
+import { ReliabilityTracker } from './providers/reliability-tracker';
+import { MetricsCollector } from './analytics/metrics-collector';
+import { PluginLoader } from './plugins';
 
 export interface SetupOptions {
   cliMode?: boolean;
@@ -46,7 +53,7 @@ export async function setupComponents(options: SetupOptions = {}): Promise<Revie
 
   // In CLI mode, we don't need GitHub components
   if (options.cliMode) {
-    return createComponentsForCLI(config);
+    return await createComponentsForCLI(config);
   }
 
   // GitHub Action mode requires token
@@ -54,14 +61,28 @@ export async function setupComponents(options: SetupOptions = {}): Promise<Revie
     throw new Error('GitHub token required for Action mode');
   }
 
-  return createComponents(config, options.githubToken);
+  return await createComponents(config, options.githubToken);
 }
 
 /**
  * Create components for CLI mode (no GitHub API)
  */
-function createComponentsForCLI(config: ReviewConfig): ReviewComponents {
-  const providerRegistry = new ProviderRegistry();
+async function createComponentsForCLI(config: ReviewConfig): Promise<ReviewComponents> {
+  // Initialize plugins if enabled
+  const pluginLoader = config.pluginsEnabled
+    ? new PluginLoader({
+        pluginDir: config.pluginDir || './plugins',
+        enabled: config.pluginsEnabled,
+        allowlist: config.pluginAllowlist,
+        blocklist: config.pluginBlocklist,
+      })
+    : undefined;
+
+  if (pluginLoader) {
+    await pluginLoader.loadPlugins();
+  }
+
+  const providerRegistry = new ProviderRegistry(pluginLoader);
   const promptBuilder = new PromptBuilder(config);
   const llmExecutor = new LLMExecutor(config);
   const deduplicator = new Deduplicator();
@@ -86,6 +107,28 @@ function createComponentsForCLI(config: ReviewConfig): ReviewComponents {
   const impactAnalyzer = new ImpactAnalyzer();
   const evidenceScorer = new EvidenceScorer();
   const mermaidGenerator = new MermaidGenerator();
+
+  // Learning and auto-fix components
+  const cacheStorage = new CacheStorage();
+  const feedbackTracker = config.learningEnabled ? new FeedbackTracker(cacheStorage, config.learningMinFeedbackCount) : undefined;
+  const quietModeFilter = config.quietModeEnabled
+    ? new QuietModeFilter(
+        {
+          enabled: config.quietModeEnabled,
+          minConfidence: config.quietMinConfidence || 0.5,
+          useLearning: config.quietUseLearning || false,
+        },
+        feedbackTracker
+      )
+    : undefined;
+  const graphBuilder = config.graphEnabled
+    ? new CodeGraphBuilder(config.graphMaxDepth || 5, (config.graphTimeoutSeconds || 10) * 1000)
+    : undefined;
+  const promptGenerator = new PromptGenerator('plain');
+  const reliabilityTracker = new ReliabilityTracker(cacheStorage);
+  const metricsCollector = config.analyticsEnabled
+    ? new MetricsCollector(cacheStorage, config)
+    : undefined;
 
   // Mock GitHub components for CLI mode
   const mockGitHubClient = {} as GitHubClient;
@@ -117,11 +160,31 @@ function createComponentsForCLI(config: ReviewConfig): ReviewComponents {
     evidenceScorer,
     mermaidGenerator,
     feedbackFilter,
+    feedbackTracker,
+    quietModeFilter,
+    graphBuilder,
+    promptGenerator,
+    reliabilityTracker,
+    metricsCollector,
   };
 }
 
-export function createComponents(config: ReviewConfig, githubToken: string): ReviewComponents {
-  const providerRegistry = new ProviderRegistry();
+export async function createComponents(config: ReviewConfig, githubToken: string): Promise<ReviewComponents> {
+  // Initialize plugins if enabled
+  const pluginLoader = config.pluginsEnabled
+    ? new PluginLoader({
+        pluginDir: config.pluginDir || './plugins',
+        enabled: config.pluginsEnabled,
+        allowlist: config.pluginAllowlist,
+        blocklist: config.pluginBlocklist,
+      })
+    : undefined;
+
+  if (pluginLoader) {
+    await pluginLoader.loadPlugins();
+  }
+
+  const providerRegistry = new ProviderRegistry(pluginLoader);
   const promptBuilder = new PromptBuilder(config);
   const llmExecutor = new LLMExecutor(config);
   const deduplicator = new Deduplicator();
@@ -152,6 +215,28 @@ export function createComponents(config: ReviewConfig, githubToken: string): Rev
   const mermaidGenerator = new MermaidGenerator();
   const feedbackFilter = new FeedbackFilter(githubClient);
 
+  // Learning and auto-fix components
+  const cacheStorage = new CacheStorage();
+  const feedbackTracker = config.learningEnabled ? new FeedbackTracker(cacheStorage, config.learningMinFeedbackCount) : undefined;
+  const quietModeFilter = config.quietModeEnabled
+    ? new QuietModeFilter(
+        {
+          enabled: config.quietModeEnabled,
+          minConfidence: config.quietMinConfidence || 0.5,
+          useLearning: config.quietUseLearning || false,
+        },
+        feedbackTracker
+      )
+    : undefined;
+  const graphBuilder = config.graphEnabled
+    ? new CodeGraphBuilder(config.graphMaxDepth || 5, (config.graphTimeoutSeconds || 10) * 1000)
+    : undefined;
+  const promptGenerator = new PromptGenerator('plain');
+  const reliabilityTracker = new ReliabilityTracker(cacheStorage);
+  const metricsCollector = config.analyticsEnabled
+    ? new MetricsCollector(cacheStorage, config)
+    : undefined;
+
   return {
     config,
     providerRegistry,
@@ -175,5 +260,11 @@ export function createComponents(config: ReviewConfig, githubToken: string): Rev
     evidenceScorer,
     mermaidGenerator,
     feedbackFilter,
+    feedbackTracker,
+    quietModeFilter,
+    graphBuilder,
+    promptGenerator,
+    reliabilityTracker,
+    metricsCollector,
   };
 }

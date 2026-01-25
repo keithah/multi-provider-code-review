@@ -15,6 +15,10 @@ export interface ReviewConfig {
   providerMaxParallel: number;
   quietModeEnabled?: boolean;
   quietMinConfidence?: number;
+  quietUseLearning?: boolean;
+  learningEnabled?: boolean;
+  learningMinFeedbackCount?: number;
+  learningLookbackDays?: number;
 
   inlineMaxComments: number;
   inlineMinSeverity: Severity;
@@ -39,6 +43,24 @@ export interface ReviewConfig {
 
   incrementalEnabled: boolean;
   incrementalCacheTtlDays: number;
+
+  graphEnabled?: boolean;
+  graphCacheEnabled?: boolean;
+  graphMaxDepth?: number;
+  graphTimeoutSeconds?: number;
+
+  generateFixPrompts?: boolean;
+  fixPromptFormat?: string;
+
+  analyticsEnabled?: boolean;
+  analyticsMaxReviews?: number;
+  analyticsDeveloperRate?: number;
+  analyticsManualReviewTime?: number;
+
+  pluginsEnabled?: boolean;
+  pluginDir?: string;
+  pluginAllowlist?: string[];
+  pluginBlocklist?: string[];
 
   dryRun: boolean;
 }

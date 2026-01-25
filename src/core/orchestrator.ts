@@ -23,6 +23,12 @@ import { RulesEngine } from '../rules/engine';
 import { ContextRetriever } from '../analysis/context';
 import { EvidenceScorer } from '../analysis/evidence';
 import { ImpactAnalyzer } from '../analysis/impact';
+import { FeedbackTracker } from '../learning/feedback-tracker';
+import { QuietModeFilter } from '../learning/quiet-mode';
+import { CodeGraphBuilder, CodeGraph } from '../analysis/context/graph-builder';
+import { PromptGenerator } from '../autofix/prompt-generator';
+import { ReliabilityTracker } from '../providers/reliability-tracker';
+import { MetricsCollector } from '../analytics/metrics-collector';
 import { ReviewConfig, Review, PRContext, RunDetails, Finding, FileChange, UnchangedContext, ProviderResult } from '../types';
 import { logger } from '../utils/logger';
 import { mapAddedLines } from '../utils/diff';
@@ -52,6 +58,12 @@ export interface ReviewComponents {
   evidenceScorer: EvidenceScorer;
   mermaidGenerator: MermaidGenerator;
   feedbackFilter: FeedbackFilter;
+  feedbackTracker?: FeedbackTracker;
+  quietModeFilter?: QuietModeFilter;
+  graphBuilder?: CodeGraphBuilder;
+  promptGenerator?: PromptGenerator;
+  reliabilityTracker?: ReliabilityTracker;
+  metricsCollector?: MetricsCollector;
 }
 
 export class ReviewOrchestrator {
@@ -76,6 +88,25 @@ export class ReviewOrchestrator {
     const { config } = this.components;
     const start = Date.now();
 
+    // Build code graph if enabled
+    let codeGraph: CodeGraph | undefined;
+    let contextRetriever = this.components.contextRetriever;
+    if (config.graphEnabled && this.components.graphBuilder) {
+      try {
+        const graphStart = Date.now();
+        codeGraph = await this.components.graphBuilder.buildGraph(pr.files);
+        const graphTime = Date.now() - graphStart;
+        logger.info(`Code graph built in ${graphTime}ms: ${codeGraph.getStats().definitions} definitions, ${codeGraph.getStats().imports} imports`);
+
+        // Create new context retriever with graph for this review (don't mutate shared component)
+        if (codeGraph) {
+          contextRetriever = new ContextRetriever(codeGraph);
+        }
+      } catch (error) {
+        logger.warn('Failed to build code graph, falling back to regex-based context', error as Error);
+      }
+    }
+
     // Check for incremental review
     const useIncremental = await this.components.incrementalReviewer.shouldUseIncremental(pr);
     let filesToReview: FileChange[] = pr.files;
@@ -86,6 +117,16 @@ export class ReviewOrchestrator {
       if (lastReviewData) {
         filesToReview = await this.components.incrementalReviewer.getChangedFilesSince(pr, lastReviewData.lastReviewedCommit);
         logger.info(`Incremental review: reviewing ${filesToReview.length} changed files`);
+
+        // Update graph incrementally if available
+        if (codeGraph && this.components.graphBuilder) {
+          try {
+            codeGraph = await this.components.graphBuilder.updateGraph(codeGraph, filesToReview);
+            logger.debug('Code graph updated incrementally');
+          } catch (error) {
+            logger.warn('Failed to update code graph incrementally', error as Error);
+          }
+        }
       }
     }
 
@@ -109,19 +150,48 @@ export class ReviewOrchestrator {
 
       await this.ensureBudget(config);
 
-      providerResults = await this.components.llmExecutor.execute(providers, prompt);
+      // Filter providers by health check before running full review
+      // This fails fast on unresponsive providers (30s timeout)
+      const healthCheckTimeout = 30000; // 30 seconds
+      const { healthy, healthCheckResults } = await this.components.llmExecutor.filterHealthyProviders(
+        providers,
+        healthCheckTimeout
+      );
+
+      if (healthy.length === 0) {
+        logger.warn('No healthy providers available after health checks');
+        // Include health check failures in results so they appear in output
+        providerResults = healthCheckResults;
+      } else {
+        // Run full review with healthy providers
+        const reviewResults = await this.components.llmExecutor.execute(healthy, prompt);
+        // Merge health check failures with review results for complete reporting
+        providerResults = [...healthCheckResults, ...reviewResults];
+      }
       llmFindings = extractFindings(providerResults);
       aiAnalysis = config.enableAiDetection ? summarizeAIDetection(providerResults) : undefined;
 
+      // Track provider reliability
+      if (this.components.reliabilityTracker) {
+        for (const result of providerResults) {
+          await this.components.reliabilityTracker.recordResult(
+            result.name,
+            result.status === 'success',
+            result.durationSeconds * 1000,
+            result.error?.message
+          );
+        }
+      }
+
       for (const result of providerResults) {
-        await this.components.costTracker.record(result.name, result.result?.usage);
+        await this.components.costTracker.record(result.name, result.result?.usage, config.budgetMaxUsd);
       }
     }
 
     const astFindings = config.enableAstAnalysis ? this.components.astAnalyzer.analyze(filesToReview) : [];
     const ruleFindings = this.components.rules.run(filesToReview);
     const securityFindings = config.enableSecurity ? this.components.security.scan(filesToReview) : [];
-    const context = this.components.contextRetriever.findRelatedContext(filesToReview);
+    const context = contextRetriever.findRelatedContext(filesToReview);
 
     const combinedFindings = [
       ...astFindings,
@@ -135,9 +205,9 @@ export class ReviewOrchestrator {
     const consensus = this.components.consensus.filter(deduped);
     const providerCount = providers.length || 1;
     const enriched = consensus.map(f =>
-      this.enrichFinding(f, pr.files, context, providerCount)
+      this.enrichFinding(f, pr.files, context, providerCount, codeGraph)
     );
-    const quietFiltered = this.applyQuietMode(enriched, config);
+    const quietFiltered = await this.applyQuietMode(enriched, config);
 
     const testHints = config.enableTestHints ? this.components.testCoverage.analyze(pr.files) : undefined;
     const impactAnalysis = this.components.impactAnalyzer.analyze(pr.files, context, quietFiltered.length > 0);
@@ -209,6 +279,21 @@ export class ReviewOrchestrator {
     }
     review.metrics.cached = Boolean(cachedFindings);
 
+    // Generate fix prompts if enabled
+    if (config.generateFixPrompts && this.components.promptGenerator) {
+      const fixPrompts = this.components.promptGenerator.generateFixPrompts(review.findings);
+      if (fixPrompts.length > 0) {
+        // Sanitize REPORT_BASENAME to prevent path traversal
+        const basename = (process.env.REPORT_BASENAME || 'multi-provider-review')
+          .replace(/[^a-zA-Z0-9_-]/g, '-')
+          .substring(0, 50);
+        const fixPromptsPath = path.join(process.cwd(), `${basename}-fix-prompts.md`);
+        const format = (config.fixPromptFormat as 'cursor' | 'copilot' | 'plain') || 'plain';
+        await this.components.promptGenerator.saveToFile(fixPrompts, fixPromptsPath, format);
+        logger.info(`Generated ${fixPrompts.length} fix prompts: ${fixPromptsPath}`);
+      }
+    }
+
     if (config.enableCaching) {
       await this.components.cache.save(pr, review);
     }
@@ -216,6 +301,16 @@ export class ReviewOrchestrator {
     // Save incremental review data
     if (config.incrementalEnabled) {
       await this.components.incrementalReviewer.saveReview(pr, review);
+    }
+
+    // Record review metrics for analytics
+    if (config.analyticsEnabled && this.components.metricsCollector) {
+      try {
+        await this.components.metricsCollector.recordReview(review, pr.number);
+        logger.debug(`Recorded review metrics for PR #${pr.number}`);
+      } catch (error) {
+        logger.warn('Failed to record review metrics', error as Error);
+      }
     }
 
     const markdown = this.components.formatter.format(review);
@@ -276,7 +371,14 @@ export class ReviewOrchestrator {
 
   private async ensureBudget(config: ReviewConfig): Promise<void> {
     if (config.budgetMaxUsd <= 0) return;
-    // Budget pre-check is skipped; cost is tracked after execution.
+
+    // Pre-flight guardrail: refuse to run when no budget remains based on cached totals
+    const projected = this.components.costTracker.summary().totalCost;
+    if (projected >= config.budgetMaxUsd) {
+      throw new Error(
+        `Budget exhausted: current recorded cost $${projected.toFixed(4)} exceeds or equals cap $${config.budgetMaxUsd.toFixed(2)}`
+      );
+    }
   }
 
   private estimateTokens(text: string): number {
@@ -340,13 +442,22 @@ export class ReviewOrchestrator {
     finding: Finding,
     files: FileChange[],
     context: UnchangedContext[],
-    providerCount: number
+    providerCount: number,
+    codeGraph?: CodeGraph
   ): Finding {
     const file = files.find(f => f.filename === finding.file);
     const changedLines = mapAddedLines(file?.patch);
     const hasDirectEvidence = changedLines.some(l => l.line === finding.line);
     const astConfirmed = Boolean(finding.providers?.includes('ast') || finding.provider === 'ast');
-    const graphConfirmed = context.some(ctx => ctx.file === finding.file);
+
+    // Enhanced graph confirmation using code graph
+    let graphConfirmed = context.some(ctx => ctx.file === finding.file);
+    if (codeGraph && !graphConfirmed) {
+      // Check if the file has dependents (is used elsewhere)
+      const dependents = codeGraph.getDependents(finding.file);
+      graphConfirmed = dependents.length > 0;
+    }
+
     const relatedSnippets = context
       .filter(ctx => ctx.file === finding.file)
       .flatMap(ctx => ctx.affectedCode);
@@ -372,14 +483,27 @@ export class ReviewOrchestrator {
     };
   }
 
-  private applyQuietMode(findings: Finding[], config: ReviewConfig): Finding[] {
+  private async applyQuietMode(findings: Finding[], config: ReviewConfig): Promise<Finding[]> {
     if (!config.quietModeEnabled) return findings;
+
+    // Use quiet mode filter with learning if available
+    if (this.components.quietModeFilter) {
+      const filtered = await this.components.quietModeFilter.filterByConfidence(findings);
+      const filterStats = await this.components.quietModeFilter.getFilterStats(findings);
+      logger.info(`Quiet mode: filtered ${filterStats.filtered}/${filterStats.total} findings (${filterStats.filterRate.toFixed(1)}% reduction)`);
+      return filtered;
+    }
+
+    // Fallback to simple threshold filtering
     const threshold = config.quietMinConfidence ?? 0.5;
     return findings.filter(f => (f.evidence?.confidence ?? 1) >= threshold);
   }
 
   private async writeReports(review: Review): Promise<void> {
-    const base = process.env.REPORT_BASENAME || 'multi-provider-review';
+    // Sanitize REPORT_BASENAME to prevent path traversal
+    const base = (process.env.REPORT_BASENAME || 'multi-provider-review')
+      .replace(/[^a-zA-Z0-9_-]/g, '-')
+      .substring(0, 50);
     const sarifPath = path.join(process.cwd(), `${base}.sarif`);
     const jsonPath = path.join(process.cwd(), `${base}.json`);
 
