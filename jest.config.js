@@ -9,4 +9,5 @@ module.exports = {
   coverageDirectory: 'coverage',
   clearMocks: true,
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+  testTimeout: 10000, // 10 seconds per test
 };
