@@ -11,6 +11,7 @@ import { ProviderRegistry } from '../providers/registry';
 import { PullRequestLoader } from '../github/pr-loader';
 import { CommentPoster } from '../github/comment-poster';
 import { MarkdownFormatter } from '../output/formatter';
+import { MarkdownFormatterV2 } from '../output/formatter-v2';
 import { MermaidGenerator } from '../output/mermaid';
 import { FeedbackFilter } from '../github/feedback';
 import { buildJson } from '../output/json';
@@ -52,7 +53,7 @@ export interface ReviewComponents {
   rules: RulesEngine;
   prLoader: PullRequestLoader;
   commentPoster: CommentPoster;
-  formatter: MarkdownFormatter;
+  formatter: MarkdownFormatter | MarkdownFormatterV2;
   contextRetriever: ContextRetriever;
   impactAnalyzer: ImpactAnalyzer;
   evidenceScorer: EvidenceScorer;
