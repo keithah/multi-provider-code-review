@@ -12,6 +12,17 @@ export class OpenCodeProvider extends Provider {
     super(`opencode/${modelId}`);
   }
 
+  // Lightweight health check: verify CLI is available; skip full review run
+  async healthCheck(_timeoutMs: number = 5000): Promise<boolean> {
+    try {
+      await this.resolveBinary();
+      return true;
+    } catch (error) {
+      logger.warn(`OpenCode health check failed for ${this.name}: ${(error as Error).message}`);
+      return false;
+    }
+  }
+
   async review(prompt: string, timeoutMs: number): Promise<ReviewResult> {
     const started = Date.now();
 

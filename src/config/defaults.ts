@@ -42,6 +42,9 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   incrementalEnabled: true,
   incrementalCacheTtlDays: 7,
 
+  batchMaxFiles: 30,
+  providerBatchOverrides: {},
+
   graphEnabled: false,
   graphCacheEnabled: true,
   graphMaxDepth: 5,

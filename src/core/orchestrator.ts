@@ -33,9 +33,14 @@ import { MetricsCollector } from '../analytics/metrics-collector';
 import { TrivialDetector } from '../analysis/trivial-detector';
 import { PathMatcher, createDefaultPathMatcherConfig, PathPattern } from '../analysis/path-matcher';
 import { z } from 'zod';
+import { Provider } from '../providers/base';
+import { createQueue } from '../utils/parallel';
 import { ReviewConfig, Review, PRContext, RunDetails, Finding, FileChange, UnchangedContext, ProviderResult } from '../types';
 import { logger } from '../utils/logger';
-import { mapAddedLines } from '../utils/diff';
+import { mapAddedLines, filterDiffByFiles } from '../utils/diff';
+import { BatchOrchestrator } from './batch-orchestrator';
+import { ProgressTracker } from '../github/progress-tracker';
+import { GitHubClient } from '../github/client';
 import * as fs from 'fs/promises';
 import path from 'path';
 
@@ -68,6 +73,8 @@ export interface ReviewComponents {
   promptGenerator?: PromptGenerator;
   reliabilityTracker?: ReliabilityTracker;
   metricsCollector?: MetricsCollector;
+  batchOrchestrator?: BatchOrchestrator;
+  githubClient?: GitHubClient;
 }
 
 export class ReviewOrchestrator {
@@ -95,6 +102,13 @@ export class ReviewOrchestrator {
   async executeReview(pr: PRContext): Promise<Review> {
     const { config } = this.components;
     const start = Date.now();
+    const progressTracker = await this.initProgressTracker(pr);
+    progressTracker?.addItem('graph', 'Build code graph');
+    progressTracker?.addItem('llm', 'LLM review (batched)');
+    progressTracker?.addItem('static', 'Static analysis & rules');
+    progressTracker?.addItem('synthesis', 'Synthesize & report');
+    let review: Review | null = null;
+    try {
 
     // Build code graph if enabled
     let codeGraph: CodeGraph | undefined;
@@ -105,6 +119,7 @@ export class ReviewOrchestrator {
         codeGraph = await this.components.graphBuilder.buildGraph(pr.files);
         const graphTime = Date.now() - graphStart;
         logger.info(`Code graph built in ${graphTime}ms: ${codeGraph.getStats().definitions} definitions, ${codeGraph.getStats().imports} imports`);
+        await progressTracker?.updateProgress('graph', 'completed', `Built in ${graphTime}ms`);
 
         // Create new context retriever with graph for this review (don't mutate shared component)
         if (codeGraph) {
@@ -112,6 +127,7 @@ export class ReviewOrchestrator {
         }
       } catch (error) {
         logger.warn('Failed to build code graph, falling back to regex-based context', error as Error);
+        await progressTracker?.updateProgress('graph', 'failed', 'Graph build failed, using regex context');
       }
     }
 
@@ -158,7 +174,7 @@ export class ReviewOrchestrator {
         reviewContext = {
           ...pr,
           files: nonTrivialFiles,
-          diff: this.filterDiffByFiles(pr.diff, nonTrivialFiles),
+          diff: filterDiffByFiles(pr.diff, nonTrivialFiles),
         };
       }
     }
@@ -252,24 +268,29 @@ export class ReviewOrchestrator {
 
     // Create a PR context for the files to review with filtered diff
     const reviewPR: PRContext = useIncremental
-      ? { ...reviewContext, files: filesToReview, diff: this.filterDiffByFiles(reviewContext.diff, filesToReview) }
+      ? { ...reviewContext, files: filesToReview, diff: filterDiffByFiles(reviewContext.diff, filesToReview) }
       : reviewContext;
 
     // Skip LLM execution if no files to review (incremental with no changes)
     let llmFindings: Finding[] = [];
     let providerResults: ProviderResult[] = [];
     let aiAnalysis: ReturnType<typeof summarizeAIDetection> | undefined;
-    const providers = await this.components.providerRegistry.createProviders(config);
+    let providers = await this.components.providerRegistry.createProviders(config);
+    providers = await this.applyReliabilityFilters(providers);
+
+    const batchOrchestrator =
+      this.components.batchOrchestrator ||
+      new BatchOrchestrator({
+        defaultBatchSize: config.batchMaxFiles || 30,
+        providerOverrides: config.providerBatchOverrides,
+      });
 
     if (filesToReview.length === 0) {
       logger.info('No files to review in incremental update, using cached findings only');
     } else {
-      const prompt = this.components.promptBuilder.build(reviewPR);
-
       await this.ensureBudget(config);
 
-      // Filter providers by health check before running full review
-      // This fails fast on unresponsive providers (30s timeout)
+      // Health check providers once before batching
       const healthCheckTimeout = 30000; // 30 seconds
       const { healthy, healthCheckResults } = await this.components.llmExecutor.filterHealthyProviders(
         providers,
@@ -278,31 +299,39 @@ export class ReviewOrchestrator {
 
       if (healthy.length === 0) {
         logger.warn('No healthy providers available after health checks');
-        // Include health check failures in results so they appear in output
         providerResults = healthCheckResults;
+        await this.recordReliability(providerResults);
+        await progressTracker?.updateProgress('llm', 'failed', 'No healthy providers after health checks');
       } else {
-        // Run full review with healthy providers
-        const reviewResults = await this.components.llmExecutor.execute(healthy, prompt);
-        // Merge health check failures with review results for complete reporting
-        providerResults = [...healthCheckResults, ...reviewResults];
-      }
-      llmFindings = extractFindings(providerResults);
-      aiAnalysis = config.enableAiDetection ? summarizeAIDetection(providerResults) : undefined;
+        const batchSize = batchOrchestrator.getBatchSize(healthy.map(p => p.name));
+        const batches = batchOrchestrator.createBatches(filesToReview, batchSize);
+        const batchQueue = createQueue(Math.max(1, config.providerMaxParallel));
 
-      // Track provider reliability
-      if (this.components.reliabilityTracker) {
-        for (const result of providerResults) {
-          await this.components.reliabilityTracker.recordResult(
-            result.name,
-            result.status === 'success',
-            result.durationSeconds * 1000,
-            result.error?.message
-          );
+        logger.info(`Processing ${batches.length} batch(es) with size ${batchSize}`);
+
+        for (const batch of batches) {
+          batchQueue.add(async () => {
+            const batchDiff = filterDiffByFiles(reviewContext.diff, batch);
+            const batchContext: PRContext = { ...reviewContext, files: batch, diff: batchDiff };
+            const prompt = this.components.promptBuilder.build(batchContext);
+
+            const results = await this.components.llmExecutor.execute(healthy, prompt);
+            providerResults.push(...results);
+            llmFindings.push(...extractFindings(results));
+
+            await this.recordReliability(results);
+
+            for (const result of results) {
+              await this.components.costTracker.record(result.name, result.result?.usage, config.budgetMaxUsd);
+            }
+          });
         }
-      }
 
-      for (const result of providerResults) {
-        await this.components.costTracker.record(result.name, result.result?.usage, config.budgetMaxUsd);
+        await batchQueue.onIdle();
+        providerResults = [...healthCheckResults, ...providerResults];
+        await this.recordReliability(healthCheckResults);
+        aiAnalysis = config.enableAiDetection ? summarizeAIDetection(providerResults) : undefined;
+        await progressTracker?.updateProgress('llm', 'completed', `Batches: ${batches.length}, size: ${batchSize}`);
       }
     }
 
@@ -326,6 +355,7 @@ export class ReviewOrchestrator {
       this.enrichFinding(f, pr.files, context, providerCount, codeGraph)
     );
     const quietFiltered = await this.applyQuietMode(enriched, config);
+    await progressTracker?.updateProgress('static', 'completed', 'AST, security, and rules processed');
 
     const testHints = config.enableTestHints ? this.components.testCoverage.analyze(pr.files) : undefined;
     const impactAnalysis = this.components.impactAnalyzer.analyze(pr.files, context, quietFiltered.length > 0);
@@ -348,7 +378,7 @@ export class ReviewOrchestrator {
       providerPoolSize: providers.length,
     };
 
-    const review = this.components.synthesis.synthesize(
+    review = this.components.synthesis.synthesize(
       quietFiltered,
       reviewPR,
       testHints,
@@ -438,8 +468,21 @@ export class ReviewOrchestrator {
     await this.components.commentPoster.postInline(pr.number, inlineFiltered, pr.files, pr.headSha);
 
     await this.writeReports(review);
-
+    await progressTracker?.updateProgress('synthesis', 'completed');
     return review;
+    } catch (error) {
+      await progressTracker?.updateProgress('synthesis', 'failed', (error as Error).message);
+      throw error;
+    } finally {
+      if (progressTracker) {
+        try {
+          progressTracker.setTotalCost(this.components.costTracker.summary().totalCost);
+          await progressTracker.finalize(Boolean(review));
+        } catch (err) {
+          logger.warn('Failed to finalize progress tracker', err as Error);
+        }
+      }
+    }
   }
 
   /**
@@ -483,6 +526,60 @@ export class ReviewOrchestrator {
   private isBot(author: string): boolean {
     const lower = author.toLowerCase();
     return ['bot', 'dependabot', 'renovate', 'github-actions', '[bot]'].some(p => lower.includes(p));
+  }
+
+  private async applyReliabilityFilters(providers: Provider[]): Promise<Provider[]> {
+    const tracker = this.components.reliabilityTracker;
+    if (!tracker || providers.length === 0) return providers;
+
+    const available: Provider[] = [];
+    for (const provider of providers) {
+      const open = await tracker.isCircuitOpen(provider.name);
+      if (open) {
+        logger.warn(`Skipping provider ${provider.name} (circuit open)`);
+        continue;
+      }
+      available.push(provider);
+    }
+
+    if (available.length === 0) {
+      logger.warn('All providers are currently tripped by circuit breakers; using original list as fallback');
+      return providers;
+    }
+
+    const rankings = await tracker.rankProviders(available.map(p => p.name));
+    const scoreMap = new Map(rankings.map(r => [r.providerId, r.score]));
+    return [...available].sort((a, b) => (scoreMap.get(b.name) ?? 0.5) - (scoreMap.get(a.name) ?? 0.5));
+  }
+
+  private async recordReliability(results: ProviderResult[]): Promise<void> {
+    if (!this.components.reliabilityTracker) return;
+    for (const result of results) {
+      await this.components.reliabilityTracker.recordResult(
+        result.name,
+        result.status === 'success',
+        result.durationSeconds * 1000,
+        result.error?.message
+      );
+    }
+  }
+
+  private async initProgressTracker(pr: PRContext): Promise<ProgressTracker | undefined> {
+    if (!this.components.githubClient || this.components.config.dryRun) return undefined;
+
+    try {
+      const tracker = new ProgressTracker(this.components.githubClient.octokit, {
+        owner: this.components.githubClient.owner,
+        repo: this.components.githubClient.repo,
+        prNumber: pr.number,
+        updateStrategy: 'milestone',
+      });
+      await tracker.initialize();
+      return tracker;
+    } catch (error) {
+      logger.warn('Failed to initialize progress tracker', error as Error);
+      return undefined;
+    }
   }
 
   private async ensureBudget(config: ReviewConfig): Promise<void> {
@@ -533,54 +630,6 @@ export class ReviewOrchestrator {
    * Used for incremental reviews to send only relevant diffs to LLMs
    * Uses indexOf instead of regex to avoid ReDoS and improve memory efficiency
    */
-  private filterDiffByFiles(diff: string, files: FileChange[]): string {
-    if (files.length === 0) return '';
-
-    const fileNames = new Set(files.map(f => f.filename));
-    const diffChunks: string[] = [];
-    const DIFF_MARKER = 'diff --git ';
-
-    // Manual parsing using indexOf to avoid regex and reduce memory overhead
-    let startIdx = 0;
-
-    while (startIdx < diff.length) {
-      const markerIdx = diff.indexOf(DIFF_MARKER, startIdx);
-      if (markerIdx === -1) break;
-
-      // Skip if not at start of line
-      if (markerIdx > 0 && diff[markerIdx - 1] !== '\n') {
-        startIdx = markerIdx + DIFF_MARKER.length;
-        continue;
-      }
-
-      // Find next diff marker or end
-      let nextIdx = diff.indexOf('\n' + DIFF_MARKER, markerIdx + 1);
-      if (nextIdx === -1) {
-        nextIdx = diff.length;
-      } else {
-        nextIdx += 1;
-      }
-
-      const chunk = diff.substring(markerIdx, nextIdx);
-
-      // Extract filename from first line
-      const firstLineEnd = chunk.indexOf('\n');
-      const firstLine = firstLineEnd === -1 ? chunk : chunk.substring(0, firstLineEnd);
-      const bIndex = firstLine.indexOf(' b/');
-
-      if (bIndex !== -1) {
-        const filename = firstLine.substring(bIndex + 3).trim();
-        if (fileNames.has(filename)) {
-          diffChunks.push(chunk);
-        }
-      }
-
-      startIdx = nextIdx;
-    }
-
-    return diffChunks.join('');
-  }
-
   private enrichFinding(
     finding: Finding,
     files: FileChange[],
@@ -647,7 +696,7 @@ export class ReviewOrchestrator {
    * Tracks time saved and cost avoided
    */
   private createTrivialReview(reason: string, fileCount: number, startTime: number): Review {
-    const durationSeconds = (Date.now() - startTime) / 1000;
+    const durationSeconds = Math.max(0.001, (Date.now() - startTime) / 1000);
 
     return {
       summary: `This PR contains only trivial changes that don't require detailed review.\n\n**Reason:** ${reason}\n\n**Files changed:** ${fileCount}\n\n**Cost savings:** Skipped LLM analysis, saving estimated $0.01-0.05 in API costs.\n\nThese types of changes are automatically filtered to save review time and API costs. If you believe this should have been reviewed, you can disable trivial change detection in the configuration.`,

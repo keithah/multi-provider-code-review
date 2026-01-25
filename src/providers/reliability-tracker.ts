@@ -1,5 +1,6 @@
 import { CacheStorage } from '../cache/storage';
 import { logger } from '../utils/logger';
+import { CircuitBreaker } from './circuit-breaker';
 
 export interface ProviderResult {
   providerId: string;
@@ -58,7 +59,8 @@ export class ReliabilityTracker {
 
   constructor(
     private readonly storage = new CacheStorage(),
-    private readonly minAttempts = ReliabilityTracker.MIN_ATTEMPTS_FOR_SCORING
+    private readonly minAttempts = ReliabilityTracker.MIN_ATTEMPTS_FOR_SCORING,
+    private readonly circuitBreaker = new CircuitBreaker(storage)
   ) {}
 
   /**
@@ -81,6 +83,13 @@ export class ReliabilityTracker {
     };
 
     data.results.push(result);
+
+    // Circuit breaker bookkeeping
+    if (success) {
+      await this.circuitBreaker.recordSuccess(providerId);
+    } else {
+      await this.circuitBreaker.recordFailure(providerId);
+    }
 
     // Check if we should aggregate
     const timeSinceAggregation = Date.now() - data.lastAggregation;
@@ -188,6 +197,13 @@ export class ReliabilityTracker {
     logger.info(`Found ${recommended.length} recommended providers with score >= ${minScore}`);
 
     return recommended;
+  }
+
+  /**
+   * Check whether a provider's circuit is open.
+   */
+  async isCircuitOpen(providerId: string): Promise<boolean> {
+    return this.circuitBreaker.isOpen(providerId);
   }
 
   /**

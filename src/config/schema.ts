@@ -41,6 +41,9 @@ export const ReviewConfigSchema = z.object({
   incremental_enabled: z.boolean().optional(),
   incremental_cache_ttl_days: z.number().int().min(1).max(30).optional(),
 
+  batch_max_files: z.number().int().min(1).max(200).optional(),
+  provider_batch_overrides: z.record(z.number().int().min(1).max(200)).optional(),
+
   graph_enabled: z.boolean().optional(),
   graph_cache_enabled: z.boolean().optional(),
   graph_max_depth: z.number().int().min(1).max(10).optional(),

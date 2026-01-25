@@ -44,6 +44,9 @@ export interface ReviewConfig {
   incrementalEnabled: boolean;
   incrementalCacheTtlDays: number;
 
+  batchMaxFiles?: number;
+  providerBatchOverrides?: Record<string, number>;
+
   graphEnabled?: boolean;
   graphCacheEnabled?: boolean;
   graphMaxDepth?: number;

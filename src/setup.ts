@@ -32,6 +32,7 @@ import { PromptGenerator } from './autofix/prompt-generator';
 import { ReliabilityTracker } from './providers/reliability-tracker';
 import { MetricsCollector } from './analytics/metrics-collector';
 import { PluginLoader } from './plugins';
+import { BatchOrchestrator } from './core/batch-orchestrator';
 
 export interface SetupOptions {
   cliMode?: boolean;
@@ -129,6 +130,10 @@ async function createComponentsForCLI(config: ReviewConfig): Promise<ReviewCompo
   const metricsCollector = config.analyticsEnabled
     ? new MetricsCollector(cacheStorage, config)
     : undefined;
+  const batchOrchestrator = new BatchOrchestrator({
+    defaultBatchSize: config.batchMaxFiles || 30,
+    providerOverrides: config.providerBatchOverrides,
+  });
 
   // Mock GitHub components for CLI mode
   const mockGitHubClient = {} as GitHubClient;
@@ -172,6 +177,7 @@ async function createComponentsForCLI(config: ReviewConfig): Promise<ReviewCompo
     promptGenerator,
     reliabilityTracker,
     metricsCollector,
+    batchOrchestrator,
   };
 }
 
@@ -242,6 +248,10 @@ export async function createComponents(config: ReviewConfig, githubToken: string
   const metricsCollector = config.analyticsEnabled
     ? new MetricsCollector(cacheStorage, config)
     : undefined;
+  const batchOrchestrator = new BatchOrchestrator({
+    defaultBatchSize: config.batchMaxFiles || 30,
+    providerOverrides: config.providerBatchOverrides,
+  });
 
   return {
     config,
@@ -272,5 +282,7 @@ export async function createComponents(config: ReviewConfig, githubToken: string
     promptGenerator,
     reliabilityTracker,
     metricsCollector,
+    batchOrchestrator,
+    githubClient,
   };
 }

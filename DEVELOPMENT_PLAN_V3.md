@@ -9,6 +9,11 @@
 
 This is a **focused, ROI-driven plan** to build the best-in-class code review tool by implementing only the highest-value features from the v2.1 specification, plus strategic additions.
 
+**Latest Updates (2026-01-25):**
+- ✅ Progress tracker wired into orchestrator for live PR status
+- ✅ Smart request batching (directory-based, provider overrides, parallel batches)
+- ✅ Provider reliability circuit breaker (fail-fast + ranking)
+
 **Current Status (2026-01-23):**
 - ✅ **Phase 1 COMPLETE** (Weeks 1-4) - Testing, Incremental Review, CLI Mode
 - ✅ **Phase 2 COMPLETE** (Weeks 5-10) - All features implemented and integrated

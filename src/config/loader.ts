@@ -101,6 +101,9 @@ export class ConfigLoader {
       incrementalEnabled: this.parseBoolean(env.INCREMENTAL_ENABLED),
       incrementalCacheTtlDays: this.parseNumber(env.INCREMENTAL_CACHE_TTL_DAYS),
 
+      batchMaxFiles: this.parseNumber(env.BATCH_MAX_FILES),
+      providerBatchOverrides: this.parseOverrides(env.PROVIDER_BATCH_OVERRIDES),
+
       skipTrivialChanges: this.parseBoolean(env.SKIP_TRIVIAL_CHANGES),
       skipDependencyUpdates: this.parseBoolean(env.SKIP_DEPENDENCY_UPDATES),
       skipDocumentationOnly: this.parseBoolean(env.SKIP_DOCUMENTATION_ONLY),
@@ -148,6 +151,8 @@ export class ConfigLoader {
       enableAiDetection: config.enable_ai_detection,
       incrementalEnabled: config.incremental_enabled,
       incrementalCacheTtlDays: config.incremental_cache_ttl_days,
+      batchMaxFiles: config.batch_max_files,
+      providerBatchOverrides: config.provider_batch_overrides,
       skipTrivialChanges: config.skip_trivial_changes,
       skipDependencyUpdates: config.skip_dependency_updates,
       skipDocumentationOnly: config.skip_documentation_only,
@@ -201,6 +206,26 @@ export class ConfigLoader {
     if (!value) return undefined;
     const num = Number.parseFloat(value);
     return Number.isFinite(num) ? num : undefined;
+  }
+
+  private static parseOverrides(value?: string): Record<string, number> | undefined {
+    if (!value) return undefined;
+    try {
+      const parsed = JSON.parse(value);
+      if (typeof parsed !== 'object' || Array.isArray(parsed) || parsed === null) {
+        throw new Error('Overrides must be a JSON object');
+      }
+      const result: Record<string, number> = {};
+      for (const [key, val] of Object.entries(parsed)) {
+        const num = Number(val);
+        if (!Number.isFinite(num)) continue;
+        result[key] = num;
+      }
+      return result;
+    } catch (error) {
+      logger.warn(`Failed to parse PROVIDER_BATCH_OVERRIDES: ${(error as Error).message}`);
+      return undefined;
+    }
   }
 
   private static parseSeverity(value?: string): 'critical' | 'major' | 'minor' | undefined {
