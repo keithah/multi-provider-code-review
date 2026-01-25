@@ -141,7 +141,7 @@ export class ReviewOrchestrator {
     let llmFindings: Finding[] = [];
     let providerResults: ProviderResult[] = [];
     let aiAnalysis: ReturnType<typeof summarizeAIDetection> | undefined;
-    const providers = await this.components.providerRegistry.createProviders(config);
+    let providers = await this.components.providerRegistry.createProviders(config);
 
     if (filesToReview.length === 0) {
       logger.info('No files to review in incremental update, using cached findings only');
@@ -149,6 +149,15 @@ export class ReviewOrchestrator {
       const prompt = this.components.promptBuilder.build(reviewPR);
 
       await this.ensureBudget(config);
+
+      // Filter providers by health check before running full review
+      // This fails fast on unresponsive providers (30s timeout)
+      const healthCheckTimeout = 30000; // 30 seconds
+      providers = await this.components.llmExecutor.filterHealthyProviders(providers, healthCheckTimeout);
+
+      if (providers.length === 0) {
+        logger.warn('No healthy providers available after health checks');
+      }
 
       providerResults = await this.components.llmExecutor.execute(providers, prompt);
       llmFindings = extractFindings(providerResults);

@@ -37,6 +37,11 @@ class FakeProvider extends Provider {
 }
 
 class StubLLMExecutor {
+  async filterHealthyProviders(providers: Provider[]): Promise<Provider[]> {
+    // In tests, assume all providers are healthy
+    return providers;
+  }
+
   async execute(): Promise<ProviderResult[]> {
     const provider = new FakeProvider();
     const result = await provider.review('', 1000);
@@ -191,6 +196,11 @@ describe('ReviewOrchestrator integration (offline)', () => {
 
   it('handles provider failures gracefully', async () => {
     class FailingLLMExecutor {
+      async filterHealthyProviders(providers: Provider[]): Promise<Provider[]> {
+        // Return providers unchanged to test failure handling
+        return providers;
+      }
+
       async execute(): Promise<ProviderResult[]> {
         return [
           {
@@ -368,6 +378,10 @@ describe('ReviewOrchestrator integration (offline)', () => {
 
   it('applies consensus filtering with multiple providers', async () => {
     class MultiProviderLLMExecutor {
+      async filterHealthyProviders(providers: Provider[]): Promise<Provider[]> {
+        return providers;
+      }
+
       async execute(): Promise<ProviderResult[]> {
         return [
           {

@@ -133,6 +133,18 @@ export class PluginLoader {
         return;
       }
 
+      // Validate that createProvider is actually a function
+      if (typeof plugin.createProvider !== 'function') {
+        logger.warn(`Invalid plugin at ${pluginPath}: createProvider must be a function`);
+        return;
+      }
+
+      // Validate that initialize, if present, is a function
+      if (plugin.initialize !== undefined && typeof plugin.initialize !== 'function') {
+        logger.warn(`Invalid plugin at ${pluginPath}: initialize must be a function if provided`);
+        return;
+      }
+
       // Validate metadata structure
       const metadata = plugin.metadata;
       if (!metadata.name || typeof metadata.name !== 'string' || metadata.name.trim() === '') {
@@ -164,15 +176,18 @@ export class PluginLoader {
         return;
       }
 
-      // Initialize plugin
-      if (plugin.initialize) {
-        await plugin.initialize();
+      // Check for duplicate plugin name before registration
+      if (this.plugins.has(plugin.metadata.name)) {
+        logger.error(
+          `Plugin name collision detected: "${plugin.metadata.name}" is already registered. ` +
+          `Cannot load duplicate plugin from ${pluginPath}.`
+        );
+        throw new Error(
+          `Plugin name collision: "${plugin.metadata.name}" already registered`
+        );
       }
 
-      // Register plugin
-      this.plugins.set(plugin.metadata.name, plugin);
-
-      // Map provider names to plugin
+      // Check for provider name collisions before registration (atomic check)
       for (const providerName of plugin.metadata.providers) {
         const existingPlugin = this.providerMap.get(providerName);
         if (existingPlugin) {
@@ -184,6 +199,18 @@ export class PluginLoader {
             `Provider name collision: "${providerName}" already registered by plugin "${existingPlugin}"`
           );
         }
+      }
+
+      // Initialize plugin (only after all validation passes)
+      if (plugin.initialize) {
+        await plugin.initialize();
+      }
+
+      // Register plugin atomically (all checks passed)
+      this.plugins.set(plugin.metadata.name, plugin);
+
+      // Map provider names to plugin
+      for (const providerName of plugin.metadata.providers) {
         this.providerMap.set(providerName, plugin.metadata.name);
       }
 

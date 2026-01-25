@@ -85,12 +85,7 @@ jobs:
         run: npm install -g opencode-ai@1.1.32
       # Run review if: PR number found. Fork PRs are allowed without OpenRouter key (falls back to free providers).
       - name: Skip Fork PR Without Secrets
-        if: |
-          ${{
-            steps.resolve-pr.outputs.pr != '' &&
-            github.event.pull_request.head.repo.fork == true &&
-            env.OPENROUTER_API_KEY == ''
-          }}
+        if: steps.resolve-pr.outputs.pr != '' && github.event.pull_request.head.repo.fork == true && env.OPENROUTER_API_KEY == ''
         run: |
           echo "⚠️  Skipping review for fork PR without OPENROUTER_API_KEY"
           echo "Fork PRs cannot access repository secrets for security reasons."
@@ -104,14 +99,7 @@ jobs:
         # Run if:
         # 1. PR exists, AND
         # 2. Either not a fork OR (is a fork AND has OPENROUTER_API_KEY)
-        if: |
-          ${{
-            steps.resolve-pr.outputs.pr != '' &&
-            (
-              github.event.pull_request.head.repo.fork != true ||
-              env.OPENROUTER_API_KEY != ''
-            )
-          }}
+        if: steps.resolve-pr.outputs.pr != '' && (github.event.pull_request.head.repo.fork != true || env.OPENROUTER_API_KEY != '')
         uses: ./
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

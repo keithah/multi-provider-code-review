@@ -8,6 +8,48 @@ import { logger } from '../../utils/logger';
 export class LLMExecutor {
   constructor(private readonly config: ReviewConfig) {}
 
+  /**
+   * Filter providers by running health checks to identify responsive providers
+   * Providers that don't respond within healthCheckTimeoutMs are filtered out
+   * @param providers - Array of providers to check
+   * @param healthCheckTimeoutMs - Timeout for health check (default 30s)
+   * @returns Array of healthy providers
+   */
+  async filterHealthyProviders(providers: Provider[], healthCheckTimeoutMs: number = 30000): Promise<Provider[]> {
+    if (providers.length === 0) return [];
+
+    logger.info(`Running health checks on ${providers.length} provider(s) with ${healthCheckTimeoutMs}ms timeout...`);
+
+    const queue = createQueue(this.config.providerMaxParallel);
+    const healthyProviders: Provider[] = [];
+
+    for (const provider of providers) {
+      queue.add(async () => {
+        const started = Date.now();
+        try {
+          const isHealthy = await provider.healthCheck(healthCheckTimeoutMs);
+          const duration = Date.now() - started;
+
+          if (isHealthy) {
+            healthyProviders.push(provider);
+            logger.info(`✓ Provider ${provider.name} health check passed (${duration}ms)`);
+          } else {
+            logger.warn(`✗ Provider ${provider.name} health check failed (${duration}ms)`);
+          }
+        } catch (error) {
+          const duration = Date.now() - started;
+          logger.warn(`✗ Provider ${provider.name} health check error (${duration}ms): ${(error as Error).message}`);
+        }
+      });
+    }
+
+    await queue.onIdle();
+
+    logger.info(`Health checks complete: ${healthyProviders.length}/${providers.length} provider(s) are responsive`);
+
+    return healthyProviders;
+  }
+
   async execute(providers: Provider[], prompt: string): Promise<ProviderResult[]> {
     const queue = createQueue(this.config.providerMaxParallel);
     const results: ProviderResult[] = [];

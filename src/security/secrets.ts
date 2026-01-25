@@ -33,8 +33,8 @@ const SECRET_PATTERNS: Array<{ regex: RegExp; title: string; message: string }> 
     message: 'Rotate the connection string and remove it from source control.',
   },
   {
-    regex: /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i,
-    title: 'Possible Azure client secret or UUID',
+    regex: /(?:client_secret|subscription_id|tenant_id|application_id)\s*[:=]\s*['"]?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}['"]?/i,
+    title: 'Possible Azure client secret or identifier',
     message: 'If this is an Azure secret, rotate it immediately. Remove from source control.',
   },
 
@@ -68,7 +68,7 @@ const SECRET_PATTERNS: Array<{ regex: RegExp; title: string; message: string }> 
 
   // Database Connection Strings
   {
-    regex: /(?:postgres|mysql|mongodb|redis):\/\/[^:]+:[^@]+@[^\/]+/i,
+    regex: /(?:postgres|mysql|mongodb|redis):\/\/[^:]+:[^@]+@[^/]+/i,
     title: 'Possible database connection string with credentials',
     message: 'Remove credentials from connection strings. Use environment variables or secret managers.',
   },
