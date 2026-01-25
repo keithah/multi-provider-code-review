@@ -14,8 +14,13 @@ export class OpenCodeProvider extends Provider {
 
   // Lightweight health check: verify CLI is available; skip full review run
   async healthCheck(_timeoutMs: number = 5000): Promise<boolean> {
+    const timeoutMs = Math.max(1, _timeoutMs ?? 5000);
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`OpenCode health check timed out after ${timeoutMs}ms`)), timeoutMs)
+    );
+
     try {
-      await this.resolveBinary();
+      await Promise.race([this.resolveBinary(), timeoutPromise]);
       return true;
     } catch (error) {
       logger.warn(`OpenCode health check failed for ${this.name}: ${(error as Error).message}`);

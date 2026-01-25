@@ -31883,8 +31883,12 @@ var OpenCodeProvider = class extends Provider {
   }
   // Lightweight health check: verify CLI is available; skip full review run
   async healthCheck(_timeoutMs = 5e3) {
+    const timeoutMs = Math.max(1, _timeoutMs ?? 5e3);
+    const timeoutPromise = new Promise(
+      (_, reject) => setTimeout(() => reject(new Error(`OpenCode health check timed out after ${timeoutMs}ms`)), timeoutMs)
+    );
     try {
-      await this.resolveBinary();
+      await Promise.race([this.resolveBinary(), timeoutPromise]);
       return true;
     } catch (error2) {
       logger.warn(`OpenCode health check failed for ${this.name}: ${error2.message}`);
@@ -36151,6 +36155,11 @@ var PromptGenerator = class {
   }
 };
 
+// src/utils/sanitize.ts
+function encodeURIComponentSafe(value) {
+  return encodeURIComponent(value).replace(/%/g, "_");
+}
+
 // src/providers/circuit-breaker.ts
 var CircuitBreaker = class {
   constructor(storage = new CacheStorage(), options = {}) {
@@ -36160,35 +36169,40 @@ var CircuitBreaker = class {
   }
   failureThreshold;
   openDurationMs;
+  locks = /* @__PURE__ */ new Map();
   async isOpen(providerId) {
-    const state = await this.load(providerId);
-    if (state.state === "open") {
-      const expired = state.openedAt && Date.now() - state.openedAt > this.openDurationMs;
-      if (expired) {
-        await this.setState(providerId, { state: "half_open", failures: 0 });
-        return false;
+    return this.withLock(providerId, async () => {
+      const state = await this.load(providerId);
+      if (state.state === "open") {
+        const expired = state.openedAt && Date.now() - state.openedAt > this.openDurationMs;
+        if (expired) {
+          await this.setState(providerId, { state: "half_open", failures: 0 });
+          return false;
+        }
+        return true;
       }
-      return true;
-    }
-    return false;
+      return false;
+    });
   }
   async recordSuccess(providerId) {
-    await this.setState(providerId, { state: "closed", failures: 0 });
+    await this.withLock(providerId, () => this.setState(providerId, { state: "closed", failures: 0 }));
   }
   async recordFailure(providerId) {
-    const state = await this.load(providerId);
-    const failures = state.failures + 1;
-    if (state.state === "half_open") {
-      await this.setState(providerId, { state: "open", failures: this.failureThreshold, openedAt: Date.now() });
-      logger.warn(`Circuit re-opened for ${providerId} after half-open failure`);
-      return;
-    }
-    if (failures >= this.failureThreshold) {
-      await this.setState(providerId, { state: "open", failures, openedAt: Date.now() });
-      logger.warn(`Circuit opened for ${providerId} after ${failures} failures`);
-    } else {
-      await this.setState(providerId, { state: "closed", failures });
-    }
+    await this.withLock(providerId, async () => {
+      const state = await this.load(providerId);
+      const failures = state.failures + 1;
+      if (state.state === "half_open") {
+        await this.setState(providerId, { state: "open", failures, openedAt: Date.now() });
+        logger.warn(`Circuit re-opened for ${providerId} after half-open failure`);
+        return;
+      }
+      if (failures >= this.failureThreshold) {
+        await this.setState(providerId, { state: "open", failures, openedAt: Date.now() });
+        logger.warn(`Circuit opened for ${providerId} after ${failures} failures`);
+      } else {
+        await this.setState(providerId, { state: "closed", failures });
+      }
+    });
   }
   async load(providerId) {
     const raw = await this.storage.read(this.key(providerId));
@@ -36206,7 +36220,23 @@ var CircuitBreaker = class {
     await this.storage.write(this.key(providerId), JSON.stringify(state));
   }
   key(providerId) {
-    return `circuit-breaker-${providerId}`;
+    const sanitized = encodeURIComponentSafe(providerId).replace(/\./g, "_");
+    return `circuit-breaker-${sanitized}`;
+  }
+  async withLock(providerId, fn) {
+    const prev = this.locks.get(providerId) ?? Promise.resolve();
+    let release;
+    const current = new Promise((resolve2) => release = resolve2);
+    this.locks.set(providerId, prev.then(() => current));
+    await prev;
+    try {
+      return await fn();
+    } finally {
+      release();
+      if (this.locks.get(providerId) === current) {
+        this.locks.delete(providerId);
+      }
+    }
   }
 };
 
@@ -36944,6 +36974,9 @@ var BatchOrchestrator = class {
    * Split files into batches of at most batchSize items.
    */
   createBatches(files, batchSize) {
+    if (!Number.isFinite(batchSize) || batchSize <= 0 || !Number.isInteger(batchSize)) {
+      throw new Error(`Invalid batch size: ${batchSize}. Must be a positive integer.`);
+    }
     if (files.length === 0) return [];
     const batches = [];
     for (let i = 0; i < files.length; i += batchSize) {
@@ -39137,7 +39170,7 @@ var PathMatcher = class {
    * Allows typical glob tokens and path separators; disallows pipes, backticks, and negation.
    */
   checkAllowedCharacters(pattern) {
-    const allowed = /^[A-Za-z0-9 ._\-\/\\*?{}\[\],]+$/;
+    const allowed = new RegExp("^[A-Za-z0-9 ._\\-/*?{}\\[\\],]+$");
     if (!allowed.test(pattern)) {
       throw new Error(`Pattern contains unsupported characters: ${pattern}`);
     }
@@ -39599,6 +39632,7 @@ var ReviewOrchestrator = class {
     progressTracker?.addItem("static", "Static analysis & rules");
     progressTracker?.addItem("synthesis", "Synthesize & report");
     let review = null;
+    let success = false;
     try {
       let codeGraph;
       let contextRetriever = this.components.contextRetriever;
@@ -39644,6 +39678,7 @@ var ReviewOrchestrator = class {
             }
           }
           review = trivialReview;
+          success = true;
           return trivialReview;
         }
         if (trivialResult.trivialFiles.length > 0) {
@@ -39882,6 +39917,7 @@ var ReviewOrchestrator = class {
       await this.components.commentPoster.postInline(pr.number, inlineFiltered, pr.files, pr.headSha);
       await this.writeReports(review);
       await progressTracker?.updateProgress("synthesis", "completed");
+      success = true;
       return review;
     } catch (error2) {
       await progressTracker?.updateProgress("synthesis", "failed", error2.message);
@@ -39890,7 +39926,7 @@ var ReviewOrchestrator = class {
       if (progressTracker) {
         try {
           progressTracker.setTotalCost(this.components.costTracker.summary().totalCost);
-          await progressTracker.finalize(Boolean(review));
+          await progressTracker.finalize(success);
         } catch (err) {
           logger.warn("Failed to finalize progress tracker", err);
         }

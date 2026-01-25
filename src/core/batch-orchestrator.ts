@@ -42,6 +42,9 @@ export class BatchOrchestrator {
    * Split files into batches of at most batchSize items.
    */
   createBatches(files: FileChange[], batchSize: number): FileChange[][] {
+    if (!Number.isFinite(batchSize) || batchSize <= 0 || !Number.isInteger(batchSize)) {
+      throw new Error(`Invalid batch size: ${batchSize}. Must be a positive integer.`);
+    }
     if (files.length === 0) return [];
     const batches: FileChange[][] = [];
 

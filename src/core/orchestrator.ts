@@ -108,6 +108,7 @@ export class ReviewOrchestrator {
     progressTracker?.addItem('static', 'Static analysis & rules');
     progressTracker?.addItem('synthesis', 'Synthesize & report');
     let review: Review | null = null;
+    let success = false;
     try {
 
     // Build code graph if enabled
@@ -165,6 +166,7 @@ export class ReviewOrchestrator {
         }
 
         review = trivialReview;
+        success = true;
         return trivialReview;
       }
 
@@ -470,20 +472,21 @@ export class ReviewOrchestrator {
 
     await this.writeReports(review);
     await progressTracker?.updateProgress('synthesis', 'completed');
-    return review;
-    } catch (error) {
-      await progressTracker?.updateProgress('synthesis', 'failed', (error as Error).message);
-      throw error;
-    } finally {
-      if (progressTracker) {
-        try {
-          progressTracker.setTotalCost(this.components.costTracker.summary().totalCost);
-          await progressTracker.finalize(Boolean(review));
-        } catch (err) {
-          logger.warn('Failed to finalize progress tracker', err as Error);
+        success = true;
+        return review;
+      } catch (error) {
+        await progressTracker?.updateProgress('synthesis', 'failed', (error as Error).message);
+        throw error;
+      } finally {
+        if (progressTracker) {
+          try {
+            progressTracker.setTotalCost(this.components.costTracker.summary().totalCost);
+            await progressTracker.finalize(success);
+          } catch (err) {
+            logger.warn('Failed to finalize progress tracker', err as Error);
+          }
         }
       }
-    }
   }
 
   /**

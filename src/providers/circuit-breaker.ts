@@ -1,5 +1,6 @@
 import { CacheStorage } from '../cache/storage';
 import { logger } from '../utils/logger';
+import { encodeURIComponentSafe } from '../utils/sanitize';
 
 type CircuitState = 'closed' | 'open' | 'half_open';
 
@@ -23,6 +24,7 @@ export interface CircuitBreakerOptions {
 export class CircuitBreaker {
   private readonly failureThreshold: number;
   private readonly openDurationMs: number;
+  private readonly locks = new Map<string, Promise<void>>();
 
   constructor(
     private readonly storage = new CacheStorage(),
@@ -33,41 +35,44 @@ export class CircuitBreaker {
   }
 
   async isOpen(providerId: string): Promise<boolean> {
-    const state = await this.load(providerId);
+    return this.withLock(providerId, async () => {
+      const state = await this.load(providerId);
 
-    if (state.state === 'open') {
-      const expired = state.openedAt && Date.now() - state.openedAt > this.openDurationMs;
-      if (expired) {
-        await this.setState(providerId, { state: 'half_open', failures: 0 });
-        return false;
+      if (state.state === 'open') {
+        const expired = state.openedAt && Date.now() - state.openedAt > this.openDurationMs;
+        if (expired) {
+          await this.setState(providerId, { state: 'half_open', failures: 0 });
+          return false;
+        }
+        return true;
       }
-      return true;
-    }
 
-    return false;
+      return false;
+    });
   }
 
   async recordSuccess(providerId: string): Promise<void> {
-    await this.setState(providerId, { state: 'closed', failures: 0 });
+    await this.withLock(providerId, () => this.setState(providerId, { state: 'closed', failures: 0 }));
   }
 
   async recordFailure(providerId: string): Promise<void> {
-    const state = await this.load(providerId);
-    const failures = state.failures + 1;
+    await this.withLock(providerId, async () => {
+      const state = await this.load(providerId);
+      const failures = state.failures + 1;
 
-    // If we're in half-open, a single failure should reopen immediately.
-    if (state.state === 'half_open') {
-      await this.setState(providerId, { state: 'open', failures: this.failureThreshold, openedAt: Date.now() });
-      logger.warn(`Circuit re-opened for ${providerId} after half-open failure`);
-      return;
-    }
+      if (state.state === 'half_open') {
+        await this.setState(providerId, { state: 'open', failures, openedAt: Date.now() });
+        logger.warn(`Circuit re-opened for ${providerId} after half-open failure`);
+        return;
+      }
 
-    if (failures >= this.failureThreshold) {
-      await this.setState(providerId, { state: 'open', failures, openedAt: Date.now() });
-      logger.warn(`Circuit opened for ${providerId} after ${failures} failures`);
-    } else {
-      await this.setState(providerId, { state: 'closed', failures });
-    }
+      if (failures >= this.failureThreshold) {
+        await this.setState(providerId, { state: 'open', failures, openedAt: Date.now() });
+        logger.warn(`Circuit opened for ${providerId} after ${failures} failures`);
+      } else {
+        await this.setState(providerId, { state: 'closed', failures });
+      }
+    });
   }
 
   private async load(providerId: string): Promise<CircuitData> {
@@ -89,6 +94,24 @@ export class CircuitBreaker {
   }
 
   private key(providerId: string): string {
-    return `circuit-breaker-${providerId}`;
+    const sanitized = encodeURIComponentSafe(providerId).replace(/\./g, '_');
+    return `circuit-breaker-${sanitized}`;
+  }
+
+  private async withLock<T>(providerId: string, fn: () => Promise<T>): Promise<T> {
+    const prev = this.locks.get(providerId) ?? Promise.resolve();
+    let release!: () => void;
+    const current = new Promise<void>(resolve => (release = resolve));
+    this.locks.set(providerId, prev.then(() => current));
+
+    await prev;
+    try {
+      return await fn();
+    } finally {
+      release();
+      if (this.locks.get(providerId) === current) {
+        this.locks.delete(providerId);
+      }
+    }
   }
 }
