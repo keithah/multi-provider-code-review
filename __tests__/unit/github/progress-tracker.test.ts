@@ -2,7 +2,9 @@ import { Octokit } from '@octokit/rest';
 import { ProgressTracker } from '../../../src/github/progress-tracker';
 
 describe('ProgressTracker', () => {
-  let octokit: jest.Mocked<Octokit>;
+  let octokit: Octokit;
+  let createCommentMock: jest.Mock;
+  let updateCommentMock: jest.Mock;
   let tracker: ProgressTracker;
 
   const config = {
@@ -13,10 +15,13 @@ describe('ProgressTracker', () => {
   };
 
   beforeEach(() => {
+    createCommentMock = jest.fn();
+    updateCommentMock = jest.fn();
+
     octokit = {
       issues: {
-        createComment: jest.fn(),
-        updateComment: jest.fn(),
+        createComment: createCommentMock,
+        updateComment: updateCommentMock,
       },
     } as any;
 
@@ -26,7 +31,7 @@ describe('ProgressTracker', () => {
   describe('initialization', () => {
     it('should create initial progress comment', async () => {
       const mockComment = { data: { id: 456 } };
-      octokit.issues.createComment.mockResolvedValue(mockComment as any);
+      createCommentMock.mockResolvedValue(mockComment as any);
 
       await tracker.initialize();
 
@@ -39,7 +44,7 @@ describe('ProgressTracker', () => {
     });
 
     it('should handle initialization failure gracefully', async () => {
-      octokit.issues.createComment.mockRejectedValue(new Error('API Error'));
+      createCommentMock.mockRejectedValue(new Error('API Error'));
 
       // Should not throw
       await expect(tracker.initialize()).resolves.not.toThrow();
@@ -48,7 +53,7 @@ describe('ProgressTracker', () => {
 
   describe('progress item management', () => {
     beforeEach(async () => {
-      octokit.issues.createComment.mockResolvedValue({ data: { id: 456 } } as any);
+      createCommentMock.mockResolvedValue({ data: { id: 456 } } as any);
       await tracker.initialize();
     });
 
@@ -64,10 +69,10 @@ describe('ProgressTracker', () => {
 
       // Milestone strategy: only update on completed/failed
       await tracker.updateProgress('test-item', 'in_progress');
-      expect(octokit.issues.updateComment).not.toHaveBeenCalled();
+      expect(updateCommentMock).not.toHaveBeenCalled();
 
       await tracker.updateProgress('test-item', 'completed');
-      expect(octokit.issues.updateComment).toHaveBeenCalledTimes(1);
+      expect(updateCommentMock).toHaveBeenCalledTimes(1);
     });
 
     it('should include details in progress update', async () => {
@@ -75,7 +80,7 @@ describe('ProgressTracker', () => {
 
       await tracker.updateProgress('test-item', 'completed', 'Found 5 findings');
 
-      expect(octokit.issues.updateComment).toHaveBeenCalledWith({
+      expect(updateCommentMock).toHaveBeenCalledWith({
         owner: 'test-owner',
         repo: 'test-repo',
         comment_id: 456,
@@ -87,13 +92,13 @@ describe('ProgressTracker', () => {
       await tracker.updateProgress('non-existent', 'completed');
 
       // Should not crash or update comment
-      expect(octokit.issues.updateComment).not.toHaveBeenCalled();
+      expect(updateCommentMock).not.toHaveBeenCalled();
     });
   });
 
   describe('comment formatting', () => {
     beforeEach(async () => {
-      octokit.issues.createComment.mockResolvedValue({ data: { id: 456 } } as any);
+      createCommentMock.mockResolvedValue({ data: { id: 456 } } as any);
       await tracker.initialize();
     });
 
@@ -104,7 +109,7 @@ describe('ProgressTracker', () => {
       await tracker.updateProgress('item1', 'completed');
       await tracker.updateProgress('item2', 'pending');
 
-      const lastCall = octokit.issues.updateComment.mock.calls[0];
+      const lastCall = updateCommentMock.mock.calls[0];
       const body = lastCall?.[0]?.body as string;
 
       expect(body).toContain('[x]'); // Completed item
@@ -120,7 +125,7 @@ describe('ProgressTracker', () => {
       await tracker.updateProgress('completed-item', 'completed');
       await tracker.updateProgress('failed-item', 'failed');
 
-      const lastCall = octokit.issues.updateComment.mock.calls[octokit.issues.updateComment.mock.calls.length - 1];
+      const lastCall = updateCommentMock.mock.calls[updateCommentMock.mock.calls.length - 1];
       const body = lastCall?.[0]?.body as string;
 
       expect(body).toContain('✅'); // Completed
@@ -136,7 +141,7 @@ describe('ProgressTracker', () => {
 
       await tracker.updateProgress('item1', 'completed');
 
-      const lastCall = octokit.issues.updateComment.mock.calls[0];
+      const lastCall = updateCommentMock.mock.calls[0];
       const body = lastCall?.[0]?.body as string;
 
       expect(body).toMatch(/\(\d+ms\)/); // Duration in milliseconds
@@ -148,7 +153,7 @@ describe('ProgressTracker', () => {
       tracker.addItem('item1', 'Test');
       await tracker.updateProgress('item1', 'completed');
 
-      const lastCall = octokit.issues.updateComment.mock.calls[0];
+      const lastCall = updateCommentMock.mock.calls[0];
       const body = lastCall?.[0]?.body as string;
 
       expect(body).toContain('**Duration**:');
@@ -160,7 +165,7 @@ describe('ProgressTracker', () => {
 
   describe('finalization', () => {
     beforeEach(async () => {
-      octokit.issues.createComment.mockResolvedValue({ data: { id: 456 } } as any);
+      createCommentMock.mockResolvedValue({ data: { id: 456 } } as any);
       await tracker.initialize();
     });
 
@@ -170,7 +175,7 @@ describe('ProgressTracker', () => {
 
       await tracker.finalize(true);
 
-      const lastCall = octokit.issues.updateComment.mock.calls[octokit.issues.updateComment.mock.calls.length - 1];
+      const lastCall = updateCommentMock.mock.calls[updateCommentMock.mock.calls.length - 1];
       const body = lastCall?.[0]?.body as string;
 
       expect(body).toContain('✅'); // All items completed
@@ -183,7 +188,7 @@ describe('ProgressTracker', () => {
 
       await tracker.finalize(false);
 
-      const lastCall = octokit.issues.updateComment.mock.calls[octokit.issues.updateComment.mock.calls.length - 1];
+      const lastCall = updateCommentMock.mock.calls[updateCommentMock.mock.calls.length - 1];
       const body = lastCall?.[0]?.body as string;
 
       expect(body).toContain('❌'); // All items failed
@@ -192,7 +197,7 @@ describe('ProgressTracker', () => {
 
   describe('duration formatting', () => {
     beforeEach(async () => {
-      octokit.issues.createComment.mockResolvedValue({ data: { id: 456 } } as any);
+      createCommentMock.mockResolvedValue({ data: { id: 456 } } as any);
       await tracker.initialize();
     });
 
@@ -202,7 +207,7 @@ describe('ProgressTracker', () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
       await tracker.updateProgress('item1', 'completed');
 
-      const lastCall = octokit.issues.updateComment.mock.calls[0];
+      const lastCall = updateCommentMock.mock.calls[0];
       const body = lastCall?.[0]?.body as string;
 
       expect(body).toMatch(/\d+ms/);
@@ -214,7 +219,7 @@ describe('ProgressTracker', () => {
       await new Promise((resolve) => setTimeout(resolve, 1100));
       await tracker.updateProgress('item1', 'completed');
 
-      const lastCall = octokit.issues.updateComment.mock.calls[0];
+      const lastCall = updateCommentMock.mock.calls[0];
       const body = lastCall?.[0]?.body as string;
 
       expect(body).toMatch(/\d+\.\d+s/);
@@ -223,12 +228,12 @@ describe('ProgressTracker', () => {
 
   describe('error handling', () => {
     beforeEach(async () => {
-      octokit.issues.createComment.mockResolvedValue({ data: { id: 456 } } as any);
+      createCommentMock.mockResolvedValue({ data: { id: 456 } } as any);
       await tracker.initialize();
     });
 
     it('should handle update failures gracefully', async () => {
-      octokit.issues.updateComment.mockRejectedValue(new Error('API Error'));
+      updateCommentMock.mockRejectedValue(new Error('API Error'));
 
       tracker.addItem('item1', 'Test');
 
@@ -237,7 +242,7 @@ describe('ProgressTracker', () => {
     });
 
     it('should handle finalize failures gracefully', async () => {
-      octokit.issues.updateComment.mockRejectedValue(new Error('API Error'));
+      updateCommentMock.mockRejectedValue(new Error('API Error'));
 
       tracker.addItem('item1', 'Test');
 
