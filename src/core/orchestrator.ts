@@ -307,7 +307,17 @@ export class ReviewOrchestrator {
         await progressTracker?.updateProgress('llm', 'failed', 'No healthy providers after health checks');
       } else {
         const batchSize = batchOrchestrator.getBatchSize(healthy.map(p => p.name));
-        const batches = batchOrchestrator.createBatches(filesToReview, batchSize);
+        let batches: FileChange[][];
+        try {
+          batches = batchOrchestrator.createBatches(filesToReview, batchSize);
+        } catch (error) {
+          logger.warn(
+            `Invalid batch size ${batchSize} computed from providers (${healthy.map(p => p.name).join(', ')}) - falling back to size 1`,
+            error as Error
+          );
+          batches = batchOrchestrator.createBatches(filesToReview, 1);
+        }
+
         const batchQueue = createQueue(Math.max(1, config.providerMaxParallel));
 
         logger.info(`Processing ${batches.length} batch(es) with size ${batchSize}`);
@@ -318,20 +328,47 @@ export class ReviewOrchestrator {
             const batchContext: PRContext = { ...reviewContext, files: batch, diff: batchDiff };
             const prompt = this.components.promptBuilder.build(batchContext);
 
-            const results = await this.components.llmExecutor.execute(healthy, prompt);
+            try {
+              const results = await this.components.llmExecutor.execute(healthy, prompt);
 
-            for (const result of results) {
-              await this.components.costTracker.record(result.name, result.result?.usage, config.budgetMaxUsd);
+              for (const result of results) {
+                await this.components.costTracker.record(result.name, result.result?.usage, config.budgetMaxUsd);
+              }
+
+              return results;
+            } catch (error) {
+              logger.error('Batch execution failed', error as Error);
+              return healthy.map(provider => ({
+                name: provider.name,
+                status: 'error' as const,
+                error: error as Error,
+                durationSeconds: 0,
+              }));
             }
-
-            return results;
           }) as Promise<ProviderResult[]>
         );
 
-        const batchResults = (await Promise.all(batchPromises)).flat();
-        await batchQueue.onIdle();
-        if (typeof (batchQueue as any).clear === 'function') {
-          (batchQueue as any).clear(); // p-queue v7 supports clear(); guard for older versions
+        const batchResults: ProviderResult[] = [];
+        try {
+          const settled = await Promise.allSettled(batchPromises);
+          for (const result of settled) {
+            if (result.status === 'fulfilled') {
+              batchResults.push(...result.value);
+            } else {
+              logger.error('Batch promise rejected', result.reason as Error);
+              batchResults.push({
+                name: 'batch',
+                status: 'error',
+                error: result.reason as Error,
+                durationSeconds: 0,
+              });
+            }
+          }
+        } finally {
+          await batchQueue.onIdle();
+          if (typeof (batchQueue as any).clear === 'function') {
+            (batchQueue as any).clear(); // p-queue v7 supports clear(); guard for older versions
+          }
         }
         llmFindings.push(...extractFindings(batchResults));
         providerResults = [...healthCheckResults, ...batchResults];
@@ -550,8 +587,8 @@ export class ReviewOrchestrator {
     }
 
     if (available.length === 0) {
-      logger.warn('All providers are currently tripped by circuit breakers; using original list as fallback');
-      return providers;
+      logger.warn('All providers are currently tripped by circuit breakers; skipping review run');
+      return [];
     }
 
     const rankings = await tracker.rankProviders(available.map(p => p.name));

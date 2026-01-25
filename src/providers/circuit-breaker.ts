@@ -114,7 +114,10 @@ export class CircuitBreaker {
       }
     })();
 
-    runVoid = run.then(() => undefined, () => undefined);
+    runVoid = run.then(
+      () => undefined,
+      () => undefined
+    );
     this.locks.set(providerId, runVoid);
     return run;
   }

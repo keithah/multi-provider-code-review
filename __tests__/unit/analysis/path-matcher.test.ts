@@ -559,8 +559,7 @@ describe('PathMatcher', () => {
       }).toThrow(/control characters/i);
     });
 
-    it('should accept pattern with regular space (0x20, not control char)', () => {
-      // Space (0x20) is NOT a control character
+    it('rejects patterns containing spaces to reduce accidental broad matches', () => {
       const patternWithSpace = 'my project/*.ts';
 
       expect(() => {
@@ -569,7 +568,7 @@ describe('PathMatcher', () => {
           defaultIntensity: 'standard',
           patterns: [{ pattern: patternWithSpace, intensity: 'thorough' }],
         });
-      }).not.toThrow();
+      }).toThrow(/unsupported characters/i);
     });
 
     it('should reject pattern with disallowed characters (e.g., pipe)', () => {
