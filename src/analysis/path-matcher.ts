@@ -62,8 +62,9 @@ export class PathMatcher {
         throw new Error(`Pattern too complex (score ${complexityScore}): ${pattern}`);
       }
 
-      // Security: Disallow control characters
-      if (/[\x00-\x1F]/.test(pattern)) {
+      // Security: Disallow control characters (using unicode escapes for ESLint)
+      // eslint-disable-next-line no-control-regex
+      if (/[\u0000-\u001F]/.test(pattern)) {
         throw new Error(`Pattern contains control characters: ${pattern}`);
       }
     }

@@ -17,7 +17,6 @@ import { RuleLoader } from './rules/loader';
 import { PullRequestLoader } from './github/pr-loader';
 import { CommentPoster } from './github/comment-poster';
 import { GitHubClient } from './github/client';
-import { MarkdownFormatter } from './output/formatter';
 import { MarkdownFormatterV2 } from './output/formatter-v2';
 import { ReviewComponents } from './core/orchestrator';
 import { ContextRetriever } from './analysis/context';
