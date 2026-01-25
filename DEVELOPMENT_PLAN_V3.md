@@ -1244,3 +1244,259 @@ Total: 9 commits on `feature/v0.2.1-release-prep` branch
 2026-01-25
 
 ## Ready for v0.2.1 release tag
+
+---
+
+## v0.3.0: Enhanced Review System (In Progress)
+
+**Date Started**: 2026-01-25
+**Status**: 🚧 In Development
+**Timeline**: 3-4 weeks (28 days)
+
+### Research Summary
+
+Based on comprehensive analysis of leading AI code review tools:
+- **Claude Code Action**: Live progress tracking, single comment updates, metadata attachment
+- **CodeRabbit.ai**: Incremental reviews, multi-model analysis, conversational feedback
+- **Sweep AI**: AST-based chunking (2M+ files/day), hybrid search, self-review loops
+- **Qodo (CodiumAI)**: Severity prioritization (50% higher acceptance), dynamic learning
+- **GitHub Copilot**: Efficient batching, SQLite caching, rate limit handling
+
+### Core Goals
+
+1. **Visual Progress Tracking** - Live-updating PR comments showing review status with checkboxes
+2. **Smart Request Batching** - Break large PRs into chunks to prevent timeouts (fixes big-pickle failures)
+3. **Advanced Code Indexing** - AST-based semantic caching for better context and faster reviews
+4. **High-Value UX Improvements** - Severity prioritization, self-review, incremental analysis
+
+### Implementation Status
+
+#### Phase 1: Visual Progress Tracking + Smart Batching (Week 1) - 🚧 IN PROGRESS
+
+**Feature 1.1: Live Progress Comment** - ✅ Started
+- Implementation: `src/github/progress-tracker.ts` (new)
+- Milestone-based updates (major events only)
+- Checkboxes with status emojis (✅/❌/🔄/⏳)
+- Duration and cost metadata
+- Inspired by Claude Code Action's approach
+
+**Feature 1.2: Smart Request Batching** - ⏳ Planned
+- Implementation: `src/core/batch-orchestrator.ts` (new)
+- Directory-based batching (keeps related files together)
+- Provider-specific overrides (smaller batches for unreliable providers)
+- Parallel batch processing
+- Fixes big-pickle timeout issues
+
+**Feature 1.3: Provider Reliability Integration** - ⏳ Planned
+- Wire up existing `ReliabilityTracker` to provider selection
+- Circuit breaker pattern (3 failures → open circuit for 5 minutes)
+- Filter providers below reliability threshold
+- Rank providers by reliability score
+
+**Configuration Decisions**:
+- **Embeddings**: Use available model from OpenRouter/OpenCode, fallback to local sentence-transformers
+- **Cache**: `.mpr-cache/` directory in repo (gitignored)
+- **Batching**: Directory-based (better context for LLMs)
+- **Self-review**: Balanced filtering (moderate strictness)
+- **Progress updates**: Milestone-based (completed/failed events only)
+
+#### Phase 2: Advanced Code Indexing & Caching (Week 2) - ⏳ Planned
+
+**Feature 2.1: AST-Based Code Chunker**
+- Implementation: `src/analysis/ast-chunker.ts` (new)
+- Tree-sitter with 113+ language parsers
+- Semantic integrity (no mid-function splits)
+- ~1500 chars per chunk (Sweep AI's proven size)
+- Dependency tracking for context retrieval
+
+**Feature 2.2: Hybrid Search System**
+- Implementation: `src/analysis/hybrid-search.ts` (new)
+- Combines lexical (TF-IDF) + vector (embeddings) search
+- Distinguishes definitions from usages
+- Query construction via AST integration
+
+**Feature 2.3: Persistent Cache with SQLite**
+- Implementation: `src/cache/sqlite-cache.ts` (new)
+- File URI + content hash as key
+- Incremental invalidation (only changed files)
+- WAL mode for concurrent reads
+- Performance pragmas (aggressive)
+
+**Feature 2.4: Context-Aware Retrieval**
+- Enhance existing `src/analysis/context-retriever.ts`
+- Use AST chunking + hybrid search
+- Transitive dependency tracking
+- Persistent caching via SQLite
+
+#### Phase 3: Additional High-Value Features (Weeks 3-4) - ⏳ Planned
+
+**Feature 3.1: Severity-Based Prioritization**
+- Implementation: `src/synthesis/prioritizer.ts` (new)
+- Critical (bugs, security) → Important (maintainability) → Optional (style)
+- Based on Qodo's "Focus on Problems" mode (50% higher acceptance)
+- Focus mode: only show critical + important
+
+**Feature 3.2: Self-Review Loop**
+- Implementation: `src/analysis/self-reviewer.ts` (new)
+- Automated validation of findings before posting
+- Filters false positives (code doesn't exist, contradictions, duplicates)
+- Balanced strictness setting
+
+**Feature 3.3: Dynamic Learning System**
+- Implementation: `src/learning/adaptive-learner.ts` (new)
+- Learn from 👍/👎 reactions on findings
+- Build team-specific best practices
+- Pattern weight decay (0.1)
+
+**Feature 3.4: Commit Suggestions**
+- Implementation: `src/output/suggestion-formatter.ts` (new)
+- GitHub ```suggestion``` block format
+- One-click fix application
+- Native GitHub integration
+
+### Critical Files
+
+**New Files** (16 total):
+1. `src/github/progress-tracker.ts` ✅ Created
+2. `src/core/batch-orchestrator.ts` ⏳
+3. `src/analysis/ast-chunker.ts` ⏳
+4. `src/analysis/hybrid-search.ts` ⏳
+5. `src/cache/sqlite-cache.ts` ⏳
+6. `src/synthesis/prioritizer.ts` ⏳
+7. `src/analysis/self-reviewer.ts` ⏳
+8. `src/learning/adaptive-learner.ts` ⏳
+9. `src/output/suggestion-formatter.ts` ⏳
+10. `src/providers/circuit-breaker.ts` ⏳
+11-16. Test files ⏳
+
+**Modified Files** (6 total):
+1. `src/core/orchestrator.ts` - Integrate batching, progress tracking, provider selection
+2. `src/github/comment-poster.ts` - Batch inline comments, track progress
+3. `src/analysis/context-retriever.ts` - Use hybrid search and AST chunks
+4. `src/providers/reliability-tracker.ts` - Add circuit breaker integration
+5. `src/config/schema.ts` - Add new config options
+6. `src/config/defaults.ts` - Set default values
+
+### Configuration Schema
+
+```yaml
+# .mpr.yml - New v0.3.0 options
+
+# Visual Progress Tracking
+progress_tracking:
+  enabled: true
+  update_strategy: 'milestone'  # 'milestone' | 'debounced' | 'realtime'
+  show_duration: true
+  show_cost: true
+
+# Smart Batching
+batching:
+  enabled: true
+  max_files_per_batch: 30
+  max_bytes_per_batch: 50000
+  strategy: 'directory'  # 'directory' | 'size' | 'impact'
+  parallel_batches: true
+  provider_configs:
+    big-pickle:
+      max_files_per_batch: 15
+      timeout_multiplier: 1.5
+
+# Code Indexing & Caching
+indexing:
+  enabled: true
+  cache_type: 'sqlite'
+  cache_path: '.mpr-cache/code-index.db'
+  chunk_size: 1500
+  hybrid_search: true
+  embedding_provider: 'auto'  # 'auto' | 'openai' | 'local'
+
+# Provider Reliability with Circuit Breaker
+providers:
+  track_reliability: true
+  rank_by_reliability: true
+  min_reliability_score: 0.5
+  circuit_breaker:
+    enabled: true
+    failure_threshold: 3
+    reset_timeout_ms: 300000
+
+# Severity Prioritization
+prioritization:
+  enabled: true
+  focus_mode: true
+  severity_thresholds:
+    critical_confidence: 0.7
+    important_confidence: 0.5
+    optional_confidence: 0.3
+
+# Self-Review
+self_review:
+  enabled: true
+  max_iterations: 2
+  strictness: 'balanced'  # 'conservative' | 'balanced' | 'permissive'
+
+# Dynamic Learning
+learning:
+  enabled: true
+  min_feedback_count: 5
+  pattern_weight_decay: 0.1
+
+# Commit Suggestions
+suggestions:
+  enabled: true
+  format: 'github'
+```
+
+### Success Metrics
+
+**Phase 1 Targets**:
+- [ ] Progress comment updates ≤2s latency
+- [ ] Large PRs (200 files) complete without timeout
+- [ ] big-pickle success rate >80% (up from ~40%)
+- [ ] Inline comment posting success rate >95%
+
+**Phase 2 Targets**:
+- [ ] Cache hit rate >70% on incremental reviews
+- [ ] Context retrieval latency <500ms
+- [ ] Chunk boundary accuracy >95% (no mid-function splits)
+- [ ] Cache size <100MB per 1000 files
+
+**Phase 3 Targets**:
+- [ ] Severity filtering reduces noise by 40%
+- [ ] Self-review filters >20% of false positives
+- [ ] Learning system improves acceptance rate by 30%
+- [ ] Commit suggestions used in >50% of fixes
+
+### Timeline
+
+**Week 1**: Foundation (Progress + Batching) - 🚧 Current
+- Days 1-2: Progress tracker ✅ Started
+- Days 3-4: Batch orchestrator ⏳
+- Days 5-6: Circuit breaker + reliability ⏳
+- Day 7: Integration testing ⏳
+
+**Week 2**: Intelligence (Indexing + Caching)
+- Days 1-2: AST chunker with tree-sitter
+- Days 3-4: Hybrid search (TF-IDF + embeddings)
+- Days 5-6: SQLite cache + context retriever
+- Day 7: Performance benchmarking
+
+**Week 3**: Enhancement (Prioritization + Learning)
+- Days 1-2: Severity prioritizer
+- Days 3-4: Self-review loop
+- Days 5-6: Dynamic learning system
+- Day 7: Testing + refinement
+
+**Week 4**: Polish (Suggestions + Documentation)
+- Days 1-2: Commit suggestion formatter
+- Days 3-4: Configuration tuning + defaults
+- Days 5-6: Documentation updates
+- Day 7: Final testing + release prep
+
+### Next Steps
+
+1. Complete ProgressTracker tests
+2. Integrate ProgressTracker into orchestrator
+3. Implement BatchOrchestrator
+4. Wire up circuit breaker to ReliabilityTracker
+5. Update config schema and defaults
