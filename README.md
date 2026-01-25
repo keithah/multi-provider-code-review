@@ -263,6 +263,7 @@ ANALYTICS_MAX_REVIEWS: '1000'
 ### Getting Started
 - **[User Guide](./docs/user-guide.md)** - Dismissing findings, feedback learning, and usage tips
 - **[Performance Guide](./docs/PERFORMANCE.md)** - Optimization strategies and configuration tuning
+- **[Security Guide](./docs/SECURITY.md)** - Security features, best practices, and threat model
 - **[Error Handling Guide](./docs/ERROR_HANDLING.md)** - Error recovery and debugging strategies
 - **[Troubleshooting Guide](./docs/TROUBLESHOOTING.md)** - Common issues and solutions
 - **[Self-Hosted Deployment](./docs/self-hosted.md)** - Docker deployment and webhook setup
