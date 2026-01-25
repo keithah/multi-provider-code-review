@@ -31528,7 +31528,16 @@ var ConfigLoader = class {
       for (const [key, val] of Object.entries(parsed)) {
         const num = Number(val);
         if (!Number.isFinite(num)) continue;
-        result[key] = num;
+        const intVal = Math.trunc(num);
+        if (intVal < 1) {
+          logger.warn(`Ignoring PROVIDER_BATCH_OVERRIDES entry for "${key}": value ${intVal} is below minimum 1`);
+          continue;
+        }
+        const clamped = Math.min(intVal, 200);
+        if (clamped !== intVal) {
+          logger.warn(`Clamping PROVIDER_BATCH_OVERRIDES entry for "${key}" from ${intVal} to maximum 200`);
+        }
+        result[key] = clamped;
       }
       return result;
     } catch (error2) {
@@ -36169,6 +36178,11 @@ var CircuitBreaker = class {
   async recordFailure(providerId) {
     const state = await this.load(providerId);
     const failures = state.failures + 1;
+    if (state.state === "half_open") {
+      await this.setState(providerId, { state: "open", failures: this.failureThreshold, openedAt: Date.now() });
+      logger.warn(`Circuit re-opened for ${providerId} after half-open failure`);
+      return;
+    }
     if (failures >= this.failureThreshold) {
       await this.setState(providerId, { state: "open", failures, openedAt: Date.now() });
       logger.warn(`Circuit opened for ${providerId} after ${failures} failures`);
@@ -39629,6 +39643,7 @@ var ReviewOrchestrator = class {
               logger.warn("Failed to record trivial review metrics", error2);
             }
           }
+          review = trivialReview;
           return trivialReview;
         }
         if (trivialResult.trivialFiles.length > 0) {
@@ -39737,23 +39752,23 @@ var ReviewOrchestrator = class {
           const batches = batchOrchestrator.createBatches(filesToReview, batchSize);
           const batchQueue = createQueue(Math.max(1, config.providerMaxParallel));
           logger.info(`Processing ${batches.length} batch(es) with size ${batchSize}`);
-          for (const batch of batches) {
-            batchQueue.add(async () => {
+          const batchPromises = batches.map(
+            (batch) => batchQueue.add(async () => {
               const batchDiff = filterDiffByFiles(reviewContext.diff, batch);
               const batchContext = { ...reviewContext, files: batch, diff: batchDiff };
               const prompt = this.components.promptBuilder.build(batchContext);
               const results = await this.components.llmExecutor.execute(healthy, prompt);
-              providerResults.push(...results);
-              llmFindings.push(...extractFindings(results));
-              await this.recordReliability(results);
               for (const result of results) {
                 await this.components.costTracker.record(result.name, result.result?.usage, config.budgetMaxUsd);
               }
-            });
-          }
+              return results;
+            })
+          );
+          const batchResults = (await Promise.all(batchPromises)).flat();
           await batchQueue.onIdle();
-          providerResults = [...healthCheckResults, ...providerResults];
-          await this.recordReliability(healthCheckResults);
+          llmFindings.push(...extractFindings(batchResults));
+          providerResults = [...healthCheckResults, ...batchResults];
+          await this.recordReliability(providerResults);
           aiAnalysis = config.enableAiDetection ? summarizeAIDetection(providerResults) : void 0;
           await progressTracker?.updateProgress("llm", "completed", `Batches: ${batches.length}, size: ${batchSize}`);
         }

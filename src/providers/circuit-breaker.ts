@@ -55,6 +55,13 @@ export class CircuitBreaker {
     const state = await this.load(providerId);
     const failures = state.failures + 1;
 
+    // If we're in half-open, a single failure should reopen immediately.
+    if (state.state === 'half_open') {
+      await this.setState(providerId, { state: 'open', failures: this.failureThreshold, openedAt: Date.now() });
+      logger.warn(`Circuit re-opened for ${providerId} after half-open failure`);
+      return;
+    }
+
     if (failures >= this.failureThreshold) {
       await this.setState(providerId, { state: 'open', failures, openedAt: Date.now() });
       logger.warn(`Circuit opened for ${providerId} after ${failures} failures`);

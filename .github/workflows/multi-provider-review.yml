@@ -18,7 +18,8 @@ on:
 # Cancel in-progress runs for the same PR to prevent duplicate reviews
 # Use PR number + head SHA (not merge commit SHA) for uniqueness per commit
 concurrency:
-  group: review-${{ github.event.pull_request.number || inputs.pr_number }}-${{ github.event.pull_request.head.sha || github.sha }}
+  # Guard against missing pull_request context (e.g., workflow_dispatch)
+  group: review-${{ (github.event.pull_request && github.event.pull_request.number) || inputs.pr_number || 'manual' }}-${{ (github.event.pull_request && github.event.pull_request.head.sha) || github.sha }}
   cancel-in-progress: true
 
 # Permissions: Principle of least privilege
@@ -35,13 +36,10 @@ permissions:
 
 jobs:
   review:
-    # Runner configuration:
-    # Primary: ubicloud-standard-2 (cost-effective, 2 vCPU)
-    # Fallback: GitHub Actions will automatically use ubuntu-latest if ubicloud is unavailable
-    # No explicit fallback needed - GitHub handles runner availability automatically
-    runs-on: ubicloud-standard-2
+    runs-on: ubuntu-latest
     env:
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      IS_FORK: ${{ github.event.pull_request && github.event.pull_request.head.repo.fork || false }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -79,7 +77,7 @@ jobs:
       - name: Validate Secrets and Configuration
         run: |
           # Check if OPENROUTER_API_KEY is available for fork PRs
-          if [ "${{ github.event.pull_request.head.repo.fork }}" = "true" ]; then
+          if [ "$IS_FORK" = "true" ]; then
             echo "ℹ️  Fork PR detected - repository secrets are unavailable by design."
             echo "The review will continue using free providers only (OpenCode CLI + built-in fallbacks)."
           elif [ -z "$OPENROUTER_API_KEY" ]; then

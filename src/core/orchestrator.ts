@@ -164,6 +164,7 @@ export class ReviewOrchestrator {
           }
         }
 
+        review = trivialReview;
         return trivialReview;
       }
 
@@ -309,27 +310,27 @@ export class ReviewOrchestrator {
 
         logger.info(`Processing ${batches.length} batch(es) with size ${batchSize}`);
 
-        for (const batch of batches) {
+        const batchPromises: Promise<ProviderResult[]>[] = batches.map(batch =>
           batchQueue.add(async () => {
             const batchDiff = filterDiffByFiles(reviewContext.diff, batch);
             const batchContext: PRContext = { ...reviewContext, files: batch, diff: batchDiff };
             const prompt = this.components.promptBuilder.build(batchContext);
 
             const results = await this.components.llmExecutor.execute(healthy, prompt);
-            providerResults.push(...results);
-            llmFindings.push(...extractFindings(results));
-
-            await this.recordReliability(results);
 
             for (const result of results) {
               await this.components.costTracker.record(result.name, result.result?.usage, config.budgetMaxUsd);
             }
-          });
-        }
 
+            return results;
+          }) as Promise<ProviderResult[]>
+        );
+
+        const batchResults = (await Promise.all(batchPromises)).flat();
         await batchQueue.onIdle();
-        providerResults = [...healthCheckResults, ...providerResults];
-        await this.recordReliability(healthCheckResults);
+        llmFindings.push(...extractFindings(batchResults));
+        providerResults = [...healthCheckResults, ...batchResults];
+        await this.recordReliability(providerResults);
         aiAnalysis = config.enableAiDetection ? summarizeAIDetection(providerResults) : undefined;
         await progressTracker?.updateProgress('llm', 'completed', `Batches: ${batches.length}, size: ${batchSize}`);
       }

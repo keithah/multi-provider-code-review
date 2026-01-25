@@ -219,7 +219,18 @@ export class ConfigLoader {
       for (const [key, val] of Object.entries(parsed)) {
         const num = Number(val);
         if (!Number.isFinite(num)) continue;
-        result[key] = num;
+
+        // Enforce integer batch sizes between 1 and 200 (schema constraint)
+        const intVal = Math.trunc(num);
+        if (intVal < 1) {
+          logger.warn(`Ignoring PROVIDER_BATCH_OVERRIDES entry for "${key}": value ${intVal} is below minimum 1`);
+          continue;
+        }
+        const clamped = Math.min(intVal, 200);
+        if (clamped !== intVal) {
+          logger.warn(`Clamping PROVIDER_BATCH_OVERRIDES entry for "${key}" from ${intVal} to maximum 200`);
+        }
+        result[key] = clamped;
       }
       return result;
     } catch (error) {
