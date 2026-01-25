@@ -172,8 +172,10 @@ export class TrivialDetector {
    * Check if a single file is trivial
    */
   private isFileTrivial(file: FileChange): boolean {
+    const normalized = this.normalizePath(file.filename);
+
     return (
-      this.isFileTrivialByType(file.filename) ||
+      this.isFileTrivialByType(normalized) ||
       this.isFileTrivialByContent(file)
     );
   }
@@ -451,6 +453,13 @@ export class TrivialDetector {
   private normalizeWhitespace(text: string): string {
     // Trim leading/trailing whitespace and collapse internal runs to single space
     return text.trim().replace(/\s+/g, ' ');
+  }
+
+  /**
+   * Normalize path separators for consistent matching across platforms.
+   */
+  private normalizePath(filename: string): string {
+    return filename.replace(/\\/g, '/');
   }
 
   /**

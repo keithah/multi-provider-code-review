@@ -571,5 +571,29 @@ describe('PathMatcher', () => {
         });
       }).not.toThrow();
     });
+
+    it('should reject pattern with disallowed characters (e.g., pipe)', () => {
+      const badPattern = 'src|app.ts';
+
+      expect(() => {
+        new PathMatcher({
+          enabled: true,
+          defaultIntensity: 'standard',
+          patterns: [{ pattern: badPattern, intensity: 'thorough' }],
+        });
+      }).toThrow(/unsupported characters/i);
+    });
+
+    it('should reject patterns containing path traversal', () => {
+      const traversalPattern = '../secrets/*';
+
+      expect(() => {
+        new PathMatcher({
+          enabled: true,
+          defaultIntensity: 'standard',
+          patterns: [{ pattern: traversalPattern, intensity: 'thorough' }],
+        });
+      }).toThrow(/path traversal/i);
+    });
   });
 });

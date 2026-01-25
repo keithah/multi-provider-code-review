@@ -212,25 +212,27 @@ describe('OpenCodeProvider Integration', () => {
         reviewMockProcess = new EventEmitter() as any;
         reviewMockProcess.stdout = new EventEmitter();
         reviewMockProcess.stderr = new EventEmitter();
-        reviewMockProcess.kill = jest.fn();
+        // Fail-safe: auto-close after 500ms even if kill isn't called
+        const failSafe = setTimeout(() => reviewMockProcess.emit('close', 0), 500);
+        reviewMockProcess.kill = jest.fn(() => {
+          clearTimeout(failSafe);
+          setTimeout(() => reviewMockProcess.emit('close', 0), 0);
+        });
         reviewMockProcess.pid = 12345; // Mock PID for process group kill
         return reviewMockProcess;
       });
 
       // Mock process.kill to prevent actual kill attempt
-      const originalProcessKill = process.kill;
-      process.kill = jest.fn();
+      const killSpy = jest.spyOn(process, 'kill').mockImplementation(() => true as any);
 
       try {
         // Set very short timeout
         await expect(provider.review('test', 100)).rejects.toThrow('timed out after 100ms');
 
         // Verify that either process group kill or regular kill was attempted
-        // (implementation detail, but we want to ensure cleanup was attempted)
-        expect(process.kill).toHaveBeenCalled();
+        expect(killSpy).toHaveBeenCalled();
       } finally {
-        // Restore original process.kill
-        process.kill = originalProcessKill;
+        killSpy.mockRestore();
       }
     });
 

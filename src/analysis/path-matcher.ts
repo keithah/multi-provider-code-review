@@ -98,6 +98,8 @@ export class PathMatcher {
     this.checkPatternLength(pattern);
     this.checkPatternComplexity(pattern);
     this.checkControlCharacters(pattern);
+    this.checkAllowedCharacters(pattern);
+    this.checkTraversal(pattern);
   }
 
   /**
@@ -133,6 +135,31 @@ export class PathMatcher {
       if (pattern.charCodeAt(i) <= 0x1F) {
         throw new Error(`Pattern contains control characters: ${pattern}`);
       }
+    }
+  }
+
+  /**
+   * Restrict patterns to a safe character allowlist to avoid shell/meta injection.
+   * Allows typical glob tokens and path separators; disallows pipes, backticks, and negation.
+   */
+  private checkAllowedCharacters(pattern: string): void {
+    const allowed = /^[A-Za-z0-9 ._\-\/\\*?{}\[\],]+$/;
+    if (!allowed.test(pattern)) {
+      throw new Error(`Pattern contains unsupported characters: ${pattern}`);
+    }
+
+    // Explicitly block leading negation (!pattern) which minimatch treats as exclusion
+    if (pattern.trim().startsWith('!')) {
+      throw new Error(`Pattern negation (!) is not allowed: ${pattern}`);
+    }
+  }
+
+  /**
+   * Block path traversal segments ('..') inside patterns to avoid unintended matches.
+   */
+  private checkTraversal(pattern: string): void {
+    if (pattern.includes('..')) {
+      throw new Error(`Pattern contains path traversal ('..') which is not allowed: ${pattern}`);
     }
   }
 

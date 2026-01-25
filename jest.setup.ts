@@ -21,3 +21,9 @@ jest.mock('p-retry', () => {
     FailedAttemptError,
   };
 });
+
+// Some code paths (e.g., @actions/core.setFailed) set process.exitCode to 1.
+// Reset it after the test suite so Jest exits cleanly when all tests pass.
+afterAll(() => {
+  process.exitCode = 0;
+});
