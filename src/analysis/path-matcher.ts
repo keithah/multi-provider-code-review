@@ -1,5 +1,6 @@
 import { FileChange } from '../types';
 import { logger } from '../utils/logger';
+import { minimatch } from 'minimatch';
 
 /**
  * Path-based review intensity configuration
@@ -84,111 +85,31 @@ export class PathMatcher {
   }
 
   /**
-   * Match a file path against a glob-style pattern
+   * Match a file path against a glob-style pattern using minimatch library
    * Supports:
    * - ** for recursive directory matching
    * - * for single segment wildcard
    * - Exact matches
+   * - Brace expansion: {a,b,c}
+   * - Character classes: [abc]
+   *
+   * Uses minimatch library which is battle-tested and ReDoS-safe
    */
   private matchesPattern(filePath: string, pattern: string): boolean {
     try {
-      // Convert glob pattern to regex
-      const regexPattern = this.globToRegex(pattern);
-      return regexPattern.test(filePath);
+      // Use minimatch with safe options
+      return minimatch(filePath, pattern, {
+        dot: true,           // Match dotfiles
+        matchBase: false,    // Don't match basenames only
+        nocase: false,       // Case-sensitive matching
+        nonegate: true,      // Disable negation patterns (security)
+        nocomment: true,     // Disable comment patterns (security)
+      });
     } catch (error) {
       // Log error and return false for invalid patterns
       logger.warn(`Invalid glob pattern "${pattern}": ${(error as Error).message}`);
       return false;
     }
-  }
-
-  /**
-   * Convert glob pattern to regular expression
-   * Validates input to prevent regex injection and ReDoS attacks
-   */
-  private globToRegex(pattern: string): RegExp {
-    // Validate pattern to prevent regex injection
-    if (!pattern || typeof pattern !== 'string') {
-      throw new Error('Invalid glob pattern: must be a non-empty string');
-    }
-
-    // Limit pattern length to prevent complexity attacks
-    if (pattern.length > 500) {
-      throw new Error('Invalid glob pattern: pattern too long (max 500 characters)');
-    }
-
-    // Check for suspicious patterns that could cause ReDoS
-    const suspiciousPatterns = [
-      /(\*\*){3,}/, // Multiple consecutive **
-      /(\*){10,}/, // Too many consecutive *
-      /(.)\1{20,}/, // Excessive character repetition
-      /(\*.*\*){3,}/, // Nested wildcard patterns
-      /\{[^}]{100,}\}/, // Very long brace expansions
-      /(\||\/){20,}/, // Excessive alternation or path separators
-    ];
-
-    for (const suspicious of suspiciousPatterns) {
-      if (suspicious.test(pattern)) {
-        throw new Error('Invalid glob pattern: potentially malicious pattern detected');
-      }
-    }
-
-    // Calculate complexity score to catch subtle ReDoS patterns
-    const complexityScore = this.calculatePatternComplexity(pattern);
-    if (complexityScore > 100) {
-      throw new Error(`Invalid glob pattern: complexity score too high (${complexityScore} > 100)`);
-    }
-
-    // Escape special regex characters except * and /
-    let regexStr = pattern
-      .replace(/[.+?^${}()|[\]\\]/g, '\\$&') // Escape special chars
-      .replace(/\*\*/g, '___RECURSIVE___') // Placeholder for **
-      .replace(/\*/g, '[^/]*') // * matches anything except /
-      .replace(/___RECURSIVE___/g, '.*'); // ** matches everything
-
-    // Anchor the pattern
-    regexStr = `^${regexStr}$`;
-
-    try {
-      return new RegExp(regexStr);
-    } catch (error) {
-      throw new Error(`Invalid glob pattern: failed to compile regex - ${(error as Error).message}`);
-    }
-  }
-
-  /**
-   * Calculate complexity score for a pattern to detect potential ReDoS
-   * Higher scores indicate more complex/dangerous patterns
-   */
-  private calculatePatternComplexity(pattern: string): number {
-    let score = 0;
-
-    // Count wildcards (each adds complexity)
-    const wildcardCount = (pattern.match(/\*/g) || []).length;
-    score += wildcardCount * 2;
-
-    // Count double wildcards (more complex)
-    const doubleWildcardCount = (pattern.match(/\*\*/g) || []).length;
-    score += doubleWildcardCount * 5;
-
-    // Count alternations (brace expansions)
-    const braceCount = (pattern.match(/\{/g) || []).length;
-    score += braceCount * 3;
-
-    // Count character classes
-    const charClassCount = (pattern.match(/\[/g) || []).length;
-    score += charClassCount * 2;
-
-    // Penalty for very long patterns
-    if (pattern.length > 200) {
-      score += Math.floor(pattern.length / 50);
-    }
-
-    // Penalty for nested quantifiers (wildcard followed by wildcard)
-    const nestedQuantifiers = (pattern.match(/\*+.*\*+/g) || []).length;
-    score += nestedQuantifiers * 10;
-
-    return score;
   }
 
   /**

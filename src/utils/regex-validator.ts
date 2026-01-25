@@ -22,6 +22,7 @@ export function isValidRegexPattern(pattern: string): boolean {
 
   // Check for suspicious patterns that could cause ReDoS
   const suspiciousPatterns = [
+    // Quantifier-based attacks
     /(\*\*){3,}/, // Multiple consecutive **
     /(\+\+){3,}/, // Multiple consecutive ++
     /(\*){10,}/, // Too many consecutive *
@@ -29,6 +30,24 @@ export function isValidRegexPattern(pattern: string): boolean {
     /(.)\1{20,}/, // Excessive character repetition
     /(\.\*){5,}/, // Too many .* patterns
     /(\.\+){5,}/, // Too many .+ patterns
+
+    // Nested quantifiers (catastrophic backtracking)
+    /\([^)]*[+*]\)[+*]/, // (a+)+ or (a*)* patterns
+    /\([^)]*[+*]\)\{/, // (a+){n,m} patterns
+    /\[[^\]]*\][+*]\{/, // [a-z]+{n,m} patterns
+
+    // Alternation with overlap (ReDoS vectors)
+    /\([^|]*\|[^)]*\)[+*]/, // (a|ab)+ patterns
+    /\{[^}]{100,}\}/, // Very long brace expansions
+
+    // Excessive nesting and complexity
+    /(\(.*){5,}/, // Too many nested groups
+    /(\[.*){10,}/, // Too many character classes
+    /(\||\/){20,}/, // Excessive alternation
+
+    // Dangerous lookahead/lookbehind combos
+    /\(\?[=!<].*\)\+/, // Quantified lookarounds
+    /\(\?[=!<].*\)\*/, // Quantified lookarounds
   ];
 
   for (const suspicious of suspiciousPatterns) {
