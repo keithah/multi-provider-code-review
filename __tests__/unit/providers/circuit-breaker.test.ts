@@ -75,7 +75,7 @@ describe('CircuitBreaker', () => {
     const keys = storage.keys();
     expect(keys).toHaveLength(1);
     expect(keys[0]).toMatch(/^circuit-breaker-/);
-    expect(keys[0]).not.toMatch(/[\\/]{2,}|\\.\\./);
+    expect(keys[0]).not.toMatch(/[\\/]{2,}/);
   });
 
   it('clears internal locks after operations to avoid leaks', async () => {

@@ -322,7 +322,7 @@ export class ReviewOrchestrator {
           batches = batchOrchestrator.createBatches(filesToReview, 1);
         }
 
-        const batchQueue = createQueue(Math.max(1, config.providerMaxParallel));
+        const batchQueue = createQueue(Math.max(1, Number(config.providerMaxParallel) || 1));
 
         logger.info(`Processing ${batches.length} batch(es) with size ${batchSize}`);
 
@@ -370,7 +370,13 @@ export class ReviewOrchestrator {
           }
         } finally {
           await batchQueue.onIdle();
-          (batchQueue as any).clear?.();
+          if (typeof (batchQueue as any).clear === 'function') {
+            (batchQueue as any).clear();
+          } else {
+            // Best-effort cleanup for older p-queue versions
+            batchQueue.pause();
+            batchQueue.removeAllListeners();
+          }
         }
         llmFindings.push(...extractFindings(batchResults));
         providerResults = batchResults;
