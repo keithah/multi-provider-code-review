@@ -51,14 +51,20 @@ class BenchmarkPricingService implements MockPricingService {
 
 /**
  * Mock IncrementalReviewer for benchmarks
- * Always returns false to force full review for accurate benchmarking
+ * Configurable mode allows benchmarking both incremental and full review paths
  */
 class MockIncrementalReviewer {
+  constructor(private readonly enableIncremental: boolean = false) {}
+
   async shouldUseIncremental(_pr: PRContext): Promise<boolean> {
-    return false; // Always do full review in benchmarks
+    // Default false for full review benchmarks
+    // Set to true to benchmark incremental review performance
+    return this.enableIncremental;
   }
 
   async getLastReview(_prNumber: number): Promise<null> {
+    // Always return null to simulate no previous review
+    // For real incremental benchmarks, this would return cached review data
     return null;
   }
 

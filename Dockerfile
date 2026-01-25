@@ -5,8 +5,10 @@
 ARG BUILD_DATE
 ARG VERSION=0.2.1
 
-# Use node:20-alpine (pinned to Node.js v20.x LTS, not "latest")
-# Alpine provides a minimal, secure base image
+# Use node:20-alpine for Docker builds (pinned to Node.js v20.x LTS, not "latest")
+# Node.js 20 is the active LTS version with long-term support until 2026-04-30
+# Alpine provides a minimal, secure base image (~50MB vs ~1GB for full node image)
+# GitHub Actions workflow uses runner's built-in Node.js (typically Node 20+)
 FROM node:20-alpine AS builder
 
 # Install build dependencies
@@ -70,10 +72,11 @@ ENV LOG_LEVEL=info
 # Expose webhook port (if using webhook mode)
 EXPOSE 3000
 
-# Health check - verifies that the bundled entrypoint exists and Node can execute
-# Avoids depending on a build artifact (health-check.js) that is not bundled
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD node -e "require('fs').accessSync('dist/index.js')" || exit 1
+# Health check - verifies the application can be loaded and initialized
+# Checks that Node.js can successfully load the bundle, not just file existence
+# This catches build errors, missing dependencies, and runtime initialization issues
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD node -e "try { require('./dist/index.js'); process.exit(0); } catch(e) { console.error('Health check failed:', e.message); process.exit(1); }"
 
 # Default command (can be overridden)
 CMD ["node", "dist/index.js"]

@@ -16,16 +16,18 @@ coverage/
 .git/
 .github/
 .vscode/
-# Markdown files (except README.md which is needed for documentation)
+# Markdown files
+# Keep README.md for documentation, exclude development docs
 DEVELOPMENT_PLAN_V2.1.md
 CONTRIBUTING.md
 CHANGELOG.md
-!README.md
 
 # Environment
-# Exclude ALL .env files including .env.example to prevent accidental credential leakage
-# Users should reference .env.example from the git repository or documentation
-.env*
+# Exclude actual environment files but preserve the template
+# .env.example is safe to include as it contains no real credentials
+.env
+.env.local
+.env.*.local
 
 # Cache
 .cache/

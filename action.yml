@@ -13,11 +13,19 @@ inputs:
     description: "Pull request number"
     required: true
   REVIEW_PROVIDERS:
-    description: "Comma-separated provider list (leave empty for automatic discovery of best free models)"
+    description: |
+      Comma-separated provider list (e.g., "openrouter/model1,opencode/model2").
+      DEFAULT (empty): Enables dynamic provider discovery - automatically selects best free models
+      from OpenRouter API (if OPENROUTER_API_KEY set), OpenCode CLI, and hardcoded fallbacks.
+      CUSTOM: Override discovery with specific providers. Disables automatic fallback chain.
     required: false
     default: ""
   FALLBACK_PROVIDERS:
-    description: "Comma-separated fallback providers (leave empty for automatic discovery)"
+    description: |
+      Comma-separated fallback providers used when primary providers fail.
+      DEFAULT (empty): Uses automatic fallback discovery (same mechanism as REVIEW_PROVIDERS).
+      CUSTOM: Override with specific fallback models.
+      Only used when REVIEW_PROVIDERS is also set (custom mode).
     required: false
     default: ""
   SYNTHESIS_MODEL:

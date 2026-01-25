@@ -2,20 +2,23 @@ import { ReviewOrchestrator, ReviewComponents } from '../../../src/core/orchestr
 
 describe('ReviewOrchestrator', () => {
   let orchestrator: ReviewOrchestrator;
-  let mockComponents: ReviewComponents;
+  let mockComponents: Partial<ReviewComponents>;
 
   beforeEach(() => {
-    // Mock components would be created here
-    // This is a placeholder for complex integration tests
-    mockComponents = {} as any;
-    orchestrator = new ReviewOrchestrator(mockComponents);
+    // Minimal mock for instantiation testing only
+    // Full component mocking is done in integration tests
+    // See __tests__/integration/orchestrator.integration.test.ts for comprehensive tests
+    mockComponents = {
+      // Empty partial mock - only testing constructor doesn't throw
+    };
+    orchestrator = new ReviewOrchestrator(mockComponents as ReviewComponents);
   });
 
   it('should be instantiable', () => {
     expect(orchestrator).toBeInstanceOf(ReviewOrchestrator);
   });
 
-  // More comprehensive tests would go here
-  // Testing the full review orchestration is an integration test
-  // and would require significant mocking of all components
+  // Note: Comprehensive orchestration tests are in integration test suite
+  // This unit test suite is minimal as ReviewOrchestrator is primarily
+  // an integration/coordination layer tested better with real component interactions
 });
