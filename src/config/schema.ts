@@ -58,6 +58,14 @@ export const ReviewConfigSchema = z.object({
   plugin_allowlist: z.array(z.string()).optional(),
   plugin_blocklist: z.array(z.string()).optional(),
 
+  skip_trivial_changes: z.boolean().optional(),
+  skip_dependency_updates: z.boolean().optional(),
+  skip_documentation_only: z.boolean().optional(),
+  skip_formatting_only: z.boolean().optional(),
+  skip_test_fixtures: z.boolean().optional(),
+  skip_config_files: z.boolean().optional(),
+  trivial_patterns: z.array(z.string()).optional(),
+
   dry_run: z.boolean().optional(),
 });
 

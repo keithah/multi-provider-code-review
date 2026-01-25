@@ -60,6 +60,14 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   pluginAllowlist: [],
   pluginBlocklist: [],
 
+  skipTrivialChanges: true,
+  skipDependencyUpdates: true,
+  skipDocumentationOnly: true,
+  skipFormattingOnly: false, // Disabled by default (hard to detect accurately)
+  skipTestFixtures: true,
+  skipConfigFiles: true,
+  trivialPatterns: [],
+
   dryRun: false,
 };
 

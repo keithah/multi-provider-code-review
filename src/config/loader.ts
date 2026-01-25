@@ -101,6 +101,14 @@ export class ConfigLoader {
       incrementalEnabled: this.parseBoolean(env.INCREMENTAL_ENABLED),
       incrementalCacheTtlDays: this.parseNumber(env.INCREMENTAL_CACHE_TTL_DAYS),
 
+      skipTrivialChanges: this.parseBoolean(env.SKIP_TRIVIAL_CHANGES),
+      skipDependencyUpdates: this.parseBoolean(env.SKIP_DEPENDENCY_UPDATES),
+      skipDocumentationOnly: this.parseBoolean(env.SKIP_DOCUMENTATION_ONLY),
+      skipFormattingOnly: this.parseBoolean(env.SKIP_FORMATTING_ONLY),
+      skipTestFixtures: this.parseBoolean(env.SKIP_TEST_FIXTURES),
+      skipConfigFiles: this.parseBoolean(env.SKIP_CONFIG_FILES),
+      trivialPatterns: this.parseArray(env.TRIVIAL_PATTERNS),
+
       dryRun: this.parseBoolean(env.DRY_RUN),
     };
   }
@@ -135,6 +143,13 @@ export class ConfigLoader {
       enableAiDetection: config.enable_ai_detection,
       incrementalEnabled: config.incremental_enabled,
       incrementalCacheTtlDays: config.incremental_cache_ttl_days,
+      skipTrivialChanges: config.skip_trivial_changes,
+      skipDependencyUpdates: config.skip_dependency_updates,
+      skipDocumentationOnly: config.skip_documentation_only,
+      skipFormattingOnly: config.skip_formatting_only,
+      skipTestFixtures: config.skip_test_fixtures,
+      skipConfigFiles: config.skip_config_files,
+      trivialPatterns: config.trivial_patterns,
       dryRun: config.dry_run,
     };
   }

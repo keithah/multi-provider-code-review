@@ -152,6 +152,34 @@ inputs:
     description: "Base name for JSON/SARIF reports"
     required: false
     default: "multi-provider-review"
+  SKIP_TRIVIAL_CHANGES:
+    description: "Skip reviews for trivial changes (dependency locks, docs, config files, test fixtures)"
+    required: false
+    default: "true"
+  SKIP_DEPENDENCY_UPDATES:
+    description: "Skip dependency lock file updates (package-lock.json, yarn.lock, etc.)"
+    required: false
+    default: "true"
+  SKIP_DOCUMENTATION_ONLY:
+    description: "Skip documentation-only changes (*.md, docs/, README, CHANGELOG)"
+    required: false
+    default: "true"
+  SKIP_FORMATTING_ONLY:
+    description: "Skip formatting-only changes (whitespace, indentation)"
+    required: false
+    default: "false"
+  SKIP_TEST_FIXTURES:
+    description: "Skip test fixture changes (__fixtures__, __snapshots__, *.snap)"
+    required: false
+    default: "true"
+  SKIP_CONFIG_FILES:
+    description: "Skip config file changes (.eslintrc, .prettierrc, .gitignore, tsconfig.json)"
+    required: false
+    default: "true"
+  TRIVIAL_PATTERNS:
+    description: "Custom regex patterns for trivial files (comma-separated)"
+    required: false
+    default: ""
   DRY_RUN:
     description: "Preview mode - run review without posting to GitHub"
     required: false

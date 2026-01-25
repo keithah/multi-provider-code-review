@@ -62,6 +62,14 @@ export interface ReviewConfig {
   pluginAllowlist?: string[];
   pluginBlocklist?: string[];
 
+  skipTrivialChanges?: boolean;
+  skipDependencyUpdates?: boolean;
+  skipDocumentationOnly?: boolean;
+  skipFormattingOnly?: boolean;
+  skipTestFixtures?: boolean;
+  skipConfigFiles?: boolean;
+  trivialPatterns?: string[];
+
   dryRun: boolean;
 }
 

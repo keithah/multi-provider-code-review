@@ -30,6 +30,7 @@ import { CodeGraphBuilder, CodeGraph } from '../analysis/context/graph-builder';
 import { PromptGenerator } from '../autofix/prompt-generator';
 import { ReliabilityTracker } from '../providers/reliability-tracker';
 import { MetricsCollector } from '../analytics/metrics-collector';
+import { TrivialDetector } from '../analysis/trivial-detector';
 import { ReviewConfig, Review, PRContext, RunDetails, Finding, FileChange, UnchangedContext, ProviderResult } from '../types';
 import { logger } from '../utils/logger';
 import { mapAddedLines } from '../utils/diff';
@@ -105,6 +106,40 @@ export class ReviewOrchestrator {
         }
       } catch (error) {
         logger.warn('Failed to build code graph, falling back to regex-based context', error as Error);
+      }
+    }
+
+    // Check for trivial changes (dependency locks, docs, config files, test fixtures)
+    if (config.skipTrivialChanges) {
+      const trivialDetector = new TrivialDetector({
+        enabled: true,
+        skipDependencyUpdates: config.skipDependencyUpdates ?? true,
+        skipDocumentationOnly: config.skipDocumentationOnly ?? true,
+        skipFormattingOnly: config.skipFormattingOnly ?? false,
+        skipTestFixtures: config.skipTestFixtures ?? true,
+        skipConfigFiles: config.skipConfigFiles ?? true,
+        customTrivialPatterns: config.trivialPatterns ?? [],
+      });
+
+      const trivialResult = trivialDetector.detect(pr.files);
+
+      if (trivialResult.isTrivial) {
+        // Entire PR is trivial - post simple comment and skip review
+        logger.info(`Skipping review: ${trivialResult.reason}`);
+        const trivialReview = this.createTrivialReview(trivialResult.reason!, pr.files.length);
+        const markdown = this.components.formatter.format(trivialReview);
+        await this.components.commentPoster.postSummary(pr.number, markdown, false);
+        return trivialReview;
+      }
+
+      // Some files are trivial - filter them out before review
+      if (trivialResult.trivialFiles.length > 0) {
+        logger.info(`Filtering ${trivialResult.trivialFiles.length} trivial files from review: ${trivialResult.trivialFiles.join(', ')}`);
+        pr = {
+          ...pr,
+          files: pr.files.filter(f => trivialResult.nonTrivialFiles.includes(f.filename)),
+          diff: this.filterDiffByFiles(pr.diff, pr.files.filter(f => trivialResult.nonTrivialFiles.includes(f.filename))),
+        };
       }
     }
 
@@ -498,6 +533,30 @@ export class ReviewOrchestrator {
     // Fallback to simple threshold filtering
     const threshold = config.quietMinConfidence ?? 0.5;
     return findings.filter(f => (f.evidence?.confidence ?? 1) >= threshold);
+  }
+
+  /**
+   * Create a simple review result for trivial PRs that don't need full analysis
+   */
+  private createTrivialReview(reason: string, fileCount: number): Review {
+    return {
+      summary: `This PR contains only trivial changes that don't require detailed review.\n\n**Reason:** ${reason}\n\n**Files changed:** ${fileCount}\n\nThese types of changes are automatically filtered to save review time and API costs. If you believe this should have been reviewed, you can disable trivial change detection in the configuration.`,
+      findings: [],
+      inlineComments: [],
+      actionItems: [],
+      metrics: {
+        totalFindings: 0,
+        critical: 0,
+        major: 0,
+        minor: 0,
+        providersUsed: 0,
+        providersSuccess: 0,
+        providersFailed: 0,
+        totalTokens: 0,
+        totalCost: 0,
+        durationSeconds: 0,
+      },
+    };
   }
 
   private async writeReports(review: Review): Promise<void> {
