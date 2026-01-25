@@ -146,10 +146,27 @@ async function main() {
 
     for (let i = 1; i < args.length; i++) {
       if (args[i] === '--output' || args[i] === '-o') {
+        if (i + 1 >= args.length) {
+          logger.error('--output requires a value');
+          process.exit(1);
+        }
         options.output = args[++i];
       } else if (args[i] === '--format' || args[i] === '-f') {
-        options.format = args[++i] as 'html' | 'csv' | 'json';
+        if (i + 1 >= args.length) {
+          logger.error('--format requires a value');
+          process.exit(1);
+        }
+        const format = args[++i];
+        if (format !== 'html' && format !== 'csv' && format !== 'json') {
+          logger.error(`Invalid format "${format}". Must be one of: html, csv, json`);
+          process.exit(1);
+        }
+        options.format = format as 'html' | 'csv' | 'json';
       } else if (args[i] === '--days' || args[i] === '-d') {
+        if (i + 1 >= args.length) {
+          logger.error('--days requires a value');
+          process.exit(1);
+        }
         options.days = parseDays(args[++i], 30);
       }
     }

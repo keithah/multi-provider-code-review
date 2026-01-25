@@ -22,6 +22,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as crypto from 'crypto';
+import { pathToFileURL } from 'url';
 import { logger } from '../utils/logger';
 import { Provider } from '../providers/base';
 
@@ -122,8 +123,8 @@ export class PluginLoader {
       // Verify plugin integrity if manifest exists
       await this.verifyPluginIntegrity(pluginPath, indexPath);
 
-      // Dynamically import plugin
-      const pluginModule = await import(indexPath);
+      // Dynamically import plugin (use pathToFileURL for cross-platform compatibility)
+      const pluginModule = await import(pathToFileURL(indexPath).href);
       const plugin = pluginModule.default as Plugin;
 
       // Validate plugin structure
@@ -173,6 +174,16 @@ export class PluginLoader {
 
       // Map provider names to plugin
       for (const providerName of plugin.metadata.providers) {
+        const existingPlugin = this.providerMap.get(providerName);
+        if (existingPlugin) {
+          logger.error(
+            `Provider name collision detected: "${providerName}" is already registered by plugin "${existingPlugin}". ` +
+            `Plugin "${plugin.metadata.name}" cannot register the same provider name.`
+          );
+          throw new Error(
+            `Provider name collision: "${providerName}" already registered by plugin "${existingPlugin}"`
+          );
+        }
         this.providerMap.set(providerName, plugin.metadata.name);
       }
 

@@ -29,6 +29,8 @@ permissions:
 jobs:
   review:
     runs-on: ubicloud-standard-2
+    env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -65,13 +67,12 @@ jobs:
         run: |
           # Check if OPENROUTER_API_KEY is available for fork PRs
           if [ "${{ github.event.pull_request.head.repo.fork }}" = "true" ]; then
-            if [ -z "${{ secrets.OPENROUTER_API_KEY }}" ]; then
-              echo "⚠️  Warning: Fork PR without OPENROUTER_API_KEY. OpenRouter providers will be skipped; free OpenCode providers will be used."
-            else
-              echo "✅ OPENROUTER_API_KEY available for fork PR - review will run"
-            fi
+            echo "⚠️  Fork PR detected - secrets are not available"
+            echo "Review will use free OpenCode providers only"
+          elif [ -z "$OPENROUTER_API_KEY" ]; then
+            echo "⚠️  Warning: OPENROUTER_API_KEY not set. OpenRouter providers will be skipped; free OpenCode providers will be used."
           else
-            echo "✅ Not a fork PR - all secrets available"
+            echo "✅ OPENROUTER_API_KEY available - full provider access enabled"
           fi
 
           # Log provider discovery strategy
@@ -88,7 +89,7 @@ jobs:
           ${{
             steps.resolve-pr.outputs.pr != '' &&
             github.event.pull_request.head.repo.fork == true &&
-            secrets.OPENROUTER_API_KEY == ''
+            env.OPENROUTER_API_KEY == ''
           }}
         run: |
           echo "⚠️  Skipping review for fork PR without OPENROUTER_API_KEY"
@@ -108,7 +109,7 @@ jobs:
             steps.resolve-pr.outputs.pr != '' &&
             (
               github.event.pull_request.head.repo.fork != true ||
-              secrets.OPENROUTER_API_KEY != ''
+              env.OPENROUTER_API_KEY != ''
             )
           }}
         uses: ./

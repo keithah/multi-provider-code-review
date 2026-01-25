@@ -113,13 +113,6 @@ const SECRET_PATTERNS: Array<{ regex: RegExp; title: string; message: string }> 
     message: 'Revoke the key and remove it from source control.',
   },
 
-  // Heroku
-  {
-    regex: /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/,
-    title: 'Possible Heroku API key',
-    message: 'Revoke the key and remove it from source control.',
-  },
-
   // Generic Passwords
   {
     regex: /(?:password|passwd|pwd)\s*[:=]\s*['"]([^'"]{8,})['"]/i,

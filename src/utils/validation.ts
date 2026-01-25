@@ -2,6 +2,7 @@
  * Validation utilities with helpful error messages
  */
 
+import * as path from 'path';
 import { logger } from './logger';
 
 export class ValidationError extends Error {
@@ -219,6 +220,19 @@ export function validateTimeout(timeoutMs: number): void {
 }
 
 /**
+ * Check if a string contains control characters (ASCII 0x00-0x1F)
+ */
+function containsControlCharacters(str: string): boolean {
+  for (let i = 0; i < str.length; i++) {
+    const code = str.charCodeAt(i);
+    if (code >= 0x00 && code <= 0x1f) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Validate file path and check for directory traversal attacks
  * @param filePath - Path to validate
  * @param baseDir - Optional base directory to restrict paths to. When provided, returns absolute resolved path.
@@ -251,9 +265,6 @@ export function validateFilePath(filePath: unknown, baseDir?: string): string {
 
   // If baseDir is provided, perform enhanced validation with path resolution
   if (baseDir) {
-    // Import path module for resolution
-    const path = require('path');
-
     // Resolve to absolute path to normalize and detect traversal
     const basePath = path.resolve(baseDir);
     const resolvedPath = path.resolve(basePath, filePath);
@@ -270,10 +281,8 @@ export function validateFilePath(filePath: unknown, baseDir?: string): string {
 
     // Additional checks for suspicious patterns
     const suspiciousPatterns = [
-      /\/\.\//,         // Current directory reference
+      /\/?\.\//,        // Current directory reference (with or without leading slash)
       /\/\//,           // Double slashes
-      /\0/,             // Null bytes
-      /[\x00-\x1f]/,    // Control characters
     ];
 
     for (const pattern of suspiciousPatterns) {
@@ -284,6 +293,15 @@ export function validateFilePath(filePath: unknown, baseDir?: string): string {
           `Path "${filePath}" contains potentially malicious characters or patterns`
         );
       }
+    }
+
+    // Check for control characters using helper function
+    if (containsControlCharacters(filePath)) {
+      throw new ValidationError(
+        'File path contains control characters',
+        'filePath',
+        `Path "${filePath}" contains control characters (ASCII 0x00-0x1F) which are not allowed`
+      );
     }
 
     return resolvedPath;
