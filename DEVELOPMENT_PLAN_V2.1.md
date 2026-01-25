@@ -702,6 +702,101 @@ const fixed = true;
 
 **Blocked by:** Nothing - ready to implement when prioritized
 
+### 4. Dynamic Free Model Pool with Health Checks
+
+**Description:** Automatically select and rotate free OpenRouter models to maximize review results without cost
+
+**Technical Approach:**
+- Fetch list of free models from OpenRouter API
+  - Use `/api/v1/models` endpoint with filter `pricing.prompt=0`
+  - Cache model list for 24 hours to reduce API calls
+- Implement health check system:
+  - Send small test prompt to each candidate model
+  - Measure response time and success rate
+  - Track model availability over time
+- Dynamic model selection:
+  - Start with a pool of N free models (configurable, default 5)
+  - Rotate models on each review for diversity
+  - If health check fails, swap out for next available free model
+  - Maintain a "hot standby" pool of verified working models
+- Fallback strategy:
+  - If all free models fail, fall back to configured paid models
+  - Log model failures for monitoring
+  - Alert user if free tier exhausted
+
+**Implementation:**
+```typescript
+// src/providers/openrouter/free-model-pool.ts
+export class FreeModelPool {
+  async fetchFreeModels(): Promise<Model[]>
+  async healthCheck(model: Model): Promise<boolean>
+  async selectHealthyModels(count: number): Promise<Model[]>
+  async rotateFailedModel(failed: Model): Promise<Model>
+}
+
+// src/providers/openrouter/model-cache.ts
+export class ModelCache {
+  getCachedModels(): Model[]
+  cacheModels(models: Model[], ttl: number): void
+  invalidateCache(): void
+}
+```
+
+**Configuration:**
+```yaml
+openrouter:
+  free_model_pool:
+    enabled: true
+    pool_size: 5
+    health_check_timeout: 10s
+    health_check_prompt: "Review this code: const x = 1;"
+    cache_ttl_hours: 24
+    fallback_to_paid: true
+    rotation_strategy: 'round-robin'  # or 'random', 'fastest'
+```
+
+**Health Check Strategy:**
+- Quick test prompt (< 50 tokens)
+- Timeout after 10 seconds
+- Retry once on failure
+- Mark model as "degraded" after 3 failures
+- Remove from pool after 5 consecutive failures
+- Re-check degraded models every hour
+
+**Benefits:**
+- Zero cost for reviews (using only free models)
+- More diverse results from multiple models
+- Automatic failover when models go down
+- Increased reliability through redundancy
+- Better coverage than single free model
+
+**Implementation Notes:**
+- Medium complexity (~3-5 days work)
+- High value for cost-conscious users
+- Requires robust error handling
+- Need to handle OpenRouter rate limits
+- Should track model performance metrics
+- Consider model quality differences (some free models may be lower quality)
+- Cache health check results to avoid repeated checks
+- Implement exponential backoff for failed models
+
+**Risks:**
+- Free models may have lower quality than paid models
+- Free models may have rate limits or availability issues
+- Adds complexity to provider selection logic
+- Health checks add latency to review startup (~2-5s)
+
+**Mitigation:**
+- Make feature opt-in with clear documentation
+- Show which models were used in review output
+- Allow users to blocklist specific free models
+- Provide quality comparison metrics
+- Cache health checks aggressively
+
+**Blocked by:** Nothing - ready to implement when prioritized
+
+**Priority:** Medium - good for expanding free tier usage, but not critical
+
 ---
 
 **Why defer these features:**
@@ -714,8 +809,12 @@ const fixed = true;
 **When to build (v0.3.0 timeline):**
 - After v0.2.1 has been used in production for 2-4 weeks
 - When feedback shows clear demand for interactive features
-- When resources are available (estimated 2-3 weeks total)
-- Priority order: (1) Commit Suggestions, (2) Visual Progress, (3) Interactive Bot
+- When resources are available (estimated 3-4 weeks total)
+- Priority order:
+  1. Commit Suggestions (2 days)
+  2. Dynamic Free Model Pool (3-5 days)
+  3. Visual Progress (1-3 days)
+  4. Interactive Bot (1-2 weeks)
 
 **Original Deferred Features (v2.2+):**
 - Complex ML learning - Needs 100+ active users for data
