@@ -457,4 +457,160 @@ describe('TrivialDetector', () => {
       expect(result.trivialFiles).toHaveLength(3);
     });
   });
+
+  describe('skip flag combinations', () => {
+    it('should respect skipDependencyUpdates=false', () => {
+      const config = createDefaultTrivialConfig();
+      config.skipDependencyUpdates = false;
+
+      const detector = new TrivialDetector(config);
+      const files = [createFile('package-lock.json')];
+
+      const result = detector.detect(files);
+
+      expect(result.isTrivial).toBe(false);
+      expect(result.nonTrivialFiles).toContain('package-lock.json');
+    });
+
+    it('should respect skipDocumentationOnly=false', () => {
+      const config = createDefaultTrivialConfig();
+      config.skipDocumentationOnly = false;
+
+      const detector = new TrivialDetector(config);
+      const files = [createFile('README.md')];
+
+      const result = detector.detect(files);
+
+      expect(result.isTrivial).toBe(false);
+      expect(result.nonTrivialFiles).toContain('README.md');
+    });
+
+    it('should respect skipTestFixtures=false', () => {
+      const config = createDefaultTrivialConfig();
+      config.skipTestFixtures = false;
+
+      const detector = new TrivialDetector(config);
+      const files = [createFile('__tests__/__snapshots__/test.snap')];
+
+      const result = detector.detect(files);
+
+      expect(result.isTrivial).toBe(false);
+      expect(result.nonTrivialFiles).toContain('__tests__/__snapshots__/test.snap');
+    });
+
+    it('should respect skipConfigFiles=false', () => {
+      const config = createDefaultTrivialConfig();
+      config.skipConfigFiles = false;
+
+      const detector = new TrivialDetector(config);
+      const files = [createFile('.eslintrc.json')];
+
+      const result = detector.detect(files);
+
+      expect(result.isTrivial).toBe(false);
+      expect(result.nonTrivialFiles).toContain('.eslintrc.json');
+    });
+
+    it('should respect skipBuildArtifacts=false', () => {
+      const config = createDefaultTrivialConfig();
+      config.skipBuildArtifacts = false;
+
+      const detector = new TrivialDetector(config);
+      const files = [createFile('dist/bundle.js')];
+
+      const result = detector.detect(files);
+
+      expect(result.isTrivial).toBe(false);
+      expect(result.nonTrivialFiles).toContain('dist/bundle.js');
+    });
+
+    it('should handle all skip flags disabled', () => {
+      const config = createDefaultTrivialConfig();
+      config.skipDependencyUpdates = false;
+      config.skipDocumentationOnly = false;
+      config.skipTestFixtures = false;
+      config.skipConfigFiles = false;
+      config.skipBuildArtifacts = false;
+      config.skipFormattingOnly = false;
+
+      const detector = new TrivialDetector(config);
+      const files = [
+        createFile('package-lock.json'),
+        createFile('README.md'),
+        createFile('.eslintrc.json'),
+      ];
+
+      const result = detector.detect(files);
+
+      expect(result.isTrivial).toBe(false);
+      expect(result.nonTrivialFiles).toHaveLength(3);
+      expect(result.trivialFiles).toHaveLength(0);
+    });
+
+    it('should handle all skip flags enabled (default)', () => {
+      const detector = new TrivialDetector(createDefaultTrivialConfig());
+      const files = [
+        createFile('package-lock.json'),
+        createFile('README.md'),
+        createFile('.eslintrc.json'),
+      ];
+
+      const result = detector.detect(files);
+
+      expect(result.isTrivial).toBe(true);
+      expect(result.trivialFiles).toHaveLength(3);
+      expect(result.nonTrivialFiles).toHaveLength(0);
+    });
+
+    it('should handle mixed skip flags', () => {
+      const config = createDefaultTrivialConfig();
+      config.skipDependencyUpdates = true;
+      config.skipDocumentationOnly = false;
+      config.skipConfigFiles = true;
+
+      const detector = new TrivialDetector(config);
+      const files = [
+        createFile('package-lock.json'), // Trivial
+        createFile('README.md'),           // Non-trivial
+        createFile('.eslintrc.json'),      // Trivial
+      ];
+
+      const result = detector.detect(files);
+
+      expect(result.isTrivial).toBe(false);
+      expect(result.nonTrivialFiles).toEqual(['README.md']);
+      expect(result.trivialFiles).toEqual(['package-lock.json', '.eslintrc.json']);
+    });
+
+    it('should respect custom trivial patterns', () => {
+      const config = createDefaultTrivialConfig();
+      config.customTrivialPatterns = ['.*\\.generated\\.ts$'];
+
+      const detector = new TrivialDetector(config);
+      const files = [createFile('src/api.generated.ts')];
+
+      const result = detector.detect(files);
+
+      expect(result.isTrivial).toBe(true);
+      expect(result.trivialFiles).toContain('src/api.generated.ts');
+    });
+
+    it('should combine custom patterns with built-in patterns', () => {
+      const config = createDefaultTrivialConfig();
+      config.customTrivialPatterns = ['.*\\.generated\\.ts$'];
+
+      const detector = new TrivialDetector(config);
+      const files = [
+        createFile('src/api.generated.ts'), // Custom pattern
+        createFile('package-lock.json'),     // Built-in pattern
+        createFile('src/app.ts'),            // Neither
+      ];
+
+      const result = detector.detect(files);
+
+      expect(result.isTrivial).toBe(false);
+      expect(result.trivialFiles).toEqual(['src/api.generated.ts', 'package-lock.json']);
+      expect(result.nonTrivialFiles).toEqual(['src/app.ts']);
+    });
+  });
 });

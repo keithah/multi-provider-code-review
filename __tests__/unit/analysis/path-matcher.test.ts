@@ -428,5 +428,122 @@ describe('PathMatcher', () => {
       // Both files match, but only one unique path
       expect(result.matchedPaths).toHaveLength(1);
     });
+
+    it('should handle multiple files with different patterns efficiently', () => {
+      const patterns: PathPattern[] = [
+        { pattern: 'src/**/*.ts', intensity: 'standard' },
+        { pattern: 'test/**/*.ts', intensity: 'light' },
+      ];
+
+      const matcher = new PathMatcher({
+        enabled: true,
+        defaultIntensity: 'standard',
+        patterns,
+      });
+
+      const files = [
+        createFile('src/app.ts'),
+        createFile('src/utils.ts'),
+        createFile('test/app.test.ts'),
+      ];
+
+      const result = matcher.determineIntensity(files);
+
+      expect(result.matchedPaths.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should handle empty file list', () => {
+      const matcher = new PathMatcher(createDefaultPathMatcherConfig());
+
+      const result = matcher.determineIntensity([]);
+
+      expect(result.intensity).toBe('standard');
+      expect(result.matchedPaths).toHaveLength(0);
+    });
+
+    it('should handle patterns with no matches', () => {
+      const patterns: PathPattern[] = [
+        { pattern: 'non-existent/**', intensity: 'thorough' },
+      ];
+
+      const matcher = new PathMatcher({
+        enabled: true,
+        defaultIntensity: 'standard',
+        patterns,
+      });
+
+      const files = [createFile('src/app.ts')];
+      const result = matcher.determineIntensity(files);
+
+      expect(result.intensity).toBe('standard');
+      expect(result.matchedPaths).toHaveLength(0);
+    });
+
+    it('should handle boundary pattern length (exactly 500 chars)', () => {
+      const boundaryPattern = 'a'.repeat(500);
+
+      expect(() => {
+        new PathMatcher({
+          enabled: true,
+          defaultIntensity: 'standard',
+          patterns: [{ pattern: boundaryPattern, intensity: 'thorough' }],
+        });
+      }).not.toThrow();
+    });
+
+    it('should handle boundary complexity score (exactly 50)', () => {
+      // 25 wildcards * 2 = 50 (exactly at limit)
+      // Pattern: a*b*c*d*e*f*g*h*i*j*k*l*m*n*o*p*q*r*s*t*u*v*w*x*y*
+      const boundaryPattern = 'a*b*c*d*e*f*g*h*i*j*k*l*m*n*o*p*q*r*s*t*u*v*w*x*y*';
+
+      expect(() => {
+        new PathMatcher({
+          enabled: true,
+          defaultIntensity: 'standard',
+          patterns: [{ pattern: boundaryPattern, intensity: 'thorough' }],
+        });
+      }).not.toThrow();
+    });
+
+    it('should reject pattern at complexity score 51+', () => {
+      // 26 wildcards * 2 = 52 (over limit)
+      const overLimitPattern = 'a*b*c*d*e*f*g*h*i*j*k*l*m*n*o*p*q*r*s*t*u*v*w*x*y*z*';
+
+      expect(() => {
+        new PathMatcher({
+          enabled: true,
+          defaultIntensity: 'standard',
+          patterns: [{ pattern: overLimitPattern, intensity: 'thorough' }],
+        });
+      }).toThrow(/too complex/i);
+    });
+
+    it('should reject pattern with tab character (0x09 is control char)', () => {
+      // Tab (0x09) is a control character (0x00-0x1F)
+      const patternWithTab = 'src\t/app.ts';
+
+      expect(() => {
+        new PathMatcher({
+          enabled: true,
+          defaultIntensity: 'standard',
+          patterns: [{ pattern: patternWithTab, intensity: 'thorough' }],
+        });
+      }).toThrow(/control characters/i);
+    });
+
+    it('should accept pattern with regular space (0x20, not control char)', () => {
+      // Space (0x20) is NOT a control character
+      const patternWithSpace = 'my project/*.ts';
+
+      expect(() => {
+        new PathMatcher({
+          enabled: true,
+          defaultIntensity: 'standard',
+          patterns: [{ pattern: patternWithSpace, intensity: 'thorough' }],
+        });
+      }).not.toThrow();
+    });
   });
 });
