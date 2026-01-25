@@ -40,6 +40,7 @@ export class WebhookHandler {
   private static readonly MIN_SECRET_LENGTH = 32;
   private readonly globalRateLimit = new Map<string, RateLimitEntry>();
   private readonly prRateLimit = new Map<number, RateLimitEntry>();
+  private rateLimitCleanupIntervalId: NodeJS.Timeout | null = null;
 
   constructor(
     private readonly config: WebhookConfig,
@@ -47,7 +48,18 @@ export class WebhookHandler {
   ) {
     this.validateConfig();
     // Clean up old rate limit entries every 5 minutes
-    setInterval(() => this.cleanupRateLimits(), 5 * 60 * 1000);
+    this.rateLimitCleanupIntervalId = setInterval(() => this.cleanupRateLimits(), 5 * 60 * 1000);
+  }
+
+  /**
+   * Dispose of resources and stop background tasks
+   * Safe to call multiple times (no-op if already disposed)
+   */
+  dispose(): void {
+    if (this.rateLimitCleanupIntervalId !== null) {
+      clearInterval(this.rateLimitCleanupIntervalId);
+      this.rateLimitCleanupIntervalId = null;
+    }
   }
 
   /**
@@ -76,8 +88,9 @@ export class WebhookHandler {
     for (const pattern of forbiddenPatterns) {
       if (pattern.test(this.config.secret)) {
         throw new Error(
-          `Webhook secret appears to be a placeholder value: "${this.config.secret}". ` +
+          `Webhook secret appears to be a placeholder value matching forbidden pattern. ` +
           `This is not allowed in production. ` +
+          `The secret matched pattern: ${pattern.source}. ` +
           `Generate a secure random secret with: openssl rand -hex 32`
         );
       }

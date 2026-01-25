@@ -285,8 +285,10 @@ export function validateFilePath(filePath: unknown, baseDir?: string): string {
     const basePath = path.resolve(baseDir);
     const resolvedPath = path.resolve(basePath, filePath);
 
-    // Check for directory traversal - resolved path must be within baseDir
-    if (!resolvedPath.startsWith(basePath + path.sep) && resolvedPath !== basePath) {
+    // Check for directory traversal using path.relative
+    // If the relative path starts with '..' or equals '..', the resolved path escapes baseDir
+    const relativePath = path.relative(basePath, resolvedPath);
+    if (relativePath.startsWith('..') || relativePath === '..') {
       throw new ValidationError(
         'File path escapes base directory',
         'filePath',
