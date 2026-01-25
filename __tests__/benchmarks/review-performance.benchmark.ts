@@ -19,6 +19,7 @@ import { TestCoverageAnalyzer } from '../../src/analysis/test-coverage';
 import { ASTAnalyzer } from '../../src/analysis/ast/analyzer';
 import { CacheManager } from '../../src/cache/manager';
 import { CostTracker } from '../../src/cost/tracker';
+import { PricingService } from '../../src/cost/pricing';
 import { SecurityScanner } from '../../src/security/scanner';
 import { RulesEngine } from '../../src/rules/engine';
 import { PromptBuilder } from '../../src/analysis/llm/prompt-builder';
@@ -270,7 +271,7 @@ async function runBenchmark(
     testCoverage: new TestCoverageAnalyzer(),
     astAnalyzer: new ASTAnalyzer(),
     cache: cache || new NoopCache(),
-    costTracker: new CostTracker(new BenchmarkPricingService() as unknown as MockPricingService),
+    costTracker: new CostTracker(new BenchmarkPricingService()),
     security: new SecurityScanner(),
     rules: new RulesEngine([]),
     prLoader: new BenchmarkPRLoader(prContext) as unknown as ReviewComponents['prLoader'],

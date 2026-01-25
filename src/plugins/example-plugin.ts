@@ -27,13 +27,13 @@ const metadata: PluginMetadata = {
 
 /**
  * Custom provider implementation
+ * Must extend Provider base class to inherit healthCheck and validation methods
  */
-class CustomProvider implements Provider {
-  name: string;
+class CustomProvider extends Provider {
   model: string;
 
   constructor(model: string, private readonly apiKey: string) {
-    this.name = model;
+    super(model); // Call parent constructor with provider name
     this.model = model;
   }
 
