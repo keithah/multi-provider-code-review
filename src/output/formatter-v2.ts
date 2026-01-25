@@ -183,7 +183,8 @@ export class MarkdownFormatterV2 {
     lines.push('');
 
     findings.forEach((finding, index) => {
-      lines.push(this.formatFinding(finding, severity));
+      // Pass the index and total count for numbering (if count > 1)
+      lines.push(this.formatFinding(finding, severity, index + 1, findings.length));
       if (index < findings.length - 1) {
         lines.push('');
       }
@@ -196,7 +197,9 @@ export class MarkdownFormatterV2 {
 
   private formatFinding(
     finding: Finding,
-    severity: 'critical' | 'major' | 'minor'
+    severity: 'critical' | 'major' | 'minor',
+    index: number,
+    total: number
   ): string {
     const lines: string[] = [];
 
@@ -204,7 +207,10 @@ export class MarkdownFormatterV2 {
     const emoji = severity === 'critical' ? '🔴' : severity === 'major' ? '🟡' : '🔵';
     const location = `\`${finding.file}:${finding.line}\``;
 
-    lines.push(`#### ${emoji} ${finding.title}`);
+    // Add number prefix if there are multiple findings of this severity
+    const numberPrefix = total > 1 ? `${index}. ` : '';
+
+    lines.push(`#### ${emoji} ${numberPrefix}${finding.title}`);
     lines.push(`**Location:** ${location}${finding.category ? ` • **Category:** ${finding.category}` : ''}`);
     lines.push('');
 
@@ -229,16 +235,20 @@ export class MarkdownFormatterV2 {
       lines.push('');
     }
 
-    // Evidence (if present)
+    // Evidence (if present) - put behind "View reasoning" collapsible
     if (finding.evidence) {
       const confidence = Math.round(finding.evidence.confidence * 100);
 
-      lines.push(`**Evidence:** ${finding.evidence.badge} (${confidence}% confidence)`);
       if (finding.evidence.reasoning) {
         lines.push(`<details><summary>View reasoning</summary>`);
         lines.push('');
+        lines.push(`**Evidence:** ${finding.evidence.badge} (${confidence}% confidence)`);
+        lines.push('');
         lines.push(finding.evidence.reasoning);
         lines.push('</details>');
+      } else {
+        // No reasoning, show evidence inline
+        lines.push(`**Evidence:** ${finding.evidence.badge} (${confidence}% confidence)`);
       }
       lines.push('');
     }

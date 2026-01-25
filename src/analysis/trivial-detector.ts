@@ -246,7 +246,8 @@ export class TrivialDetector {
    * Improved algorithm to reduce false positives:
    * 1. Checks if only whitespace differs between lines
    * 2. Uses ordered comparison to detect semantic changes
-   * 3. Validates that changes are truly formatting-related
+   * 3. Detects common semantic changes (identifiers, strings, imports)
+   * 4. Validates that changes are truly formatting-related
    */
   private isFormattingOnly(file: FileChange): boolean {
     if (!file.patch) return false;
@@ -254,7 +255,16 @@ export class TrivialDetector {
     // Extract added/removed lines from patch
     const lines = file.patch.split('\n');
     const changes = lines.filter(line => line.startsWith('+') || line.startsWith('-'));
-    const actualChanges = changes.filter(line => !line.startsWith('+++') && !line.startsWith('---'));
+
+    // Filter out diff metadata headers with strict pattern matching
+    // Only exclude lines that are diff metadata (not code that happens to start with +++/---)
+    const actualChanges = changes.filter(line => {
+      // Exclude diff file headers: "+++ " or "--- " (with space after)
+      if (/^(\+\+\+ |\-\-\- )/.test(line)) return false;
+      // Exclude hunk headers: "@@ ... @@"
+      if (/^@@/.test(line)) return false;
+      return true;
+    });
 
     if (actualChanges.length === 0) return true;
 
@@ -281,6 +291,11 @@ export class TrivialDetector {
           return false;
         }
       }
+
+      // Additional semantic checks - catch changes that normalized comparison might miss
+      if (!this.areSemanticallySame(added, deleted)) {
+        return false;
+      }
     }
 
     // All lines differ only in whitespace
@@ -288,11 +303,99 @@ export class TrivialDetector {
   }
 
   /**
+   * Check if two lines are semantically the same (beyond whitespace)
+   * Detects common semantic changes like:
+   * - Variable/function name changes
+   * - String literal changes
+   * - Number literal changes
+   * - Import/export changes
+   */
+  private areSemanticallySame(line1: string, line2: string): boolean {
+    const trimmed1 = line1.trim();
+    const trimmed2 = line2.trim();
+
+    // If both are empty or comments, they're the same
+    if (!trimmed1 && !trimmed2) return true;
+    if (trimmed1.startsWith('//') && trimmed2.startsWith('//')) return true;
+    if (trimmed1.startsWith('/*') && trimmed2.startsWith('/*')) return true;
+    if (trimmed1.startsWith('*') && trimmed2.startsWith('*')) return true;
+
+    // Extract identifiers (variable/function names)
+    const identifiers1 = this.extractIdentifiers(trimmed1);
+    const identifiers2 = this.extractIdentifiers(trimmed2);
+
+    // If identifier count differs, it's a semantic change
+    if (identifiers1.length !== identifiers2.length) return false;
+
+    // If any identifier changed (ignoring order for now), it's semantic
+    const ids1Set = new Set(identifiers1);
+    const ids2Set = new Set(identifiers2);
+    if (ids1Set.size !== ids2Set.size) return false;
+    for (const id of ids1Set) {
+      if (!ids2Set.has(id)) return false;
+    }
+
+    // Extract string literals
+    const strings1 = this.extractStrings(trimmed1);
+    const strings2 = this.extractStrings(trimmed2);
+
+    // If string literal changed, it's semantic
+    if (strings1.join('|') !== strings2.join('|')) return false;
+
+    // Check for import/export changes
+    if (this.isImportOrExport(trimmed1) || this.isImportOrExport(trimmed2)) {
+      // For imports/exports, require exact match (after normalization)
+      return this.normalizeWhitespace(trimmed1) === this.normalizeWhitespace(trimmed2);
+    }
+
+    return true;
+  }
+
+  /**
+   * Extract identifiers (variable/function names) from a line of code
+   */
+  private extractIdentifiers(line: string): string[] {
+    // Simple identifier extraction (words that look like identifiers)
+    const matches = line.match(/\b[a-zA-Z_$][a-zA-Z0-9_$]*\b/g);
+    return matches || [];
+  }
+
+  /**
+   * Extract string literals from a line of code
+   */
+  private extractStrings(line: string): string[] {
+    const strings: string[] = [];
+    // Match single and double quoted strings
+    const singleQuoted = line.match(/'([^']*)'/g);
+    const doubleQuoted = line.match(/"([^"]*)"/g);
+    const templateLiteral = line.match(/`([^`]*)`/g);
+
+    if (singleQuoted) strings.push(...singleQuoted);
+    if (doubleQuoted) strings.push(...doubleQuoted);
+    if (templateLiteral) strings.push(...templateLiteral);
+
+    return strings;
+  }
+
+  /**
+   * Check if a line is an import or export statement
+   */
+  private isImportOrExport(line: string): boolean {
+    const trimmed = line.trim();
+    return trimmed.startsWith('import ') ||
+           trimmed.startsWith('export ') ||
+           trimmed.startsWith('from ') ||
+           trimmed.includes('require(');
+  }
+
+  /**
    * Normalize whitespace for comparison
-   * Removes all whitespace to detect semantic changes
+   * Trims and collapses internal whitespace runs to single space
+   * This preserves string literals and semantics while detecting formatting changes
    */
   private normalizeWhitespace(text: string): string {
-    return text.replace(/\s+/g, '');
+    // Trim leading/trailing whitespace and collapse internal runs to single space
+    return text.trim().replace(/\s+/g, ' ');
   }
 
   /**

@@ -31,7 +31,8 @@ import { PromptGenerator } from '../autofix/prompt-generator';
 import { ReliabilityTracker } from '../providers/reliability-tracker';
 import { MetricsCollector } from '../analytics/metrics-collector';
 import { TrivialDetector } from '../analysis/trivial-detector';
-import { PathMatcher, createDefaultPathMatcherConfig } from '../analysis/path-matcher';
+import { PathMatcher, createDefaultPathMatcherConfig, PathPattern, ReviewIntensity } from '../analysis/path-matcher';
+import { z } from 'zod';
 import { ReviewConfig, Review, PRContext, RunDetails, Finding, FileChange, UnchangedContext, ProviderResult } from '../types';
 import { logger } from '../utils/logger';
 import { mapAddedLines } from '../utils/diff';
@@ -86,6 +87,10 @@ export class ReviewOrchestrator {
   /**
    * Execute review on a given PR context
    * Can be called directly with a PRContext from CLI or GitHub
+   *
+   * IMMUTABILITY GUARANTEE: This function does not mutate the input `pr` parameter.
+   * When filtering or transforming the PR context, a new object is created with spread syntax.
+   * Tests verify that pr.files array is not modified by this function.
    */
   async executeReview(pr: PRContext): Promise<Review> {
     const { config } = this.components;
@@ -159,23 +164,51 @@ export class ReviewOrchestrator {
     }
 
     // Determine review intensity based on file paths (after trivial filtering)
+    // NOTE: Currently logs intensity but doesn't apply it to review behavior
+    // TODO: Wire intensity into PromptBuilder, provider selection, or analysis depth
     if (config.pathBasedIntensity) {
-      let patterns = [];
+      let patterns: PathPattern[] = [];
       if (config.pathIntensityPatterns) {
         try {
           const parsed = JSON.parse(config.pathIntensityPatterns);
+
           // Validate that parsed result is an array
-          if (Array.isArray(parsed)) {
-            patterns = parsed;
-          } else {
+          if (!Array.isArray(parsed)) {
             logger.warn('pathIntensityPatterns is not an array, using defaults');
             patterns = createDefaultPathMatcherConfig().patterns;
+          } else {
+            // Validate each pattern object against schema
+            const PathPatternSchema = z.object({
+              pattern: z.string(),
+              intensity: z.enum(['thorough', 'standard', 'light'] as const),
+              description: z.string().optional(),
+            });
+
+            const validPatterns: PathPattern[] = [];
+            for (const item of parsed) {
+              const result = PathPatternSchema.safeParse(item);
+              if (result.success) {
+                validPatterns.push(result.data);
+              } else {
+                logger.warn(`Invalid path pattern object, skipping: ${JSON.stringify(item)}`);
+              }
+            }
+
+            if (validPatterns.length === 0) {
+              logger.warn('No valid path patterns found, using defaults');
+              patterns = createDefaultPathMatcherConfig().patterns;
+            } else {
+              patterns = validPatterns;
+            }
           }
         } catch (error) {
           logger.warn('Failed to parse pathIntensityPatterns, using defaults', error as Error);
           // Fallback to default patterns on parse failure
           patterns = createDefaultPathMatcherConfig().patterns;
         }
+      } else {
+        // No patterns configured, use defaults
+        patterns = createDefaultPathMatcherConfig().patterns;
       }
 
       const pathMatcher = new PathMatcher({
@@ -369,9 +402,7 @@ export class ReviewOrchestrator {
       const fixPrompts = this.components.promptGenerator.generateFixPrompts(review.findings);
       if (fixPrompts.length > 0) {
         // Sanitize REPORT_BASENAME to prevent path traversal
-        const basename = (process.env.REPORT_BASENAME || 'multi-provider-review')
-          .replace(/[^a-zA-Z0-9_-]/g, '-')
-          .substring(0, 50);
+        const basename = this.sanitizeFilename(process.env.REPORT_BASENAME || 'multi-provider-review');
         const fixPromptsPath = path.join(process.cwd(), `${basename}-fix-prompts.md`);
         const format = (config.fixPromptFormat as 'cursor' | 'copilot' | 'plain') || 'plain';
         await this.components.promptGenerator.saveToFile(fixPrompts, fixPromptsPath, format);
@@ -468,6 +499,33 @@ export class ReviewOrchestrator {
 
   private estimateTokens(text: string): number {
     return Math.ceil(Buffer.byteLength(text, 'utf8') / 4);
+  }
+
+  /**
+   * Sanitize filename to prevent path traversal attacks
+   * Removes directory separators, path traversal sequences, and absolute paths
+   */
+  private sanitizeFilename(filename: string): string {
+    // Check for path traversal patterns
+    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      logger.warn(`Detected path traversal attempt in filename: ${filename}`);
+      // Use only the basename (last component)
+      filename = path.basename(filename);
+    }
+
+    // Check for absolute paths
+    if (path.isAbsolute(filename)) {
+      logger.warn(`Detected absolute path in filename: ${filename}`);
+      filename = path.basename(filename);
+    }
+
+    // Remove all non-alphanumeric characters except dash and underscore
+    const sanitized = filename
+      .replace(/[^a-zA-Z0-9_-]/g, '-')
+      .substring(0, 50);
+
+    // Ensure we don't end up with an empty string
+    return sanitized || 'multi-provider-review';
   }
 
   /**
@@ -622,9 +680,7 @@ export class ReviewOrchestrator {
 
   private async writeReports(review: Review): Promise<void> {
     // Sanitize REPORT_BASENAME to prevent path traversal
-    const base = (process.env.REPORT_BASENAME || 'multi-provider-review')
-      .replace(/[^a-zA-Z0-9_-]/g, '-')
-      .substring(0, 50);
+    const base = this.sanitizeFilename(process.env.REPORT_BASENAME || 'multi-provider-review');
     const sarifPath = path.join(process.cwd(), `${base}.sarif`);
     const jsonPath = path.join(process.cwd(), `${base}.json`);
 

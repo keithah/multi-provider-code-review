@@ -510,7 +510,7 @@ mpr analytics summary
 ```bash
 # Test specific provider
 export REVIEW_PROVIDERS="openrouter/google/gemini-2.0-flash-exp:free"
-export OPENROUTER_API_KEY="sk-or-v1-YOUR_KEY"
+export OPENROUTER_API_KEY="REPLACE_WITH_YOUR_KEY"
 mpr review --dry-run
 
 # Check provider health

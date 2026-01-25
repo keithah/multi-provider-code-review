@@ -122,12 +122,21 @@ export class PathMatcher {
       /(\*\*){3,}/, // Multiple consecutive **
       /(\*){10,}/, // Too many consecutive *
       /(.)\1{20,}/, // Excessive character repetition
+      /(\*.*\*){3,}/, // Nested wildcard patterns
+      /\{[^}]{100,}\}/, // Very long brace expansions
+      /(\||\/){20,}/, // Excessive alternation or path separators
     ];
 
     for (const suspicious of suspiciousPatterns) {
       if (suspicious.test(pattern)) {
         throw new Error('Invalid glob pattern: potentially malicious pattern detected');
       }
+    }
+
+    // Calculate complexity score to catch subtle ReDoS patterns
+    const complexityScore = this.calculatePatternComplexity(pattern);
+    if (complexityScore > 100) {
+      throw new Error(`Invalid glob pattern: complexity score too high (${complexityScore} > 100)`);
     }
 
     // Escape special regex characters except * and /
@@ -145,6 +154,41 @@ export class PathMatcher {
     } catch (error) {
       throw new Error(`Invalid glob pattern: failed to compile regex - ${(error as Error).message}`);
     }
+  }
+
+  /**
+   * Calculate complexity score for a pattern to detect potential ReDoS
+   * Higher scores indicate more complex/dangerous patterns
+   */
+  private calculatePatternComplexity(pattern: string): number {
+    let score = 0;
+
+    // Count wildcards (each adds complexity)
+    const wildcardCount = (pattern.match(/\*/g) || []).length;
+    score += wildcardCount * 2;
+
+    // Count double wildcards (more complex)
+    const doubleWildcardCount = (pattern.match(/\*\*/g) || []).length;
+    score += doubleWildcardCount * 5;
+
+    // Count alternations (brace expansions)
+    const braceCount = (pattern.match(/\{/g) || []).length;
+    score += braceCount * 3;
+
+    // Count character classes
+    const charClassCount = (pattern.match(/\[/g) || []).length;
+    score += charClassCount * 2;
+
+    // Penalty for very long patterns
+    if (pattern.length > 200) {
+      score += Math.floor(pattern.length / 50);
+    }
+
+    // Penalty for nested quantifiers (wildcard followed by wildcard)
+    const nestedQuantifiers = (pattern.match(/\*+.*\*+/g) || []).length;
+    score += nestedQuantifiers * 10;
+
+    return score;
   }
 
   /**
