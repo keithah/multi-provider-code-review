@@ -1,42 +1,5 @@
 import { Review, Finding } from '../types';
-
-/**
- * ANSI color codes for terminal output
- */
-const colors = {
-  reset: '\x1b[0m',
-  bold: '\x1b[1m',
-  dim: '\x1b[2m',
-
-  red: '\x1b[31m',
-  yellow: '\x1b[33m',
-  blue: '\x1b[34m',
-  green: '\x1b[32m',
-  gray: '\x1b[90m',
-  cyan: '\x1b[36m',
-
-  bgRed: '\x1b[41m',
-  bgYellow: '\x1b[43m',
-  bgBlue: '\x1b[44m',
-};
-
-/**
- * Check if terminal supports colors
- * Respects NO_COLOR environment variable (https://no-color.org/)
- */
-function supportsColor(): boolean {
-  if (process.env.NO_COLOR !== undefined) {
-    return false;
-  }
-  return process.stdout.isTTY && process.env.TERM !== 'dumb';
-}
-
-/**
- * Apply color if terminal supports it
- */
-function colorize(text: string, color: string): string {
-  return supportsColor() ? `${color}${text}${colors.reset}` : text;
-}
+import { colors } from './colors';
 
 /**
  * Terminal formatter for CLI output
@@ -50,9 +13,9 @@ export class TerminalFormatter {
 
     // Header
     lines.push('');
-    lines.push(colorize('═'.repeat(80), colors.cyan));
-    lines.push(colorize('  Multi-Provider Code Review', colors.bold + colors.cyan));
-    lines.push(colorize('═'.repeat(80), colors.cyan));
+    lines.push(colors.cyan('═'.repeat(80)));
+    lines.push(colors.bold(colors.cyan('  Multi-Provider Code Review')));
+    lines.push(colors.cyan('═'.repeat(80)));
     lines.push('');
 
     // Summary stats
@@ -63,7 +26,7 @@ export class TerminalFormatter {
     if (review.findings.length > 0) {
       lines.push(this.formatFindings(review.findings));
     } else {
-      lines.push(colorize('✓ No issues found!', colors.green + colors.bold));
+      lines.push(colors.success('✓ No issues found!'));
       lines.push('');
     }
 
@@ -85,11 +48,22 @@ export class TerminalFormatter {
 
     if (!metrics) return '';
 
-    lines.push(colorize('Summary:', colors.bold));
-    lines.push(`  ${this.getSeverityIcon('critical')} Critical: ${colorize(String(metrics.critical), metrics.critical > 0 ? colors.red + colors.bold : colors.gray)}`);
-    lines.push(`  ${this.getSeverityIcon('major')} Major:    ${colorize(String(metrics.major), metrics.major > 0 ? colors.yellow + colors.bold : colors.gray)}`);
-    lines.push(`  ${this.getSeverityIcon('minor')} Minor:    ${colorize(String(metrics.minor), metrics.minor > 0 ? colors.blue : colors.gray)}`);
-    lines.push(`  ${colorize('Total:', colors.dim)}    ${colorize(String(metrics.totalFindings), colors.bold)}`);
+    lines.push(colors.bold('Summary:'));
+
+    const criticalCount = metrics.critical > 0
+      ? colors.bold(colors.red(String(metrics.critical)))
+      : colors.gray(String(metrics.critical));
+    const majorCount = metrics.major > 0
+      ? colors.bold(colors.yellow(String(metrics.major)))
+      : colors.gray(String(metrics.major));
+    const minorCount = metrics.minor > 0
+      ? colors.blue(String(metrics.minor))
+      : colors.gray(String(metrics.minor));
+
+    lines.push(`  ${this.getSeverityIcon('critical')} Critical: ${criticalCount}`);
+    lines.push(`  ${this.getSeverityIcon('major')} Major:    ${majorCount}`);
+    lines.push(`  ${this.getSeverityIcon('minor')} Minor:    ${minorCount}`);
+    lines.push(`  ${colors.dim('Total:')}    ${colors.bold(String(metrics.totalFindings))}`);
 
     return lines.join('\n');
   }
@@ -107,7 +81,7 @@ export class TerminalFormatter {
 
     // Critical findings
     if (critical.length > 0) {
-      lines.push(colorize('Critical Issues:', colors.red + colors.bold));
+      lines.push(colors.critical('Critical Issues:'));
       lines.push('');
       for (const finding of critical) {
         lines.push(this.formatFinding(finding, 'critical'));
@@ -117,7 +91,7 @@ export class TerminalFormatter {
 
     // Major findings
     if (major.length > 0) {
-      lines.push(colorize('Major Issues:', colors.yellow + colors.bold));
+      lines.push(colors.major('Major Issues:'));
       lines.push('');
       for (const finding of major) {
         lines.push(this.formatFinding(finding, 'major'));
@@ -127,7 +101,7 @@ export class TerminalFormatter {
 
     // Minor findings
     if (minor.length > 0) {
-      lines.push(colorize('Minor Issues:', colors.blue + colors.bold));
+      lines.push(colors.bold(colors.blue('Minor Issues:')));
       lines.push('');
       for (const finding of minor) {
         lines.push(this.formatFinding(finding, 'minor'));
@@ -144,21 +118,21 @@ export class TerminalFormatter {
   private formatFinding(finding: Finding, severity: string): string {
     const lines: string[] = [];
     const icon = this.getSeverityIcon(severity);
-    const color = this.getSeverityColor(severity);
 
     // Title with location
-    const location = colorize(`${finding.file}:${finding.line}`, colors.cyan);
-    lines.push(`  ${icon} ${colorize(finding.title, color + colors.bold)} ${colorize('at', colors.dim)} ${location}`);
+    const location = colors.cyan(`${finding.file}:${finding.line}`);
+    const title = this.formatSeverityText(finding.title, severity);
+    lines.push(`  ${icon} ${title} ${colors.dim('at')} ${location}`);
 
     // Message (indented)
     const messageLines = finding.message.split('\n');
     for (const line of messageLines) {
-      lines.push(`     ${colorize(line, colors.dim)}`);
+      lines.push(`     ${colors.dim(line)}`);
     }
 
     // Suggestion (if present)
     if (finding.suggestion) {
-      lines.push(`     ${colorize('💡 Suggestion:', colors.green)} ${finding.suggestion}`);
+      lines.push(`     ${colors.green('💡 Suggestion:')} ${finding.suggestion}`);
     }
 
     return lines.join('\n');
@@ -172,13 +146,13 @@ export class TerminalFormatter {
 
     const lines: string[] = [];
 
-    lines.push(colorize('Performance:', colors.bold));
-    lines.push(`  Duration:  ${colorize(`${metrics.durationSeconds.toFixed(2)}s`, colors.cyan)}`);
-    lines.push(`  Cost:      ${colorize(`$${metrics.totalCost.toFixed(4)}`, colors.cyan)}`);
-    lines.push(`  Providers: ${colorize(`${metrics.providersSuccess}/${metrics.providersUsed}`, colors.cyan)} successful`);
+    lines.push(colors.bold('Performance:'));
+    lines.push(`  Duration:  ${colors.cyan(`${metrics.durationSeconds.toFixed(2)}s`)}`);
+    lines.push(`  Cost:      ${colors.cyan(`$${metrics.totalCost.toFixed(4)}`)}`);
+    lines.push(`  Providers: ${colors.cyan(`${metrics.providersSuccess}/${metrics.providersUsed}`)} successful`);
 
     if (metrics.providersFailed > 0) {
-      lines.push(`  ${colorize('⚠', colors.yellow)} ${metrics.providersFailed} provider(s) failed`);
+      lines.push(`  ${colors.warn('⚠')} ${metrics.providersFailed} provider(s) failed`);
     }
 
     return lines.join('\n');
@@ -190,29 +164,29 @@ export class TerminalFormatter {
   private getSeverityIcon(severity: string): string {
     switch (severity) {
       case 'critical':
-        return colorize('✖', colors.red);
+        return colors.red('✖');
       case 'major':
-        return colorize('⚠', colors.yellow);
+        return colors.yellow('⚠');
       case 'minor':
-        return colorize('ℹ', colors.blue);
+        return colors.blue('ℹ');
       default:
         return '•';
     }
   }
 
   /**
-   * Get color for severity level
+   * Format text with severity-appropriate styling
    */
-  private getSeverityColor(severity: string): string {
+  private formatSeverityText(text: string, severity: string): string {
     switch (severity) {
       case 'critical':
-        return colors.red;
+        return colors.bold(colors.red(text));
       case 'major':
-        return colors.yellow;
+        return colors.bold(colors.yellow(text));
       case 'minor':
-        return colors.blue;
+        return colors.bold(colors.blue(text));
       default:
-        return colors.reset;
+        return text;
     }
   }
 
@@ -221,8 +195,8 @@ export class TerminalFormatter {
    */
   formatMessage(message: string, type: 'error' | 'warning' | 'info' | 'success' = 'info'): string {
     const icon = this.getMessageIcon(type);
-    const color = this.getMessageColor(type);
-    return `${icon} ${colorize(message, color)}`;
+    const coloredMessage = this.colorMessage(message, type);
+    return `${icon} ${coloredMessage}`;
   }
 
   /**
@@ -231,33 +205,33 @@ export class TerminalFormatter {
   private getMessageIcon(type: string): string {
     switch (type) {
       case 'error':
-        return colorize('✖', colors.red);
+        return colors.error('✖');
       case 'warning':
-        return colorize('⚠', colors.yellow);
+        return colors.warn('⚠');
       case 'success':
-        return colorize('✓', colors.green);
+        return colors.success('✓');
       case 'info':
-        return colorize('ℹ', colors.blue);
+        return colors.info('ℹ');
       default:
         return '•';
     }
   }
 
   /**
-   * Get color for message type
+   * Apply color to message based on type
    */
-  private getMessageColor(type: string): string {
+  private colorMessage(message: string, type: string): string {
     switch (type) {
       case 'error':
-        return colors.red;
+        return colors.error(message);
       case 'warning':
-        return colors.yellow;
+        return colors.warn(message);
       case 'success':
-        return colors.green;
+        return colors.success(message);
       case 'info':
-        return colors.blue;
+        return colors.info(message);
       default:
-        return colors.reset;
+        return message;
     }
   }
 
