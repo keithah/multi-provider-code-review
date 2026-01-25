@@ -260,7 +260,7 @@ export class TrivialDetector {
     // Only exclude lines that are diff metadata (not code that happens to start with +++/---)
     const actualChanges = changes.filter(line => {
       // Exclude diff file headers: "+++ " or "--- " (with space after)
-      if (/^(\+\+\+ |\-\-\- )/.test(line)) return false;
+      if (/^(\+\+\+ |--- )/.test(line)) return false;
       // Exclude hunk headers: "@@ ... @@"
       if (/^@@/.test(line)) return false;
       return true;

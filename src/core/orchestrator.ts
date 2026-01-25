@@ -31,7 +31,7 @@ import { PromptGenerator } from '../autofix/prompt-generator';
 import { ReliabilityTracker } from '../providers/reliability-tracker';
 import { MetricsCollector } from '../analytics/metrics-collector';
 import { TrivialDetector } from '../analysis/trivial-detector';
-import { PathMatcher, createDefaultPathMatcherConfig, PathPattern, ReviewIntensity } from '../analysis/path-matcher';
+import { PathMatcher, createDefaultPathMatcherConfig, PathPattern } from '../analysis/path-matcher';
 import { z } from 'zod';
 import { ReviewConfig, Review, PRContext, RunDetails, Finding, FileChange, UnchangedContext, ProviderResult } from '../types';
 import { logger } from '../utils/logger';
