@@ -144,7 +144,7 @@ export class PathMatcher {
    */
   private checkAllowedCharacters(pattern: string): void {
     // Spaces are disallowed to reduce accidental broad matches; comma is kept for brace sets.
-    const allowed = new RegExp('^[A-Za-z0-9._\\-/*?{}\\[\\],]+$');
+    const allowed = /^[A-Za-z0-9._\-\/\*\?{}\[\],]+$/;
     if (!allowed.test(pattern)) {
       throw new Error(`Pattern contains unsupported characters: ${pattern}`);
     }
@@ -159,7 +159,8 @@ export class PathMatcher {
    * Block path traversal segments ('..') inside patterns to avoid unintended matches.
    */
   private checkTraversal(pattern: string): void {
-    if (pattern.includes('..')) {
+    const traversalSegment = /(^|[\\/])\.\.(?:[\\/]|$)/;
+    if (traversalSegment.test(pattern)) {
       throw new Error(`Pattern contains path traversal ('..') which is not allowed: ${pattern}`);
     }
   }

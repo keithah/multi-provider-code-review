@@ -99,26 +99,17 @@ export class CircuitBreaker {
   }
 
   private withLock<T>(providerId: string, fn: () => Promise<T>): Promise<T> {
-    const previous = (this.locks.get(providerId) as Promise<unknown> | undefined)?.catch(() => undefined) ?? Promise.resolve();
-    let run!: Promise<T>;
-    let runVoid!: Promise<void>;
+    const previous = this.locks.get(providerId)?.catch(() => undefined) ?? Promise.resolve();
 
-    run = (async () => {
-      await previous;
-      try {
-        return await fn();
-      } finally {
-        if (this.locks.get(providerId) === runVoid) {
-          this.locks.delete(providerId);
-        }
-      }
-    })();
+    const run: Promise<T> = previous.then(fn);
+    const runVoid = run.then(() => undefined, () => undefined);
 
-    runVoid = run.then(
-      () => undefined,
-      () => undefined
-    );
     this.locks.set(providerId, runVoid);
-    return run;
+
+    return run.finally(() => {
+      if (this.locks.get(providerId) === runVoid) {
+        this.locks.delete(providerId);
+      }
+    });
   }
 }

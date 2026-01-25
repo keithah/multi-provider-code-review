@@ -1,15 +1,6 @@
 import { ReliabilityTracker } from '../../../src/providers/reliability-tracker';
 import { CircuitBreaker } from '../../../src/providers/circuit-breaker';
-
-class MemoryStorage {
-  private store = new Map<string, string>();
-  async read(key: string): Promise<string | null> {
-    return this.store.get(key) ?? null;
-  }
-  async write(key: string, value: string): Promise<void> {
-    this.store.set(key, value);
-  }
-}
+import { MemoryStorage } from '../../helpers/memory-storage';
 
 describe('ReliabilityTracker with CircuitBreaker', () => {
   it('opens circuit after consecutive failures', async () => {

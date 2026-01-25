@@ -19,7 +19,7 @@ on:
 # Use PR number + head SHA (not merge commit SHA) for uniqueness per commit
 concurrency:
   # Guard against missing pull_request context (e.g., workflow_dispatch)
-  group: review-${{ (github.event.pull_request && github.event.pull_request.number) || inputs.pr_number || 'manual' }}-${{ (github.event.pull_request && github.event.pull_request.head.sha) || github.sha }}
+  group: review-${{ github.event.pull_request && github.event.pull_request.number || inputs.pr_number || 'manual' }}-${{ github.event.pull_request && github.event.pull_request.head && github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 # Permissions: Principle of least privilege

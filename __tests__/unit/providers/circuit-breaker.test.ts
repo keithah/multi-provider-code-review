@@ -1,18 +1,6 @@
 import { CircuitBreaker } from '../../../src/providers/circuit-breaker';
 import { encodeURIComponentSafe } from '../../../src/utils/sanitize';
-
-class MemoryStorage {
-  private store = new Map<string, string>();
-  async read(key: string): Promise<string | null> {
-    return this.store.get(key) ?? null;
-  }
-  async write(key: string, value: string): Promise<void> {
-    this.store.set(key, value);
-  }
-  keys(): string[] {
-    return [...this.store.keys()];
-  }
-}
+import { MemoryStorage } from '../../helpers/memory-storage';
 
 describe('CircuitBreaker', () => {
   jest.useFakeTimers();

@@ -275,7 +275,7 @@ export class ReviewOrchestrator {
       : reviewContext;
 
     // Skip LLM execution if no files to review (incremental with no changes)
-    let llmFindings: Finding[] = [];
+    const llmFindings: Finding[] = [];
     let providerResults: ProviderResult[] = [];
     let aiAnalysis: ReturnType<typeof summarizeAIDetection> | undefined;
     let providers = await this.components.providerRegistry.createProviders(config);
