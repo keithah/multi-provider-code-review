@@ -3,6 +3,7 @@ import { GitHubClient } from './client';
 import { logger } from '../utils/logger';
 import { mapLinesToPositions } from '../utils/diff';
 import { withRetry } from '../utils/retry';
+import { extractCodeSnippet, createEnhancedCommentBody } from '../utils/code-snippet';
 
 export class CommentPoster {
   private static readonly MAX_COMMENT_SIZE = 60_000;
@@ -117,7 +118,7 @@ export class CommentPoster {
     }
   }
 
-  async postInline(prNumber: number, comments: InlineComment[], files: FileChange[]): Promise<void> {
+  async postInline(prNumber: number, comments: InlineComment[], files: FileChange[], headSha?: string): Promise<void> {
     if (comments.length === 0) return;
 
     // Build a map from file path to line->position mapping
@@ -126,8 +127,38 @@ export class CommentPoster {
       positionMaps.set(file.filename, mapLinesToPositions(file.patch));
     }
 
+    // Fetch file contents and enhance comments with code snippets (if headSha provided)
+    const fileContentCache = new Map<string, string | null>();
+
+    const enhancedComments = await Promise.all(
+      comments.map(async (c) => {
+        let enhancedBody = c.body;
+
+        // Try to add code snippet if we have the commit SHA
+        if (headSha) {
+          // Check cache first
+          let fileContent = fileContentCache.get(c.path);
+
+          if (fileContent === undefined) {
+            // Not in cache, fetch it
+            fileContent = await this.client.getFileContent(c.path, headSha);
+            fileContentCache.set(c.path, fileContent);
+          }
+
+          if (fileContent) {
+            const snippet = extractCodeSnippet(fileContent, c.line, 3);
+            if (snippet) {
+              enhancedBody = createEnhancedCommentBody(c.body, snippet, c.path);
+            }
+          }
+        }
+
+        return { ...c, body: enhancedBody };
+      })
+    );
+
     // Convert comments to GitHub API format, filtering out those without valid positions
-    const apiComments = comments
+    const apiComments = enhancedComments
       .map(c => {
         const posMap = positionMaps.get(c.path);
         const position = posMap?.get(c.line);

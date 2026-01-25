@@ -319,7 +319,7 @@ export class ReviewOrchestrator {
 
     // Update existing comment for incremental reviews
     await this.components.commentPoster.postSummary(pr.number, markdown, useIncremental);
-    await this.components.commentPoster.postInline(pr.number, inlineFiltered, pr.files);
+    await this.components.commentPoster.postInline(pr.number, inlineFiltered, pr.files, pr.headSha);
 
     await this.writeReports(review);
 
