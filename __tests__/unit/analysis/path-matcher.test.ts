@@ -571,6 +571,16 @@ describe('PathMatcher', () => {
       }).toThrow(/unsupported characters/i);
     });
 
+    it('rejects leading negation', () => {
+      expect(() => {
+        new PathMatcher({
+          enabled: true,
+          defaultIntensity: 'standard',
+          patterns: [{ pattern: '!src/**', intensity: 'thorough' }],
+        });
+      }).toThrow(/negation/i);
+    });
+
     it('should reject pattern with disallowed characters (e.g., pipe)', () => {
       const badPattern = 'src|app.ts';
 

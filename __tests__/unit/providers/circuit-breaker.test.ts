@@ -58,7 +58,7 @@ describe('CircuitBreaker', () => {
     const storage = new MemoryStorage();
     const breaker = new CircuitBreaker(storage as any, { failureThreshold: 10 });
     const id = 'race/provider';
-    const key = `circuit-breaker-${encodeURIComponentSafe(id).replace(/\./g, '_')}`;
+    const key = `circuit-breaker-${encodeURIComponentSafe(id)}`;
 
     await Promise.all(Array.from({ length: 5 }).map(() => breaker.recordFailure(id)));
     const state = JSON.parse((await storage.read(key)) as string);

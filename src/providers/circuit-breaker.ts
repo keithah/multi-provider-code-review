@@ -94,8 +94,7 @@ export class CircuitBreaker {
   }
 
   private key(providerId: string): string {
-    const sanitized = encodeURIComponentSafe(providerId).replace(/\./g, '_');
-    return `circuit-breaker-${sanitized}`;
+    return `circuit-breaker-${encodeURIComponentSafe(providerId)}`;
   }
 
   private withLock<T>(providerId: string, fn: () => Promise<T>): Promise<T> {

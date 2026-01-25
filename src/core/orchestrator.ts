@@ -366,13 +366,11 @@ export class ReviewOrchestrator {
           }
         } finally {
           await batchQueue.onIdle();
-          if (typeof (batchQueue as any).clear === 'function') {
-            (batchQueue as any).clear(); // p-queue v7 supports clear(); guard for older versions
-          }
+          (batchQueue as any).clear?.();
         }
         llmFindings.push(...extractFindings(batchResults));
-        providerResults = [...healthCheckResults, ...batchResults];
-        await this.recordReliability(providerResults);
+        providerResults = batchResults;
+        await this.recordReliability([...healthCheckResults, ...batchResults]);
         aiAnalysis = config.enableAiDetection ? summarizeAIDetection(providerResults) : undefined;
         await progressTracker?.updateProgress('llm', 'completed', `Batches: ${batches.length}, size: ${batchSize}`);
       }

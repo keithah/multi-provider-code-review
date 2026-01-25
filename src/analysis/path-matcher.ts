@@ -143,15 +143,14 @@ export class PathMatcher {
    * Allows typical glob tokens and path separators; disallows pipes, backticks, and negation.
    */
   private checkAllowedCharacters(pattern: string): void {
+    if (pattern.startsWith('!')) {
+      throw new Error(`Pattern negation (!) is not allowed: ${pattern}`);
+    }
+
     // Spaces are disallowed to reduce accidental broad matches; comma is kept for brace sets.
     const allowed = /^[A-Za-z0-9._\-\/\*\?{}\[\],]+$/;
     if (!allowed.test(pattern)) {
       throw new Error(`Pattern contains unsupported characters: ${pattern}`);
-    }
-
-    // Explicitly block leading negation (!pattern) which minimatch treats as exclusion
-    if (pattern.trim().startsWith('!')) {
-      throw new Error(`Pattern negation (!) is not allowed: ${pattern}`);
     }
   }
 
