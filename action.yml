@@ -15,9 +15,17 @@ inputs:
   REVIEW_PROVIDERS:
     description: |
       Comma-separated provider list (e.g., "openrouter/model1,opencode/model2").
+
+      BEHAVIOR CHANGE (v0.2.0+):
+      - Previously: Defaulted to specific hardcoded providers
+      - Now: Defaults to empty string (enables dynamic discovery)
+
       DEFAULT (empty): Enables dynamic provider discovery - automatically selects best free models
       from OpenRouter API (if OPENROUTER_API_KEY set), OpenCode CLI, and hardcoded fallbacks.
+      Well-tested and recommended for most users.
+
       CUSTOM: Override discovery with specific providers. Disables automatic fallback chain.
+      Use when you need specific models or want predictable provider selection.
     required: false
     default: ""
   FALLBACK_PROVIDERS:
@@ -120,6 +128,10 @@ inputs:
     description: "Use learned confidence thresholds in quiet mode"
     required: false
     default: "true"
+  QUIET_MIN_CONFIDENCE:
+    description: "Minimum confidence threshold for quiet mode filtering (0.0-1.0)"
+    required: false
+    default: "0.5"
   GRAPH_ENABLED:
     description: "Enable code graph for dependency tracking"
     required: false

@@ -63,19 +63,32 @@ export class PluginLoader {
     }
 
     // Require explicit security acknowledgment
-    const securityAcknowledged = process.env.PLUGIN_SECURITY_ACKNOWLEDGED === 'true';
-    if (!securityAcknowledged) {
+    // CRITICAL: Plugins execute with full system access, no sandboxing
+    const securityAcknowledged = process.env.PLUGIN_SECURITY_ACKNOWLEDGED;
+
+    // Fail fast with explicit validation - must be exactly 'true' (case-sensitive)
+    if (securityAcknowledged !== 'true') {
+      const actualValue = securityAcknowledged === undefined ? 'undefined' :
+                         securityAcknowledged === '' ? 'empty string' :
+                         `"${securityAcknowledged}"`;
+
       logger.error(
-        'Plugin loading requires explicit security acknowledgment. ' +
-        'Plugins execute arbitrary code with full system access. ' +
-        'Set PLUGIN_SECURITY_ACKNOWLEDGED=true environment variable only if you understand the risks ' +
-        'and have reviewed all plugin code.'
+        'Plugin loading BLOCKED - Security acknowledgment required. ' +
+        'Plugins execute arbitrary code with full system access and no sandboxing. ' +
+        `Current PLUGIN_SECURITY_ACKNOWLEDGED value: ${actualValue}. ` +
+        'Set PLUGIN_SECURITY_ACKNOWLEDGED=true environment variable ONLY if you: ' +
+        '1. Understand the security risks, ' +
+        '2. Have reviewed all plugin code, ' +
+        '3. Are running in a trusted, private environment.'
       );
       throw new Error(
-        'Plugin security not acknowledged. Set PLUGIN_SECURITY_ACKNOWLEDGED=true to enable plugins. ' +
-        'Only use plugins in trusted, private environments.'
+        `Plugin security not acknowledged (value: ${actualValue}). ` +
+        'Set PLUGIN_SECURITY_ACKNOWLEDGED=true to enable plugins. ' +
+        'Only use plugins in trusted, private environments where you control all code.'
       );
     }
+
+    logger.info('✓ Plugin security acknowledged - loading plugins with full system access');
 
     try {
       const pluginDir = path.resolve(this.config.pluginDir);

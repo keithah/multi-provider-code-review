@@ -70,7 +70,7 @@ jobs:
           # Check if OPENROUTER_API_KEY is available for fork PRs
           if [ "${{ github.event.pull_request.head.repo.fork }}" = "true" ]; then
             echo "⚠️  Fork PR detected - secrets are not available"
-            echo "Review will use free OpenCode providers only"
+            echo "Review will be skipped (see next step for details)"
           elif [ -z "$OPENROUTER_API_KEY" ]; then
             echo "⚠️  Warning: OPENROUTER_API_KEY not set. OpenRouter providers will be skipped; free OpenCode providers will be used."
           else
@@ -84,13 +84,19 @@ jobs:
             echo "🔍 Using dynamic provider discovery (see workflow comments for fallback chain)"
           fi
       - name: Install OpenCode CLI
-        # Pinned to v1.1.32 for compatibility with dynamic provider discovery
-        # This version supports the `opencode run` command format we use
-        # If upgrading, test with dynamic discovery and fallback mechanisms
+        # Version pinning strategy:
+        # - Pinned to v1.1.32 for compatibility with dynamic provider discovery
+        # - This version supports the `opencode run` command format we use
+        # - Update strategy: Test with newer versions quarterly (Jan, Apr, Jul, Oct)
+        # - Before updating: Run full test suite + manual smoke tests
+        # - Check for breaking changes in opencode-ai changelog
+        # - Verify dynamic discovery still works with new version
         run: npm install -g opencode-ai@1.1.32
       # Run review if: PR number found. Fork PRs are allowed without OpenRouter key (falls back to free providers).
       - name: Skip Fork PR Without Secrets
         if: steps.resolve-pr.outputs.pr != '' && github.event.pull_request.head.repo.fork == true && env.OPENROUTER_API_KEY == ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "⚠️  Skipping review for fork PR without OPENROUTER_API_KEY"
           echo "Fork PRs cannot access repository secrets for security reasons."
@@ -99,6 +105,21 @@ jobs:
           echo "To enable review for fork PRs:"
           echo "1. Repository maintainers can add OPENROUTER_API_KEY to repository secrets"
           echo "2. Or use workflow_dispatch to manually trigger reviews with approval"
+          echo ""
+          echo "Posting notification comment to PR..."
+
+          # Post a notification comment to the PR
+          gh pr comment ${{ steps.resolve-pr.outputs.pr }} --body "## ⚠️ Automated Code Review Skipped
+
+This PR is from a fork and cannot access repository secrets for security reasons.
+
+The automated code review requires API credentials (OPENROUTER_API_KEY) which are not available to fork PRs to prevent unauthorized access.
+
+**For maintainers:** You can:
+- Manually trigger a review using workflow_dispatch after reviewing the changes
+- Add OPENROUTER_API_KEY to repository secrets to enable reviews for trusted forks
+
+**For contributors:** Maintainers will review your code manually or trigger an automated review after initial verification."
 
       - name: Multi-Provider Code Review
         # Run if:
