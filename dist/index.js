@@ -27097,9 +27097,10 @@ var DEFAULT_CONFIG = {
   skipDependencyUpdates: true,
   skipDocumentationOnly: true,
   skipFormattingOnly: false,
-  // Disabled by default (hard to detect accurately)
+  // Disabled by default (may have false positives)
   skipTestFixtures: true,
   skipConfigFiles: true,
+  skipBuildArtifacts: true,
   trivialPatterns: [],
   dryRun: false
 };
@@ -31203,7 +31204,18 @@ var ReviewConfigSchema = external_exports.object({
   skip_formatting_only: external_exports.boolean().optional(),
   skip_test_fixtures: external_exports.boolean().optional(),
   skip_config_files: external_exports.boolean().optional(),
-  trivial_patterns: external_exports.array(external_exports.string()).optional(),
+  skip_build_artifacts: external_exports.boolean().optional(),
+  trivial_patterns: external_exports.array(external_exports.string().refine(
+    (pattern) => {
+      try {
+        new RegExp(pattern);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    { message: "Invalid regex pattern" }
+  )).optional(),
   dry_run: external_exports.boolean().optional()
 });
 
@@ -31532,6 +31544,7 @@ var ConfigLoader = class {
       skipFormattingOnly: this.parseBoolean(env.SKIP_FORMATTING_ONLY),
       skipTestFixtures: this.parseBoolean(env.SKIP_TEST_FIXTURES),
       skipConfigFiles: this.parseBoolean(env.SKIP_CONFIG_FILES),
+      skipBuildArtifacts: this.parseBoolean(env.SKIP_BUILD_ARTIFACTS),
       trivialPatterns: this.parseArray(env.TRIVIAL_PATTERNS),
       dryRun: this.parseBoolean(env.DRY_RUN)
     };
@@ -31572,6 +31585,7 @@ var ConfigLoader = class {
       skipFormattingOnly: config.skip_formatting_only,
       skipTestFixtures: config.skip_test_fixtures,
       skipConfigFiles: config.skip_config_files,
+      skipBuildArtifacts: config.skip_build_artifacts,
       trivialPatterns: config.trivial_patterns,
       dryRun: config.dry_run
     };
@@ -37100,7 +37114,9 @@ var TrivialDetector = class {
     "Cargo.lock",
     "poetry.lock",
     "go.sum",
-    "composer.lock"
+    "composer.lock",
+    "pdm.lock",
+    "Pipfile.lock"
   ];
   DOCUMENTATION_PATTERNS = [
     /\.md$/i,
@@ -37126,10 +37142,27 @@ var TrivialDetector = class {
     /\.gitignore/,
     /\.npmignore/,
     /\.dockerignore/,
+    /\.gitattributes$/,
     /tsconfig\.json$/,
     /jsconfig\.json$/,
     /\.vscode\//,
     /\.idea\//
+  ];
+  // Build artifacts and generated files
+  BUILD_ARTIFACT_PATTERNS = [
+    /^dist\//,
+    /^build\//,
+    /^out\//,
+    /^\.next\//,
+    /^\.nuxt\//,
+    /^target\//,
+    // Rust/Java
+    /^bin\//,
+    /^obj\//,
+    /\.min\.js$/,
+    /\.min\.css$/,
+    /\.map$/
+    // Source maps
   ];
   constructor(config) {
     this.config = config;
@@ -37185,6 +37218,9 @@ var TrivialDetector = class {
     if (this.config.skipConfigFiles && this.isConfigFile(filename)) {
       return true;
     }
+    if (this.config.skipBuildArtifacts && this.isBuildArtifact(filename)) {
+      return true;
+    }
     if (this.matchesCustomPattern(filename)) {
       return true;
     }
@@ -37219,6 +37255,12 @@ var TrivialDetector = class {
     return this.CONFIG_FILE_PATTERNS.some((pattern) => pattern.test(filename));
   }
   /**
+   * Check if file is a build artifact
+   */
+  isBuildArtifact(filename) {
+    return this.BUILD_ARTIFACT_PATTERNS.some((pattern) => pattern.test(filename));
+  }
+  /**
    * Check if file matches custom trivial patterns
    */
   matchesCustomPattern(filename) {
@@ -37233,6 +37275,8 @@ var TrivialDetector = class {
   }
   /**
    * Check if changes are formatting-only (whitespace, indentation, etc.)
+   * Uses a diff-based approach: if all additions have corresponding removals
+   * with identical trimmed content, it's likely just formatting.
    */
   isFormattingOnly(file) {
     if (!file.patch)
@@ -37242,14 +37286,20 @@ var TrivialDetector = class {
     const actualChanges = changes.filter((line) => !line.startsWith("+++") && !line.startsWith("---"));
     if (actualChanges.length === 0)
       return true;
-    const hasSubstantiveChanges = actualChanges.some((line) => {
-      const content = line.substring(1);
-      const trimmed = content.trim();
-      if (trimmed.length === 0)
+    const additions = actualChanges.filter((line) => line.startsWith("+")).map((line) => line.substring(1).trim());
+    const deletions = actualChanges.filter((line) => line.startsWith("-")).map((line) => line.substring(1).trim());
+    if (additions.length !== deletions.length)
+      return false;
+    const additionSet = new Set(additions.filter((line) => line.length > 0));
+    const deletionSet = new Set(deletions.filter((line) => line.length > 0));
+    if (additionSet.size !== deletionSet.size)
+      return false;
+    for (const addition of additionSet) {
+      if (!deletionSet.has(addition)) {
         return false;
-      return trimmed.length > 0;
-    });
-    return !hasSubstantiveChanges;
+      }
+    }
+    return true;
   }
   /**
    * Generate a human-readable reason for why PR is trivial
@@ -37260,6 +37310,7 @@ var TrivialDetector = class {
     const hasOnlyDocs = files.every((f) => this.isDocumentationFile(f.filename));
     const hasOnlyFixtures = files.every((f) => this.isTestFixture(f.filename));
     const hasOnlyConfig = files.every((f) => this.isConfigFile(f.filename));
+    const hasOnlyBuildArtifacts = files.every((f) => this.isBuildArtifact(f.filename));
     if (hasOnlyDeps) {
       reasons.push("dependency lock file updates only");
     }
@@ -37272,6 +37323,9 @@ var TrivialDetector = class {
     if (hasOnlyConfig) {
       reasons.push("configuration file changes only");
     }
+    if (hasOnlyBuildArtifacts) {
+      reasons.push("build artifact updates only");
+    }
     if (reasons.length === 0) {
       const types = /* @__PURE__ */ new Set();
       files.forEach((f) => {
@@ -37283,6 +37337,8 @@ var TrivialDetector = class {
           types.add("test fixtures");
         if (this.isConfigFile(f.filename))
           types.add("config files");
+        if (this.isBuildArtifact(f.filename))
+          types.add("build artifacts");
       });
       if (types.size > 0) {
         return `trivial changes only (${Array.from(types).join(", ")})`;
@@ -37338,6 +37394,7 @@ var ReviewOrchestrator = class {
         logger.warn("Failed to build code graph, falling back to regex-based context", error2);
       }
     }
+    let reviewContext = pr;
     if (config.skipTrivialChanges) {
       const trivialDetector = new TrivialDetector({
         enabled: true,
@@ -37346,32 +37403,42 @@ var ReviewOrchestrator = class {
         skipFormattingOnly: config.skipFormattingOnly ?? false,
         skipTestFixtures: config.skipTestFixtures ?? true,
         skipConfigFiles: config.skipConfigFiles ?? true,
+        skipBuildArtifacts: config.skipBuildArtifacts ?? true,
         customTrivialPatterns: config.trivialPatterns ?? []
       });
       const trivialResult = trivialDetector.detect(pr.files);
       if (trivialResult.isTrivial) {
         logger.info(`Skipping review: ${trivialResult.reason}`);
-        const trivialReview = this.createTrivialReview(trivialResult.reason, pr.files.length);
+        const trivialReview = this.createTrivialReview(trivialResult.reason, pr.files.length, start);
         const markdown2 = this.components.formatter.format(trivialReview);
         await this.components.commentPoster.postSummary(pr.number, markdown2, false);
+        if (config.analyticsEnabled && this.components.metricsCollector) {
+          try {
+            await this.components.metricsCollector.recordReview(trivialReview, pr.number);
+            logger.debug(`Recorded trivial review metrics for PR #${pr.number}`);
+          } catch (error2) {
+            logger.warn("Failed to record trivial review metrics", error2);
+          }
+        }
         return trivialReview;
       }
       if (trivialResult.trivialFiles.length > 0) {
         logger.info(`Filtering ${trivialResult.trivialFiles.length} trivial files from review: ${trivialResult.trivialFiles.join(", ")}`);
-        pr = {
+        const nonTrivialFiles = pr.files.filter((f) => trivialResult.nonTrivialFiles.includes(f.filename));
+        reviewContext = {
           ...pr,
-          files: pr.files.filter((f) => trivialResult.nonTrivialFiles.includes(f.filename)),
-          diff: this.filterDiffByFiles(pr.diff, pr.files.filter((f) => trivialResult.nonTrivialFiles.includes(f.filename)))
+          files: nonTrivialFiles,
+          diff: this.filterDiffByFiles(pr.diff, nonTrivialFiles)
         };
       }
     }
-    const useIncremental = await this.components.incrementalReviewer.shouldUseIncremental(pr);
-    let filesToReview = pr.files;
+    const useIncremental = await this.components.incrementalReviewer.shouldUseIncremental(reviewContext);
+    let filesToReview = reviewContext.files;
     let lastReviewData = null;
     if (useIncremental) {
-      lastReviewData = await this.components.incrementalReviewer.getLastReview(pr.number);
+      lastReviewData = await this.components.incrementalReviewer.getLastReview(reviewContext.number);
       if (lastReviewData) {
-        filesToReview = await this.components.incrementalReviewer.getChangedFilesSince(pr, lastReviewData.lastReviewedCommit);
+        filesToReview = await this.components.incrementalReviewer.getChangedFilesSince(reviewContext, lastReviewData.lastReviewedCommit);
         logger.info(`Incremental review: reviewing ${filesToReview.length} changed files`);
         if (codeGraph && this.components.graphBuilder) {
           try {
@@ -37383,8 +37450,8 @@ var ReviewOrchestrator = class {
         }
       }
     }
-    const cachedFindings = config.enableCaching ? await this.components.cache.load(pr) : null;
-    const reviewPR = useIncremental ? { ...pr, files: filesToReview, diff: this.filterDiffByFiles(pr.diff, filesToReview) } : pr;
+    const cachedFindings = config.enableCaching ? await this.components.cache.load(reviewContext) : null;
+    const reviewPR = useIncremental ? { ...reviewContext, files: filesToReview, diff: this.filterDiffByFiles(reviewContext.diff, filesToReview) } : reviewContext;
     let llmFindings = [];
     let providerResults = [];
     let aiAnalysis;
@@ -37661,14 +37728,18 @@ var ReviewOrchestrator = class {
   }
   /**
    * Create a simple review result for trivial PRs that don't need full analysis
+   * Tracks time saved and cost avoided
    */
-  createTrivialReview(reason, fileCount) {
+  createTrivialReview(reason, fileCount, startTime) {
+    const durationSeconds = (Date.now() - startTime) / 1e3;
     return {
       summary: `This PR contains only trivial changes that don't require detailed review.
 
 **Reason:** ${reason}
 
 **Files changed:** ${fileCount}
+
+**Cost savings:** Skipped LLM analysis, saving estimated $0.01-0.05 in API costs.
 
 These types of changes are automatically filtered to save review time and API costs. If you believe this should have been reviewed, you can disable trivial change detection in the configuration.`,
       findings: [],
@@ -37684,7 +37755,16 @@ These types of changes are automatically filtered to save review time and API co
         providersFailed: 0,
         totalTokens: 0,
         totalCost: 0,
-        durationSeconds: 0
+        durationSeconds
+      },
+      runDetails: {
+        providers: [],
+        totalCost: 0,
+        totalTokens: 0,
+        durationSeconds,
+        cacheHit: false,
+        synthesisModel: "",
+        providerPoolSize: 0
       }
     };
   }

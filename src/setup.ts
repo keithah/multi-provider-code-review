@@ -136,7 +136,13 @@ async function createComponentsForCLI(config: ReviewConfig): Promise<ReviewCompo
   const prLoader = new PullRequestLoader(mockGitHubClient);
   const commentPoster = new CommentPoster(mockGitHubClient, true); // Always dry-run in CLI
   const formatter = new MarkdownFormatterV2();
-  const feedbackFilter = {} as FeedbackFilter;
+  // Create a mock FeedbackFilter that always allows posts (no suppression in CLI mode)
+  const feedbackFilter = {
+    client: mockGitHubClient,
+    loadSuppressed: async (): Promise<Set<string>> => new Set(),
+    shouldPost: (): boolean => true,
+    signatureFromComment: (): string => '',
+  } as unknown as FeedbackFilter;
 
   return {
     config,

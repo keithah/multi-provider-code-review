@@ -64,7 +64,18 @@ export const ReviewConfigSchema = z.object({
   skip_formatting_only: z.boolean().optional(),
   skip_test_fixtures: z.boolean().optional(),
   skip_config_files: z.boolean().optional(),
-  trivial_patterns: z.array(z.string()).optional(),
+  skip_build_artifacts: z.boolean().optional(),
+  trivial_patterns: z.array(z.string().refine(
+    (pattern) => {
+      try {
+        new RegExp(pattern);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    { message: 'Invalid regex pattern' }
+  )).optional(),
 
   dry_run: z.boolean().optional(),
 });

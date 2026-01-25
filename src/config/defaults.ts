@@ -63,9 +63,10 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   skipTrivialChanges: true,
   skipDependencyUpdates: true,
   skipDocumentationOnly: true,
-  skipFormattingOnly: false, // Disabled by default (hard to detect accurately)
+  skipFormattingOnly: false, // Disabled by default (may have false positives)
   skipTestFixtures: true,
   skipConfigFiles: true,
+  skipBuildArtifacts: true,
   trivialPatterns: [],
 
   dryRun: false,

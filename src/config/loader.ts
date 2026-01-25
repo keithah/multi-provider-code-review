@@ -107,6 +107,7 @@ export class ConfigLoader {
       skipFormattingOnly: this.parseBoolean(env.SKIP_FORMATTING_ONLY),
       skipTestFixtures: this.parseBoolean(env.SKIP_TEST_FIXTURES),
       skipConfigFiles: this.parseBoolean(env.SKIP_CONFIG_FILES),
+      skipBuildArtifacts: this.parseBoolean(env.SKIP_BUILD_ARTIFACTS),
       trivialPatterns: this.parseArray(env.TRIVIAL_PATTERNS),
 
       dryRun: this.parseBoolean(env.DRY_RUN),
@@ -149,6 +150,7 @@ export class ConfigLoader {
       skipFormattingOnly: config.skip_formatting_only,
       skipTestFixtures: config.skip_test_fixtures,
       skipConfigFiles: config.skip_config_files,
+      skipBuildArtifacts: config.skip_build_artifacts,
       trivialPatterns: config.trivial_patterns,
       dryRun: config.dry_run,
     };

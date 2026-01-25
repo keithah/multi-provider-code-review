@@ -173,7 +173,11 @@ inputs:
     required: false
     default: "true"
   SKIP_CONFIG_FILES:
-    description: "Skip config file changes (.eslintrc, .prettierrc, .gitignore, tsconfig.json)"
+    description: "Skip config file changes (.eslintrc, .prettierrc, .gitignore, .gitattributes, tsconfig.json)"
+    required: false
+    default: "true"
+  SKIP_BUILD_ARTIFACTS:
+    description: "Skip build artifact changes (dist/, build/, *.min.js, *.map)"
     required: false
     default: "true"
   TRIVIAL_PATTERNS:

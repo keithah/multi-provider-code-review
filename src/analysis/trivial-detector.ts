@@ -21,6 +21,7 @@ export interface TrivialDetectorConfig {
   skipFormattingOnly: boolean;
   skipTestFixtures: boolean;
   skipConfigFiles: boolean;
+  skipBuildArtifacts: boolean;
   customTrivialPatterns: string[];
 }
 
@@ -37,6 +38,8 @@ export class TrivialDetector {
     'poetry.lock',
     'go.sum',
     'composer.lock',
+    'pdm.lock',
+    'Pipfile.lock',
   ];
 
   private readonly DOCUMENTATION_PATTERNS = [
@@ -65,10 +68,26 @@ export class TrivialDetector {
     /\.gitignore/,
     /\.npmignore/,
     /\.dockerignore/,
+    /\.gitattributes$/,
     /tsconfig\.json$/,
     /jsconfig\.json$/,
     /\.vscode\//,
     /\.idea\//,
+  ];
+
+  // Build artifacts and generated files
+  private readonly BUILD_ARTIFACT_PATTERNS = [
+    /^dist\//,
+    /^build\//,
+    /^out\//,
+    /^\.next\//,
+    /^\.nuxt\//,
+    /^target\//,  // Rust/Java
+    /^bin\//,
+    /^obj\//,
+    /\.min\.js$/,
+    /\.min\.css$/,
+    /\.map$/,     // Source maps
   ];
 
   constructor(config: TrivialDetectorConfig) {
@@ -145,6 +164,11 @@ export class TrivialDetector {
       return true;
     }
 
+    // Build artifacts
+    if (this.config.skipBuildArtifacts && this.isBuildArtifact(filename)) {
+      return true;
+    }
+
     // Custom patterns
     if (this.matchesCustomPattern(filename)) {
       return true;
@@ -188,6 +212,13 @@ export class TrivialDetector {
   }
 
   /**
+   * Check if file is a build artifact
+   */
+  private isBuildArtifact(filename: string): boolean {
+    return this.BUILD_ARTIFACT_PATTERNS.some(pattern => pattern.test(filename));
+  }
+
+  /**
    * Check if file matches custom trivial patterns
    */
   private matchesCustomPattern(filename: string): boolean {
@@ -204,6 +235,8 @@ export class TrivialDetector {
 
   /**
    * Check if changes are formatting-only (whitespace, indentation, etc.)
+   * Uses a diff-based approach: if all additions have corresponding removals
+   * with identical trimmed content, it's likely just formatting.
    */
   private isFormattingOnly(file: FileChange): boolean {
     if (!file.patch) return false;
@@ -215,23 +248,28 @@ export class TrivialDetector {
 
     if (actualChanges.length === 0) return true;
 
-    // Check if all changes are whitespace-only
-    const hasSubstantiveChanges = actualChanges.some(line => {
-      // Remove +/- prefix
-      const content = line.substring(1);
-      // Remove whitespace
-      const trimmed = content.trim();
+    // Separate additions and deletions
+    const additions = actualChanges.filter(line => line.startsWith('+')).map(line => line.substring(1).trim());
+    const deletions = actualChanges.filter(line => line.startsWith('-')).map(line => line.substring(1).trim());
 
-      // If trimmed content exists, check if it's different from just whitespace changes
-      if (trimmed.length === 0) return false; // Empty line, not substantive
+    // If different number of additions vs deletions, not just formatting
+    if (additions.length !== deletions.length) return false;
 
-      // Look for actual code changes (not just whitespace/formatting)
-      // This is a simple heuristic - could be improved
-      return trimmed.length > 0;
-    });
+    // Check if all additions have matching deletions (after trimming)
+    const additionSet = new Set(additions.filter(line => line.length > 0));
+    const deletionSet = new Set(deletions.filter(line => line.length > 0));
 
-    // If no substantive changes found, it's formatting-only
-    return !hasSubstantiveChanges;
+    // If sets are equal, changes are only whitespace/formatting
+    if (additionSet.size !== deletionSet.size) return false;
+
+    for (const addition of additionSet) {
+      if (!deletionSet.has(addition)) {
+        return false; // Found a line that was actually changed
+      }
+    }
+
+    // All non-empty lines have matching trimmed content
+    return true;
   }
 
   /**
@@ -244,6 +282,7 @@ export class TrivialDetector {
     const hasOnlyDocs = files.every(f => this.isDocumentationFile(f.filename));
     const hasOnlyFixtures = files.every(f => this.isTestFixture(f.filename));
     const hasOnlyConfig = files.every(f => this.isConfigFile(f.filename));
+    const hasOnlyBuildArtifacts = files.every(f => this.isBuildArtifact(f.filename));
 
     if (hasOnlyDeps) {
       reasons.push('dependency lock file updates only');
@@ -261,6 +300,10 @@ export class TrivialDetector {
       reasons.push('configuration file changes only');
     }
 
+    if (hasOnlyBuildArtifacts) {
+      reasons.push('build artifact updates only');
+    }
+
     if (reasons.length === 0) {
       // Mixed trivial types
       const types = new Set<string>();
@@ -269,6 +312,7 @@ export class TrivialDetector {
         if (this.isDocumentationFile(f.filename)) types.add('documentation');
         if (this.isTestFixture(f.filename)) types.add('test fixtures');
         if (this.isConfigFile(f.filename)) types.add('config files');
+        if (this.isBuildArtifact(f.filename)) types.add('build artifacts');
       });
 
       if (types.size > 0) {
@@ -298,9 +342,10 @@ export function createDefaultTrivialConfig(): TrivialDetectorConfig {
     enabled: true,
     skipDependencyUpdates: true,
     skipDocumentationOnly: true,
-    skipFormattingOnly: false, // Disabled by default (hard to detect accurately)
+    skipFormattingOnly: false, // Disabled by default (may have false positives)
     skipTestFixtures: true,
     skipConfigFiles: true,
+    skipBuildArtifacts: true,
     customTrivialPatterns: [],
   };
 }

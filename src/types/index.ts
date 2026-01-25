@@ -68,6 +68,7 @@ export interface ReviewConfig {
   skipFormattingOnly?: boolean;
   skipTestFixtures?: boolean;
   skipConfigFiles?: boolean;
+  skipBuildArtifacts?: boolean;
   trivialPatterns?: string[];
 
   dryRun: boolean;

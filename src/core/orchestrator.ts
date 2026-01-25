@@ -110,6 +110,7 @@ export class ReviewOrchestrator {
     }
 
     // Check for trivial changes (dependency locks, docs, config files, test fixtures)
+    let reviewContext = pr;
     if (config.skipTrivialChanges) {
       const trivialDetector = new TrivialDetector({
         enabled: true,
@@ -118,6 +119,7 @@ export class ReviewOrchestrator {
         skipFormattingOnly: config.skipFormattingOnly ?? false,
         skipTestFixtures: config.skipTestFixtures ?? true,
         skipConfigFiles: config.skipConfigFiles ?? true,
+        skipBuildArtifacts: config.skipBuildArtifacts ?? true,
         customTrivialPatterns: config.trivialPatterns ?? [],
       });
 
@@ -126,32 +128,44 @@ export class ReviewOrchestrator {
       if (trivialResult.isTrivial) {
         // Entire PR is trivial - post simple comment and skip review
         logger.info(`Skipping review: ${trivialResult.reason}`);
-        const trivialReview = this.createTrivialReview(trivialResult.reason!, pr.files.length);
+        const trivialReview = this.createTrivialReview(trivialResult.reason!, pr.files.length, start);
         const markdown = this.components.formatter.format(trivialReview);
         await this.components.commentPoster.postSummary(pr.number, markdown, false);
+
+        // Record metrics for trivial review (shows cost/time saved)
+        if (config.analyticsEnabled && this.components.metricsCollector) {
+          try {
+            await this.components.metricsCollector.recordReview(trivialReview, pr.number);
+            logger.debug(`Recorded trivial review metrics for PR #${pr.number}`);
+          } catch (error) {
+            logger.warn('Failed to record trivial review metrics', error as Error);
+          }
+        }
+
         return trivialReview;
       }
 
-      // Some files are trivial - filter them out before review
+      // Some files are trivial - filter them out before review (create new context, don't mutate)
       if (trivialResult.trivialFiles.length > 0) {
         logger.info(`Filtering ${trivialResult.trivialFiles.length} trivial files from review: ${trivialResult.trivialFiles.join(', ')}`);
-        pr = {
+        const nonTrivialFiles = pr.files.filter(f => trivialResult.nonTrivialFiles.includes(f.filename));
+        reviewContext = {
           ...pr,
-          files: pr.files.filter(f => trivialResult.nonTrivialFiles.includes(f.filename)),
-          diff: this.filterDiffByFiles(pr.diff, pr.files.filter(f => trivialResult.nonTrivialFiles.includes(f.filename))),
+          files: nonTrivialFiles,
+          diff: this.filterDiffByFiles(pr.diff, nonTrivialFiles),
         };
       }
     }
 
-    // Check for incremental review
-    const useIncremental = await this.components.incrementalReviewer.shouldUseIncremental(pr);
-    let filesToReview: FileChange[] = pr.files;
+    // Check for incremental review (use reviewContext which may have filtered trivial files)
+    const useIncremental = await this.components.incrementalReviewer.shouldUseIncremental(reviewContext);
+    let filesToReview: FileChange[] = reviewContext.files;
     let lastReviewData = null;
 
     if (useIncremental) {
-      lastReviewData = await this.components.incrementalReviewer.getLastReview(pr.number);
+      lastReviewData = await this.components.incrementalReviewer.getLastReview(reviewContext.number);
       if (lastReviewData) {
-        filesToReview = await this.components.incrementalReviewer.getChangedFilesSince(pr, lastReviewData.lastReviewedCommit);
+        filesToReview = await this.components.incrementalReviewer.getChangedFilesSince(reviewContext, lastReviewData.lastReviewedCommit);
         logger.info(`Incremental review: reviewing ${filesToReview.length} changed files`);
 
         // Update graph incrementally if available
@@ -166,12 +180,12 @@ export class ReviewOrchestrator {
       }
     }
 
-    const cachedFindings = config.enableCaching ? await this.components.cache.load(pr) : null;
+    const cachedFindings = config.enableCaching ? await this.components.cache.load(reviewContext) : null;
 
     // Create a PR context for the files to review with filtered diff
     const reviewPR: PRContext = useIncremental
-      ? { ...pr, files: filesToReview, diff: this.filterDiffByFiles(pr.diff, filesToReview) }
-      : pr;
+      ? { ...reviewContext, files: filesToReview, diff: this.filterDiffByFiles(reviewContext.diff, filesToReview) }
+      : reviewContext;
 
     // Skip LLM execution if no files to review (incremental with no changes)
     let llmFindings: Finding[] = [];
@@ -537,10 +551,13 @@ export class ReviewOrchestrator {
 
   /**
    * Create a simple review result for trivial PRs that don't need full analysis
+   * Tracks time saved and cost avoided
    */
-  private createTrivialReview(reason: string, fileCount: number): Review {
+  private createTrivialReview(reason: string, fileCount: number, startTime: number): Review {
+    const durationSeconds = (Date.now() - startTime) / 1000;
+
     return {
-      summary: `This PR contains only trivial changes that don't require detailed review.\n\n**Reason:** ${reason}\n\n**Files changed:** ${fileCount}\n\nThese types of changes are automatically filtered to save review time and API costs. If you believe this should have been reviewed, you can disable trivial change detection in the configuration.`,
+      summary: `This PR contains only trivial changes that don't require detailed review.\n\n**Reason:** ${reason}\n\n**Files changed:** ${fileCount}\n\n**Cost savings:** Skipped LLM analysis, saving estimated $0.01-0.05 in API costs.\n\nThese types of changes are automatically filtered to save review time and API costs. If you believe this should have been reviewed, you can disable trivial change detection in the configuration.`,
       findings: [],
       inlineComments: [],
       actionItems: [],
@@ -554,7 +571,16 @@ export class ReviewOrchestrator {
         providersFailed: 0,
         totalTokens: 0,
         totalCost: 0,
-        durationSeconds: 0,
+        durationSeconds,
+      },
+      runDetails: {
+        providers: [],
+        totalCost: 0,
+        totalTokens: 0,
+        durationSeconds,
+        cacheHit: false,
+        synthesisModel: '',
+        providerPoolSize: 0,
       },
     };
   }

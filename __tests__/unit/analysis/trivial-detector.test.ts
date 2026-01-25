@@ -163,6 +163,15 @@ describe('TrivialDetector', () => {
       expect(result.isTrivial).toBe(true);
     });
 
+    it('should detect .gitattributes as trivial', () => {
+      const detector = new TrivialDetector(createDefaultTrivialConfig());
+      const files = [createFile('.gitattributes')];
+
+      const result = detector.detect(files);
+
+      expect(result.isTrivial).toBe(true);
+    });
+
     it('should detect tsconfig.json as trivial', () => {
       const detector = new TrivialDetector(createDefaultTrivialConfig());
       const files = [createFile('tsconfig.json')];
@@ -170,6 +179,57 @@ describe('TrivialDetector', () => {
       const result = detector.detect(files);
 
       expect(result.isTrivial).toBe(true);
+    });
+  });
+
+  describe('build artifacts', () => {
+    it('should detect dist/ files as trivial', () => {
+      const detector = new TrivialDetector(createDefaultTrivialConfig());
+      const files = [createFile('dist/index.js'), createFile('dist/bundle.css')];
+
+      const result = detector.detect(files);
+
+      expect(result.isTrivial).toBe(true);
+      expect(result.reason).toContain('build artifact');
+    });
+
+    it('should detect build/ files as trivial', () => {
+      const detector = new TrivialDetector(createDefaultTrivialConfig());
+      const files = [createFile('build/main.js')];
+
+      const result = detector.detect(files);
+
+      expect(result.isTrivial).toBe(true);
+    });
+
+    it('should detect minified files as trivial', () => {
+      const detector = new TrivialDetector(createDefaultTrivialConfig());
+      const files = [createFile('app.min.js'), createFile('styles.min.css')];
+
+      const result = detector.detect(files);
+
+      expect(result.isTrivial).toBe(true);
+    });
+
+    it('should detect source maps as trivial', () => {
+      const detector = new TrivialDetector(createDefaultTrivialConfig());
+      const files = [createFile('bundle.js.map')];
+
+      const result = detector.detect(files);
+
+      expect(result.isTrivial).toBe(true);
+    });
+
+    it('should not skip if disabled in config', () => {
+      const config = createDefaultTrivialConfig();
+      config.skipBuildArtifacts = false;
+
+      const detector = new TrivialDetector(config);
+      const files = [createFile('dist/index.js')];
+
+      const result = detector.detect(files);
+
+      expect(result.isTrivial).toBe(false);
     });
   });
 
@@ -245,6 +305,46 @@ describe('TrivialDetector', () => {
 
       // Should not throw, should match as literal string
       expect(() => detector.detect(files)).not.toThrow();
+    });
+  });
+
+  describe('formatting-only detection', () => {
+    it('should detect formatting-only changes', () => {
+      const config = createDefaultTrivialConfig();
+      config.skipFormattingOnly = true;
+
+      const detector = new TrivialDetector(config);
+      const patch = `@@ -1,3 +1,3 @@
+-function test() {
+-  return 42;
+-}
++function test() {
++    return 42;
++}`;
+
+      const files = [createFile('src/test.ts', patch)];
+      const result = detector.detect(files);
+
+      expect(result.isTrivial).toBe(true);
+    });
+
+    it('should not detect substantive changes as formatting-only', () => {
+      const config = createDefaultTrivialConfig();
+      config.skipFormattingOnly = true;
+
+      const detector = new TrivialDetector(config);
+      const patch = `@@ -1,3 +1,3 @@
+-function test() {
+-  return 42;
+-}
++function test() {
++  return 43;
++}`;
+
+      const files = [createFile('src/test.ts', patch)];
+      const result = detector.detect(files);
+
+      expect(result.isTrivial).toBe(false);
     });
   });
 
