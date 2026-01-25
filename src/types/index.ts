@@ -71,6 +71,10 @@ export interface ReviewConfig {
   skipBuildArtifacts?: boolean;
   trivialPatterns?: string[];
 
+  pathBasedIntensity?: boolean;
+  pathIntensityPatterns?: string; // JSON string of PathPattern[]
+  pathDefaultIntensity?: 'thorough' | 'standard' | 'light';
+
   dryRun: boolean;
 }
 

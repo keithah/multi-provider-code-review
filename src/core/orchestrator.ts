@@ -31,6 +31,7 @@ import { PromptGenerator } from '../autofix/prompt-generator';
 import { ReliabilityTracker } from '../providers/reliability-tracker';
 import { MetricsCollector } from '../analytics/metrics-collector';
 import { TrivialDetector } from '../analysis/trivial-detector';
+import { PathMatcher } from '../analysis/path-matcher';
 import { ReviewConfig, Review, PRContext, RunDetails, Finding, FileChange, UnchangedContext, ProviderResult } from '../types';
 import { logger } from '../utils/logger';
 import { mapAddedLines } from '../utils/diff';
@@ -154,6 +155,31 @@ export class ReviewOrchestrator {
           files: nonTrivialFiles,
           diff: this.filterDiffByFiles(pr.diff, nonTrivialFiles),
         };
+      }
+    }
+
+    // Determine review intensity based on file paths (after trivial filtering)
+    if (config.pathBasedIntensity) {
+      let patterns = [];
+      if (config.pathIntensityPatterns) {
+        try {
+          patterns = JSON.parse(config.pathIntensityPatterns);
+        } catch (error) {
+          logger.warn('Failed to parse pathIntensityPatterns, using defaults', error as Error);
+        }
+      }
+
+      const pathMatcher = new PathMatcher({
+        enabled: true,
+        defaultIntensity: config.pathDefaultIntensity ?? 'standard',
+        patterns,
+      });
+
+      const intensityResult = pathMatcher.determineIntensity(reviewContext.files);
+      logger.info(`Review intensity: ${intensityResult.intensity} - ${intensityResult.reason}`);
+
+      if (intensityResult.matchedPaths.length > 0) {
+        logger.debug(`Matched paths: ${intensityResult.matchedPaths.join(', ')}`);
       }
     }
 

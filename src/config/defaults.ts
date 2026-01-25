@@ -69,6 +69,10 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   skipBuildArtifacts: true,
   trivialPatterns: [],
 
+  pathBasedIntensity: false, // Disabled by default, opt-in
+  pathIntensityPatterns: undefined,
+  pathDefaultIntensity: 'standard',
+
   dryRun: false,
 };
 

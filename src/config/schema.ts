@@ -77,6 +77,10 @@ export const ReviewConfigSchema = z.object({
     { message: 'Invalid regex pattern' }
   )).optional(),
 
+  path_based_intensity: z.boolean().optional(),
+  path_intensity_patterns: z.string().optional(),
+  path_default_intensity: z.enum(['thorough', 'standard', 'light']).optional(),
+
   dry_run: z.boolean().optional(),
 });
 

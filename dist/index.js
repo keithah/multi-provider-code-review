@@ -27102,6 +27102,10 @@ var DEFAULT_CONFIG = {
   skipConfigFiles: true,
   skipBuildArtifacts: true,
   trivialPatterns: [],
+  pathBasedIntensity: false,
+  // Disabled by default, opt-in
+  pathIntensityPatterns: void 0,
+  pathDefaultIntensity: "standard",
   dryRun: false
 };
 var FALLBACK_STATIC_PROVIDERS = [
@@ -31216,6 +31220,9 @@ var ReviewConfigSchema = external_exports.object({
     },
     { message: "Invalid regex pattern" }
   )).optional(),
+  path_based_intensity: external_exports.boolean().optional(),
+  path_intensity_patterns: external_exports.string().optional(),
+  path_default_intensity: external_exports.enum(["thorough", "standard", "light"]).optional(),
   dry_run: external_exports.boolean().optional()
 });
 
@@ -31546,6 +31553,9 @@ var ConfigLoader = class {
       skipConfigFiles: this.parseBoolean(env.SKIP_CONFIG_FILES),
       skipBuildArtifacts: this.parseBoolean(env.SKIP_BUILD_ARTIFACTS),
       trivialPatterns: this.parseArray(env.TRIVIAL_PATTERNS),
+      pathBasedIntensity: this.parseBoolean(env.PATH_BASED_INTENSITY),
+      pathIntensityPatterns: env.PATH_INTENSITY_PATTERNS,
+      pathDefaultIntensity: this.parseIntensity(env.PATH_DEFAULT_INTENSITY),
       dryRun: this.parseBoolean(env.DRY_RUN)
     };
   }
@@ -31587,6 +31597,9 @@ var ConfigLoader = class {
       skipConfigFiles: config.skip_config_files,
       skipBuildArtifacts: config.skip_build_artifacts,
       trivialPatterns: config.trivial_patterns,
+      pathBasedIntensity: config.path_based_intensity,
+      pathIntensityPatterns: config.path_intensity_patterns,
+      pathDefaultIntensity: config.path_default_intensity,
       dryRun: config.dry_run
     };
   }
@@ -31629,6 +31642,15 @@ var ConfigLoader = class {
       return void 0;
     const normalized = value.toLowerCase();
     if (normalized === "critical" || normalized === "major" || normalized === "minor") {
+      return normalized;
+    }
+    return void 0;
+  }
+  static parseIntensity(value) {
+    if (!value)
+      return void 0;
+    const normalized = value.toLowerCase();
+    if (normalized === "thorough" || normalized === "standard" || normalized === "light") {
       return normalized;
     }
     return void 0;
@@ -37354,6 +37376,97 @@ var TrivialDetector = class {
   }
 };
 
+// src/analysis/path-matcher.ts
+var PathMatcher = class {
+  constructor(config) {
+    this.config = config;
+  }
+  /**
+   * Analyze files and determine review intensity based on path patterns
+   */
+  determineIntensity(files) {
+    if (!this.config.enabled || this.config.patterns.length === 0) {
+      return {
+        intensity: this.config.defaultIntensity,
+        matchedPaths: [],
+        reason: "Path-based intensity disabled or no patterns configured"
+      };
+    }
+    let highestIntensity = null;
+    const matchedPaths = [];
+    const matchedPatterns = [];
+    for (const file of files) {
+      for (const pathPattern of this.config.patterns) {
+        if (this.matchesPattern(file.filename, pathPattern.pattern)) {
+          matchedPaths.push(file.filename);
+          matchedPatterns.push(pathPattern);
+          if (highestIntensity === null || this.compareIntensity(pathPattern.intensity, highestIntensity) > 0) {
+            highestIntensity = pathPattern.intensity;
+          }
+        }
+      }
+    }
+    const finalIntensity = highestIntensity ?? this.config.defaultIntensity;
+    const reason = this.buildReason(finalIntensity, matchedPatterns, matchedPaths);
+    logger.info(`Path-based intensity: ${finalIntensity}`, {
+      matchedPaths: matchedPaths.length,
+      patterns: matchedPatterns.map((p) => p.pattern)
+    });
+    return {
+      intensity: finalIntensity,
+      matchedPaths: [...new Set(matchedPaths)],
+      // Deduplicate
+      reason
+    };
+  }
+  /**
+   * Match a file path against a glob-style pattern
+   * Supports:
+   * - ** for recursive directory matching
+   * - * for single segment wildcard
+   * - Exact matches
+   */
+  matchesPattern(filePath, pattern) {
+    const regexPattern = this.globToRegex(pattern);
+    return regexPattern.test(filePath);
+  }
+  /**
+   * Convert glob pattern to regular expression
+   */
+  globToRegex(pattern) {
+    let regexStr = pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*\*/g, "___RECURSIVE___").replace(/\*/g, "[^/]*").replace(/___RECURSIVE___/g, ".*");
+    regexStr = `^${regexStr}$`;
+    return new RegExp(regexStr);
+  }
+  /**
+   * Compare two intensity levels (higher value = more thorough)
+   * Returns: 1 if a > b, -1 if a < b, 0 if equal
+   */
+  compareIntensity(a, b) {
+    const levels = {
+      light: 1,
+      standard: 2,
+      thorough: 3
+    };
+    return levels[a] - levels[b];
+  }
+  /**
+   * Build a human-readable reason for the intensity decision
+   */
+  buildReason(intensity, matchedPatterns, matchedPaths) {
+    if (matchedPaths.length === 0) {
+      return `Using ${intensity} review intensity (default)`;
+    }
+    const uniquePatterns = [...new Set(matchedPatterns.map((p) => p.pattern))];
+    const descriptions = matchedPatterns.filter((p) => p.description).map((p) => p.description).filter((v, i, a) => a.indexOf(v) === i);
+    let reason = `Using ${intensity} review intensity: matched ${matchedPaths.length} file(s) against patterns: ${uniquePatterns.join(", ")}`;
+    if (descriptions.length > 0) {
+      reason += `. Reason: ${descriptions.join(", ")}`;
+    }
+    return reason;
+  }
+};
+
 // src/core/orchestrator.ts
 var fs7 = __toESM(require("fs/promises"));
 var import_path = __toESM(require("path"));
@@ -37428,6 +37541,26 @@ var ReviewOrchestrator = class {
           files: nonTrivialFiles,
           diff: this.filterDiffByFiles(pr.diff, nonTrivialFiles)
         };
+      }
+    }
+    if (config.pathBasedIntensity) {
+      let patterns = [];
+      if (config.pathIntensityPatterns) {
+        try {
+          patterns = JSON.parse(config.pathIntensityPatterns);
+        } catch (error2) {
+          logger.warn("Failed to parse pathIntensityPatterns, using defaults", error2);
+        }
+      }
+      const pathMatcher = new PathMatcher({
+        enabled: true,
+        defaultIntensity: config.pathDefaultIntensity ?? "standard",
+        patterns
+      });
+      const intensityResult = pathMatcher.determineIntensity(reviewContext.files);
+      logger.info(`Review intensity: ${intensityResult.intensity} - ${intensityResult.reason}`);
+      if (intensityResult.matchedPaths.length > 0) {
+        logger.debug(`Matched paths: ${intensityResult.matchedPaths.join(", ")}`);
       }
     }
     const useIncremental = await this.components.incrementalReviewer.shouldUseIncremental(reviewContext);

@@ -184,6 +184,18 @@ inputs:
     description: "Custom regex patterns for trivial files (comma-separated)"
     required: false
     default: ""
+  PATH_BASED_INTENSITY:
+    description: "Enable path-based review intensity (opt-in feature)"
+    required: false
+    default: "false"
+  PATH_INTENSITY_PATTERNS:
+    description: "JSON array of path patterns with intensities (e.g., [{\"pattern\":\"src/auth/**\",\"intensity\":\"thorough\"}])"
+    required: false
+    default: ""
+  PATH_DEFAULT_INTENSITY:
+    description: "Default review intensity for files that don't match patterns (thorough, standard, light)"
+    required: false
+    default: "standard"
   DRY_RUN:
     description: "Preview mode - run review without posting to GitHub"
     required: false
