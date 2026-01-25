@@ -153,13 +153,21 @@ export class ReviewOrchestrator {
       // Filter providers by health check before running full review
       // This fails fast on unresponsive providers (30s timeout)
       const healthCheckTimeout = 30000; // 30 seconds
-      providers = await this.components.llmExecutor.filterHealthyProviders(providers, healthCheckTimeout);
+      const { healthy, healthCheckResults } = await this.components.llmExecutor.filterHealthyProviders(
+        providers,
+        healthCheckTimeout
+      );
 
-      if (providers.length === 0) {
+      if (healthy.length === 0) {
         logger.warn('No healthy providers available after health checks');
+        // Include health check failures in results so they appear in output
+        providerResults = healthCheckResults;
+      } else {
+        // Run full review with healthy providers
+        const reviewResults = await this.components.llmExecutor.execute(healthy, prompt);
+        // Merge health check failures with review results for complete reporting
+        providerResults = [...healthCheckResults, ...reviewResults];
       }
-
-      providerResults = await this.components.llmExecutor.execute(providers, prompt);
       llmFindings = extractFindings(providerResults);
       aiAnalysis = config.enableAiDetection ? summarizeAIDetection(providerResults) : undefined;
 

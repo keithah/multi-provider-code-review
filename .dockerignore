@@ -38,6 +38,7 @@ reports/
 *.sarif
 *.json
 !package.json
+!package-lock.json
 !tsconfig.json
 
 # Docker

@@ -355,7 +355,9 @@ describe('MarkdownFormatter', () => {
 
       const output = formatter.format(review);
 
-      expect(output).toContain('_no content_');
+      // Should show error message, not "_no content_"
+      expect(output).toContain('Error: Failed');
+      expect(output).toContain('provider-1 [error]');
     });
   });
 });

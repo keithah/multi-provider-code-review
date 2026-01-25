@@ -61,12 +61,25 @@ export class MarkdownFormatter {
       for (const result of review.providerResults) {
         lines.push(`<details><summary>${result.name} [${result.status}] (${result.durationSeconds.toFixed(1)}s)</summary>`);
         lines.push('');
+
         if (result.result?.content) {
-          // Content may already have code fences - just output as-is
+          // Success: show review content
           lines.push(result.result.content.trim());
+        } else if (result.error) {
+          // Failure: show error details
+          lines.push('```');
+          lines.push(`Error: ${result.error.message}`);
+          if (result.error.stack) {
+            lines.push('');
+            lines.push('Stack trace:');
+            lines.push(result.error.stack);
+          }
+          lines.push('```');
         } else {
+          // No content and no error (shouldn't happen)
           lines.push('_no content_');
         }
+
         lines.push('</details>');
         lines.push('');
       }

@@ -39,12 +39,18 @@ interface BenchmarkResult {
   cacheHit: boolean;
 }
 
-interface MockPricingService {
-  getPricing(modelId: string): Promise<{ modelId: string; promptPrice: number; completionPrice: number; isFree: boolean }>;
-}
+/**
+ * Benchmark pricing service that returns fixed prices for performance testing
+ * Extends PricingService to match type requirements for CostTracker
+ */
+class BenchmarkPricingService extends PricingService {
+  constructor() {
+    // Pass undefined apiKey to avoid network calls in benchmarks
+    super(undefined);
+  }
 
-class BenchmarkPricingService implements MockPricingService {
   async getPricing(_modelId: string) {
+    // Return fixed pricing for consistent benchmark results
     return { modelId: 'mock', promptPrice: 0.001, completionPrice: 0.002, isFree: false };
   }
 }

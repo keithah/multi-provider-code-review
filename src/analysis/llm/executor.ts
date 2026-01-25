@@ -13,15 +13,19 @@ export class LLMExecutor {
    * Providers that don't respond within healthCheckTimeoutMs are filtered out
    * @param providers - Array of providers to check
    * @param healthCheckTimeoutMs - Timeout for health check (default 30s)
-   * @returns Array of healthy providers
+   * @returns Object with healthy providers and health check results for all providers
    */
-  async filterHealthyProviders(providers: Provider[], healthCheckTimeoutMs: number = 30000): Promise<Provider[]> {
-    if (providers.length === 0) return [];
+  async filterHealthyProviders(
+    providers: Provider[],
+    healthCheckTimeoutMs: number = 30000
+  ): Promise<{ healthy: Provider[]; healthCheckResults: ProviderResult[] }> {
+    if (providers.length === 0) return { healthy: [], healthCheckResults: [] };
 
     logger.info(`Running health checks on ${providers.length} provider(s) with ${healthCheckTimeoutMs}ms timeout...`);
 
     const queue = createQueue(this.config.providerMaxParallel);
     const healthyProviders: Provider[] = [];
+    const healthCheckResults: ProviderResult[] = [];
 
     for (const provider of providers) {
       queue.add(async () => {
@@ -34,11 +38,26 @@ export class LLMExecutor {
             healthyProviders.push(provider);
             logger.info(`✓ Provider ${provider.name} health check passed (${duration}ms)`);
           } else {
+            const result: ProviderResult = {
+              name: provider.name,
+              status: 'error',
+              error: new Error('Health check failed - provider did not respond within timeout'),
+              durationSeconds: duration / 1000,
+            };
+            healthCheckResults.push(result);
             logger.warn(`✗ Provider ${provider.name} health check failed (${duration}ms)`);
           }
         } catch (error) {
           const duration = Date.now() - started;
-          logger.warn(`✗ Provider ${provider.name} health check error (${duration}ms): ${(error as Error).message}`);
+          const err = error as Error;
+          const result: ProviderResult = {
+            name: provider.name,
+            status: 'error',
+            error: err,
+            durationSeconds: duration / 1000,
+          };
+          healthCheckResults.push(result);
+          logger.warn(`✗ Provider ${provider.name} health check error (${duration}ms): ${err.message}`);
         }
       });
     }
@@ -47,7 +66,7 @@ export class LLMExecutor {
 
     logger.info(`Health checks complete: ${healthyProviders.length}/${providers.length} provider(s) are responsive`);
 
-    return healthyProviders;
+    return { healthy: healthyProviders, healthCheckResults };
   }
 
   async execute(providers: Provider[], prompt: string): Promise<ProviderResult[]> {
