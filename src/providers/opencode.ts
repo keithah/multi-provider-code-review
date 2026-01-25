@@ -61,12 +61,18 @@ export class OpenCodeProvider extends Provider {
 
   private runCli(bin: string, args: string[], timeoutMs: number): Promise<{ stdout: string; stderr: string }> {
     return new Promise((resolve, reject) => {
-      // Use detached: false to ensure child processes are in the same process group
+      // Use detached: true to create a new process group
       // This allows killing the entire process tree when needed
       const proc = spawn(bin, args, {
         stdio: ['ignore', 'pipe', 'pipe'],
-        detached: false,
+        detached: true,
       });
+
+      // Unref to avoid keeping parent alive (if available)
+      if (proc.unref) {
+        proc.unref();
+      }
+
       let stdout = '';
       let stderr = '';
       let timedOut = false;

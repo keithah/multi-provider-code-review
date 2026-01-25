@@ -97,7 +97,7 @@ export class PathMatcher {
       return regexPattern.test(filePath);
     } catch (error) {
       // Log error and return false for invalid patterns
-      console.warn(`Invalid glob pattern "${pattern}": ${(error as Error).message}`);
+      logger.warn(`Invalid glob pattern "${pattern}": ${(error as Error).message}`);
       return false;
     }
   }

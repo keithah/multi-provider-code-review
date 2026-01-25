@@ -1,5 +1,6 @@
 import { FileChange } from '../types';
 import { logger } from '../utils/logger';
+import { isValidRegexPattern } from '../utils/regex-validator';
 
 /**
  * Detects trivial changes that don't require code review
@@ -225,8 +226,8 @@ export class TrivialDetector {
     return this.config.customTrivialPatterns.some(pattern => {
       try {
         // Validate pattern to prevent regex injection and ReDoS
-        if (!this.isValidRegexPattern(pattern)) {
-          console.warn(`Invalid trivial pattern "${pattern}": treating as literal string`);
+        if (!isValidRegexPattern(pattern)) {
+          logger.warn(`Invalid trivial pattern "${pattern}": treating as literal string`);
           return filename.includes(pattern);
         }
 
@@ -234,43 +235,10 @@ export class TrivialDetector {
         return regex.test(filename);
       } catch (error) {
         // Invalid regex, treat as literal string match
-        console.warn(`Failed to compile regex pattern "${pattern}": ${(error as Error).message}`);
+        logger.warn(`Failed to compile regex pattern "${pattern}": ${(error as Error).message}`);
         return filename.includes(pattern);
       }
     });
-  }
-
-  /**
-   * Validate regex pattern to prevent ReDoS attacks
-   */
-  private isValidRegexPattern(pattern: string): boolean {
-    // Check for empty or non-string patterns
-    if (!pattern || typeof pattern !== 'string') {
-      return false;
-    }
-
-    // Limit pattern length to prevent complexity attacks
-    if (pattern.length > 500) {
-      return false;
-    }
-
-    // Check for suspicious patterns that could cause ReDoS
-    const suspiciousPatterns = [
-      /(\*\*){3,}/, // Multiple consecutive **
-      /(\+\+){3,}/, // Multiple consecutive ++
-      /(\*){10,}/, // Too many consecutive *
-      /(\+){10,}/, // Too many consecutive +
-      /(.)\1{20,}/, // Excessive character repetition
-      /(\.\*){5,}/, // Too many .* patterns
-    ];
-
-    for (const suspicious of suspiciousPatterns) {
-      if (suspicious.test(pattern)) {
-        return false;
-      }
-    }
-
-    return true;
   }
 
   /**

@@ -89,7 +89,7 @@ Error: API key for openrouter is required
 3. **Test key locally:**
    ```bash
    curl https://openrouter.ai/api/v1/models \
-     -H "Authorization: Bearer sk-or-v1-YOUR_KEY_HERE"
+     -H "Authorization: Bearer $OPENROUTER_API_KEY"
    ```
 
 ### Problem: Rate limiting errors

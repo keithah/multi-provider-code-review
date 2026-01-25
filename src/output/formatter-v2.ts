@@ -83,7 +83,7 @@ export class MarkdownFormatterV2 {
     // Footer
     lines.push('---');
     lines.push('');
-    lines.push('*Powered by Multi-Provider Code Review* • [Dismiss a finding](https://github.com/your-repo/multi-provider-code-review/blob/main/docs/user-guide.md#dismissing-findings) by reacting with 👎');
+    lines.push('*Powered by Multi-Provider Code Review* • To dismiss a finding, react with 👎');
 
     return lines.join('\n');
   }
@@ -215,9 +215,17 @@ export class MarkdownFormatterV2 {
     // Suggestion (if present)
     if (finding.suggestion) {
       lines.push('**Suggested Fix:**');
-      lines.push('```');
-      lines.push(finding.suggestion);
-      lines.push('```');
+      const trimmedSuggestion = finding.suggestion.trim();
+      // Check if suggestion is already fenced
+      if (trimmedSuggestion.startsWith('```')) {
+        // Already fenced, use as-is
+        lines.push(trimmedSuggestion);
+      } else {
+        // Not fenced, wrap it
+        lines.push('```');
+        lines.push(trimmedSuggestion);
+        lines.push('```');
+      }
       lines.push('');
     }
 

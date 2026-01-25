@@ -445,8 +445,8 @@ describe('MarkdownFormatterV2', () => {
       const output = formatter.format(review);
 
       expect(output).toContain('Powered by Multi-Provider Code Review');
-      expect(output).toContain('Dismiss a finding');
-      expect(output).toContain('by reacting with 👎');
+      expect(output).toContain('dismiss a finding');
+      expect(output).toContain('react with 👎');
     });
 
     it('should use collapsible sections for long content', () => {

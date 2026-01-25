@@ -163,7 +163,14 @@ export class ReviewOrchestrator {
       let patterns = [];
       if (config.pathIntensityPatterns) {
         try {
-          patterns = JSON.parse(config.pathIntensityPatterns);
+          const parsed = JSON.parse(config.pathIntensityPatterns);
+          // Validate that parsed result is an array
+          if (Array.isArray(parsed)) {
+            patterns = parsed;
+          } else {
+            logger.warn('pathIntensityPatterns is not an array, using defaults');
+            patterns = createDefaultPathMatcherConfig().patterns;
+          }
         } catch (error) {
           logger.warn('Failed to parse pathIntensityPatterns, using defaults', error as Error);
           // Fallback to default patterns on parse failure
