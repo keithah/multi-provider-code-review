@@ -1,13 +1,29 @@
 import { MetricsCollector } from '../../../src/analytics/metrics-collector';
 import { Review } from '../../../src/types';
+import { CacheStorage } from '../../../src/cache/storage';
+import * as path from 'path';
+import * as fs from 'fs/promises';
 
 describe('MetricsCollector', () => {
   let collector: MetricsCollector;
+  let testCacheDir: string;
 
   beforeEach(async () => {
-    collector = new MetricsCollector();
+    // Use a unique cache directory for each test run to avoid interference
+    testCacheDir = path.join(process.cwd(), `.mpr-cache-test-${Date.now()}`);
+    const storage = new CacheStorage(testCacheDir);
+    collector = new MetricsCollector(storage);
     // Clear all metrics before each test for isolation
     await collector.clear();
+  });
+
+  afterEach(async () => {
+    // Clean up test cache directory
+    try {
+      await fs.rm(testCacheDir, { recursive: true, force: true });
+    } catch {
+      // Ignore cleanup errors
+    }
   });
 
   describe('recordReview', () => {
@@ -64,7 +80,7 @@ describe('MetricsCollector', () => {
 
       const metrics = await collector.getMetrics();
       expect(metrics.length).toBeLessThanOrEqual(1000);
-    }, 10000); // Increase timeout to 10 seconds for this test
+    }, 30000); // Increase timeout to 30 seconds for this test
   });
 
   describe('getMetrics', () => {

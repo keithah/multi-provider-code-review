@@ -27,4 +27,45 @@ export class GitHubClient {
 
     core.debug(`GitHub client initialized for ${this.owner}/${this.repo}`);
   }
+
+  /**
+   * Fetch file content from a specific ref (commit SHA, branch, or tag)
+   * @param filePath - Path to the file in the repository
+   * @param ref - Git ref (commit SHA, branch name, or tag)
+   * @returns File content as string, or null if file doesn't exist/inaccessible
+   */
+  async getFileContent(filePath: string, ref: string): Promise<string | null> {
+    try {
+      const response = await this.octokit.rest.repos.getContent({
+        owner: this.owner,
+        repo: this.repo,
+        path: filePath,
+        ref,
+      });
+
+      // Check if the response is a file (not a directory)
+      if ('content' in response.data && !Array.isArray(response.data)) {
+        // Handle empty content or encoding "none" for large files
+        if (!response.data.content || response.data.content === '' || response.data.encoding === 'none') {
+          // File is empty or too large
+          core.debug(`File content empty or encoding 'none': ${filePath}`);
+          return '';
+        }
+        // Content is base64 encoded
+        return Buffer.from(response.data.content, 'base64').toString('utf-8');
+      }
+
+      return null;
+    } catch (error) {
+      const err = error as { status?: number };
+      if (err.status === 404) {
+        // File not found - this is expected for new files in PRs
+        core.debug(`File not found: ${filePath} at ref ${ref}`);
+        return null;
+      }
+      // Log other errors but don't throw - gracefully degrade
+      core.warning(`Failed to fetch file content for ${filePath}: ${(error as Error).message}`);
+      return null;
+    }
+  }
 }

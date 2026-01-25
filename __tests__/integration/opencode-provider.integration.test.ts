@@ -208,19 +208,30 @@ describe('OpenCodeProvider Integration', () => {
           setTimeout(() => binaryCheckProc.emit('close', 0), 1);
           return binaryCheckProc;
         }
-        // Create process that never emits close event
+        // Create process that never emits close event (simulates hanging process)
         reviewMockProcess = new EventEmitter() as any;
         reviewMockProcess.stdout = new EventEmitter();
         reviewMockProcess.stderr = new EventEmitter();
         reviewMockProcess.kill = jest.fn();
+        reviewMockProcess.pid = 12345; // Mock PID for process group kill
         return reviewMockProcess;
       });
 
-      // Set very short timeout
-      await expect(provider.review('test', 100)).rejects.toThrow('timed out after 100ms');
+      // Mock process.kill to prevent actual kill attempt
+      const originalProcessKill = process.kill;
+      process.kill = jest.fn();
 
-      // Verify process was killed
-      expect(reviewMockProcess.kill).toHaveBeenCalledWith('SIGKILL');
+      try {
+        // Set very short timeout
+        await expect(provider.review('test', 100)).rejects.toThrow('timed out after 100ms');
+
+        // Verify that either process group kill or regular kill was attempted
+        // (implementation detail, but we want to ensure cleanup was attempted)
+        expect(process.kill).toHaveBeenCalled();
+      } finally {
+        // Restore original process.kill
+        process.kill = originalProcessKill;
+      }
     });
 
     it('should handle spawn errors', async () => {

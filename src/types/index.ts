@@ -62,6 +62,19 @@ export interface ReviewConfig {
   pluginAllowlist?: string[];
   pluginBlocklist?: string[];
 
+  skipTrivialChanges?: boolean;
+  skipDependencyUpdates?: boolean;
+  skipDocumentationOnly?: boolean;
+  skipFormattingOnly?: boolean;
+  skipTestFixtures?: boolean;
+  skipConfigFiles?: boolean;
+  skipBuildArtifacts?: boolean;
+  trivialPatterns?: string[];
+
+  pathBasedIntensity?: boolean;
+  pathIntensityPatterns?: string; // JSON string of PathPattern[]
+  pathDefaultIntensity?: 'thorough' | 'standard' | 'light';
+
   dryRun: boolean;
 }
 

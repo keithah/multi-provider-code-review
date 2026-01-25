@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isValidRegexPattern } from '../utils/regex-validator';
 
 export const ReviewConfigSchema = z.object({
   providers: z.array(z.string()).optional(),
@@ -57,6 +58,22 @@ export const ReviewConfigSchema = z.object({
   plugin_dir: z.string().optional(),
   plugin_allowlist: z.array(z.string()).optional(),
   plugin_blocklist: z.array(z.string()).optional(),
+
+  skip_trivial_changes: z.boolean().optional(),
+  skip_dependency_updates: z.boolean().optional(),
+  skip_documentation_only: z.boolean().optional(),
+  skip_formatting_only: z.boolean().optional(),
+  skip_test_fixtures: z.boolean().optional(),
+  skip_config_files: z.boolean().optional(),
+  skip_build_artifacts: z.boolean().optional(),
+  trivial_patterns: z.array(z.string().refine(
+    (pattern) => isValidRegexPattern(pattern),
+    { message: 'Invalid or unsafe regex pattern (check for ReDoS vulnerabilities)' }
+  )).optional(),
+
+  path_based_intensity: z.boolean().optional(),
+  path_intensity_patterns: z.string().optional(),
+  path_default_intensity: z.enum(['thorough', 'standard', 'light']).optional(),
 
   dry_run: z.boolean().optional(),
 });

@@ -60,6 +60,19 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   pluginAllowlist: [],
   pluginBlocklist: [],
 
+  skipTrivialChanges: true,
+  skipDependencyUpdates: true,
+  skipDocumentationOnly: true,
+  skipFormattingOnly: false, // Disabled by default (may have false positives)
+  skipTestFixtures: true,
+  skipConfigFiles: true,
+  skipBuildArtifacts: true,
+  trivialPatterns: [],
+
+  pathBasedIntensity: false, // Disabled by default, opt-in
+  pathIntensityPatterns: undefined,
+  pathDefaultIntensity: 'standard',
+
   dryRun: false,
 };
 

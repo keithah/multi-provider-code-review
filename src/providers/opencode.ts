@@ -61,11 +61,37 @@ export class OpenCodeProvider extends Provider {
 
   private runCli(bin: string, args: string[], timeoutMs: number): Promise<{ stdout: string; stderr: string }> {
     return new Promise((resolve, reject) => {
-      const proc = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+      // Use detached: true to create a new process group
+      // This allows killing the entire process tree when needed
+      const proc = spawn(bin, args, {
+        stdio: ['ignore', 'pipe', 'pipe'],
+        detached: true,
+      });
+
+      // Unref to avoid keeping parent alive (if available)
+      if (proc.unref) {
+        proc.unref();
+      }
+
       let stdout = '';
       let stderr = '';
+      let timedOut = false;
+
       const timer = setTimeout(() => {
-        proc.kill('SIGKILL');
+        timedOut = true;
+        logger.warn(`OpenCode CLI timeout (${timeoutMs}ms), killing process and all children`);
+
+        // Kill the entire process group to ensure child processes are terminated
+        // On Unix: negative PID kills the process group
+        try {
+          if (proc.pid) {
+            process.kill(-proc.pid, 'SIGKILL');
+          }
+        } catch (err) {
+          // Fallback: kill just the main process
+          proc.kill('SIGKILL');
+        }
+
         reject(new Error(`OpenCode CLI timed out after ${timeoutMs}ms`));
       }, timeoutMs);
 
@@ -76,15 +102,19 @@ export class OpenCodeProvider extends Provider {
         stderr += chunk.toString();
       });
       proc.on('error', err => {
-        clearTimeout(timer);
-        reject(err);
+        if (!timedOut) {
+          clearTimeout(timer);
+          reject(err);
+        }
       });
       proc.on('close', code => {
-        clearTimeout(timer);
-        if (code !== 0) {
-          reject(new Error(`OpenCode CLI exited with code ${code}: ${stderr || stdout || 'no output'}`));
-        } else {
-          resolve({ stdout: stdout.trim(), stderr: stderr.trim() });
+        if (!timedOut) {
+          clearTimeout(timer);
+          if (code !== 0) {
+            reject(new Error(`OpenCode CLI exited with code ${code}: ${stderr || stdout || 'no output'}`));
+          } else {
+            resolve({ stdout: stdout.trim(), stderr: stderr.trim() });
+          }
         }
       });
     });

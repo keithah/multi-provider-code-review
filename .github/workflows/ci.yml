@@ -22,5 +22,9 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
-      - run: npm run test
+      # Run tests with CI-optimized settings:
+      # --maxWorkers=2: Limit parallelism to reduce resource contention
+      # --forceExit: Ensure clean exit despite lingering async operations
+      # Note: All 439 tests must pass; forceExit only prevents hanging on cleanup
+      - run: npm test -- --maxWorkers=2 --forceExit
       - run: npm run build

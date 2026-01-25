@@ -11,6 +11,7 @@ import { ProviderRegistry } from '../providers/registry';
 import { PullRequestLoader } from '../github/pr-loader';
 import { CommentPoster } from '../github/comment-poster';
 import { MarkdownFormatter } from '../output/formatter';
+import { MarkdownFormatterV2 } from '../output/formatter-v2';
 import { MermaidGenerator } from '../output/mermaid';
 import { FeedbackFilter } from '../github/feedback';
 import { buildJson } from '../output/json';
@@ -29,6 +30,9 @@ import { CodeGraphBuilder, CodeGraph } from '../analysis/context/graph-builder';
 import { PromptGenerator } from '../autofix/prompt-generator';
 import { ReliabilityTracker } from '../providers/reliability-tracker';
 import { MetricsCollector } from '../analytics/metrics-collector';
+import { TrivialDetector } from '../analysis/trivial-detector';
+import { PathMatcher, createDefaultPathMatcherConfig, PathPattern } from '../analysis/path-matcher';
+import { z } from 'zod';
 import { ReviewConfig, Review, PRContext, RunDetails, Finding, FileChange, UnchangedContext, ProviderResult } from '../types';
 import { logger } from '../utils/logger';
 import { mapAddedLines } from '../utils/diff';
@@ -52,7 +56,7 @@ export interface ReviewComponents {
   rules: RulesEngine;
   prLoader: PullRequestLoader;
   commentPoster: CommentPoster;
-  formatter: MarkdownFormatter;
+  formatter: MarkdownFormatter | MarkdownFormatterV2;
   contextRetriever: ContextRetriever;
   impactAnalyzer: ImpactAnalyzer;
   evidenceScorer: EvidenceScorer;
@@ -83,6 +87,10 @@ export class ReviewOrchestrator {
   /**
    * Execute review on a given PR context
    * Can be called directly with a PRContext from CLI or GitHub
+   *
+   * IMMUTABILITY GUARANTEE: This function does not mutate the input `pr` parameter.
+   * When filtering or transforming the PR context, a new object is created with spread syntax.
+   * Tests verify that pr.files array is not modified by this function.
    */
   async executeReview(pr: PRContext): Promise<Review> {
     const { config } = this.components;
@@ -107,15 +115,125 @@ export class ReviewOrchestrator {
       }
     }
 
-    // Check for incremental review
-    const useIncremental = await this.components.incrementalReviewer.shouldUseIncremental(pr);
-    let filesToReview: FileChange[] = pr.files;
+    // Check for trivial changes (dependency locks, docs, config files, test fixtures)
+    let reviewContext = pr;
+    if (config.skipTrivialChanges) {
+      const trivialDetector = new TrivialDetector({
+        enabled: true,
+        skipDependencyUpdates: config.skipDependencyUpdates ?? true,
+        skipDocumentationOnly: config.skipDocumentationOnly ?? true,
+        skipFormattingOnly: config.skipFormattingOnly ?? false,
+        skipTestFixtures: config.skipTestFixtures ?? true,
+        skipConfigFiles: config.skipConfigFiles ?? true,
+        skipBuildArtifacts: config.skipBuildArtifacts ?? true,
+        customTrivialPatterns: config.trivialPatterns ?? [],
+      });
+
+      const trivialResult = trivialDetector.detect(pr.files);
+
+      if (trivialResult.isTrivial) {
+        // Entire PR is trivial - post simple comment and skip review
+        logger.info(`Skipping review: ${trivialResult.reason}`);
+        const trivialReview = this.createTrivialReview(trivialResult.reason!, pr.files.length, start);
+        const markdown = this.components.formatter.format(trivialReview);
+        await this.components.commentPoster.postSummary(pr.number, markdown, false);
+
+        // Record metrics for trivial review (shows cost/time saved)
+        if (config.analyticsEnabled && this.components.metricsCollector) {
+          try {
+            await this.components.metricsCollector.recordReview(trivialReview, pr.number);
+            logger.debug(`Recorded trivial review metrics for PR #${pr.number}`);
+          } catch (error) {
+            logger.warn('Failed to record trivial review metrics', error as Error);
+          }
+        }
+
+        return trivialReview;
+      }
+
+      // Some files are trivial - filter them out before review (create new context, don't mutate)
+      if (trivialResult.trivialFiles.length > 0) {
+        logger.info(`Filtering ${trivialResult.trivialFiles.length} trivial files from review: ${trivialResult.trivialFiles.join(', ')}`);
+        const nonTrivialFiles = pr.files.filter(f => trivialResult.nonTrivialFiles.includes(f.filename));
+        reviewContext = {
+          ...pr,
+          files: nonTrivialFiles,
+          diff: this.filterDiffByFiles(pr.diff, nonTrivialFiles),
+        };
+      }
+    }
+
+    // Determine review intensity based on file paths (after trivial filtering)
+    // NOTE: Currently logs intensity but doesn't apply it to review behavior
+    // TODO: Wire intensity into PromptBuilder, provider selection, or analysis depth
+    if (config.pathBasedIntensity) {
+      let patterns: PathPattern[] = [];
+      if (config.pathIntensityPatterns) {
+        try {
+          const parsed = JSON.parse(config.pathIntensityPatterns);
+
+          // Validate that parsed result is an array
+          if (!Array.isArray(parsed)) {
+            logger.warn('pathIntensityPatterns is not an array, using defaults');
+            patterns = createDefaultPathMatcherConfig().patterns;
+          } else {
+            // Validate each pattern object against schema
+            const PathPatternSchema = z.object({
+              pattern: z.string(),
+              intensity: z.enum(['thorough', 'standard', 'light'] as const),
+              description: z.string().optional(),
+            });
+
+            const validPatterns: PathPattern[] = [];
+            for (const item of parsed) {
+              const result = PathPatternSchema.safeParse(item);
+              if (result.success) {
+                validPatterns.push(result.data);
+              } else {
+                logger.warn(`Invalid path pattern object, skipping: ${JSON.stringify(item)}`);
+              }
+            }
+
+            if (validPatterns.length === 0) {
+              logger.warn('No valid path patterns found, using defaults');
+              patterns = createDefaultPathMatcherConfig().patterns;
+            } else {
+              patterns = validPatterns;
+            }
+          }
+        } catch (error) {
+          logger.warn('Failed to parse pathIntensityPatterns, using defaults', error as Error);
+          // Fallback to default patterns on parse failure
+          patterns = createDefaultPathMatcherConfig().patterns;
+        }
+      } else {
+        // No patterns configured, use defaults
+        patterns = createDefaultPathMatcherConfig().patterns;
+      }
+
+      const pathMatcher = new PathMatcher({
+        enabled: true,
+        defaultIntensity: config.pathDefaultIntensity ?? 'standard',
+        patterns,
+      });
+
+      const intensityResult = pathMatcher.determineIntensity(reviewContext.files);
+      logger.info(`Review intensity: ${intensityResult.intensity} - ${intensityResult.reason}`);
+
+      if (intensityResult.matchedPaths.length > 0) {
+        logger.debug(`Matched paths: ${intensityResult.matchedPaths.join(', ')}`);
+      }
+    }
+
+    // Check for incremental review (use reviewContext which may have filtered trivial files)
+    const useIncremental = await this.components.incrementalReviewer.shouldUseIncremental(reviewContext);
+    let filesToReview: FileChange[] = reviewContext.files;
     let lastReviewData = null;
 
     if (useIncremental) {
-      lastReviewData = await this.components.incrementalReviewer.getLastReview(pr.number);
+      lastReviewData = await this.components.incrementalReviewer.getLastReview(reviewContext.number);
       if (lastReviewData) {
-        filesToReview = await this.components.incrementalReviewer.getChangedFilesSince(pr, lastReviewData.lastReviewedCommit);
+        filesToReview = await this.components.incrementalReviewer.getChangedFilesSince(reviewContext, lastReviewData.lastReviewedCommit);
         logger.info(`Incremental review: reviewing ${filesToReview.length} changed files`);
 
         // Update graph incrementally if available
@@ -130,12 +248,12 @@ export class ReviewOrchestrator {
       }
     }
 
-    const cachedFindings = config.enableCaching ? await this.components.cache.load(pr) : null;
+    const cachedFindings = config.enableCaching ? await this.components.cache.load(reviewContext) : null;
 
     // Create a PR context for the files to review with filtered diff
     const reviewPR: PRContext = useIncremental
-      ? { ...pr, files: filesToReview, diff: this.filterDiffByFiles(pr.diff, filesToReview) }
-      : pr;
+      ? { ...reviewContext, files: filesToReview, diff: this.filterDiffByFiles(reviewContext.diff, filesToReview) }
+      : reviewContext;
 
     // Skip LLM execution if no files to review (incremental with no changes)
     let llmFindings: Finding[] = [];
@@ -284,9 +402,7 @@ export class ReviewOrchestrator {
       const fixPrompts = this.components.promptGenerator.generateFixPrompts(review.findings);
       if (fixPrompts.length > 0) {
         // Sanitize REPORT_BASENAME to prevent path traversal
-        const basename = (process.env.REPORT_BASENAME || 'multi-provider-review')
-          .replace(/[^a-zA-Z0-9_-]/g, '-')
-          .substring(0, 50);
+        const basename = this.sanitizeFilename(process.env.REPORT_BASENAME || 'multi-provider-review');
         const fixPromptsPath = path.join(process.cwd(), `${basename}-fix-prompts.md`);
         const format = (config.fixPromptFormat as 'cursor' | 'copilot' | 'plain') || 'plain';
         await this.components.promptGenerator.saveToFile(fixPrompts, fixPromptsPath, format);
@@ -319,7 +435,7 @@ export class ReviewOrchestrator {
 
     // Update existing comment for incremental reviews
     await this.components.commentPoster.postSummary(pr.number, markdown, useIncremental);
-    await this.components.commentPoster.postInline(pr.number, inlineFiltered, pr.files);
+    await this.components.commentPoster.postInline(pr.number, inlineFiltered, pr.files, pr.headSha);
 
     await this.writeReports(review);
 
@@ -383,6 +499,33 @@ export class ReviewOrchestrator {
 
   private estimateTokens(text: string): number {
     return Math.ceil(Buffer.byteLength(text, 'utf8') / 4);
+  }
+
+  /**
+   * Sanitize filename to prevent path traversal attacks
+   * Removes directory separators, path traversal sequences, and absolute paths
+   */
+  private sanitizeFilename(filename: string): string {
+    // Check for path traversal patterns
+    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      logger.warn(`Detected path traversal attempt in filename: ${filename}`);
+      // Use only the basename (last component)
+      filename = path.basename(filename);
+    }
+
+    // Check for absolute paths
+    if (path.isAbsolute(filename)) {
+      logger.warn(`Detected absolute path in filename: ${filename}`);
+      filename = path.basename(filename);
+    }
+
+    // Remove all non-alphanumeric characters except dash and underscore
+    const sanitized = filename
+      .replace(/[^a-zA-Z0-9_-]/g, '-')
+      .substring(0, 50);
+
+    // Ensure we don't end up with an empty string
+    return sanitized || 'multi-provider-review';
   }
 
   /**
@@ -499,11 +642,45 @@ export class ReviewOrchestrator {
     return findings.filter(f => (f.evidence?.confidence ?? 1) >= threshold);
   }
 
+  /**
+   * Create a simple review result for trivial PRs that don't need full analysis
+   * Tracks time saved and cost avoided
+   */
+  private createTrivialReview(reason: string, fileCount: number, startTime: number): Review {
+    const durationSeconds = (Date.now() - startTime) / 1000;
+
+    return {
+      summary: `This PR contains only trivial changes that don't require detailed review.\n\n**Reason:** ${reason}\n\n**Files changed:** ${fileCount}\n\n**Cost savings:** Skipped LLM analysis, saving estimated $0.01-0.05 in API costs.\n\nThese types of changes are automatically filtered to save review time and API costs. If you believe this should have been reviewed, you can disable trivial change detection in the configuration.`,
+      findings: [],
+      inlineComments: [],
+      actionItems: [],
+      metrics: {
+        totalFindings: 0,
+        critical: 0,
+        major: 0,
+        minor: 0,
+        providersUsed: 0,
+        providersSuccess: 0,
+        providersFailed: 0,
+        totalTokens: 0,
+        totalCost: 0,
+        durationSeconds,
+      },
+      runDetails: {
+        providers: [],
+        totalCost: 0,
+        totalTokens: 0,
+        durationSeconds,
+        cacheHit: false,
+        synthesisModel: '',
+        providerPoolSize: 0,
+      },
+    };
+  }
+
   private async writeReports(review: Review): Promise<void> {
     // Sanitize REPORT_BASENAME to prevent path traversal
-    const base = (process.env.REPORT_BASENAME || 'multi-provider-review')
-      .replace(/[^a-zA-Z0-9_-]/g, '-')
-      .substring(0, 50);
+    const base = this.sanitizeFilename(process.env.REPORT_BASENAME || 'multi-provider-review');
     const sarifPath = path.join(process.cwd(), `${base}.sarif`);
     const jsonPath = path.join(process.cwd(), `${base}.json`);
 

@@ -101,6 +101,19 @@ export class ConfigLoader {
       incrementalEnabled: this.parseBoolean(env.INCREMENTAL_ENABLED),
       incrementalCacheTtlDays: this.parseNumber(env.INCREMENTAL_CACHE_TTL_DAYS),
 
+      skipTrivialChanges: this.parseBoolean(env.SKIP_TRIVIAL_CHANGES),
+      skipDependencyUpdates: this.parseBoolean(env.SKIP_DEPENDENCY_UPDATES),
+      skipDocumentationOnly: this.parseBoolean(env.SKIP_DOCUMENTATION_ONLY),
+      skipFormattingOnly: this.parseBoolean(env.SKIP_FORMATTING_ONLY),
+      skipTestFixtures: this.parseBoolean(env.SKIP_TEST_FIXTURES),
+      skipConfigFiles: this.parseBoolean(env.SKIP_CONFIG_FILES),
+      skipBuildArtifacts: this.parseBoolean(env.SKIP_BUILD_ARTIFACTS),
+      trivialPatterns: this.parseArray(env.TRIVIAL_PATTERNS),
+
+      pathBasedIntensity: this.parseBoolean(env.PATH_BASED_INTENSITY),
+      pathIntensityPatterns: env.PATH_INTENSITY_PATTERNS,
+      pathDefaultIntensity: this.parseIntensity(env.PATH_DEFAULT_INTENSITY),
+
       dryRun: this.parseBoolean(env.DRY_RUN),
     };
   }
@@ -135,6 +148,17 @@ export class ConfigLoader {
       enableAiDetection: config.enable_ai_detection,
       incrementalEnabled: config.incremental_enabled,
       incrementalCacheTtlDays: config.incremental_cache_ttl_days,
+      skipTrivialChanges: config.skip_trivial_changes,
+      skipDependencyUpdates: config.skip_dependency_updates,
+      skipDocumentationOnly: config.skip_documentation_only,
+      skipFormattingOnly: config.skip_formatting_only,
+      skipTestFixtures: config.skip_test_fixtures,
+      skipConfigFiles: config.skip_config_files,
+      skipBuildArtifacts: config.skip_build_artifacts,
+      trivialPatterns: config.trivial_patterns,
+      pathBasedIntensity: config.path_based_intensity,
+      pathIntensityPatterns: config.path_intensity_patterns,
+      pathDefaultIntensity: config.path_default_intensity,
       dryRun: config.dry_run,
     };
   }
@@ -184,6 +208,15 @@ export class ConfigLoader {
     const normalized = value.toLowerCase();
     if (normalized === 'critical' || normalized === 'major' || normalized === 'minor') {
       return normalized as 'critical' | 'major' | 'minor';
+    }
+    return undefined;
+  }
+
+  private static parseIntensity(value?: string): 'thorough' | 'standard' | 'light' | undefined {
+    if (!value) return undefined;
+    const normalized = value.toLowerCase();
+    if (normalized === 'thorough' || normalized === 'standard' || normalized === 'light') {
+      return normalized as 'thorough' | 'standard' | 'light';
     }
     return undefined;
   }

@@ -17,7 +17,7 @@ import { RuleLoader } from './rules/loader';
 import { PullRequestLoader } from './github/pr-loader';
 import { CommentPoster } from './github/comment-poster';
 import { GitHubClient } from './github/client';
-import { MarkdownFormatter } from './output/formatter';
+import { MarkdownFormatterV2 } from './output/formatter-v2';
 import { ReviewComponents } from './core/orchestrator';
 import { ContextRetriever } from './analysis/context';
 import { ImpactAnalyzer } from './analysis/impact';
@@ -134,8 +134,14 @@ async function createComponentsForCLI(config: ReviewConfig): Promise<ReviewCompo
   const mockGitHubClient = {} as GitHubClient;
   const prLoader = new PullRequestLoader(mockGitHubClient);
   const commentPoster = new CommentPoster(mockGitHubClient, true); // Always dry-run in CLI
-  const formatter = new MarkdownFormatter();
-  const feedbackFilter = {} as FeedbackFilter;
+  const formatter = new MarkdownFormatterV2();
+  // Create a mock FeedbackFilter that always allows posts (no suppression in CLI mode)
+  const feedbackFilter = {
+    client: mockGitHubClient,
+    loadSuppressed: async (): Promise<Set<string>> => new Set(),
+    shouldPost: (): boolean => true,
+    signatureFromComment: (): string => '',
+  } as unknown as FeedbackFilter;
 
   return {
     config,
@@ -208,7 +214,7 @@ export async function createComponents(config: ReviewConfig, githubToken: string
   const githubClient = new GitHubClient(githubToken);
   const prLoader = new PullRequestLoader(githubClient);
   const commentPoster = new CommentPoster(githubClient, config.dryRun);
-  const formatter = new MarkdownFormatter();
+  const formatter = new MarkdownFormatterV2();
   const contextRetriever = new ContextRetriever();
   const impactAnalyzer = new ImpactAnalyzer();
   const evidenceScorer = new EvidenceScorer();

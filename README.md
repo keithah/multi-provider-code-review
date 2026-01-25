@@ -21,6 +21,7 @@ Hybrid AST + LLM GitHub Action that fuses multiple AI providers with consensus f
 ### Advanced Features ⚡ NEW v2.1
 - **📊 Analytics Dashboard** - Track costs, performance, and ROI with HTML/CSV/JSON reports
 - **🤖 Feedback Learning** - Improves over time based on 👍/👎 reactions
+- **🚫 Dismiss Findings** - Add 👎 reaction to suppress false positives on future reviews
 - **🔍 Code Graph Analysis** - AST-based dependency tracking for better context
 - **⚙️ Auto-Fix Prompts** - Generate fix suggestions for AI IDEs (Cursor, Copilot)
 - **📈 Provider Reliability** - Track and rank providers by success rate and cost
@@ -260,6 +261,11 @@ ANALYTICS_MAX_REVIEWS: '1000'
 ## Documentation
 
 ### Getting Started
+- **[User Guide](./docs/user-guide.md)** - Dismissing findings, feedback learning, and usage tips
+- **[Performance Guide](./docs/PERFORMANCE.md)** - Optimization strategies and configuration tuning
+- **[Security Guide](./docs/SECURITY.md)** - Security features, best practices, and threat model
+- **[Error Handling Guide](./docs/ERROR_HANDLING.md)** - Error recovery and debugging strategies
+- **[Troubleshooting Guide](./docs/TROUBLESHOOTING.md)** - Common issues and solutions
 - **[Self-Hosted Deployment](./docs/self-hosted.md)** - Docker deployment and webhook setup
 - **[Plugin Development](./docs/plugins.md)** - Create custom LLM provider plugins
 - **[Analytics Guide](./docs/analytics.md)** - Track costs, performance, and ROI
