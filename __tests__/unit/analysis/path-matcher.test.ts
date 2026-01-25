@@ -351,4 +351,82 @@ describe('PathMatcher', () => {
       expect(result.intensity).toBe('thorough');
     });
   });
+
+  describe('pattern validation', () => {
+    it('should reject patterns that are too long', () => {
+      const longPattern = 'a'.repeat(600);
+
+      expect(() => {
+        new PathMatcher({
+          enabled: true,
+          defaultIntensity: 'standard',
+          patterns: [{ pattern: longPattern, intensity: 'thorough' }],
+        });
+      }).toThrow(/too long/i);
+    });
+
+    it('should reject patterns that are too complex', () => {
+      // Pattern with excessive wildcards and braces (score > 50)
+      // 30 wildcards * 2 + 5 braces * 3 = 75
+      const complexPattern = '**/*/**/*/**/*/**/*/**/*/**/*/**/*/**/*/**/*/{a,b,c}/{d,e,f}/{g,h,i}/{j,k}/**/*';
+
+      expect(() => {
+        new PathMatcher({
+          enabled: true,
+          defaultIntensity: 'standard',
+          patterns: [{ pattern: complexPattern, intensity: 'thorough' }],
+        });
+      }).toThrow(/too complex/i);
+    });
+
+    it('should reject patterns with control characters', () => {
+      const badPattern = 'src/\x00evil/**';
+
+      expect(() => {
+        new PathMatcher({
+          enabled: true,
+          defaultIntensity: 'standard',
+          patterns: [{ pattern: badPattern, intensity: 'thorough' }],
+        });
+      }).toThrow(/control characters/i);
+    });
+
+    it('should accept valid patterns', () => {
+      expect(() => {
+        new PathMatcher({
+          enabled: true,
+          defaultIntensity: 'standard',
+          patterns: [
+            { pattern: 'src/auth/**', intensity: 'thorough' },
+            { pattern: '**/*.test.ts', intensity: 'light' },
+            { pattern: '{a,b,c}/**', intensity: 'standard' },
+          ],
+        });
+      }).not.toThrow();
+    });
+  });
+
+  describe('pattern caching', () => {
+    it('should cache pattern matching results', () => {
+      const patterns: PathPattern[] = [
+        { pattern: 'src/**', intensity: 'thorough' },
+      ];
+
+      const matcher = new PathMatcher({
+        enabled: true,
+        defaultIntensity: 'standard',
+        patterns,
+      });
+
+      const files = [
+        createFile('src/app.ts'),
+        createFile('src/app.ts'), // Duplicate - should use cache
+      ];
+
+      const result = matcher.determineIntensity(files);
+
+      // Both files match, but only one unique path
+      expect(result.matchedPaths).toHaveLength(1);
+    });
+  });
 });

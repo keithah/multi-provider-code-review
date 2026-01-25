@@ -29,9 +29,45 @@ export interface IntensityResult {
 
 /**
  * Matches file paths against patterns to determine review intensity
+ * Performance: Uses memoization to cache pattern matching results
  */
 export class PathMatcher {
-  constructor(private readonly config: PathMatcherConfig) {}
+  // Cache for pattern matching results: `${filePath}:${pattern}` -> boolean
+  private readonly matchCache = new Map<string, boolean>();
+
+  constructor(private readonly config: PathMatcherConfig) {
+    // Validate all patterns on construction
+    this.validatePatterns();
+  }
+
+  /**
+   * Validate all patterns for security and correctness
+   * Throws if any pattern is invalid
+   */
+  private validatePatterns(): void {
+    for (const pathPattern of this.config.patterns) {
+      const pattern = pathPattern.pattern;
+
+      // Security: Limit pattern length to prevent DoS
+      if (pattern.length > 500) {
+        throw new Error(`Pattern too long (${pattern.length} chars, max 500): ${pattern}`);
+      }
+
+      // Security: Check for suspicious complexity
+      const wildcardCount = (pattern.match(/\*/g) || []).length;
+      const braceCount = (pattern.match(/\{/g) || []).length;
+      const complexityScore = wildcardCount * 2 + braceCount * 3;
+
+      if (complexityScore > 50) {
+        throw new Error(`Pattern too complex (score ${complexityScore}): ${pattern}`);
+      }
+
+      // Security: Disallow control characters
+      if (/[\x00-\x1F]/.test(pattern)) {
+        throw new Error(`Pattern contains control characters: ${pattern}`);
+      }
+    }
+  }
 
   /**
    * Analyze files and determine review intensity based on path patterns
@@ -94,20 +130,35 @@ export class PathMatcher {
    * - Character classes: [abc]
    *
    * Uses minimatch library which is battle-tested and ReDoS-safe
+   * Performance: Results are memoized to avoid redundant matching
    */
   private matchesPattern(filePath: string, pattern: string): boolean {
+    // Check cache first
+    const cacheKey = `${filePath}:${pattern}`;
+    const cached = this.matchCache.get(cacheKey);
+    if (cached !== undefined) {
+      return cached;
+    }
+
     try {
       // Use minimatch with safe options
-      return minimatch(filePath, pattern, {
+      const result = minimatch(filePath, pattern, {
         dot: true,           // Match dotfiles
         matchBase: false,    // Don't match basenames only
         nocase: false,       // Case-sensitive matching
         nonegate: true,      // Disable negation patterns (security)
         nocomment: true,     // Disable comment patterns (security)
       });
+
+      // Cache the result
+      this.matchCache.set(cacheKey, result);
+      return result;
     } catch (error) {
       // Log error and return false for invalid patterns
       logger.warn(`Invalid glob pattern "${pattern}": ${(error as Error).message}`);
+
+      // Cache negative result to avoid repeated errors
+      this.matchCache.set(cacheKey, false);
       return false;
     }
   }
