@@ -302,15 +302,46 @@ export class ReviewOrchestrator {
     } else {
       await this.ensureBudget(config);
 
-      // Health check providers once before batching
-      const { healthy, healthCheckResults } = await this.components.llmExecutor.filterHealthyProviders(
-        providers,
-        HEALTH_CHECK_TIMEOUT_MS
-      );
+      // Health check providers, retrying discovery if we don't hit minimum healthy targets
+      let allHealthResults: ProviderResult[] = [];
+      let healthy: Provider[] = [];
+      const triedProviders = new Set<string>(providers.map(p => p.name));
+
+      const runHealthCheck = async (candidateProviders: Provider[]) => {
+        const { healthy: h, healthCheckResults } = await this.components.llmExecutor.filterHealthyProviders(
+          candidateProviders,
+          HEALTH_CHECK_TIMEOUT_MS
+        );
+        healthy = healthy.concat(h);
+        allHealthResults = allHealthResults.concat(healthCheckResults);
+      };
+
+      await runHealthCheck(providers);
+
+      const MIN_TOTAL_HEALTHY = 4;
+      const MIN_OPENCODE_HEALTHY = 2;
+
+      const countOpenCode = (list: Provider[]) => list.filter(p => p.name.startsWith('opencode/')).length;
+
+      let attempts = 0;
+      while (
+        attempts < 2 &&
+        (healthy.length < MIN_TOTAL_HEALTHY || countOpenCode(healthy) < MIN_OPENCODE_HEALTHY)
+      ) {
+        const additional = await this.components.providerRegistry.discoverAdditionalFreeProviders(
+          Array.from(triedProviders),
+          6
+        );
+        if (additional.length === 0) break;
+
+        additional.forEach(p => triedProviders.add(p.name));
+        await runHealthCheck(additional);
+        attempts += 1;
+      }
 
       if (healthy.length === 0) {
         logger.warn('No healthy providers available after health checks');
-        providerResults = healthCheckResults;
+        providerResults = allHealthResults;
         await this.recordReliability(providerResults);
         await progressTracker?.updateProgress('llm', 'failed', 'No healthy providers after health checks');
       } else {

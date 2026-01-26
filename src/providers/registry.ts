@@ -110,6 +110,39 @@ export class ProviderRegistry {
     return providers;
   }
 
+  /**
+   * Discover additional free providers, excluding ones we've already tried.
+   * Used when initial health checks fail to yield enough healthy providers.
+   */
+  async discoverAdditionalFreeProviders(existing: string[], max: number = 6): Promise<Provider[]> {
+    const existingSet = new Set(existing);
+    const discovered: string[] = [];
+
+    if (process.env.OPENROUTER_API_KEY) {
+      const moreOpenRouter = await getBestFreeOpenRouterModels(8, 5000);
+      discovered.push(...moreOpenRouter.filter(m => !existingSet.has(m)));
+    }
+
+    const moreOpenCode = await getBestFreeOpenCodeModels(8, 10000);
+    discovered.push(...moreOpenCode.filter(m => !existingSet.has(m)));
+
+    if (discovered.length === 0) {
+      // last resort: static fallbacks not already present
+      discovered.push(...FALLBACK_STATIC_PROVIDERS.filter(m => !existingSet.has(m)));
+    }
+
+    let providers = this.instantiate(discovered);
+    providers = this.dedupeProviders(providers);
+    providers = this.applyAllowBlock(providers, DEFAULT_CONFIG);
+    providers = await this.filterRateLimited(providers);
+
+    if (providers.length > max) {
+      providers = this.randomSelect(providers, max, Math.min(2, max));
+    }
+
+    return providers;
+  }
+
   private instantiate(names: string[]): Provider[] {
     const list: Provider[] = [];
 

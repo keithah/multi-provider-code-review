@@ -26873,7 +26873,7 @@ var DEFAULT_CONFIG = {
   fallbackProviders: [],
   providerAllowlist: [],
   providerBlocklist: [],
-  providerLimit: 6,
+  providerLimit: 8,
   providerRetries: 2,
   providerMaxParallel: 3,
   quietModeEnabled: false,
@@ -32172,7 +32172,9 @@ async function getBestFreeModels(count = 4, timeoutMs = 5e3) {
     isFree: true
   }));
   rankedModels.sort((a, b) => b.score - a.score);
-  const selectedModels = rankedModels.slice(0, count).map((m) => m.modelId);
+  const poolSize = Math.min(rankedModels.length, Math.max(count * 2, count + 2));
+  const pool = rankedModels.slice(0, poolSize).map((m) => m.modelId);
+  const selectedModels = shuffle(pool).slice(0, count);
   logger.info(
     `Selected ${selectedModels.length}/${count} best free OpenRouter models: ${selectedModels.join(", ")}`
   );
@@ -32186,6 +32188,14 @@ function getFallbackModels(count = 4) {
     "openrouter/google/gemini-2.0-flash-exp:free"
   ];
   return fallbacks.slice(0, count);
+}
+function shuffle(arr) {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
 }
 var modelCache = null;
 var CACHE_TTL_MS = 60 * 60 * 1e3;
@@ -32358,7 +32368,7 @@ var ProviderRegistry = class {
       const discoveredModels = [];
       if (process.env.OPENROUTER_API_KEY) {
         logger.info("Discovering OpenRouter models...");
-        const openRouterModels = await getBestFreeModelsCached(4, 5e3);
+        const openRouterModels = await getBestFreeModelsCached(8, 5e3);
         if (openRouterModels.length > 0) {
           logger.info(`\u2705 Discovered ${openRouterModels.length} OpenRouter models`);
           discoveredModels.push(...openRouterModels);
@@ -32369,7 +32379,7 @@ var ProviderRegistry = class {
         logger.info("Skipping OpenRouter discovery (no API key)");
       }
       logger.info("Discovering OpenCode models...");
-      const openCodeModels = await getBestFreeOpenCodeModelsCached(4, 1e4);
+      const openCodeModels = await getBestFreeOpenCodeModelsCached(8, 1e4);
       if (openCodeModels.length > 0) {
         logger.info(`\u2705 Discovered ${openCodeModels.length} OpenCode models`);
         discoveredModels.push(...openCodeModels);
@@ -32388,13 +32398,13 @@ var ProviderRegistry = class {
       logger.warn("Using static fallback providers as last resort");
       providers = this.instantiate(FALLBACK_STATIC_PROVIDERS);
     }
-    providers = this.dedupeProviders(providers);
+    providers = this.shuffle(this.dedupeProviders(providers));
     providers = this.applyAllowBlock(providers, config);
     logger.info(`After allowBlock: ${providers.length} providers`);
     providers = await this.filterRateLimited(providers);
     logger.info(`After filterRateLimited: ${providers.length} providers`);
-    const selectionLimit = config.providerLimit > 0 ? config.providerLimit : 6;
-    const minSelection = Math.min(5, selectionLimit);
+    const selectionLimit = config.providerLimit > 0 ? config.providerLimit : 8;
+    const minSelection = Math.min(4, selectionLimit);
     logger.info(`Selection limit: ${selectionLimit} (configured: ${config.providerLimit}), min: ${minSelection}, fallback count: ${config.fallbackProviders.length}`);
     if (providers.length < selectionLimit && config.fallbackProviders.length > 0) {
       logger.info(`Adding ${config.fallbackProviders.length} fallback providers to reach target of ${selectionLimit}`);
@@ -32416,6 +32426,31 @@ var ProviderRegistry = class {
     if (providers.length === 0) {
       logger.warn("No providers available; falling back to opencode/minimax-m2.1-free");
       providers = this.instantiate(["opencode/minimax-m2.1-free"]);
+    }
+    return providers;
+  }
+  /**
+   * Discover additional free providers, excluding ones we've already tried.
+   * Used when initial health checks fail to yield enough healthy providers.
+   */
+  async discoverAdditionalFreeProviders(existing, max = 6) {
+    const existingSet = new Set(existing);
+    const discovered = [];
+    if (process.env.OPENROUTER_API_KEY) {
+      const moreOpenRouter = await getBestFreeModelsCached(8, 5e3);
+      discovered.push(...moreOpenRouter.filter((m) => !existingSet.has(m)));
+    }
+    const moreOpenCode = await getBestFreeOpenCodeModelsCached(8, 1e4);
+    discovered.push(...moreOpenCode.filter((m) => !existingSet.has(m)));
+    if (discovered.length === 0) {
+      discovered.push(...FALLBACK_STATIC_PROVIDERS.filter((m) => !existingSet.has(m)));
+    }
+    let providers = this.instantiate(discovered);
+    providers = this.dedupeProviders(providers);
+    providers = this.applyAllowBlock(providers, DEFAULT_CONFIG);
+    providers = await this.filterRateLimited(providers);
+    if (providers.length > max) {
+      providers = this.randomSelect(providers, max, Math.min(2, max));
     }
     return providers;
   }
@@ -32489,9 +32524,17 @@ var ProviderRegistry = class {
     return selected;
   }
   randomSelect(providers, max, min) {
-    const shuffled = [...providers].sort(() => Math.random() - 0.5);
+    const shuffled = this.shuffle(providers);
     const count = Math.max(min, Math.min(max, shuffled.length));
     return shuffled.slice(0, count);
+  }
+  shuffle(list) {
+    const copy = [...list];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
   }
   dedupeProviders(providers) {
     const seen = /* @__PURE__ */ new Set();
@@ -33187,7 +33230,7 @@ var LLMExecutor = class {
     logger.info(`Running health checks on ${providers.length} provider(s) with ${healthCheckTimeoutMs}ms timeout...`);
     const queue = createQueue(this.config.providerMaxParallel);
     const healthyProviders = [];
-    const healthCheckResults = [];
+    const healthCheckResults2 = [];
     for (const provider of providers) {
       queue.add(async () => {
         const started = Date.now();
@@ -33204,7 +33247,7 @@ var LLMExecutor = class {
               error: new Error(`Health check timed out after ${duration}ms - provider did not respond within timeout`),
               durationSeconds: duration / 1e3
             };
-            healthCheckResults.push(result);
+            healthCheckResults2.push(result);
             logger.warn(`\u2717 Provider ${provider.name} health check timed out (${duration}ms)`);
           }
         } catch (error2) {
@@ -33220,14 +33263,14 @@ var LLMExecutor = class {
             error: err,
             durationSeconds: duration / 1e3
           };
-          healthCheckResults.push(result);
+          healthCheckResults2.push(result);
           logger.warn(`\u2717 Provider ${provider.name} health check error (${duration}ms): ${err.message}`);
         }
       });
     }
     await queue.onIdle();
     logger.info(`Health checks complete: ${healthyProviders.length}/${providers.length} provider(s) are responsive`);
-    return { healthy: healthyProviders, healthCheckResults };
+    return { healthy: healthyProviders, healthCheckResults: healthCheckResults2 };
   }
   async execute(providers, prompt) {
     const queue = createQueue(this.config.providerMaxParallel);
@@ -39242,7 +39285,7 @@ var PathMatcher = class {
    * Allows typical glob tokens and path separators; disallows pipes, backticks, and negation.
    */
   checkAllowedCharacters(pattern) {
-    const allowed = new RegExp("^[A-Za-z0-9.@+^ !_\\-/*?{}\\[\\],]+$");
+    const allowed = new RegExp("^[A-Za-z0-9.@+^ !_\\-/*?{}\\[\\],()~=]+$");
     if (!allowed.test(pattern)) {
       throw new Error(`Pattern contains unsupported characters: ${pattern}`);
     }
@@ -39848,13 +39891,35 @@ var ReviewOrchestrator = class {
         logger.info("No files to review in incremental update, using cached findings only");
       } else {
         await this.ensureBudget(config);
-        const { healthy, healthCheckResults } = await this.components.llmExecutor.filterHealthyProviders(
-          providers,
-          HEALTH_CHECK_TIMEOUT_MS
-        );
+        let allHealthResults = [];
+        let healthy = [];
+        const triedProviders = new Set(providers.map((p) => p.name));
+        const runHealthCheck = async (candidateProviders) => {
+          const { healthy: h, healthCheckResults: healthCheckResults2 } = await this.components.llmExecutor.filterHealthyProviders(
+            candidateProviders,
+            HEALTH_CHECK_TIMEOUT_MS
+          );
+          healthy = healthy.concat(h);
+          allHealthResults = allHealthResults.concat(healthCheckResults2);
+        };
+        await runHealthCheck(providers);
+        const MIN_TOTAL_HEALTHY = 4;
+        const MIN_OPENCODE_HEALTHY = 2;
+        const countOpenCode = (list) => list.filter((p) => p.name.startsWith("opencode/")).length;
+        let attempts = 0;
+        while (attempts < 2 && (healthy.length < MIN_TOTAL_HEALTHY || countOpenCode(healthy) < MIN_OPENCODE_HEALTHY)) {
+          const additional = await this.components.providerRegistry.discoverAdditionalFreeProviders(
+            Array.from(triedProviders),
+            6
+          );
+          if (additional.length === 0) break;
+          additional.forEach((p) => triedProviders.add(p.name));
+          await runHealthCheck(additional);
+          attempts += 1;
+        }
         if (healthy.length === 0) {
           logger.warn("No healthy providers available after health checks");
-          providerResults = healthCheckResults;
+          providerResults = allHealthResults;
           await this.recordReliability(providerResults);
           await progressTracker?.updateProgress("llm", "failed", "No healthy providers after health checks");
         } else {
@@ -39921,10 +39986,14 @@ var ReviewOrchestrator = class {
             await batchQueue.onIdle();
             this.cleanupQueue(batchQueue);
           }
-          const mergedResults = [
-            ...healthCheckResults.filter((h) => !batchResults.some((b) => b.name === h.name)),
-            ...batchResults
-          ];
+          const mergedMap = /* @__PURE__ */ new Map();
+          for (const result of healthCheckResults) {
+            mergedMap.set(result.name, result);
+          }
+          for (const result of batchResults) {
+            mergedMap.set(result.name, result);
+          }
+          const mergedResults = Array.from(mergedMap.values()).sort((a, b) => a.name.localeCompare(b.name));
           await this.recordReliability(mergedResults);
           if (batchFailures > 0) {
             if (batchSuccesses === 0) {

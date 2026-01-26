@@ -2452,3 +2452,17 @@ Repomix is a powerful tool, but it's designed for **full codebase analysis**, no
 - Configuration schema
 
 **Priority**: HIGH - Schedule after v0.3.0 completion
+
+---
+
+## Deferred: Anti-Hallucination Guardrails (Next Phase)
+
+**Problem**: LLM outputs can be plausible but wrong, adding noisy or unsafe findings/fix prompts.
+
+**Planned Solution**:
+- Deterministic validators confirming file/line/snippet existence before posting findings.
+- Dual-provider agreement or self-consistency for critical findings.
+- Require changed-line evidence; downgrade or drop findings without evidence.
+- Validate auto-fix prompts with lint/parse checks before saving.
+
+**Status**: Deferred to next phase (post-v0.3.1).
