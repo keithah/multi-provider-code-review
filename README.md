@@ -28,6 +28,11 @@ Hybrid AST + LLM GitHub Action that fuses multiple AI providers with consensus f
 - **🐳 Self-Hosted Deployment** - Docker & webhook server for enterprise use
 - **🔌 Plugin System** - Add custom LLM providers without modifying core code
 
+### Safety Defaults
+- **Path patterns** are validated to prevent injection/traversal: allowed chars `[A-Za-z0-9._-/*?{}[] ,]`, leading `!` (negation) and `..` segments are blocked.
+- **Batch overrides** (`PROVIDER_BATCH_OVERRIDES`) must be integers 1-200; out-of-range values are clamped with a warning.
+- **Concurrency control**: workflow runs use a simple `${{ github.workflow }}-${{ github.ref }}-${{ github.run_id }}` group to avoid duplicate reviews per commit/ref.
+
 ## Quick Start
 
 ### GitHub Action (Production)
