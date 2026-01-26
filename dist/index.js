@@ -34696,7 +34696,9 @@ var MarkdownFormatterV2 = class {
       lines.push(this.generateReleaseNotes(review));
       lines.push("");
     }
-    if (review.findings.length > 0) {
+    const hasFindings = review.findings.length > 0;
+    const allProvidersDown = review.metrics.providersSuccess === 0;
+    if (hasFindings) {
       lines.push("## Findings");
       lines.push("");
       const critical = review.findings.filter((f) => f.severity === "critical");
@@ -34712,9 +34714,10 @@ var MarkdownFormatterV2 = class {
         lines.push(this.formatSeveritySection("\u{1F535} Minor", minor, "minor"));
       }
     } else {
+      const allClearMessage = this.generateAllClearMessage(review, { suppressRepeat: true });
       lines.push("## All Clear!");
       lines.push("");
-      lines.push(`> ${this.generateAllClearMessage(review)}`);
+      lines.push(`> ${allClearMessage}`);
       lines.push("");
     }
     if (review.actionItems && review.actionItems.length > 0) {
@@ -34766,10 +34769,10 @@ var MarkdownFormatterV2 = class {
     const context2 = `Found across ${filesReviewed} file${filesReviewed > 1 ? "s" : ""}.`;
     return `${summary}. ${context2}`;
   }
-  generateAllClearMessage(review) {
+  generateAllClearMessage(review, options = {}) {
     const { metrics } = review;
     if (metrics.providersSuccess === 0) {
-      return "LLM analysis skipped because no providers were healthy. Static checks found no issues.";
+      return options.suppressRepeat ? "LLM analysis skipped because no providers were healthy." : "LLM analysis skipped because no providers were healthy. Static checks found no issues.";
     }
     return "No issues found. Great job!";
   }
