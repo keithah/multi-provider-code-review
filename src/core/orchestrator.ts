@@ -368,13 +368,18 @@ export class ReviewOrchestrator {
           await batchQueue.onIdle();
           this.cleanupQueue(batchQueue);
         }
+        const mergedResults = [
+          ...healthCheckResults.filter(h => !batchResults.some(b => b.name === h.name)),
+          ...batchResults,
+        ];
         if (batchFailures > 0) {
-          await this.recordReliability([...healthCheckResults, ...batchResults]);
-          throw new Error(`One or more batches failed (${batchFailures}/${batches.length}); aborting review`);
+          await this.recordReliability(mergedResults);
+          const failedNames = mergedResults.filter(r => r.status !== 'success').map(r => r.name).join(', ');
+          throw new Error(`One or more batches failed (${batchFailures}/${batches.length}): ${failedNames}`);
         }
         llmFindings.push(...extractFindings(batchResults));
-        providerResults = batchResults;
-        await this.recordReliability([...healthCheckResults, ...batchResults]);
+        providerResults = mergedResults;
+        await this.recordReliability(mergedResults);
         aiAnalysis = config.enableAiDetection ? summarizeAIDetection(providerResults) : undefined;
         await progressTracker?.updateProgress('llm', 'completed', `Batches: ${batches.length}, size: ${batchSize}`);
       }
@@ -672,14 +677,7 @@ export class ReviewOrchestrator {
   }
 
   private cleanupQueue(queue: PQueue): void {
-    if (typeof queue.clear === 'function') {
-      queue.clear();
-      return;
-    }
-    // Fallback for older p-queue versions
-    const q = queue as unknown as { _queue?: { clear(): void }; _pending?: { clear(): void } };
-    q._queue?.clear?.();
-    q._pending?.clear?.();
+    queue.clear?.();
   }
 
   /**
