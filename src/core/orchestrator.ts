@@ -351,28 +351,26 @@ export class ReviewOrchestrator {
                 durationSeconds: 0,
               }));
             }
-          }) as Promise<ProviderResult[]>
+          })
         );
 
         const batchResults: ProviderResult[] = [];
+        let batchFailures = 0;
         try {
-          const settled = await Promise.allSettled(batchPromises);
-          for (const result of settled) {
-            if (result.status === 'fulfilled') {
-              batchResults.push(...result.value);
-            } else {
-              logger.error('Batch promise rejected', result.reason as Error);
-              batchResults.push({
-                name: 'batch',
-                status: 'error',
-                error: result.reason as Error,
-                durationSeconds: 0,
-              });
+          for (const promise of batchPromises) {
+            const result = await promise;
+            batchResults.push(...result);
+            if (result.some(r => r.status !== 'success')) {
+              batchFailures += 1;
             }
           }
         } finally {
           await batchQueue.onIdle();
           this.cleanupQueue(batchQueue);
+        }
+        if (batchFailures > 0) {
+          await this.recordReliability([...healthCheckResults, ...batchResults]);
+          throw new Error(`One or more batches failed (${batchFailures}/${batches.length}); aborting review`);
         }
         llmFindings.push(...extractFindings(batchResults));
         providerResults = batchResults;

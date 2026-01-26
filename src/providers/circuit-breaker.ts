@@ -25,6 +25,7 @@ export class CircuitBreaker {
   private readonly failureThreshold: number;
   private readonly openDurationMs: number;
   private readonly locks = new Map<string, Promise<void>>();
+  private static readonly LOCK_CLEANUP_MS = 30_000;
 
   constructor(
     private readonly storage = new CacheStorage(),
@@ -116,6 +117,11 @@ export class CircuitBreaker {
         if (this.locks.get(lockKey) === tail) {
           this.locks.delete(lockKey);
         }
+        setTimeout(() => {
+          if (this.locks.get(lockKey) === tail) {
+            this.locks.delete(lockKey);
+          }
+        }, CircuitBreaker.LOCK_CLEANUP_MS);
       }
     })();
 
