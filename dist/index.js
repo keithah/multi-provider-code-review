@@ -34714,7 +34714,7 @@ var MarkdownFormatterV2 = class {
     } else {
       lines.push("## All Clear!");
       lines.push("");
-      lines.push("> No issues found. Great job!");
+      lines.push(`> ${this.generateAllClearMessage(review)}`);
       lines.push("");
     }
     if (review.actionItems && review.actionItems.length > 0) {
@@ -34746,6 +34746,9 @@ var MarkdownFormatterV2 = class {
   generatePRSummary(review) {
     const { metrics, findings } = review;
     if (findings.length === 0) {
+      if (metrics.providersSuccess === 0) {
+        return "LLM review skipped: no healthy providers were available. Static checks did not find issues.";
+      }
       return "This PR looks great! No issues detected by the automated review.";
     }
     const parts = [];
@@ -34762,6 +34765,13 @@ var MarkdownFormatterV2 = class {
     const filesReviewed = new Set(findings.map((f) => f.file)).size;
     const context2 = `Found across ${filesReviewed} file${filesReviewed > 1 ? "s" : ""}.`;
     return `${summary}. ${context2}`;
+  }
+  generateAllClearMessage(review) {
+    const { metrics } = review;
+    if (metrics.providersSuccess === 0) {
+      return "LLM analysis skipped because no providers were healthy. Static checks found no issues.";
+    }
+    return "No issues found. Great job!";
   }
   hasSignificantChanges(review) {
     return review.metrics.critical > 0 || review.metrics.major > 0;

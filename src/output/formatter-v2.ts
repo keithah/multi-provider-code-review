@@ -59,7 +59,7 @@ export class MarkdownFormatterV2 {
     } else {
       lines.push('## All Clear!');
       lines.push('');
-      lines.push('> No issues found. Great job!');
+      lines.push(`> ${this.generateAllClearMessage(review)}`);
       lines.push('');
     }
 
@@ -111,6 +111,9 @@ export class MarkdownFormatterV2 {
     const { metrics, findings } = review;
 
     if (findings.length === 0) {
+      if (metrics.providersSuccess === 0) {
+        return 'LLM review skipped: no healthy providers were available. Static checks did not find issues.';
+      }
       return 'This PR looks great! No issues detected by the automated review.';
     }
 
@@ -135,6 +138,14 @@ export class MarkdownFormatterV2 {
     const context = `Found across ${filesReviewed} file${filesReviewed > 1 ? 's' : ''}.`;
 
     return `${summary}. ${context}`;
+  }
+
+  private generateAllClearMessage(review: Review): string {
+    const { metrics } = review;
+    if (metrics.providersSuccess === 0) {
+      return 'LLM analysis skipped because no providers were healthy. Static checks found no issues.';
+    }
+    return 'No issues found. Great job!';
   }
 
   private hasSignificantChanges(review: Review): boolean {
