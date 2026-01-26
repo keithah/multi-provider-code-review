@@ -1505,3 +1505,12 @@ suggestions:
 3. Implement BatchOrchestrator
 4. Wire up circuit breaker to ReliabilityTracker
 5. Update config schema and defaults
+
+### Backlog: Inline Reassessment & UX polish (next round)
+- Auto-reassessment for inline replies: detect replies to bot inline comments (parent comment id) and trigger focused re-review of that finding without requiring @ mentions.
+- Better response format: inline replies posted as inline responses; collapse all summary/comments by default (except inline). Add `fluff:off` option to strip positivity and auto-approve when no issues remain.
+- Smart triggering: auto-trigger on replies to the bot’s inline comments; still require @claude for top-level comments; clearly differentiate auto-triggered vs @claude-triggered responses.
+- Implementation notes (future):
+  - Add webhook/handler for `issue_comment` and `pull_request_review_comment` to enqueue targeted re-runs (per file/line) when the parent comment is from the bot.
+  - Extend formatter to support collapsed summaries and `fluff:off` behavior.
+  - Ensure collapse defaults keep inline comments visible until resolved.
