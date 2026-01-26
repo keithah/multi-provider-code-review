@@ -143,8 +143,9 @@ export class PathMatcher {
    * Allows typical glob tokens and path separators; disallows pipes, backticks, and negation.
    */
   private checkAllowedCharacters(pattern: string): void {
-    // Allow common glob tokens including spaces, @, +, ^, ! for negation/exclusion patterns.
-    const allowed = new RegExp('^[A-Za-z0-9.@+^ !_\\-/*?{}\\[\\],]+$');
+    // Allow common glob tokens including spaces, @, +, ^, !, parentheses, and tildes.
+    // We continue to block backticks/pipes to avoid shell injection vectors.
+    const allowed = new RegExp('^[A-Za-z0-9.@+^ !_\\-/*?{}\\[\\],()~=]+$');
     if (!allowed.test(pattern)) {
       throw new Error(`Pattern contains unsupported characters: ${pattern}`);
     }

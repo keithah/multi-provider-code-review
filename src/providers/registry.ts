@@ -32,7 +32,7 @@ export class ProviderRegistry {
       // Fetch best free OpenRouter models (if API key available)
       if (process.env.OPENROUTER_API_KEY) {
         logger.info('Discovering OpenRouter models...');
-        const openRouterModels = await getBestFreeOpenRouterModels(4, 5000);
+        const openRouterModels = await getBestFreeOpenRouterModels(8, 5000);
         if (openRouterModels.length > 0) {
           logger.info(`✅ Discovered ${openRouterModels.length} OpenRouter models`);
           discoveredModels.push(...openRouterModels);
@@ -45,7 +45,7 @@ export class ProviderRegistry {
 
       // Fetch best free OpenCode models (if CLI available)
       logger.info('Discovering OpenCode models...');
-      const openCodeModels = await getBestFreeOpenCodeModels(4, 10000);
+      const openCodeModels = await getBestFreeOpenCodeModels(8, 10000);
       if (openCodeModels.length > 0) {
         logger.info(`✅ Discovered ${openCodeModels.length} OpenCode models`);
         discoveredModels.push(...openCodeModels);
@@ -68,17 +68,17 @@ export class ProviderRegistry {
       providers = this.instantiate(FALLBACK_STATIC_PROVIDERS);
     }
 
-    // De-dup providers
-    providers = this.dedupeProviders(providers);
+    // De-dup providers and randomize order slightly to avoid sticky first picks
+    providers = this.shuffle(this.dedupeProviders(providers));
 
     providers = this.applyAllowBlock(providers, config);
     logger.info(`After allowBlock: ${providers.length} providers`);
     providers = await this.filterRateLimited(providers);
     logger.info(`After filterRateLimited: ${providers.length} providers`);
 
-    // If providerLimit is 0 or unset, default to 6. Otherwise use the configured limit.
-    const selectionLimit = config.providerLimit > 0 ? config.providerLimit : 6;
-    const minSelection = Math.min(5, selectionLimit);
+    // If providerLimit is 0 or unset, default to 8. Otherwise use the configured limit.
+    const selectionLimit = config.providerLimit > 0 ? config.providerLimit : 8;
+    const minSelection = Math.min(4, selectionLimit);
     logger.info(`Selection limit: ${selectionLimit} (configured: ${config.providerLimit}), min: ${minSelection}, fallback count: ${config.fallbackProviders.length}`);
 
     // Add fallback providers if we haven't reached the selection limit
@@ -196,9 +196,18 @@ export class ProviderRegistry {
   }
 
   private randomSelect(providers: Provider[], max: number, min: number): Provider[] {
-    const shuffled = [...providers].sort(() => Math.random() - 0.5);
+    const shuffled = this.shuffle(providers);
     const count = Math.max(min, Math.min(max, shuffled.length));
     return shuffled.slice(0, count);
+  }
+
+  private shuffle<T>(list: T[]): T[] {
+    const copy = [...list];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
   }
 
   private dedupeProviders(providers: Provider[]): Provider[] {

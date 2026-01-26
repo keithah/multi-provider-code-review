@@ -8,7 +8,7 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   fallbackProviders: [],
   providerAllowlist: [],
   providerBlocklist: [],
-  providerLimit: 6,
+  providerLimit: 8,
   providerRetries: 2,
   providerMaxParallel: 3,
   quietModeEnabled: false,

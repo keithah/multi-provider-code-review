@@ -145,7 +145,10 @@ export async function getBestFreeModels(
 
   rankedModels.sort((a, b) => b.score - a.score);
 
-  const selectedModels = rankedModels.slice(0, count).map(m => m.modelId);
+  // Take a slightly oversized pool to encourage diversity, then shuffle
+  const poolSize = Math.min(rankedModels.length, Math.max(count * 2, count + 2));
+  const pool = rankedModels.slice(0, poolSize).map(m => m.modelId);
+  const selectedModels = shuffle(pool).slice(0, count);
 
   logger.info(
     `Selected ${selectedModels.length}/${count} best free OpenRouter models: ${selectedModels.join(', ')}`
@@ -167,6 +170,15 @@ export function getFallbackModels(count = 4): string[] {
   ];
 
   return fallbacks.slice(0, count);
+}
+
+function shuffle<T>(arr: T[]): T[] {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
 }
 
 /**

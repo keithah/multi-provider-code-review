@@ -391,10 +391,15 @@ export class ReviewOrchestrator {
           this.cleanupQueue(batchQueue);
         }
 
-        const mergedResults = [
-          ...healthCheckResults.filter(h => !batchResults.some(b => b.name === h.name)),
-          ...batchResults,
-        ];
+        // Merge results deterministically: prefer batch results over health checks, unique per provider
+        const mergedMap = new Map<string, ProviderResult>();
+        for (const result of healthCheckResults) {
+          mergedMap.set(result.name, result);
+        }
+        for (const result of batchResults) {
+          mergedMap.set(result.name, result);
+        }
+        const mergedResults = Array.from(mergedMap.values()).sort((a, b) => a.name.localeCompare(b.name));
 
         // Record reliability for all results (both successes and failures)
         await this.recordReliability(mergedResults);

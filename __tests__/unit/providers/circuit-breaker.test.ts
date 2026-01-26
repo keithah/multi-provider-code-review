@@ -54,6 +54,27 @@ describe('CircuitBreaker', () => {
     expect(await breaker.isOpen(id)).toBe(true); // should re-open immediately
   });
 
+  it('allows only a single probe in half-open state', async () => {
+    const storage = new MemoryStorage();
+    const breaker = new CircuitBreaker(storage as any, { failureThreshold: 1, openDurationMs: 1 });
+    const id = 'probe/provider';
+
+    // Trip the circuit immediately
+    await breaker.recordFailure(id);
+    expect(await breaker.isOpen(id)).toBe(true);
+
+    // Move to half-open
+    jest.advanceTimersByTime(2);
+
+    // First caller reserves the probe (returns false => allow)
+    const first = await breaker.isOpen(id);
+    // Second caller should see probeInFlight and be blocked
+    const second = await breaker.isOpen(id);
+
+    expect(first).toBe(false);
+    expect(second).toBe(true);
+  });
+
   it('serializes concurrent updates without losing failures', async () => {
     const storage = new MemoryStorage();
     const breaker = new CircuitBreaker(storage as any, { failureThreshold: 10 });

@@ -571,16 +571,38 @@ describe('PathMatcher', () => {
       }).not.toThrow();
     });
 
-    it('should reject pattern with disallowed characters (e.g., pipe)', () => {
-      const badPattern = 'src|app.ts';
+    it('accepts common real-world globs with parentheses and tildes', () => {
+      const matcher = new PathMatcher({
+        enabled: true,
+        defaultIntensity: 'standard',
+        patterns: [
+          { pattern: '**/* (copy).ts', intensity: 'standard' },
+          { pattern: 'docs/(draft)/*.md', intensity: 'light' },
+          { pattern: '~/**/config?.json', intensity: 'standard' },
+        ],
+      });
 
-      expect(() => {
-        new PathMatcher({
-          enabled: true,
-          defaultIntensity: 'standard',
-          patterns: [{ pattern: badPattern, intensity: 'thorough' }],
-        });
-      }).toThrow(/unsupported characters/i);
+      const files = [
+        createFile('src/foo (copy).ts'),
+        createFile('docs/(draft)/intro.md'),
+        createFile('~/app/config1.json'),
+      ];
+
+      expect(() => matcher.determineIntensity(files)).not.toThrow();
+    });
+
+    it('should reject pattern with disallowed characters (e.g., pipe or backtick)', () => {
+      const badPatterns = ['src|app.ts', '`rm -rf`'];
+
+      for (const badPattern of badPatterns) {
+        expect(() => {
+          new PathMatcher({
+            enabled: true,
+            defaultIntensity: 'standard',
+            patterns: [{ pattern: badPattern, intensity: 'thorough' }],
+          });
+        }).toThrow(/unsupported characters/i);
+      }
     });
 
     it('should reject patterns containing path traversal', () => {
