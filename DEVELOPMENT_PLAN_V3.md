@@ -2466,3 +2466,29 @@ Repomix is a powerful tool, but it's designed for **full codebase analysis**, no
 - Validate auto-fix prompts with lint/parse checks before saving.
 
 **Status**: Deferred to next phase (post-v0.3.1).
+
+---
+
+## Planned: GitHub Models Provider Support
+
+**Problem**: We lack first-class support for GitHub-hosted models (e.g., GH Models API).
+
+**Planned Solution**:
+- Add a GitHub provider that uses `GITHUB_MODELS_API_KEY` (or PAT) for auth.
+- Include GH Models in discovery/rotation with cost/context constraints.
+- Respect org/repo allow/deny lists via config.
+
+**Status**: Planned (post-v0.3.1).
+
+---
+
+## Planned: Hugging Face Inference/Endpoints Support
+
+**Problem**: Users want to run reviews against HF Inference API or private Inference Endpoints.
+
+**Planned Solution**:
+- Add HF provider that reads `HUGGINGFACE_API_TOKEN`.
+- Support both hosted Inference API models and custom Inference Endpoints (configurable URL/model id).
+- Include HF models in dynamic discovery/rotation when token present; allow per-model cost caps.
+
+**Status**: Planned (post-v0.3.1).
