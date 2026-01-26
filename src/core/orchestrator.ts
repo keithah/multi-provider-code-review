@@ -35,6 +35,7 @@ import { PathMatcher, createDefaultPathMatcherConfig, PathPattern } from '../ana
 import { z } from 'zod';
 import { Provider } from '../providers/base';
 import { createQueue } from '../utils/parallel';
+import PQueue from 'p-queue';
 import { ReviewConfig, Review, PRContext, RunDetails, Finding, FileChange, UnchangedContext, ProviderResult } from '../types';
 import { logger } from '../utils/logger';
 import { mapAddedLines, filterDiffByFiles } from '../utils/diff';
@@ -371,13 +372,7 @@ export class ReviewOrchestrator {
           }
         } finally {
           await batchQueue.onIdle();
-          if (typeof (batchQueue as any).clear === 'function') {
-            (batchQueue as any).clear();
-          } else {
-            // Best-effort cleanup for older p-queue versions
-            (batchQueue as any)._pending?.clear?.();
-            (batchQueue as any)._queue?.clear?.();
-          }
+          this.cleanupQueue(batchQueue);
         }
         llmFindings.push(...extractFindings(batchResults));
         providerResults = batchResults;
@@ -676,6 +671,17 @@ export class ReviewOrchestrator {
 
     // Ensure we don't end up with an empty string
     return sanitized || 'multi-provider-review';
+  }
+
+  private cleanupQueue(queue: PQueue): void {
+    if (typeof queue.clear === 'function') {
+      queue.clear();
+      return;
+    }
+    // Fallback for older p-queue versions
+    const q = queue as unknown as { _queue?: { clear(): void }; _pending?: { clear(): void } };
+    q._queue?.clear?.();
+    q._pending?.clear?.();
   }
 
   /**

@@ -103,7 +103,8 @@ export class CircuitBreaker {
 
     let release!: () => void;
     const current = new Promise<void>(resolve => (release = resolve));
-    this.locks.set(lockKey, previous.then(() => current));
+    const tail = previous.then(() => current);
+    this.locks.set(lockKey, tail);
 
     const run = (async () => {
       await previous;
@@ -112,7 +113,9 @@ export class CircuitBreaker {
       } finally {
         release();
         // Ensure locks map always cleaned even if fn throws
-        this.locks.delete(lockKey);
+        if (this.locks.get(lockKey) === tail) {
+          this.locks.delete(lockKey);
+        }
       }
     })();
 

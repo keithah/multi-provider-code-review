@@ -96,13 +96,9 @@ jobs:
           fi
       - name: Install OpenCode CLI
         # Version pinning strategy:
-        # - Pinned to v1.1.32 for compatibility with dynamic provider discovery
-        # - This version supports the `opencode run` command format we use
-        # - Update strategy: Test with newer versions quarterly (Jan, Apr, Jul, Oct)
-        # - Before updating: Run full test suite + manual smoke tests
-        # - Check for breaking changes in opencode-ai changelog
-        # - Verify dynamic discovery still works with new version
-        run: npm install -g opencode-ai@1.1.32
+        # - Pin to latest published npm version known-good for CLI commands
+        # - Update strategy: Test quarterly (Jan, Apr, Jul, Oct) with full suite + smoke tests
+        run: npm install -g opencode-ai@0.6.4
       # Run review if: PR number found. Fork PRs run with free providers when OPENROUTER_API_KEY is unavailable.
       - name: Warn Fork PR Without OpenRouter Key
         if: steps.resolve-pr.outputs.pr != '' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == true && env.OPENROUTER_API_KEY == ''
