@@ -90,11 +90,14 @@ export class ReliabilityTracker {
   ): Promise<void> {
     const data = await this.loadData();
 
+    // Normalize duration to a finite, non-negative number to avoid NaN skew in averages
+    const safeDurationMs = Number.isFinite(durationMs) && durationMs! >= 0 ? durationMs : undefined;
+
     const result: ProviderResult = {
       providerId,
       success,
       timestamp: Date.now(),
-      durationMs,
+      durationMs: safeDurationMs,
       error,
     };
 
@@ -301,7 +304,7 @@ export class ReliabilityTracker {
     const successRate = totalAttempts > 0 ? successCount / totalAttempts : 0;
 
     // Average duration
-    const durationsWithValues = results.filter((r) => r.durationMs !== undefined);
+    const durationsWithValues = results.filter((r) => Number.isFinite(r.durationMs));
     const averageDurationMs =
       durationsWithValues.length > 0
         ? durationsWithValues.reduce((sum, r) => sum + (r.durationMs || 0), 0) / durationsWithValues.length

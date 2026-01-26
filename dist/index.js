@@ -31541,8 +31541,9 @@ var ConfigLoader = class {
       }
       return result;
     } catch (error2) {
-      logger.warn(`Failed to parse PROVIDER_BATCH_OVERRIDES: ${error2.message}`);
-      return void 0;
+      const message = `Failed to parse PROVIDER_BATCH_OVERRIDES: ${error2.message}`;
+      logger.warn(message);
+      throw new Error(message);
     }
   }
   static parseSeverity(value) {
@@ -36161,43 +36162,72 @@ function encodeURIComponentSafe(value) {
 }
 
 // src/providers/circuit-breaker.ts
-var CircuitBreaker = class {
+var CircuitBreaker = class _CircuitBreaker {
   constructor(storage = new CacheStorage(), options = {}) {
     this.storage = storage;
-    this.failureThreshold = options.failureThreshold ?? 3;
-    this.openDurationMs = options.openDurationMs ?? 5 * 60 * 1e3;
+    this.failureThreshold = options.failureThreshold ?? _CircuitBreaker.DEFAULT_FAILURE_THRESHOLD;
+    this.openDurationMs = options.openDurationMs ?? _CircuitBreaker.DEFAULT_OPEN_DURATION_MS;
   }
+  // Default configuration constants
+  static DEFAULT_FAILURE_THRESHOLD = 3;
+  static DEFAULT_OPEN_DURATION_MS = 5 * 60 * 1e3;
+  // 5 minutes
+  static LOCK_CLEANUP_MS = 3e4;
+  // 30 seconds
   failureThreshold;
   openDurationMs;
   locks = /* @__PURE__ */ new Map();
   async isOpen(providerId) {
     return this.withLock(providerId, async () => {
-      const state = await this.load(providerId);
+      let state = await this.load(providerId);
       if (state.state === "open") {
         const expired = state.openedAt && Date.now() - state.openedAt > this.openDurationMs;
         if (expired) {
-          await this.setState(providerId, { state: "half_open", failures: 0 });
-          return false;
+          state = { state: "half_open", failures: 0, probeInFlight: false };
+          await this.setState(providerId, state);
         }
-        return true;
+        if (state.state === "open") {
+          return true;
+        }
+      }
+      if (state.state === "half_open") {
+        if (state.probeInFlight) return true;
+        await this.setState(providerId, { ...state, probeInFlight: true });
+        return false;
       }
       return false;
     });
   }
   async recordSuccess(providerId) {
-    await this.withLock(providerId, () => this.setState(providerId, { state: "closed", failures: 0 }));
+    await this.withLock(providerId, async () => {
+      const state = await this.load(providerId);
+      await this.setState(providerId, {
+        state: "closed",
+        failures: 0,
+        openedAt: void 0,
+        probeInFlight: false
+      });
+      if (state.state !== "closed") {
+        logger.debug(`Circuit closed for ${providerId} after recovery`);
+      }
+    });
   }
   async recordFailure(providerId) {
     await this.withLock(providerId, async () => {
       const state = await this.load(providerId);
       const failures = state.failures + 1;
       if (state.state === "half_open") {
-        await this.setState(providerId, { state: "open", failures, openedAt: Date.now() });
+        await this.setState(providerId, {
+          state: "open",
+          failures,
+          openedAt: Date.now(),
+          probeInFlight: false
+        });
         logger.warn(`Circuit re-opened for ${providerId} after half-open failure`);
         return;
       }
       if (failures >= this.failureThreshold) {
-        await this.setState(providerId, { state: "open", failures, openedAt: Date.now() });
+        await this.setState(providerId, { state: "open", failures, openedAt: Date.now(), probeInFlight: false });
         logger.warn(`Circuit opened for ${providerId} after ${failures} failures`);
       } else {
         await this.setState(providerId, { state: "closed", failures });
@@ -36207,36 +36237,52 @@ var CircuitBreaker = class {
   async load(providerId) {
     const raw = await this.storage.read(this.key(providerId));
     if (!raw) {
-      return { state: "closed", failures: 0 };
+      return { state: "closed", failures: 0, probeInFlight: false };
     }
     try {
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      return {
+        probeInFlight: false,
+        ...parsed
+      };
     } catch (error2) {
       logger.warn(`Failed to parse circuit state for ${providerId}`, error2);
-      return { state: "closed", failures: 0 };
+      return { state: "closed", failures: 0, probeInFlight: false };
     }
   }
   async setState(providerId, state) {
     await this.storage.write(this.key(providerId), JSON.stringify(state));
   }
   key(providerId) {
-    const sanitized = encodeURIComponentSafe(providerId).replace(/\./g, "_");
-    return `circuit-breaker-${sanitized}`;
+    return `circuit-breaker-${encodeURIComponentSafe(providerId)}`;
   }
-  async withLock(providerId, fn) {
-    const prev = this.locks.get(providerId) ?? Promise.resolve();
+  /**
+   * Serialize concurrent access to circuit breaker state using a promise chain lock.
+   * This prevents race conditions when multiple operations try to update the same provider's state.
+   *
+   * The lock implementation uses a promise chain where each operation waits for the previous
+   * operation to complete before executing. The finally block ensures the lock is always
+   * released and cleaned up, even if the operation throws an error.
+   */
+  withLock(providerId, fn) {
+    const lockKey = this.key(providerId);
+    const previous = this.locks.get(lockKey)?.catch(() => void 0) ?? Promise.resolve();
     let release;
     const current = new Promise((resolve2) => release = resolve2);
-    this.locks.set(providerId, prev.then(() => current));
-    await prev;
-    try {
-      return await fn();
-    } finally {
-      release();
-      if (this.locks.get(providerId) === current) {
-        this.locks.delete(providerId);
+    const tail = previous.then(() => current);
+    this.locks.set(lockKey, tail);
+    const run2 = (async () => {
+      await previous;
+      try {
+        return await fn();
+      } finally {
+        release();
+        if (this.locks.get(lockKey) === tail) {
+          this.locks.delete(lockKey);
+        }
       }
-    }
+    })();
+    return run2;
   }
 };
 
@@ -36251,28 +36297,38 @@ var ReliabilityTracker = class _ReliabilityTracker {
   static AGGREGATION_INTERVAL_MS = 24 * 60 * 60 * 1e3;
   // 1 day
   static MIN_ATTEMPTS_FOR_SCORING = 5;
-  // Reliability score weights
+  static MAX_RESULTS_HISTORY = 1e3;
+  // Prevent unbounded growth
+  static MAX_FALSE_POSITIVE_HISTORY = 500;
+  // Reliability score weights (must sum to 1.0)
+  // These weights determine the relative importance of each factor in the overall score
   static WEIGHTS = {
     successRate: 0.5,
-    // 50% - Most important
+    // 50% - Most critical: did the provider complete successfully?
     falsePositiveRate: 0.3,
-    // 30% - Very important
+    // 30% - Very important: does it produce accurate results?
     responseTime: 0.2
-    // 20% - Nice to have
+    // 20% - Nice to have: is it fast?
   };
   /**
    * Record a provider execution result
    */
   async recordResult(providerId, success, durationMs, error2) {
     const data = await this.loadData();
+    const safeDurationMs = Number.isFinite(durationMs) && durationMs >= 0 ? durationMs : void 0;
     const result = {
       providerId,
       success,
       timestamp: Date.now(),
-      durationMs,
+      durationMs: safeDurationMs,
       error: error2
     };
     data.results.push(result);
+    if (data.results.length > _ReliabilityTracker.MAX_RESULTS_HISTORY) {
+      const excess = data.results.length - _ReliabilityTracker.MAX_RESULTS_HISTORY;
+      data.results.splice(0, excess);
+      logger.debug(`Trimmed ${excess} old reliability results to prevent unbounded growth`);
+    }
     if (success) {
       await this.circuitBreaker.recordSuccess(providerId);
     } else {
@@ -36299,17 +36355,24 @@ var ReliabilityTracker = class _ReliabilityTracker {
       category
     };
     data.falsePositives.push(report);
+    if (data.falsePositives.length > _ReliabilityTracker.MAX_FALSE_POSITIVE_HISTORY) {
+      const excess = data.falsePositives.length - _ReliabilityTracker.MAX_FALSE_POSITIVE_HISTORY;
+      data.falsePositives.splice(0, excess);
+      logger.debug(`Trimmed ${excess} old false positive reports`);
+    }
     await this.saveData(data);
     logger.info(`Recorded false positive from provider ${providerId} (finding: ${findingId})`);
   }
   /**
    * Get reliability score for a provider (0-1, higher is better)
+   * Returns default neutral score (0.5) for providers with insufficient history
    */
   async getReliabilityScore(providerId) {
     const data = await this.loadData();
     const stats = data.stats[providerId];
+    const DEFAULT_SCORE = 0.5;
     if (!stats || stats.totalAttempts < this.minAttempts) {
-      return 0.5;
+      return DEFAULT_SCORE;
     }
     return stats.reliabilityScore;
   }
@@ -36405,11 +36468,14 @@ var ReliabilityTracker = class _ReliabilityTracker {
     const failureCount = results.filter((r) => !r.success).length;
     const totalAttempts = results.length;
     const successRate = totalAttempts > 0 ? successCount / totalAttempts : 0;
-    const durationsWithValues = results.filter((r) => r.durationMs !== void 0);
+    const durationsWithValues = results.filter((r) => Number.isFinite(r.durationMs));
     const averageDurationMs = durationsWithValues.length > 0 ? durationsWithValues.reduce((sum, r) => sum + (r.durationMs || 0), 0) / durationsWithValues.length : 0;
     const falsePositiveCount = falsePositives.length;
     const falsePositiveRate = totalAttempts > 0 ? falsePositiveCount / totalAttempts : 0;
-    const responseTimeScore = Math.max(0, Math.min(1, 1 - (averageDurationMs - 500) / 4500));
+    const EXCELLENT_RESPONSE_MS = 500;
+    const POOR_RESPONSE_MS = 5e3;
+    const responseTimeRange = POOR_RESPONSE_MS - EXCELLENT_RESPONSE_MS;
+    const responseTimeScore = Math.max(0, Math.min(1, 1 - (averageDurationMs - EXCELLENT_RESPONSE_MS) / responseTimeRange));
     const reliabilityScore = _ReliabilityTracker.WEIGHTS.successRate * successRate + _ReliabilityTracker.WEIGHTS.falsePositiveRate * (1 - falsePositiveRate) + _ReliabilityTracker.WEIGHTS.responseTime * responseTimeScore;
     return {
       providerId,
@@ -39170,19 +39236,17 @@ var PathMatcher = class {
    * Allows typical glob tokens and path separators; disallows pipes, backticks, and negation.
    */
   checkAllowedCharacters(pattern) {
-    const allowed = new RegExp("^[A-Za-z0-9 ._\\-/*?{}\\[\\],]+$");
+    const allowed = new RegExp("^[A-Za-z0-9.@+^ !_\\-/*?{}\\[\\],]+$");
     if (!allowed.test(pattern)) {
       throw new Error(`Pattern contains unsupported characters: ${pattern}`);
-    }
-    if (pattern.trim().startsWith("!")) {
-      throw new Error(`Pattern negation (!) is not allowed: ${pattern}`);
     }
   }
   /**
    * Block path traversal segments ('..') inside patterns to avoid unintended matches.
    */
   checkTraversal(pattern) {
-    if (pattern.includes("..")) {
+    const traversalSegment = /(^|[\\/])\.\.(?:[\\/]|$)/;
+    if (traversalSegment.test(pattern)) {
       throw new Error(`Pattern contains path traversal ('..') which is not allowed: ${pattern}`);
     }
   }
@@ -39495,7 +39559,7 @@ var ProgressTracker = class {
     const duration = Date.now() - this.startTime;
     this.items.forEach((item) => {
       if (item.status === "pending" || item.status === "in_progress") {
-        item.status = finalStatus;
+        item.status = success ? "pending" : "failed";
         item.endTime = Date.now();
       }
     });
@@ -39602,6 +39666,7 @@ var ProgressTracker = class {
 // src/core/orchestrator.ts
 var fs7 = __toESM(require("fs/promises"));
 var import_path = __toESM(require("path"));
+var HEALTH_CHECK_TIMEOUT_MS = 3e4;
 var ReviewOrchestrator = class {
   constructor(components) {
     this.components = components;
@@ -39626,14 +39691,15 @@ var ReviewOrchestrator = class {
   async executeReview(pr) {
     const { config } = this.components;
     const start = Date.now();
-    const progressTracker = await this.initProgressTracker(pr);
-    progressTracker?.addItem("graph", "Build code graph");
-    progressTracker?.addItem("llm", "LLM review (batched)");
-    progressTracker?.addItem("static", "Static analysis & rules");
-    progressTracker?.addItem("synthesis", "Synthesize & report");
+    let progressTracker;
     let review = null;
     let success = false;
     try {
+      progressTracker = await this.initProgressTracker(pr);
+      progressTracker?.addItem("graph", "Build code graph");
+      progressTracker?.addItem("llm", "LLM review (batched)");
+      progressTracker?.addItem("static", "Static analysis & rules");
+      progressTracker?.addItem("synthesis", "Synthesize & report");
       let codeGraph;
       let contextRetriever = this.components.contextRetriever;
       if (config.graphEnabled && this.components.graphBuilder) {
@@ -39759,11 +39825,15 @@ var ReviewOrchestrator = class {
       }
       const cachedFindings = config.enableCaching ? await this.components.cache.load(reviewContext) : null;
       const reviewPR = useIncremental ? { ...reviewContext, files: filesToReview, diff: filterDiffByFiles(reviewContext.diff, filesToReview) } : reviewContext;
-      let llmFindings = [];
+      const llmFindings = [];
       let providerResults = [];
       let aiAnalysis;
       let providers = await this.components.providerRegistry.createProviders(config);
       providers = await this.applyReliabilityFilters(providers);
+      if (providers.length === 0) {
+        logger.warn("All providers filtered out by circuit breakers/reliability; skipping LLM execution");
+        await progressTracker?.updateProgress("llm", "failed", "No available providers after reliability filtering");
+      }
       const batchOrchestrator = this.components.batchOrchestrator || new BatchOrchestrator({
         defaultBatchSize: config.batchMaxFiles || 30,
         providerOverrides: config.providerBatchOverrides
@@ -39772,10 +39842,9 @@ var ReviewOrchestrator = class {
         logger.info("No files to review in incremental update, using cached findings only");
       } else {
         await this.ensureBudget(config);
-        const healthCheckTimeout = 3e4;
         const { healthy, healthCheckResults } = await this.components.llmExecutor.filterHealthyProviders(
           providers,
-          healthCheckTimeout
+          HEALTH_CHECK_TIMEOUT_MS
         );
         if (healthy.length === 0) {
           logger.warn("No healthy providers available after health checks");
@@ -39784,28 +39853,88 @@ var ReviewOrchestrator = class {
           await progressTracker?.updateProgress("llm", "failed", "No healthy providers after health checks");
         } else {
           const batchSize = batchOrchestrator.getBatchSize(healthy.map((p) => p.name));
-          const batches = batchOrchestrator.createBatches(filesToReview, batchSize);
-          const batchQueue = createQueue(Math.max(1, config.providerMaxParallel));
+          let batches;
+          try {
+            batches = batchOrchestrator.createBatches(filesToReview, batchSize);
+          } catch (error2) {
+            logger.warn(
+              `Invalid batch size ${batchSize} computed from providers (${healthy.map((p) => p.name).join(", ")}) - falling back to size 1`,
+              error2
+            );
+            batches = batchOrchestrator.createBatches(filesToReview, 1);
+          }
+          const batchQueue = createQueue(Math.max(1, Number(config.providerMaxParallel) || 1));
           logger.info(`Processing ${batches.length} batch(es) with size ${batchSize}`);
           const batchPromises = batches.map(
             (batch) => batchQueue.add(async () => {
               const batchDiff = filterDiffByFiles(reviewContext.diff, batch);
               const batchContext = { ...reviewContext, files: batch, diff: batchDiff };
               const prompt = this.components.promptBuilder.build(batchContext);
-              const results = await this.components.llmExecutor.execute(healthy, prompt);
-              for (const result of results) {
-                await this.components.costTracker.record(result.name, result.result?.usage, config.budgetMaxUsd);
+              try {
+                const results = await this.components.llmExecutor.execute(healthy, prompt);
+                for (const result of results) {
+                  await this.components.costTracker.record(result.name, result.result?.usage, config.budgetMaxUsd);
+                }
+                return results;
+              } catch (error2) {
+                logger.error("Batch execution failed", error2);
+                return healthy.map((provider) => ({
+                  name: provider.name,
+                  status: "error",
+                  error: error2,
+                  durationSeconds: 0
+                }));
               }
-              return results;
             })
           );
-          const batchResults = (await Promise.all(batchPromises)).flat();
-          await batchQueue.onIdle();
+          const batchResults = [];
+          let batchFailures = 0;
+          let batchSuccesses = 0;
+          try {
+            const settled = await Promise.allSettled(batchPromises);
+            for (const result of settled) {
+              if (result.status === "fulfilled") {
+                batchResults.push(...result.value);
+                if (result.value.some((r) => r.status !== "success")) {
+                  batchFailures += 1;
+                } else {
+                  batchSuccesses += 1;
+                }
+              } else {
+                batchFailures += 1;
+                logger.error("Batch promise rejected", result.reason);
+                batchResults.push(...healthy.map((provider) => ({
+                  name: provider.name,
+                  status: "error",
+                  error: result.reason,
+                  durationSeconds: 0
+                })));
+              }
+            }
+          } finally {
+            await batchQueue.onIdle();
+            this.cleanupQueue(batchQueue);
+          }
+          const mergedResults = [
+            ...healthCheckResults.filter((h) => !batchResults.some((b) => b.name === h.name)),
+            ...batchResults
+          ];
+          await this.recordReliability(mergedResults);
+          if (batchFailures > 0) {
+            if (batchSuccesses === 0) {
+              const failedNames = mergedResults.filter((r) => r.status !== "success").map((r) => r.name).join(", ");
+              logger.error(`All LLM batches failed (${batchFailures}/${batches.length}): ${failedNames}. Continuing with static analysis only.`);
+              await progressTracker?.updateProgress("llm", "failed", `All batches failed: ${failedNames}`);
+            } else {
+              logger.warn(`Partial batch failure: ${batchFailures} failed, ${batchSuccesses} succeeded. Using successful results.`);
+              await progressTracker?.updateProgress("llm", "completed", `Batches: ${batchSuccesses}/${batches.length} succeeded`);
+            }
+          } else {
+            await progressTracker?.updateProgress("llm", "completed", `Batches: ${batches.length}, size: ${batchSize}`);
+          }
           llmFindings.push(...extractFindings(batchResults));
-          providerResults = [...healthCheckResults, ...batchResults];
-          await this.recordReliability(providerResults);
+          providerResults = mergedResults;
           aiAnalysis = config.enableAiDetection ? summarizeAIDetection(providerResults) : void 0;
-          await progressTracker?.updateProgress("llm", "completed", `Batches: ${batches.length}, size: ${batchSize}`);
         }
       }
       const astFindings = config.enableAstAnalysis ? this.components.astAnalyzer.analyze(filesToReview) : [];
@@ -39977,8 +40106,8 @@ var ReviewOrchestrator = class {
       available.push(provider);
     }
     if (available.length === 0) {
-      logger.warn("All providers are currently tripped by circuit breakers; using original list as fallback");
-      return providers;
+      logger.warn("All providers are currently tripped by circuit breakers; skipping review run");
+      return [];
     }
     const rankings = await tracker.rankProviders(available.map((p) => p.name));
     const scoreMap = new Map(rankings.map((r) => [r.providerId, r.score]));
@@ -39990,7 +40119,7 @@ var ReviewOrchestrator = class {
       await this.components.reliabilityTracker.recordResult(
         result.name,
         result.status === "success",
-        result.durationSeconds * 1e3,
+        Number.isFinite(result.durationSeconds) ? Math.max(0, result.durationSeconds * 1e3) : void 0,
         result.error?.message
       );
     }
@@ -40038,6 +40167,9 @@ var ReviewOrchestrator = class {
     }
     const sanitized = filename.replace(/[^a-zA-Z0-9_-]/g, "-").substring(0, 50);
     return sanitized || "multi-provider-review";
+  }
+  cleanupQueue(queue) {
+    queue.clear?.();
   }
   /**
    * Filter diff to only include files that changed

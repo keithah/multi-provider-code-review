@@ -169,7 +169,7 @@ describe('ProgressTracker', () => {
       await tracker.initialize();
     });
 
-    it('should mark all items as completed on successful finalization', async () => {
+    it('should leave unstarted items pending on successful finalization', async () => {
       tracker.addItem('item1', 'Test 1');
       tracker.addItem('item2', 'Test 2');
 
@@ -178,7 +178,7 @@ describe('ProgressTracker', () => {
       const lastCall = updateCommentMock.mock.calls[updateCommentMock.mock.calls.length - 1];
       const body = lastCall?.[0]?.body as string;
 
-      expect(body).toContain('✅'); // All items completed
+      expect(body).toContain('⏳'); // Pending items remain pending when not executed
       expect(body).not.toContain('❌'); // No failures
     });
 

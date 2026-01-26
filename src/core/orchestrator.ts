@@ -644,7 +644,7 @@ export class ReviewOrchestrator {
       await this.components.reliabilityTracker.recordResult(
         result.name,
         result.status === 'success',
-        result.durationSeconds * 1000,
+        Number.isFinite(result.durationSeconds) ? Math.max(0, result.durationSeconds * 1000) : undefined,
         result.error?.message
       );
     }

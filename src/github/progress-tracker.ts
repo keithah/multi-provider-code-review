@@ -120,7 +120,7 @@ export class ProgressTracker {
     // Update all pending items to final status
     this.items.forEach((item) => {
       if (item.status === 'pending' || item.status === 'in_progress') {
-        item.status = finalStatus;
+        item.status = success ? 'pending' : 'failed';
         item.endTime = Date.now();
       }
     });

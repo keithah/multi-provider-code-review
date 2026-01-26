@@ -8,6 +8,11 @@ interface CircuitData {
   state: CircuitState;
   failures: number;
   openedAt?: number;
+  /**
+   * When in half_open, reserve exactly one probe. Prevents concurrent probes
+   * that could immediately re-open the circuit or double-count failures.
+   */
+  probeInFlight?: boolean;
 }
 
 export interface CircuitBreakerOptions {
@@ -46,15 +51,26 @@ export class CircuitBreaker {
 
   async isOpen(providerId: string): Promise<boolean> {
     return this.withLock(providerId, async () => {
-      const state = await this.load(providerId);
+      let state = await this.load(providerId);
 
       if (state.state === 'open') {
         const expired = state.openedAt && Date.now() - state.openedAt > this.openDurationMs;
         if (expired) {
-          await this.setState(providerId, { state: 'half_open', failures: 0 });
-          return false;
+          state = { state: 'half_open', failures: 0, probeInFlight: false };
+          await this.setState(providerId, state);
+          // fall through to half_open handling below to reserve the probe
         }
-        return true;
+        if (state.state === 'open') {
+          return true;
+        }
+      }
+
+      if (state.state === 'half_open') {
+        // Allow exactly one probe during half-open; block concurrent callers
+        if (state.probeInFlight) return true;
+
+        await this.setState(providerId, { ...state, probeInFlight: true });
+        return false;
       }
 
       return false;
@@ -62,7 +78,19 @@ export class CircuitBreaker {
   }
 
   async recordSuccess(providerId: string): Promise<void> {
-    await this.withLock(providerId, () => this.setState(providerId, { state: 'closed', failures: 0 }));
+    await this.withLock(providerId, async () => {
+      const state = await this.load(providerId);
+      await this.setState(providerId, {
+        state: 'closed',
+        failures: 0,
+        openedAt: undefined,
+        probeInFlight: false,
+      });
+
+      if (state.state !== 'closed') {
+        logger.debug(`Circuit closed for ${providerId} after recovery`);
+      }
+    });
   }
 
   async recordFailure(providerId: string): Promise<void> {
@@ -71,13 +99,18 @@ export class CircuitBreaker {
       const failures = state.failures + 1;
 
       if (state.state === 'half_open') {
-        await this.setState(providerId, { state: 'open', failures, openedAt: Date.now() });
+        await this.setState(providerId, {
+          state: 'open',
+          failures,
+          openedAt: Date.now(),
+          probeInFlight: false,
+        });
         logger.warn(`Circuit re-opened for ${providerId} after half-open failure`);
         return;
       }
 
       if (failures >= this.failureThreshold) {
-        await this.setState(providerId, { state: 'open', failures, openedAt: Date.now() });
+        await this.setState(providerId, { state: 'open', failures, openedAt: Date.now(), probeInFlight: false });
         logger.warn(`Circuit opened for ${providerId} after ${failures} failures`);
       } else {
         await this.setState(providerId, { state: 'closed', failures });
@@ -88,14 +121,18 @@ export class CircuitBreaker {
   private async load(providerId: string): Promise<CircuitData> {
     const raw = await this.storage.read(this.key(providerId));
     if (!raw) {
-      return { state: 'closed', failures: 0 };
+      return { state: 'closed', failures: 0, probeInFlight: false };
     }
 
     try {
-      return JSON.parse(raw) as CircuitData;
+      const parsed = JSON.parse(raw) as CircuitData;
+      return {
+        probeInFlight: false,
+        ...parsed,
+      };
     } catch (error) {
       logger.warn(`Failed to parse circuit state for ${providerId}`, error as Error);
-      return { state: 'closed', failures: 0 };
+      return { state: 'closed', failures: 0, probeInFlight: false };
     }
   }
 
