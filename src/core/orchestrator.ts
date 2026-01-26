@@ -320,13 +320,17 @@ export class ReviewOrchestrator {
 
       const MIN_TOTAL_HEALTHY = 4;
       const MIN_OPENCODE_HEALTHY = 2;
+      const MIN_OPENROUTER_HEALTHY = 4;
 
       const countOpenCode = (list: Provider[]) => list.filter(p => p.name.startsWith('opencode/')).length;
+      const countOpenRouter = (list: Provider[]) => list.filter(p => p.name.startsWith('openrouter/')).length;
 
       let attempts = 0;
       while (
         attempts < 2 &&
-        (healthy.length < MIN_TOTAL_HEALTHY || countOpenCode(healthy) < MIN_OPENCODE_HEALTHY)
+        (healthy.length < MIN_TOTAL_HEALTHY ||
+          countOpenCode(healthy) < MIN_OPENCODE_HEALTHY ||
+          countOpenRouter(healthy) < MIN_OPENROUTER_HEALTHY)
       ) {
         const additional = await this.components.providerRegistry.discoverAdditionalFreeProviders(
           Array.from(triedProviders),
@@ -339,11 +343,22 @@ export class ReviewOrchestrator {
         attempts += 1;
       }
 
-      if (healthy.length === 0) {
-        logger.warn('No healthy providers available after health checks');
+      if (
+        healthy.length === 0 ||
+        healthy.length < MIN_TOTAL_HEALTHY ||
+        countOpenCode(healthy) < MIN_OPENCODE_HEALTHY ||
+        countOpenRouter(healthy) < MIN_OPENROUTER_HEALTHY
+      ) {
+        logger.warn('Insufficient healthy providers after retries; skipping LLM execution');
         providerResults = allHealthResults;
         await this.recordReliability(providerResults);
-        await progressTracker?.updateProgress('llm', 'failed', 'No healthy providers after health checks');
+        await progressTracker?.updateProgress(
+          'llm',
+          'failed',
+          `Healthy providers insufficient (total=${healthy.length}, openrouter=${countOpenRouter(
+            healthy
+          )}, opencode=${countOpenCode(healthy)})`
+        );
       } else {
         const batchSize = batchOrchestrator.getBatchSize(healthy.map(p => p.name));
         let batches: FileChange[][];

@@ -81,6 +81,33 @@ export class ProviderRegistry {
     const minSelection = Math.min(4, selectionLimit);
     logger.info(`Selection limit: ${selectionLimit} (configured: ${config.providerLimit}), min: ${minSelection}, fallback count: ${config.fallbackProviders.length}`);
 
+    // Ensure minimum diversity: aim for at least 4 OpenRouter and 2 OpenCode providers when available
+    const MIN_OPENROUTER = 4;
+    const MIN_OPENCODE = 2;
+    const openrouterProviders = providers.filter(p => p.name.startsWith('openrouter/'));
+    const opencodeProviders = providers.filter(p => p.name.startsWith('opencode/'));
+    const otherProviders = providers.filter(
+      p => !p.name.startsWith('openrouter/') && !p.name.startsWith('opencode/')
+    );
+
+    const selected: Provider[] = [];
+    selected.push(...this.shuffle(openrouterProviders).slice(0, MIN_OPENROUTER));
+    selected.push(...this.shuffle(opencodeProviders).slice(0, MIN_OPENCODE));
+
+    // Fill remaining slots from the pool (avoiding duplicates)
+    const remainingPool = this.shuffle([
+      ...openrouterProviders.slice(MIN_OPENROUTER),
+      ...opencodeProviders.slice(MIN_OPENCODE),
+      ...otherProviders,
+    ]).filter(p => !selected.some(s => s.name === p.name));
+
+    while (selected.length < selectionLimit && remainingPool.length > 0) {
+      const next = remainingPool.shift()!;
+      selected.push(next);
+    }
+
+    providers = selected.length > 0 ? selected : providers;
+
     // Add fallback providers if we haven't reached the selection limit
     if (providers.length < selectionLimit && config.fallbackProviders.length > 0) {
       logger.info(`Adding ${config.fallbackProviders.length} fallback providers to reach target of ${selectionLimit}`);
