@@ -424,7 +424,7 @@ export class ReviewOrchestrator {
 
         // Merge results deterministically: prefer batch results over health checks, unique per provider
         const mergedMap = new Map<string, ProviderResult>();
-        for (const result of healthCheckResults) {
+        for (const result of allHealthResults) {
           mergedMap.set(result.name, result);
         }
         for (const result of batchResults) {

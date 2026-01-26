@@ -86,6 +86,21 @@ describe('CircuitBreaker', () => {
     expect(state.failures).toBe(5);
   });
 
+  it('handles high concurrency without leaking locks', async () => {
+    const storage = new MemoryStorage();
+    const breaker = new CircuitBreaker(storage as any, { failureThreshold: 50 });
+    const id = 'concurrent/provider';
+
+    const tasks = Array.from({ length: 40 }, (_, i) =>
+      i % 2 === 0 ? breaker.recordFailure(id) : breaker.recordSuccess(id)
+    );
+
+    await Promise.all(tasks);
+    jest.advanceTimersByTime(31_000); // allow LOCK_CLEANUP_MS to run
+
+    expect((breaker as any).locks.size).toBe(0);
+  });
+
   it('sanitizes provider ids when writing state', async () => {
     const storage = new MemoryStorage();
     const breaker = new CircuitBreaker(storage as any);
