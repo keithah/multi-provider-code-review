@@ -38,10 +38,12 @@ permissions:
 
 jobs:
   review:
+    # Internal PRs, pushes, and manual runs (non-fork)
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
     runs-on: ubuntu-latest
     env:
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-      IS_FORK: ${{ github.event.pull_request && github.event.pull_request.head.repo.fork || false }}
+      IS_FORK: false
     steps:
       - uses: actions/checkout@v4
         with:
@@ -78,11 +80,7 @@ jobs:
         run: node scripts/validate-providers.js "${{ inputs.review_providers }}"
       - name: Validate Secrets and Configuration
         run: |
-          # Check if OPENROUTER_API_KEY is available for fork PRs
-          if [ "$IS_FORK" = "true" ]; then
-            echo "ℹ️  Fork PR detected - repository secrets are unavailable by design."
-            echo "The review will continue using free providers only (OpenCode CLI + built-in fallbacks)."
-          elif [ -z "$OPENROUTER_API_KEY" ]; then
+          if [ -z "$OPENROUTER_API_KEY" ]; then
             echo "⚠️  Warning: OPENROUTER_API_KEY not set. OpenRouter providers will be skipped; free OpenCode providers will be used."
           else
             echo "✅ OPENROUTER_API_KEY available - full provider access enabled"
@@ -134,3 +132,64 @@ jobs:
           # See documentation for provider string format and available models
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+
+  review-fork:
+    # Fork PRs run in isolated, read-only context with no repo secrets
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      actions: read
+    env:
+      OPENROUTER_API_KEY: '' # ensure repo secrets are not exposed to forks
+      IS_FORK: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Resolve PR number
+        id: resolve-pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          pr="${{ github.event.pull_request.number || '' }}"
+          if [ -n "$pr" ]; then
+            echo "pr=$pr" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "No PR found for this event/branch; skipping review."
+          echo "pr=" >> "$GITHUB_OUTPUT"
+      - name: Validate Review Providers Input
+        if: ${{ inputs.review_providers != '' && inputs.review_providers != null }}
+        run: node scripts/validate-providers.js "${{ inputs.review_providers }}"
+      - name: Validate Fork Configuration
+        run: |
+          echo "ℹ️  Fork PR detected - running in isolated mode with no repository secrets."
+          if [ -z "$OPENROUTER_API_KEY" ]; then
+            echo "✅ Secrets unavailable (expected for forks); using free providers only."
+          fi
+      - name: Install OpenCode CLI
+        run: npm install -g opencode-ai@1.1.36
+      - name: Warn Fork PR Without OpenRouter Key
+        if: steps.resolve-pr.outputs.pr != '' && env.OPENROUTER_API_KEY == ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "ℹ️  Fork PR detected without OPENROUTER_API_KEY."
+          if ! command -v opencode-ai >/dev/null 2>&1; then
+            echo "❌ OpenCode CLI not available. Install opencode-ai or set OPENROUTER_API_KEY for premium providers."
+            exit 1
+          fi
+          echo "✅ Proceeding with free providers only (OpenCode CLI / built-in fallbacks)."
+      - name: Multi-Provider Code Review (Fork)
+        if: steps.resolve-pr.outputs.pr != ''
+        uses: ./
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.resolve-pr.outputs.pr }}
+          REVIEW_PROVIDERS: ${{ inputs.review_providers }}
+        env:
+          OPENROUTER_API_KEY: '' # enforce zero secret access

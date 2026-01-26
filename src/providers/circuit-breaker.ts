@@ -161,6 +161,14 @@ export class CircuitBreaker {
     const tail = previous.then(() => current);
     this.locks.set(lockKey, tail);
 
+    // Failsafe cleanup: if something wedges the tail promise, clear the lock after a timeout.
+    setTimeout(() => {
+      if (this.locks.get(lockKey) === tail) {
+        logger.warn(`Lock cleanup triggered for ${lockKey}`);
+        this.locks.delete(lockKey);
+      }
+    }, CircuitBreaker.LOCK_CLEANUP_MS);
+
     const run = (async () => {
       await previous;
       try {

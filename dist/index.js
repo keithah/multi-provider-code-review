@@ -36271,6 +36271,12 @@ var CircuitBreaker = class _CircuitBreaker {
     const current = new Promise((resolve2) => release = resolve2);
     const tail = previous.then(() => current);
     this.locks.set(lockKey, tail);
+    setTimeout(() => {
+      if (this.locks.get(lockKey) === tail) {
+        logger.warn(`Lock cleanup triggered for ${lockKey}`);
+        this.locks.delete(lockKey);
+      }
+    }, _CircuitBreaker.LOCK_CLEANUP_MS);
     const run2 = (async () => {
       await previous;
       try {
