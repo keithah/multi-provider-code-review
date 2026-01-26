@@ -101,15 +101,21 @@ export class CircuitBreaker {
     const lockKey = this.key(providerId);
     const previous = this.locks.get(lockKey)?.catch(() => undefined) ?? Promise.resolve();
 
-    const run: Promise<T> = previous.then(fn);
-    const runVoid = run.then(() => undefined, () => undefined);
+    let release!: () => void;
+    const current = new Promise<void>(resolve => (release = resolve));
+    this.locks.set(lockKey, previous.then(() => current));
 
-    this.locks.set(lockKey, runVoid);
-
-    return run.finally(() => {
-      if (this.locks.get(lockKey) === runVoid) {
+    const run = (async () => {
+      await previous;
+      try {
+        return await fn();
+      } finally {
+        release();
+        // Ensure locks map always cleaned even if fn throws
         this.locks.delete(lockKey);
       }
-    });
+    })();
+
+    return run;
   }
 }
