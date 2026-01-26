@@ -44,17 +44,33 @@ export interface ReliabilityData {
  * - Cost efficiency
  *
  * Enables ranking providers by reliability and auto-downranking unreliable ones.
+ *
+ * Reliability Scoring Algorithm:
+ * The reliability score (0-1, higher is better) is calculated as a weighted average:
+ * - Success Rate (50%): Percentage of successful executions
+ * - False Positive Rate (30%): Inverted rate of false positives reported by users
+ * - Response Time (20%): Score based on average response time (500ms = excellent, 5000ms = poor)
+ *
+ * Data Management:
+ * - Results are aggregated daily to calculate statistics
+ * - Raw results are retained up to MAX_RESULTS_HISTORY (1000) to prevent unbounded growth
+ * - False positive reports are retained up to MAX_FALSE_POSITIVE_HISTORY (500)
+ * - Providers need MIN_ATTEMPTS_FOR_SCORING (5) attempts before receiving a calculated score
+ * - New providers receive a default neutral score (0.5) until they have sufficient history
  */
 export class ReliabilityTracker {
   private static readonly CACHE_KEY = 'provider-reliability-data';
   private static readonly AGGREGATION_INTERVAL_MS = 24 * 60 * 60 * 1000; // 1 day
   private static readonly MIN_ATTEMPTS_FOR_SCORING = 5;
+  private static readonly MAX_RESULTS_HISTORY = 1000; // Prevent unbounded growth
+  private static readonly MAX_FALSE_POSITIVE_HISTORY = 500;
 
-  // Reliability score weights
+  // Reliability score weights (must sum to 1.0)
+  // These weights determine the relative importance of each factor in the overall score
   private static readonly WEIGHTS = {
-    successRate: 0.5, // 50% - Most important
-    falsePositiveRate: 0.3, // 30% - Very important
-    responseTime: 0.2, // 20% - Nice to have
+    successRate: 0.5,         // 50% - Most critical: did the provider complete successfully?
+    falsePositiveRate: 0.3,   // 30% - Very important: does it produce accurate results?
+    responseTime: 0.2,        // 20% - Nice to have: is it fast?
   };
 
   constructor(
@@ -83,6 +99,14 @@ export class ReliabilityTracker {
     };
 
     data.results.push(result);
+
+    // Trim old results to prevent unbounded growth
+    // Keep most recent results up to MAX_RESULTS_HISTORY
+    if (data.results.length > ReliabilityTracker.MAX_RESULTS_HISTORY) {
+      const excess = data.results.length - ReliabilityTracker.MAX_RESULTS_HISTORY;
+      data.results.splice(0, excess);
+      logger.debug(`Trimmed ${excess} old reliability results to prevent unbounded growth`);
+    }
 
     // Circuit breaker bookkeeping
     if (success) {
@@ -118,6 +142,14 @@ export class ReliabilityTracker {
     };
 
     data.falsePositives.push(report);
+
+    // Trim old false positive reports to prevent unbounded growth
+    if (data.falsePositives.length > ReliabilityTracker.MAX_FALSE_POSITIVE_HISTORY) {
+      const excess = data.falsePositives.length - ReliabilityTracker.MAX_FALSE_POSITIVE_HISTORY;
+      data.falsePositives.splice(0, excess);
+      logger.debug(`Trimmed ${excess} old false positive reports`);
+    }
+
     await this.saveData(data);
 
     logger.info(`Recorded false positive from provider ${providerId} (finding: ${findingId})`);
@@ -125,13 +157,18 @@ export class ReliabilityTracker {
 
   /**
    * Get reliability score for a provider (0-1, higher is better)
+   * Returns default neutral score (0.5) for providers with insufficient history
    */
   async getReliabilityScore(providerId: string): Promise<number> {
     const data = await this.loadData();
     const stats = data.stats[providerId];
 
+    // Default neutral score for new/untested providers
+    // This can be overridden by passing a custom minAttempts in the constructor
+    const DEFAULT_SCORE = 0.5;
+
     if (!stats || stats.totalAttempts < this.minAttempts) {
-      return 0.5; // Default neutral score
+      return DEFAULT_SCORE;
     }
 
     return stats.reliabilityScore;
@@ -275,8 +312,11 @@ export class ReliabilityTracker {
     const falsePositiveRate = totalAttempts > 0 ? falsePositiveCount / totalAttempts : 0;
 
     // Response time score (0-1, faster is better)
-    // Assume 500ms is excellent, 5000ms is poor
-    const responseTimeScore = Math.max(0, Math.min(1, 1 - (averageDurationMs - 500) / 4500));
+    // Response time thresholds for scoring
+    const EXCELLENT_RESPONSE_MS = 500;  // <= 500ms is considered excellent
+    const POOR_RESPONSE_MS = 5000;       // >= 5000ms is considered poor
+    const responseTimeRange = POOR_RESPONSE_MS - EXCELLENT_RESPONSE_MS;
+    const responseTimeScore = Math.max(0, Math.min(1, 1 - (averageDurationMs - EXCELLENT_RESPONSE_MS) / responseTimeRange));
 
     // Calculate weighted reliability score (0-1)
     const reliabilityScore =

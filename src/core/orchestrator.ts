@@ -45,6 +45,9 @@ import { GitHubClient } from '../github/client';
 import * as fs from 'fs/promises';
 import path from 'path';
 
+// Configuration constants
+const HEALTH_CHECK_TIMEOUT_MS = 30_000; // 30 seconds
+
 export interface ReviewComponents {
   config: ReviewConfig;
   providerRegistry: ProviderRegistry;
@@ -300,10 +303,9 @@ export class ReviewOrchestrator {
       await this.ensureBudget(config);
 
       // Health check providers once before batching
-      const healthCheckTimeout = 30000; // 30 seconds
       const { healthy, healthCheckResults } = await this.components.llmExecutor.filterHealthyProviders(
         providers,
-        healthCheckTimeout
+        HEALTH_CHECK_TIMEOUT_MS
       );
 
       if (healthy.length === 0) {
@@ -328,7 +330,9 @@ export class ReviewOrchestrator {
 
         logger.info(`Processing ${batches.length} batch(es) with size ${batchSize}`);
 
-        const batchPromises: Promise<ProviderResult[]>[] = batches.map(batch =>
+        // Create batch execution functions and queue them for parallel processing
+        // Using Promise.allSettled() enables true parallel execution and partial success handling
+        const batchPromises = batches.map(batch =>
           batchQueue.add(async () => {
             const batchDiff = filterDiffByFiles(reviewContext.diff, batch);
             const batchContext: PRContext = { ...reviewContext, files: batch, diff: batchDiff };
@@ -351,37 +355,68 @@ export class ReviewOrchestrator {
                 durationSeconds: 0,
               }));
             }
-          })
+          }) as Promise<ProviderResult[]>
         );
 
+        // Wait for all batches in parallel and handle partial successes
+        // Even if some batches fail, we use the successful results
         const batchResults: ProviderResult[] = [];
         let batchFailures = 0;
+        let batchSuccesses = 0;
         try {
-          for (const promise of batchPromises) {
-            const result = await promise;
-            batchResults.push(...result);
-            if (result.some(r => r.status !== 'success')) {
+          const settled = await Promise.allSettled(batchPromises);
+
+          for (const result of settled) {
+            if (result.status === 'fulfilled') {
+              batchResults.push(...result.value);
+              if (result.value.some(r => r.status !== 'success')) {
+                batchFailures += 1;
+              } else {
+                batchSuccesses += 1;
+              }
+            } else {
               batchFailures += 1;
+              logger.error('Batch promise rejected', result.reason);
+              // Add error results for all providers in this batch
+              batchResults.push(...healthy.map(provider => ({
+                name: provider.name,
+                status: 'error' as const,
+                error: result.reason as Error,
+                durationSeconds: 0,
+              })));
             }
           }
         } finally {
           await batchQueue.onIdle();
           this.cleanupQueue(batchQueue);
         }
+
         const mergedResults = [
           ...healthCheckResults.filter(h => !batchResults.some(b => b.name === h.name)),
           ...batchResults,
         ];
+
+        // Record reliability for all results (both successes and failures)
+        await this.recordReliability(mergedResults);
+
+        // Use partial success: proceed if at least some batches succeeded
+        // Even if ALL batches failed, continue with AST/security analysis
         if (batchFailures > 0) {
-          await this.recordReliability(mergedResults);
-          const failedNames = mergedResults.filter(r => r.status !== 'success').map(r => r.name).join(', ');
-          throw new Error(`One or more batches failed (${batchFailures}/${batches.length}): ${failedNames}`);
+          if (batchSuccesses === 0) {
+            const failedNames = mergedResults.filter(r => r.status !== 'success').map(r => r.name).join(', ');
+            logger.error(`All LLM batches failed (${batchFailures}/${batches.length}): ${failedNames}. Continuing with static analysis only.`);
+            await progressTracker?.updateProgress('llm', 'failed', `All batches failed: ${failedNames}`);
+          } else {
+            logger.warn(`Partial batch failure: ${batchFailures} failed, ${batchSuccesses} succeeded. Using successful results.`);
+            await progressTracker?.updateProgress('llm', 'completed', `Batches: ${batchSuccesses}/${batches.length} succeeded`);
+          }
+        } else {
+          await progressTracker?.updateProgress('llm', 'completed', `Batches: ${batches.length}, size: ${batchSize}`);
         }
+
         llmFindings.push(...extractFindings(batchResults));
         providerResults = mergedResults;
-        await this.recordReliability(mergedResults);
         aiAnalysis = config.enableAiDetection ? summarizeAIDetection(providerResults) : undefined;
-        await progressTracker?.updateProgress('llm', 'completed', `Batches: ${batches.length}, size: ${batchSize}`);
       }
     }
 

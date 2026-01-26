@@ -20,19 +20,28 @@ export interface CircuitBreakerOptions {
  * - After N consecutive failures -> open for a cooldown window
  * - After cooldown -> half-open (allow one attempt)
  * - On success -> close and reset counters
+ *
+ * Circuit breaker states:
+ * - CLOSED: Normal operation, requests pass through
+ * - OPEN: Provider is failing, requests are blocked
+ * - HALF_OPEN: Testing if provider has recovered, allows one request
  */
 export class CircuitBreaker {
+  // Default configuration constants
+  private static readonly DEFAULT_FAILURE_THRESHOLD = 3;
+  private static readonly DEFAULT_OPEN_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+  private static readonly LOCK_CLEANUP_MS = 30_000; // 30 seconds
+
   private readonly failureThreshold: number;
   private readonly openDurationMs: number;
   private readonly locks = new Map<string, Promise<void>>();
-  private static readonly LOCK_CLEANUP_MS = 30_000;
 
   constructor(
     private readonly storage = new CacheStorage(),
     options: CircuitBreakerOptions = {}
   ) {
-    this.failureThreshold = options.failureThreshold ?? 3;
-    this.openDurationMs = options.openDurationMs ?? 5 * 60 * 1000; // 5 minutes
+    this.failureThreshold = options.failureThreshold ?? CircuitBreaker.DEFAULT_FAILURE_THRESHOLD;
+    this.openDurationMs = options.openDurationMs ?? CircuitBreaker.DEFAULT_OPEN_DURATION_MS;
   }
 
   async isOpen(providerId: string): Promise<boolean> {
@@ -98,6 +107,14 @@ export class CircuitBreaker {
     return `circuit-breaker-${encodeURIComponentSafe(providerId)}`;
   }
 
+  /**
+   * Serialize concurrent access to circuit breaker state using a promise chain lock.
+   * This prevents race conditions when multiple operations try to update the same provider's state.
+   *
+   * The lock implementation uses a promise chain where each operation waits for the previous
+   * operation to complete before executing. The finally block ensures the lock is always
+   * released and cleaned up, even if the operation throws an error.
+   */
   private withLock<T>(providerId: string, fn: () => Promise<T>): Promise<T> {
     const lockKey = this.key(providerId);
     const previous = this.locks.get(lockKey)?.catch(() => undefined) ?? Promise.resolve();
@@ -113,15 +130,11 @@ export class CircuitBreaker {
         return await fn();
       } finally {
         release();
-        // Ensure locks map always cleaned even if fn throws
+        // Clean up the lock immediately after execution
+        // Only delete if this is still the current tail (not if a new lock was added)
         if (this.locks.get(lockKey) === tail) {
           this.locks.delete(lockKey);
         }
-        setTimeout(() => {
-          if (this.locks.get(lockKey) === tail) {
-            this.locks.delete(lockKey);
-          }
-        }, CircuitBreaker.LOCK_CLEANUP_MS);
       }
     })();
 
