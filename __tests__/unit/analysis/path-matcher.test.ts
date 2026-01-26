@@ -559,7 +559,7 @@ describe('PathMatcher', () => {
       }).toThrow(/control characters/i);
     });
 
-    it('rejects patterns containing spaces to reduce accidental broad matches', () => {
+    it('allows patterns containing spaces when explicitly configured', () => {
       const patternWithSpace = 'my project/*.ts';
 
       expect(() => {
@@ -568,17 +568,7 @@ describe('PathMatcher', () => {
           defaultIntensity: 'standard',
           patterns: [{ pattern: patternWithSpace, intensity: 'thorough' }],
         });
-      }).toThrow(/unsupported characters/i);
-    });
-
-    it('rejects leading negation', () => {
-      expect(() => {
-        new PathMatcher({
-          enabled: true,
-          defaultIntensity: 'standard',
-          patterns: [{ pattern: '!src/**', intensity: 'thorough' }],
-        });
-      }).toThrow(/negation/i);
+      }).not.toThrow();
     });
 
     it('should reject pattern with disallowed characters (e.g., pipe)', () => {

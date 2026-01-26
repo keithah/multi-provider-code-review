@@ -25,5 +25,6 @@ jobs:
       # Run tests with CI-optimized settings:
       # --maxWorkers=2: Limit parallelism to reduce resource contention
       # --detectOpenHandles surfaces lingering async resources
-      - run: npm run test -- --maxWorkers=2 --detectOpenHandles
+      # --forceExit/--testTimeout guard against hangs
+      - run: npm run test -- --maxWorkers=2 --detectOpenHandles --forceExit --testTimeout=20000
       - run: npm run build

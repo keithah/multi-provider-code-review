@@ -102,14 +102,15 @@ export class ReviewOrchestrator {
   async executeReview(pr: PRContext): Promise<Review> {
     const { config } = this.components;
     const start = Date.now();
-    const progressTracker = await this.initProgressTracker(pr);
-    progressTracker?.addItem('graph', 'Build code graph');
-    progressTracker?.addItem('llm', 'LLM review (batched)');
-    progressTracker?.addItem('static', 'Static analysis & rules');
-    progressTracker?.addItem('synthesis', 'Synthesize & report');
+    let progressTracker: ProgressTracker | undefined;
     let review: Review | null = null;
     let success = false;
     try {
+      progressTracker = await this.initProgressTracker(pr);
+      progressTracker?.addItem('graph', 'Build code graph');
+      progressTracker?.addItem('llm', 'LLM review (batched)');
+      progressTracker?.addItem('static', 'Static analysis & rules');
+      progressTracker?.addItem('synthesis', 'Synthesize & report');
 
     // Build code graph if enabled
     let codeGraph: CodeGraph | undefined;

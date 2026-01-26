@@ -20,8 +20,8 @@ on:
 # Cancel in-progress runs for the same PR to prevent duplicate reviews
 # Use PR number + head SHA (not merge commit SHA) for uniqueness per commit
 concurrency:
-  # Simple, deterministic grouping per workflow run to avoid duplicate reviews
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.run_id }}
+  # PR-aware grouping to prevent duplicate reviews per commit
+  group: review-${{ (github.event.pull_request && github.event.pull_request.number) || inputs.pr_number || 'manual' }}-${{ (github.event.pull_request && github.event.pull_request.head && github.event.pull_request.head.sha) || github.sha }}
   cancel-in-progress: true
 
 # Permissions: Principle of least privilege
@@ -110,7 +110,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "ℹ️  Fork PR detected without OPENROUTER_API_KEY."
-          echo "Proceeding with free providers only (OpenCode CLI / built-in fallbacks)."
+          if ! command -v opencode-ai >/dev/null 2>&1; then
+            echo "❌ OpenCode CLI not available. Install opencode-ai or set OPENROUTER_API_KEY for premium providers."
+            exit 1
+          fi
+          echo "✅ Proceeding with free providers only (OpenCode CLI / built-in fallbacks)."
           echo "To enable premium OpenRouter models, add OPENROUTER_API_KEY to repository or environment secrets."
 
       - name: Multi-Provider Code Review
