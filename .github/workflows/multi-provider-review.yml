@@ -96,7 +96,7 @@ jobs:
         # Version pinning strategy:
         # - Pin to latest published npm version known-good for CLI commands
         # - Update strategy: Test quarterly (Jan, Apr, Jul, Oct) with full suite + smoke tests
-        run: npm install -g opencode-ai@1.1.36
+        run: npm install -g opencode-ai@1.1.35
       # Run review if: PR number found. Fork PRs run with free providers when OPENROUTER_API_KEY is unavailable.
       - name: Warn Fork PR Without OpenRouter Key
         if: steps.resolve-pr.outputs.pr != '' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == true && env.OPENROUTER_API_KEY == ''
