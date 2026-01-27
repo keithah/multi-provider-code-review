@@ -36,6 +36,11 @@ export class LLMExecutor {
 
           if (isHealthy) {
             healthyProviders.push(provider);
+            healthCheckResults.push({
+              name: provider.name,
+              status: 'success',
+              durationSeconds: duration / 1000,
+            });
             logger.info(`✓ Provider ${provider.name} health check passed (${duration}ms)`);
           } else {
             // Health check returned false - likely timed out

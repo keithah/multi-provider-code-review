@@ -320,9 +320,12 @@ export class ReviewOrchestrator {
 
       // Dynamic minima: prefer 4 OpenRouter + 2 OpenCode when limit allows
       const selectionLimit = Math.max(1, config.providerLimit || 8);
-      const MIN_OPENROUTER_HEALTHY = Math.min(4, selectionLimit);
-      const MIN_OPENCODE_HEALTHY = Math.min(2, Math.max(0, selectionLimit - MIN_OPENROUTER_HEALTHY));
-      const MIN_TOTAL_HEALTHY = Math.min(selectionLimit, Math.max(4, MIN_OPENROUTER_HEALTHY + MIN_OPENCODE_HEALTHY));
+      const desiredOpenRouter = Math.min(4, providers.filter(p => p.name.startsWith('openrouter/')).length);
+      const desiredOpenCode = Math.min(2, providers.filter(p => p.name.startsWith('opencode/')).length);
+      const MIN_OPENROUTER_HEALTHY = desiredOpenRouter;
+      const MIN_OPENCODE_HEALTHY = desiredOpenCode;
+      const MIN_TOTAL_HEALTHY = Math.min(selectionLimit, Math.max(2, desiredOpenRouter + desiredOpenCode || 2));
+      const MIN_FALLBACK_HEALTHY = Math.min(2, selectionLimit); // If primaries fail, allow at least two healthy to proceed
 
       const countOpenCode = (list: Provider[]) => list.filter(p => p.name.startsWith('opencode/')).length;
       const countOpenRouter = (list: Provider[]) => list.filter(p => p.name.startsWith('openrouter/')).length;
@@ -352,12 +355,12 @@ export class ReviewOrchestrator {
         attempts += 1;
       }
 
-      if (
-        healthy.length === 0 ||
-        healthy.length < MIN_TOTAL_HEALTHY ||
-        countOpenCode(healthy) < MIN_OPENCODE_HEALTHY ||
-        countOpenRouter(healthy) < MIN_OPENROUTER_HEALTHY
-      ) {
+      const meetsPrimaryTargets =
+        healthy.length >= MIN_TOTAL_HEALTHY &&
+        countOpenCode(healthy) >= MIN_OPENCODE_HEALTHY &&
+        countOpenRouter(healthy) >= MIN_OPENROUTER_HEALTHY;
+
+      if (!meetsPrimaryTargets && healthy.length < MIN_FALLBACK_HEALTHY) {
         logger.warn('Insufficient healthy providers after retries; skipping LLM execution');
         providerResults = allHealthResults;
         await this.recordReliability(providerResults);

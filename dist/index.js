@@ -33322,6 +33322,11 @@ var LLMExecutor = class {
           const duration = Date.now() - started;
           if (isHealthy) {
             healthyProviders.push(provider);
+            healthCheckResults.push({
+              name: provider.name,
+              status: "success",
+              durationSeconds: duration / 1e3
+            });
             logger.info(`\u2713 Provider ${provider.name} health check passed (${duration}ms)`);
           } else {
             const result = {
@@ -40052,9 +40057,12 @@ var ReviewOrchestrator = class {
         };
         await runHealthCheck(providers);
         const selectionLimit = Math.max(1, config.providerLimit || 8);
-        const MIN_OPENROUTER_HEALTHY = Math.min(4, selectionLimit);
-        const MIN_OPENCODE_HEALTHY = Math.min(2, Math.max(0, selectionLimit - MIN_OPENROUTER_HEALTHY));
-        const MIN_TOTAL_HEALTHY = Math.min(selectionLimit, Math.max(4, MIN_OPENROUTER_HEALTHY + MIN_OPENCODE_HEALTHY));
+        const desiredOpenRouter = Math.min(4, providers.filter((p) => p.name.startsWith("openrouter/")).length);
+        const desiredOpenCode = Math.min(2, providers.filter((p) => p.name.startsWith("opencode/")).length);
+        const MIN_OPENROUTER_HEALTHY = desiredOpenRouter;
+        const MIN_OPENCODE_HEALTHY = desiredOpenCode;
+        const MIN_TOTAL_HEALTHY = Math.min(selectionLimit, Math.max(2, desiredOpenRouter + desiredOpenCode || 2));
+        const MIN_FALLBACK_HEALTHY = Math.min(2, selectionLimit);
         const countOpenCode = (list) => list.filter((p) => p.name.startsWith("opencode/")).length;
         const countOpenRouter = (list) => list.filter((p) => p.name.startsWith("openrouter/")).length;
         let attempts = 0;
@@ -40067,7 +40075,8 @@ var ReviewOrchestrator = class {
           await runHealthCheck(additional);
           attempts += 1;
         }
-        if (healthy.length === 0 || healthy.length < MIN_TOTAL_HEALTHY || countOpenCode(healthy) < MIN_OPENCODE_HEALTHY || countOpenRouter(healthy) < MIN_OPENROUTER_HEALTHY) {
+        const meetsPrimaryTargets = healthy.length >= MIN_TOTAL_HEALTHY && countOpenCode(healthy) >= MIN_OPENCODE_HEALTHY && countOpenRouter(healthy) >= MIN_OPENROUTER_HEALTHY;
+        if (!meetsPrimaryTargets && healthy.length < MIN_FALLBACK_HEALTHY) {
           logger.warn("Insufficient healthy providers after retries; skipping LLM execution");
           providerResults = allHealthResults;
           await this.recordReliability(providerResults);
