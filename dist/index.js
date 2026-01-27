@@ -31809,12 +31809,17 @@ var OpenRouterProvider = class _OpenRouterProvider extends Provider {
         throw new Error("OpenRouter API returned invalid response");
       }
       if (!response.ok) {
+        const retryAfter = response.headers.get("retry-after");
+        const seconds = retryAfter ? parseInt(retryAfter, 10) : NaN;
+        const minutes = !isNaN(seconds) && seconds > 0 ? Math.ceil(seconds / 60) : 60;
         if (response.status === 429) {
-          const retryAfter = response.headers.get("retry-after");
-          const seconds = retryAfter ? parseInt(retryAfter, 10) : NaN;
-          const minutes = !isNaN(seconds) && seconds > 0 ? Math.ceil(seconds / 60) : 60;
           await this.rateLimiter.markRateLimited(this.name, minutes, "HTTP 429 from OpenRouter");
           throw new RateLimitError(`Rate limited: ${this.name}`, minutes * 60);
+        }
+        if (response.status === 402) {
+          const blockMinutes = Math.max(minutes || 0, 60 * 24);
+          await this.rateLimiter.markRateLimited(this.name, blockMinutes, "HTTP 402 Payment Required from OpenRouter");
+          throw new RateLimitError(`Payment required: ${this.name}`, blockMinutes * 60);
         }
         throw new Error(`OpenRouter API error: ${response.status} ${response.statusText}`);
       }
