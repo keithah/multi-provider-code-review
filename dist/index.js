@@ -31588,7 +31588,7 @@ Respond with: {"findings": [{"file": "test.ts", "line": 1, "severity": "minor", 
       await this.review(testPrompt, timeoutMs);
       return true;
     } catch (error2) {
-      return false;
+      throw error2;
     }
   }
   static validate(name) {
@@ -36298,13 +36298,15 @@ var PromptGenerator = class {
 function encodeURIComponentSafe(value) {
   const encoded = encodeURIComponent(value);
   const normalized = encoded.replace(/[+]/g, "_").replace(/%/g, "_").replace(/[<>:"|?*]/g, "_");
+  const MAX_PREFIX = 120;
+  const prefix = normalized.length > MAX_PREFIX ? normalized.slice(0, MAX_PREFIX) : normalized;
   let hash = 2166136261;
   for (let i = 0; i < value.length; i += 1) {
     hash ^= value.charCodeAt(i);
     hash = hash * 16777619 >>> 0;
   }
   const hashSuffix = hash.toString(16).padStart(8, "0");
-  return `${normalized}-${hashSuffix}`;
+  return `${prefix}-${hashSuffix}`;
 }
 
 // src/providers/circuit-breaker.ts
@@ -39662,10 +39664,15 @@ var ProgressTracker = class {
   items = /* @__PURE__ */ new Map();
   startTime = Date.now();
   totalCost = 0;
+  overrideBody;
   /**
    * Initialize progress tracking by creating the initial comment
    */
   async initialize() {
+    if (!this.octokit?.rest?.issues?.createComment) {
+      logger.warn("Progress tracker unavailable: octokit.rest.issues.createComment is missing");
+      return;
+    }
     try {
       const body = this.formatProgressComment();
       const comment = await this.octokit.rest.issues.createComment({
@@ -39723,11 +39730,13 @@ var ProgressTracker = class {
     const duration = Date.now() - this.startTime;
     this.items.forEach((item) => {
       if (item.status === "pending" || item.status === "in_progress") {
-        item.status = success ? "pending" : "failed";
+        item.status = success ? "completed" : "failed";
         item.endTime = Date.now();
       }
     });
-    await this.updateComment();
+    if (!this.overrideBody) {
+      await this.updateComment();
+    }
     logger.info("Progress tracker finalized", {
       success,
       duration,
@@ -39771,8 +39780,12 @@ var ProgressTracker = class {
       logger.warn("Cannot update progress: comment not initialized");
       return;
     }
+    if (!this.octokit?.rest?.issues?.updateComment) {
+      logger.warn("Cannot update progress: octokit.rest.issues.updateComment is missing");
+      return;
+    }
     try {
-      const body = this.formatProgressComment();
+      const body = this.overrideBody ?? this.formatProgressComment();
       await this.octokit.rest.issues.updateComment({
         owner: this.config.owner,
         repo: this.config.repo,
@@ -39783,6 +39796,26 @@ var ProgressTracker = class {
     } catch (error2) {
       logger.error("Failed to update progress comment", error2);
     }
+  }
+  /**
+   * Replace the progress comment with a final body (e.g., combined progress + review)
+   */
+  async replaceWith(body) {
+    if (!this.commentId) {
+      logger.warn("Cannot replace progress: comment not initialized");
+      return;
+    }
+    if (!this.octokit?.rest?.issues?.updateComment) {
+      logger.warn("Cannot replace progress: octokit.rest.issues.updateComment is missing");
+      return;
+    }
+    this.overrideBody = body;
+    await this.octokit.rest.issues.updateComment({
+      owner: this.config.owner,
+      repo: this.config.repo,
+      comment_id: this.commentId,
+      body
+    });
   }
   /**
    * Get status emoji for visual feedback
@@ -40018,15 +40051,16 @@ var ReviewOrchestrator = class {
           allHealthResults = allHealthResults.concat(healthCheckResults);
         };
         await runHealthCheck(providers);
-        const MIN_TOTAL_HEALTHY = 4;
-        const MIN_OPENCODE_HEALTHY = 2;
-        const MIN_OPENROUTER_HEALTHY = 4;
+        const selectionLimit = Math.max(1, config.providerLimit || 8);
+        const MIN_OPENROUTER_HEALTHY = Math.min(4, selectionLimit);
+        const MIN_OPENCODE_HEALTHY = Math.min(2, Math.max(0, selectionLimit - MIN_OPENROUTER_HEALTHY));
+        const MIN_TOTAL_HEALTHY = Math.min(selectionLimit, Math.max(4, MIN_OPENROUTER_HEALTHY + MIN_OPENCODE_HEALTHY));
         const countOpenCode = (list) => list.filter((p) => p.name.startsWith("opencode/")).length;
         const countOpenRouter = (list) => list.filter((p) => p.name.startsWith("openrouter/")).length;
         let attempts = 0;
         const registry = this.components.providerRegistry;
-        const discoverExtras = typeof registry.discoverAdditionalFreeProviders === "function" ? (names) => registry.discoverAdditionalFreeProviders(names, 6, config) : null;
-        while (attempts < 2 && discoverExtras && (healthy.length < MIN_TOTAL_HEALTHY || countOpenCode(healthy) < MIN_OPENCODE_HEALTHY || countOpenRouter(healthy) < MIN_OPENROUTER_HEALTHY)) {
+        const discoverExtras = typeof registry.discoverAdditionalFreeProviders === "function" ? (names) => registry.discoverAdditionalFreeProviders(names, selectionLimit * 2, config) : null;
+        while (attempts < 4 && discoverExtras && (healthy.length < MIN_TOTAL_HEALTHY || countOpenCode(healthy) < MIN_OPENCODE_HEALTHY || countOpenRouter(healthy) < MIN_OPENROUTER_HEALTHY)) {
           const additional = await discoverExtras(Array.from(triedProviders));
           if (additional.length === 0) break;
           additional.forEach((p) => triedProviders.add(p.name));
@@ -40239,7 +40273,11 @@ var ReviewOrchestrator = class {
       const markdown = this.components.formatter.format(review);
       const suppressed = await this.components.feedbackFilter.loadSuppressed(pr.number);
       const inlineFiltered = review.inlineComments.filter((c) => this.components.feedbackFilter.shouldPost(c, suppressed));
-      await this.components.commentPoster.postSummary(pr.number, markdown, useIncremental);
+      if (progressTracker) {
+        await progressTracker.replaceWith(markdown);
+      } else {
+        await this.components.commentPoster.postSummary(pr.number, markdown, useIncremental);
+      }
       await this.components.commentPoster.postInline(pr.number, inlineFiltered, pr.files, pr.headSha);
       await this.writeReports(review);
       await progressTracker?.updateProgress("synthesis", "completed");

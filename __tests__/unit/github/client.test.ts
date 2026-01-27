@@ -1,9 +1,11 @@
 import { GitHubClient } from '../../../src/github/client';
 import * as github from '@actions/github';
+import * as github from '@actions/github';
 
 describe('GitHubClient', () => {
   const mockToken = 'ghp_test123456789';
   const originalEnv = process.env;
+  const originalContext = github.context;
 
   beforeEach(() => {
     process.env = {
@@ -14,6 +16,7 @@ describe('GitHubClient', () => {
 
   afterEach(() => {
     process.env = originalEnv;
+    (github as any).context = originalContext;
   });
 
   describe('Initialization', () => {
@@ -46,6 +49,7 @@ describe('GitHubClient', () => {
 
     it('handles GITHUB_REPOSITORY not set', () => {
       delete process.env.GITHUB_REPOSITORY;
+      (github as any).context = { repo: { owner: '', repo: '' } };
       // Simulate missing GitHub context as well
       (github as any).context = { repo: { owner: '', repo: '' } };
 

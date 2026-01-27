@@ -318,9 +318,11 @@ export class ReviewOrchestrator {
 
       await runHealthCheck(providers);
 
-      const MIN_TOTAL_HEALTHY = 4;
-      const MIN_OPENCODE_HEALTHY = 2;
-      const MIN_OPENROUTER_HEALTHY = 4;
+      // Dynamic minima: prefer 4 OpenRouter + 2 OpenCode when limit allows
+      const selectionLimit = Math.max(1, config.providerLimit || 8);
+      const MIN_OPENROUTER_HEALTHY = Math.min(4, selectionLimit);
+      const MIN_OPENCODE_HEALTHY = Math.min(2, Math.max(0, selectionLimit - MIN_OPENROUTER_HEALTHY));
+      const MIN_TOTAL_HEALTHY = Math.min(selectionLimit, Math.max(4, MIN_OPENROUTER_HEALTHY + MIN_OPENCODE_HEALTHY));
 
       const countOpenCode = (list: Provider[]) => list.filter(p => p.name.startsWith('opencode/')).length;
       const countOpenRouter = (list: Provider[]) => list.filter(p => p.name.startsWith('openrouter/')).length;
@@ -332,11 +334,11 @@ export class ReviewOrchestrator {
       const registry = this.components.providerRegistry as RegistryWithDiscovery;
       const discoverExtras =
         typeof registry.discoverAdditionalFreeProviders === 'function'
-          ? (names: string[]) => registry.discoverAdditionalFreeProviders!(names, 6, config)
+          ? (names: string[]) => registry.discoverAdditionalFreeProviders!(names, selectionLimit * 2, config)
           : null;
 
       while (
-        attempts < 2 &&
+        attempts < 4 &&
         discoverExtras &&
         (healthy.length < MIN_TOTAL_HEALTHY ||
           countOpenCode(healthy) < MIN_OPENCODE_HEALTHY ||
@@ -606,8 +608,12 @@ export class ReviewOrchestrator {
     const suppressed = await this.components.feedbackFilter.loadSuppressed(pr.number);
     const inlineFiltered = review.inlineComments.filter(c => this.components.feedbackFilter.shouldPost(c, suppressed));
 
-    // Update existing comment for incremental reviews
-    await this.components.commentPoster.postSummary(pr.number, markdown, useIncremental);
+    // If a progress tracker exists, reuse the same comment for the final review body
+    if (progressTracker) {
+      await progressTracker.replaceWith(markdown);
+    } else {
+      await this.components.commentPoster.postSummary(pr.number, markdown, useIncremental);
+    }
     await this.components.commentPoster.postInline(pr.number, inlineFiltered, pr.files, pr.headSha);
 
     await this.writeReports(review);

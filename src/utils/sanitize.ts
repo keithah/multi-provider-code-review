@@ -9,6 +9,8 @@ export function encodeURIComponentSafe(value: string): string {
     .replace(/[+]/g, '_')
     .replace(/%/g, '_')
     .replace(/[<>:"|?*]/g, '_');
+  const MAX_PREFIX = 120;
+  const prefix = normalized.length > MAX_PREFIX ? normalized.slice(0, MAX_PREFIX) : normalized;
   // Small, dependency-free hash (FNV-1a) to reduce collision risk without requiring node:crypto
   let hash = 0x811c9dc5;
   for (let i = 0; i < value.length; i += 1) {
@@ -16,5 +18,5 @@ export function encodeURIComponentSafe(value: string): string {
     hash = (hash * 0x01000193) >>> 0; // 32-bit overflow
   }
   const hashSuffix = hash.toString(16).padStart(8, '0');
-  return `${normalized}-${hashSuffix}`;
+  return `${prefix}-${hashSuffix}`;
 }
