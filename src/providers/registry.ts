@@ -84,8 +84,12 @@ export class ProviderRegistry {
     // Ensure minimum diversity: aim for at least 4 OpenRouter and 2 OpenCode providers when available
     const MIN_OPENROUTER = 4;
     const MIN_OPENCODE = 2;
-    const openrouterProviders = providers.filter(p => p.name.startsWith('openrouter/'));
-    const opencodeProviders = providers.filter(p => p.name.startsWith('opencode/'));
+    const openrouterProviders = this.filterUniqueFamilies(
+      providers.filter(p => p.name.startsWith('openrouter/'))
+    );
+    const opencodeProviders = this.filterUniqueFamilies(
+      providers.filter(p => p.name.startsWith('opencode/'))
+    );
     const otherProviders = providers.filter(
       p => !p.name.startsWith('openrouter/') && !p.name.startsWith('opencode/')
     );
@@ -279,6 +283,35 @@ export class ProviderRegistry {
       result.push(p);
     }
     return result;
+  }
+
+  /**
+   * Avoid selecting multiple variants of the same underlying model family.
+   * e.g., openrouter/nvidia/nemotron-nano-12b... and ...-9b... count as one family.
+   */
+  private filterUniqueFamilies(providers: Provider[]): Provider[] {
+    const seenFamilies = new Set<string>();
+    const unique: Provider[] = [];
+
+    for (const p of providers) {
+      const family = this.getModelFamily(p.name);
+      if (seenFamilies.has(family)) continue;
+      seenFamilies.add(family);
+      unique.push(p);
+    }
+
+    return unique;
+  }
+
+  private getModelFamily(name: string): string {
+    // expected: openrouter/vendor/model[:variant]
+    const parts = name.split('/');
+    if (parts.length < 3) return name;
+    const vendor = parts[1];
+    const modelWithVariant = parts[2].split(':')[0];
+    // Strip trailing size/version tokens (-9b, -12b, -30b, -v2, etc.)
+    const base = modelWithVariant.replace(/-[0-9]+[a-z]*.*$/i, '');
+    return `${vendor}/${base}`;
   }
 
   private usesDefaultProviders(list: string[]): boolean {

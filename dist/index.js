@@ -32408,8 +32408,12 @@ var ProviderRegistry = class {
     logger.info(`Selection limit: ${selectionLimit} (configured: ${config.providerLimit}), min: ${minSelection}, fallback count: ${config.fallbackProviders.length}`);
     const MIN_OPENROUTER = 4;
     const MIN_OPENCODE = 2;
-    const openrouterProviders = providers.filter((p) => p.name.startsWith("openrouter/"));
-    const opencodeProviders = providers.filter((p) => p.name.startsWith("opencode/"));
+    const openrouterProviders = this.filterUniqueFamilies(
+      providers.filter((p) => p.name.startsWith("openrouter/"))
+    );
+    const opencodeProviders = this.filterUniqueFamilies(
+      providers.filter((p) => p.name.startsWith("opencode/"))
+    );
     const otherProviders = providers.filter(
       (p) => !p.name.startsWith("openrouter/") && !p.name.startsWith("opencode/")
     );
@@ -32565,6 +32569,29 @@ var ProviderRegistry = class {
       result.push(p);
     }
     return result;
+  }
+  /**
+   * Avoid selecting multiple variants of the same underlying model family.
+   * e.g., openrouter/nvidia/nemotron-nano-12b... and ...-9b... count as one family.
+   */
+  filterUniqueFamilies(providers) {
+    const seenFamilies = /* @__PURE__ */ new Set();
+    const unique = [];
+    for (const p of providers) {
+      const family = this.getModelFamily(p.name);
+      if (seenFamilies.has(family)) continue;
+      seenFamilies.add(family);
+      unique.push(p);
+    }
+    return unique;
+  }
+  getModelFamily(name) {
+    const parts = name.split("/");
+    if (parts.length < 3) return name;
+    const vendor = parts[1];
+    const modelWithVariant = parts[2].split(":")[0];
+    const base = modelWithVariant.replace(/-[0-9]+[a-z]*.*$/i, "");
+    return `${vendor}/${base}`;
   }
   usesDefaultProviders(list) {
     if (!Array.isArray(list) || list.length !== DEFAULT_CONFIG.providers.length) return false;
