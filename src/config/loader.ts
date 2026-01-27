@@ -236,7 +236,7 @@ export class ConfigLoader {
     } catch (error) {
       const message = `Failed to parse PROVIDER_BATCH_OVERRIDES: ${(error as Error).message}`;
       logger.warn(message);
-      throw new Error(message);
+      return undefined;
     }
   }
 

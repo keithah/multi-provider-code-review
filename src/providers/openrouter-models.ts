@@ -34,12 +34,12 @@ export interface ModelRanking {
 /**
  * Fetch available models from OpenRouter API
  */
-export async function fetchOpenRouterModels(timeoutMs = 5000): Promise<OpenRouterModel[]> {
+export async function fetchOpenRouterModels(timeoutMs = 5000, query = 'max_price=0&order=top-weekly'): Promise<OpenRouterModel[]> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await fetch('https://openrouter.ai/api/v1/models', {
+    const response = await fetch(`https://openrouter.ai/api/v1/models?${query}`, {
       signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
@@ -136,12 +136,15 @@ export async function getBestFreeModels(
   logger.info(`Found ${freeModels.length} free OpenRouter models`);
 
   // Rank and sort models
-  const rankedModels: ModelRanking[] = freeModels.map(model => ({
-    modelId: `openrouter/${model.id}`,
-    score: rankModel(model),
-    contextLength: model.context_length || 0,
-    isFree: true,
-  }));
+  const rankedModels: ModelRanking[] = freeModels.map((model, idx) => {
+    const popularityBoost = (freeModels.length - idx); // API is already ordered by popularity (top-weekly)
+    return {
+      modelId: `openrouter/${model.id}`,
+      score: rankModel(model) + popularityBoost,
+      contextLength: model.context_length || 0,
+      isFree: true,
+    };
+  });
 
   rankedModels.sort((a, b) => b.score - a.score);
 

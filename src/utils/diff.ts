@@ -147,46 +147,38 @@ export function mapLinesToPositions(patch: string | undefined): Map<number, numb
 export function filterDiffByFiles(diff: string, files: { filename: string }[]): string {
   if (files.length === 0) return '';
 
-  const fileNames = new Set(files.map(f => f.filename));
-  const diffChunks: string[] = [];
-  const DIFF_MARKER = 'diff --git ';
+  const target = new Set(files.map(f => f.filename));
+  const lines = diff.split('\n');
+  const chunks: string[] = [];
+  let currentChunk: string[] = [];
+  let includeCurrent = false;
 
-  let startIdx = 0;
-
-  while (startIdx < diff.length) {
-    const markerIdx = diff.indexOf(DIFF_MARKER, startIdx);
-    if (markerIdx === -1) break;
-
-    // Skip if not at start of line
-    if (markerIdx > 0 && diff[markerIdx - 1] !== '\n') {
-      startIdx = markerIdx + DIFF_MARKER.length;
-      continue;
+  const pushChunkIfIncluded = () => {
+    if (includeCurrent && currentChunk.length > 0) {
+      chunks.push(currentChunk.join('\n'));
     }
+    currentChunk = [];
+    includeCurrent = false;
+  };
 
-    // Find next diff marker or end
-    let nextIdx = diff.indexOf('\n' + DIFF_MARKER, markerIdx + 1);
-    if (nextIdx === -1) {
-      nextIdx = diff.length;
-    } else {
-      nextIdx += 1;
-    }
-
-    const chunk = diff.substring(markerIdx, nextIdx);
-
-    // Extract filename from first line
-    const firstLineEnd = chunk.indexOf('\n');
-    const firstLine = firstLineEnd === -1 ? chunk : chunk.substring(0, firstLineEnd);
-    const bIndex = firstLine.indexOf(' b/');
-
-    if (bIndex !== -1) {
-      const filename = firstLine.substring(bIndex + 3).trim();
-      if (fileNames.has(filename)) {
-        diffChunks.push(chunk);
+  for (const line of lines) {
+    const isHeader = line.startsWith('diff --git ');
+    if (isHeader) {
+      pushChunkIfIncluded();
+      const match = line.match(/^diff --git\s+a\/(.+?)\s+b\/(.+)$/);
+      if (match) {
+        const bPath = match[2].trim();
+        const aPath = match[1].trim();
+        includeCurrent = target.has(bPath) || target.has(aPath);
       }
+      currentChunk.push(line);
+    } else {
+      currentChunk.push(line);
     }
-
-    startIdx = nextIdx;
   }
 
-  return diffChunks.join('');
+  pushChunkIfIncluded();
+
+  // Remove possible trailing empty string from split/join differences
+  return chunks.join('\n').trimEnd();
 }

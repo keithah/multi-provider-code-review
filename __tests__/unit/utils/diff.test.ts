@@ -48,4 +48,26 @@ describe('filterDiffByFiles', () => {
     expect(result).toContain('deleted file mode');
     expect(result).toContain('diff --git a/src/remove.ts b/src/remove.ts');
   });
+
+  it('handles paths with spaces and binary diffs', () => {
+    const diff = `diff --git a/docs/My File.md b/docs/My File.md
+Binary files a/docs/My File.md and b/docs/My File.md differ
+diff --git a/img/logo.png b/img/logo.png
+Binary files a/img/logo.png and b/img/logo.png differ
+`;
+
+    const result = filterDiffByFiles(diff, [{ filename: 'docs/My File.md' }]);
+    expect(result).toContain('docs/My File.md');
+    expect(result).not.toContain('img/logo.png');
+  });
+
+  it('is robust to unusual whitespace in diff headers', () => {
+    const diff = `diff --git   a/src/weird.ts\tb/src/weird.ts
+--- a/src/weird.ts
++++ b/src/weird.ts
+@@
+`;
+    const result = filterDiffByFiles(diff, [{ filename: 'src/weird.ts' }]);
+    expect(result).toContain('src/weird.ts');
+  });
 });

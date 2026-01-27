@@ -31543,7 +31543,7 @@ var ConfigLoader = class {
     } catch (error2) {
       const message = `Failed to parse PROVIDER_BATCH_OVERRIDES: ${error2.message}`;
       logger.warn(message);
-      throw new Error(message);
+      return void 0;
     }
   }
   static parseSeverity(value) {
@@ -32104,11 +32104,11 @@ var PricingService = class _PricingService {
 };
 
 // src/providers/openrouter-models.ts
-async function fetchOpenRouterModels(timeoutMs = 5e3) {
+async function fetchOpenRouterModels(timeoutMs = 5e3, query = "max_price=0&order=top-weekly") {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch("https://openrouter.ai/api/v1/models", {
+    const response = await fetch(`https://openrouter.ai/api/v1/models?${query}`, {
       signal: controller.signal,
       headers: {
         "Content-Type": "application/json"
@@ -32165,12 +32165,15 @@ async function getBestFreeModels(count = 4, timeoutMs = 5e3) {
     return getFallbackModels(count);
   }
   logger.info(`Found ${freeModels.length} free OpenRouter models`);
-  const rankedModels = freeModels.map((model) => ({
-    modelId: `openrouter/${model.id}`,
-    score: rankModel(model),
-    contextLength: model.context_length || 0,
-    isFree: true
-  }));
+  const rankedModels = freeModels.map((model, idx) => {
+    const popularityBoost = freeModels.length - idx;
+    return {
+      modelId: `openrouter/${model.id}`,
+      score: rankModel(model) + popularityBoost,
+      contextLength: model.context_length || 0,
+      isFree: true
+    };
+  });
   rankedModels.sort((a, b) => b.score - a.score);
   const poolSize = Math.min(rankedModels.length, Math.max(count * 2, count + 2));
   const pool = rankedModels.slice(0, poolSize).map((m) => m.modelId);
@@ -32695,36 +32698,35 @@ function mapLinesToPositions(patch) {
 }
 function filterDiffByFiles(diff, files) {
   if (files.length === 0) return "";
-  const fileNames = new Set(files.map((f) => f.filename));
-  const diffChunks = [];
-  const DIFF_MARKER = "diff --git ";
-  let startIdx = 0;
-  while (startIdx < diff.length) {
-    const markerIdx = diff.indexOf(DIFF_MARKER, startIdx);
-    if (markerIdx === -1) break;
-    if (markerIdx > 0 && diff[markerIdx - 1] !== "\n") {
-      startIdx = markerIdx + DIFF_MARKER.length;
-      continue;
+  const target = new Set(files.map((f) => f.filename));
+  const lines = diff.split("\n");
+  const chunks = [];
+  let currentChunk = [];
+  let includeCurrent = false;
+  const pushChunkIfIncluded = () => {
+    if (includeCurrent && currentChunk.length > 0) {
+      chunks.push(currentChunk.join("\n"));
     }
-    let nextIdx = diff.indexOf("\n" + DIFF_MARKER, markerIdx + 1);
-    if (nextIdx === -1) {
-      nextIdx = diff.length;
-    } else {
-      nextIdx += 1;
-    }
-    const chunk = diff.substring(markerIdx, nextIdx);
-    const firstLineEnd = chunk.indexOf("\n");
-    const firstLine = firstLineEnd === -1 ? chunk : chunk.substring(0, firstLineEnd);
-    const bIndex = firstLine.indexOf(" b/");
-    if (bIndex !== -1) {
-      const filename = firstLine.substring(bIndex + 3).trim();
-      if (fileNames.has(filename)) {
-        diffChunks.push(chunk);
+    currentChunk = [];
+    includeCurrent = false;
+  };
+  for (const line of lines) {
+    const isHeader = line.startsWith("diff --git ");
+    if (isHeader) {
+      pushChunkIfIncluded();
+      const match2 = line.match(/^diff --git\s+a\/(.+?)\s+b\/(.+)$/);
+      if (match2) {
+        const bPath = match2[2].trim();
+        const aPath = match2[1].trim();
+        includeCurrent = target.has(bPath) || target.has(aPath);
       }
+      currentChunk.push(line);
+    } else {
+      currentChunk.push(line);
     }
-    startIdx = nextIdx;
   }
-  return diffChunks.join("");
+  pushChunkIfIncluded();
+  return chunks.join("\n").trimEnd();
 }
 
 // src/analysis/llm/prompt-builder.ts
