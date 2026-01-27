@@ -146,6 +146,7 @@ export function mapLinesToPositions(patch: string | undefined): Map<number, numb
  */
 export function filterDiffByFiles(diff: string, files: { filename: string }[]): string {
   if (files.length === 0) return '';
+  if (!diff || diff.trim().length === 0) return '';
 
   const target = new Set(files.map(f => f.filename));
   const lines = diff.split('\n');
@@ -162,13 +163,16 @@ export function filterDiffByFiles(diff: string, files: { filename: string }[]): 
   };
 
   for (const line of lines) {
-    const isHeader = line.startsWith('diff --git ');
+    const normalizedLine = line.replace(/\r$/, '');
+    const isHeader = normalizedLine.startsWith('diff --git ');
     if (isHeader) {
       pushChunkIfIncluded();
-      const match = line.match(/^diff --git\s+a\/(.+?)\s+b\/(.+)$/);
+      const match = normalizedLine.match(/^diff --git\s+a\/(.+?)\s+b\/(.+)$/);
       if (match) {
-        const bPath = match[2].trim();
-        const aPath = match[1].trim();
+        const rawA = match[1].trim();
+        const rawB = match[2].trim();
+        const aPath = unquoteGitPath(rawA);
+        const bPath = unquoteGitPath(rawB);
         includeCurrent = target.has(bPath) || target.has(aPath);
       }
       currentChunk.push(line);
@@ -181,4 +185,33 @@ export function filterDiffByFiles(diff: string, files: { filename: string }[]): 
 
   // Remove possible trailing empty string from split/join differences
   return chunks.join('\n').trimEnd();
+}
+
+function unquoteGitPath(path: string): string {
+  // Git may quote paths with spaces or special chars using C-style escapes
+  if (path.startsWith('"') && path.endsWith('"')) {
+    path = path.slice(1, -1);
+  }
+  // Unescape common sequences produced by git (\" and \\ and \t etc.)
+  try {
+    path = path.replace(/\\([\\"tnr])/g, (_m, ch) => {
+      switch (ch) {
+        case '\\':
+          return '\\';
+        case '"':
+          return '"';
+        case 't':
+          return '\t';
+        case 'n':
+          return '\n';
+        case 'r':
+          return '\r';
+        default:
+          return ch;
+      }
+    });
+  } catch {
+    // If anything goes wrong, fall back to raw path
+  }
+  return path;
 }

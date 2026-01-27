@@ -32423,11 +32423,12 @@ var ProviderRegistry = class {
     const selected = [];
     selected.push(...this.shuffle(openrouterProviders).slice(0, MIN_OPENROUTER));
     selected.push(...this.shuffle(opencodeProviders).slice(0, MIN_OPENCODE));
+    const selectedNames = new Set(selected.map((s) => s.name));
     const remainingPool = this.shuffle([
-      ...openrouterProviders.slice(MIN_OPENROUTER),
-      ...opencodeProviders.slice(MIN_OPENCODE),
+      ...openrouterProviders,
+      ...opencodeProviders,
       ...otherProviders
-    ]).filter((p) => !selected.some((s) => s.name === p.name));
+    ]).filter((p) => !selectedNames.has(p.name));
     while (selected.length < selectionLimit && remainingPool.length > 0) {
       const next = remainingPool.shift();
       selected.push(next);
@@ -32460,7 +32461,7 @@ var ProviderRegistry = class {
    * Discover additional free providers, excluding ones we've already tried.
    * Used when initial health checks fail to yield enough healthy providers.
    */
-  async discoverAdditionalFreeProviders(existing, max = 6) {
+  async discoverAdditionalFreeProviders(existing, max = 6, config = DEFAULT_CONFIG) {
     const existingSet = new Set(existing);
     const discovered = [];
     if (process.env.OPENROUTER_API_KEY) {
@@ -32474,7 +32475,7 @@ var ProviderRegistry = class {
     }
     let providers = this.instantiate(discovered);
     providers = this.dedupeProviders(providers);
-    providers = this.applyAllowBlock(providers, DEFAULT_CONFIG);
+    providers = this.applyAllowBlock(providers, config);
     providers = await this.filterRateLimited(providers);
     if (providers.length > max) {
       providers = this.randomSelect(providers, max, Math.min(2, max));
@@ -32698,6 +32699,7 @@ function mapLinesToPositions(patch) {
 }
 function filterDiffByFiles(diff, files) {
   if (files.length === 0) return "";
+  if (!diff || diff.trim().length === 0) return "";
   const target = new Set(files.map((f) => f.filename));
   const lines = diff.split("\n");
   const chunks = [];
@@ -32711,13 +32713,16 @@ function filterDiffByFiles(diff, files) {
     includeCurrent = false;
   };
   for (const line of lines) {
-    const isHeader = line.startsWith("diff --git ");
+    const normalizedLine = line.replace(/\r$/, "");
+    const isHeader = normalizedLine.startsWith("diff --git ");
     if (isHeader) {
       pushChunkIfIncluded();
-      const match2 = line.match(/^diff --git\s+a\/(.+?)\s+b\/(.+)$/);
+      const match2 = normalizedLine.match(/^diff --git\s+a\/(.+?)\s+b\/(.+)$/);
       if (match2) {
-        const bPath = match2[2].trim();
-        const aPath = match2[1].trim();
+        const rawA = match2[1].trim();
+        const rawB = match2[2].trim();
+        const aPath = unquoteGitPath(rawA);
+        const bPath = unquoteGitPath(rawB);
         includeCurrent = target.has(bPath) || target.has(aPath);
       }
       currentChunk.push(line);
@@ -32727,6 +32732,31 @@ function filterDiffByFiles(diff, files) {
   }
   pushChunkIfIncluded();
   return chunks.join("\n").trimEnd();
+}
+function unquoteGitPath(path10) {
+  if (path10.startsWith('"') && path10.endsWith('"')) {
+    path10 = path10.slice(1, -1);
+  }
+  try {
+    path10 = path10.replace(/\\([\\"tnr])/g, (_m, ch) => {
+      switch (ch) {
+        case "\\":
+          return "\\";
+        case '"':
+          return '"';
+        case "t":
+          return "	";
+        case "n":
+          return "\n";
+        case "r":
+          return "\r";
+        default:
+          return ch;
+      }
+    });
+  } catch {
+  }
+  return path10;
 }
 
 // src/analysis/llm/prompt-builder.ts
@@ -36263,7 +36293,8 @@ var PromptGenerator = class {
 
 // src/utils/sanitize.ts
 function encodeURIComponentSafe(value) {
-  return encodeURIComponent(value).replace(/%/g, "_");
+  const encoded = encodeURIComponent(value);
+  return encoded.replace(/[+]/g, "_").replace(/%/g, "_").replace(/[<>:"|?*]/g, "_");
 }
 
 // src/providers/circuit-breaker.ts
@@ -39974,7 +40005,8 @@ var ReviewOrchestrator = class {
         while (attempts < 2 && (healthy.length < MIN_TOTAL_HEALTHY || countOpenCode(healthy) < MIN_OPENCODE_HEALTHY || countOpenRouter(healthy) < MIN_OPENROUTER_HEALTHY)) {
           const additional = await this.components.providerRegistry.discoverAdditionalFreeProviders(
             Array.from(triedProviders),
-            6
+            6,
+            config
           );
           if (additional.length === 0) break;
           additional.forEach((p) => triedProviders.add(p.name));

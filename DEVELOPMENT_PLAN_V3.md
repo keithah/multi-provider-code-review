@@ -2200,7 +2200,7 @@ Repomix is designed to pack entire codebases into AI-friendly formats for genera
 - Token counting per file and total
 - Git-aware filtering (.gitignore)
 - Secretlint security scanning
-- Tree-sitter based code compression
+- Tree-sitter-based code compression
 - Remote repository support
 
 **Sources:**

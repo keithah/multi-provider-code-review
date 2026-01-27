@@ -334,7 +334,8 @@ export class ReviewOrchestrator {
       ) {
         const additional = await this.components.providerRegistry.discoverAdditionalFreeProviders(
           Array.from(triedProviders),
-          6
+          6,
+          config
         );
         if (additional.length === 0) break;
 

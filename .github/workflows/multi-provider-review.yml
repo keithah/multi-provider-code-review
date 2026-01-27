@@ -3,6 +3,8 @@ name: Multi-Provider Code Review
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  pull_request_target:
+    types: [opened, synchronize, reopened]
   # Note: pull_request_review trigger removed to prevent duplicate runs
   # when the bot posts its own review comment
   push:
@@ -39,7 +41,7 @@ permissions:
 jobs:
   review:
     # Internal PRs, pushes, and manual runs (non-fork)
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+    if: (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false) || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     env:
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
@@ -134,8 +136,8 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
 
   review-fork:
-    # Fork PRs run in isolated, read-only context with no repo secrets
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == true
+    # Fork PRs run with pull_request_target to allow commenting while keeping code handling careful.
+    if: github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.fork == true
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -149,6 +151,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Resolve PR number
         id: resolve-pr
         env:
@@ -172,7 +175,7 @@ jobs:
             echo "✅ Secrets unavailable (expected for forks); using free providers only."
           fi
       - name: Install OpenCode CLI
-        run: npm install -g opencode-ai@1.1.36
+        run: npm install -g opencode-ai@1.1.35
       - name: Warn Fork PR Without OpenRouter Key
         if: steps.resolve-pr.outputs.pr != '' && env.OPENROUTER_API_KEY == ''
         env:

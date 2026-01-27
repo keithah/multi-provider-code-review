@@ -98,12 +98,13 @@ export class ProviderRegistry {
     selected.push(...this.shuffle(openrouterProviders).slice(0, MIN_OPENROUTER));
     selected.push(...this.shuffle(opencodeProviders).slice(0, MIN_OPENCODE));
 
-    // Fill remaining slots from the pool (avoiding duplicates)
+    // Build remaining pool from all providers excluding already selected
+    const selectedNames = new Set(selected.map(s => s.name));
     const remainingPool = this.shuffle([
-      ...openrouterProviders.slice(MIN_OPENROUTER),
-      ...opencodeProviders.slice(MIN_OPENCODE),
+      ...openrouterProviders,
+      ...opencodeProviders,
       ...otherProviders,
-    ]).filter(p => !selected.some(s => s.name === p.name));
+    ]).filter(p => !selectedNames.has(p.name));
 
     while (selected.length < selectionLimit && remainingPool.length > 0) {
       const next = remainingPool.shift()!;
@@ -145,7 +146,11 @@ export class ProviderRegistry {
    * Discover additional free providers, excluding ones we've already tried.
    * Used when initial health checks fail to yield enough healthy providers.
    */
-  async discoverAdditionalFreeProviders(existing: string[], max: number = 6): Promise<Provider[]> {
+  async discoverAdditionalFreeProviders(
+    existing: string[],
+    max: number = 6,
+    config: ReviewConfig = DEFAULT_CONFIG
+  ): Promise<Provider[]> {
     const existingSet = new Set(existing);
     const discovered: string[] = [];
 
@@ -164,7 +169,7 @@ export class ProviderRegistry {
 
     let providers = this.instantiate(discovered);
     providers = this.dedupeProviders(providers);
-    providers = this.applyAllowBlock(providers, DEFAULT_CONFIG);
+    providers = this.applyAllowBlock(providers, config);
     providers = await this.filterRateLimited(providers);
 
     if (providers.length > max) {
