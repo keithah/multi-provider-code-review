@@ -155,11 +155,12 @@ export class ProviderRegistry {
     const discovered: string[] = [];
 
     if (process.env.OPENROUTER_API_KEY) {
-      const moreOpenRouter = await getBestFreeOpenRouterModels(8, 5000);
+      // Pull a larger candidate pool to increase diversity when earlier picks fail
+      const moreOpenRouter = await getBestFreeOpenRouterModels(20, 5000);
       discovered.push(...moreOpenRouter.filter(m => !existingSet.has(m)));
     }
 
-    const moreOpenCode = await getBestFreeOpenCodeModels(8, 10000);
+    const moreOpenCode = await getBestFreeOpenCodeModels(12, 10000);
     discovered.push(...moreOpenCode.filter(m => !existingSet.has(m)));
 
     if (discovered.length === 0) {
@@ -167,7 +168,8 @@ export class ProviderRegistry {
       discovered.push(...FALLBACK_STATIC_PROVIDERS.filter(m => !existingSet.has(m)));
     }
 
-    let providers = this.instantiate(discovered);
+    // Shuffle early to avoid always picking the same heads of the list
+    let providers = this.instantiate(this.shuffle(discovered));
     providers = this.dedupeProviders(providers);
     providers = this.applyAllowBlock(providers, config);
     providers = await this.filterRateLimited(providers);

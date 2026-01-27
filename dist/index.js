@@ -32465,15 +32465,15 @@ var ProviderRegistry = class {
     const existingSet = new Set(existing);
     const discovered = [];
     if (process.env.OPENROUTER_API_KEY) {
-      const moreOpenRouter = await getBestFreeModelsCached(8, 5e3);
+      const moreOpenRouter = await getBestFreeModelsCached(20, 5e3);
       discovered.push(...moreOpenRouter.filter((m) => !existingSet.has(m)));
     }
-    const moreOpenCode = await getBestFreeOpenCodeModelsCached(8, 1e4);
+    const moreOpenCode = await getBestFreeOpenCodeModelsCached(12, 1e4);
     discovered.push(...moreOpenCode.filter((m) => !existingSet.has(m)));
     if (discovered.length === 0) {
       discovered.push(...FALLBACK_STATIC_PROVIDERS.filter((m) => !existingSet.has(m)));
     }
-    let providers = this.instantiate(discovered);
+    let providers = this.instantiate(this.shuffle(discovered));
     providers = this.dedupeProviders(providers);
     providers = this.applyAllowBlock(providers, config);
     providers = await this.filterRateLimited(providers);
@@ -40068,7 +40068,7 @@ var ReviewOrchestrator = class {
         let attempts = 0;
         const registry = this.components.providerRegistry;
         const discoverExtras = typeof registry.discoverAdditionalFreeProviders === "function" ? (names) => registry.discoverAdditionalFreeProviders(names, selectionLimit * 2, config) : null;
-        while (attempts < 4 && discoverExtras && (healthy.length < MIN_TOTAL_HEALTHY || countOpenCode(healthy) < MIN_OPENCODE_HEALTHY || countOpenRouter(healthy) < MIN_OPENROUTER_HEALTHY)) {
+        while (attempts < 6 && discoverExtras && (healthy.length < MIN_TOTAL_HEALTHY || countOpenCode(healthy) < MIN_OPENCODE_HEALTHY || countOpenRouter(healthy) < MIN_OPENROUTER_HEALTHY)) {
           const additional = await discoverExtras(Array.from(triedProviders));
           if (additional.length === 0) break;
           additional.forEach((p) => triedProviders.add(p.name));

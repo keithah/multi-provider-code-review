@@ -341,7 +341,7 @@ export class ReviewOrchestrator {
           : null;
 
       while (
-        attempts < 4 &&
+        attempts < 6 &&
         discoverExtras &&
         (healthy.length < MIN_TOTAL_HEALTHY ||
           countOpenCode(healthy) < MIN_OPENCODE_HEALTHY ||
