@@ -180,7 +180,7 @@ var require_file_command = __commonJS({
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.prepareKeyValueMessage = exports2.issueFileCommand = void 0;
-    var crypto4 = __importStar(require("crypto"));
+    var crypto5 = __importStar(require("crypto"));
     var fs8 = __importStar(require("fs"));
     var os3 = __importStar(require("os"));
     var utils_1 = require_utils();
@@ -198,7 +198,7 @@ var require_file_command = __commonJS({
     }
     exports2.issueFileCommand = issueFileCommand;
     function prepareKeyValueMessage(key, value) {
-      const delimiter = `ghadelimiter_${crypto4.randomUUID()}`;
+      const delimiter = `ghadelimiter_${crypto5.randomUUID()}`;
       const convertedValue = (0, utils_1.toCommandValue)(value);
       if (key.includes(delimiter)) {
         throw new Error(`Unexpected input: name should not contain the delimiter "${delimiter}"`);
@@ -3633,11 +3633,11 @@ var require_util2 = __commonJS({
     var assert = require("assert");
     var { isUint8Array } = require("util/types");
     var supportedHashes = [];
-    var crypto4;
+    var crypto5;
     try {
-      crypto4 = require("crypto");
+      crypto5 = require("crypto");
       const possibleRelevantHashes = ["sha256", "sha384", "sha512"];
-      supportedHashes = crypto4.getHashes().filter((hash) => possibleRelevantHashes.includes(hash));
+      supportedHashes = crypto5.getHashes().filter((hash) => possibleRelevantHashes.includes(hash));
     } catch {
     }
     function responseURL(response) {
@@ -3914,7 +3914,7 @@ var require_util2 = __commonJS({
       }
     }
     function bytesMatch(bytes, metadataList) {
-      if (crypto4 === void 0) {
+      if (crypto5 === void 0) {
         return true;
       }
       const parsedMetadata = parseMetadata(metadataList);
@@ -3929,7 +3929,7 @@ var require_util2 = __commonJS({
       for (const item of metadata) {
         const algorithm = item.algo;
         const expectedValue = item.hash;
-        let actualValue = crypto4.createHash(algorithm).update(bytes).digest("base64");
+        let actualValue = crypto5.createHash(algorithm).update(bytes).digest("base64");
         if (actualValue[actualValue.length - 1] === "=") {
           if (actualValue[actualValue.length - 2] === "=") {
             actualValue = actualValue.slice(0, -2);
@@ -5275,8 +5275,8 @@ var require_body = __commonJS({
     var { parseMIMEType, serializeAMimeType } = require_dataURL();
     var random;
     try {
-      const crypto4 = require("node:crypto");
-      random = (max) => crypto4.randomInt(0, max);
+      const crypto5 = require("node:crypto");
+      random = (max) => crypto5.randomInt(0, max);
     } catch {
       random = (max) => Math.floor(Math.random(max));
     }
@@ -16326,9 +16326,9 @@ var require_connection = __commonJS({
     channels.open = diagnosticsChannel.channel("undici:websocket:open");
     channels.close = diagnosticsChannel.channel("undici:websocket:close");
     channels.socketError = diagnosticsChannel.channel("undici:websocket:socket_error");
-    var crypto4;
+    var crypto5;
     try {
-      crypto4 = require("crypto");
+      crypto5 = require("crypto");
     } catch {
     }
     function establishWebSocketConnection(url, protocols, ws, onEstablish, options) {
@@ -16347,7 +16347,7 @@ var require_connection = __commonJS({
         const headersList = new Headers(options.headers)[kHeadersList];
         request.headersList = headersList;
       }
-      const keyValue = crypto4.randomBytes(16).toString("base64");
+      const keyValue = crypto5.randomBytes(16).toString("base64");
       request.headersList.append("sec-websocket-key", keyValue);
       request.headersList.append("sec-websocket-version", "13");
       for (const protocol of protocols) {
@@ -16376,7 +16376,7 @@ var require_connection = __commonJS({
             return;
           }
           const secWSAccept = response.headersList.get("Sec-WebSocket-Accept");
-          const digest = crypto4.createHash("sha1").update(keyValue + uid).digest("base64");
+          const digest = crypto5.createHash("sha1").update(keyValue + uid).digest("base64");
           if (secWSAccept !== digest) {
             failWebsocketConnection(ws, "Incorrect hash received in Sec-WebSocket-Accept header.");
             return;
@@ -16456,9 +16456,9 @@ var require_frame = __commonJS({
   "node_modules/undici/lib/websocket/frame.js"(exports2, module2) {
     "use strict";
     var { maxUnsigned16Bit } = require_constants5();
-    var crypto4;
+    var crypto5;
     try {
-      crypto4 = require("crypto");
+      crypto5 = require("crypto");
     } catch {
     }
     var WebsocketFrameSend = class {
@@ -16467,7 +16467,7 @@ var require_frame = __commonJS({
        */
       constructor(data) {
         this.frameData = data;
-        this.maskKey = crypto4.randomBytes(4);
+        this.maskKey = crypto5.randomBytes(4);
       }
       createFrame(opcode) {
         const bodyLength = this.frameData?.byteLength ?? 0;
@@ -31876,7 +31876,7 @@ var import_child_process = require("child_process");
 var fs2 = __toESM(require("fs/promises"));
 var os = __toESM(require("os"));
 var path2 = __toESM(require("path"));
-var crypto = __toESM(require("crypto"));
+var crypto2 = __toESM(require("crypto"));
 var OpenCodeProvider = class extends Provider {
   constructor(modelId) {
     super(`opencode/${modelId}`);
@@ -31902,7 +31902,7 @@ var OpenCodeProvider = class extends Provider {
     const cliModel = this.modelId.startsWith("opencode/") ? this.modelId : `opencode/${this.modelId}`;
     const tmpDir = await fs2.mkdtemp(path2.join(os.tmpdir(), "opencode-"));
     await fs2.chmod(tmpDir, 448);
-    const promptFile = path2.join(tmpDir, `prompt-${crypto.randomBytes(8).toString("hex")}.txt`);
+    const promptFile = path2.join(tmpDir, `prompt-${crypto2.randomBytes(8).toString("hex")}.txt`);
     await fs2.writeFile(promptFile, prompt, { encoding: "utf8", mode: 384 });
     const args = [...baseArgs, "run", "-m", cliModel, "--file", promptFile, "--", "Review the attached PR context and provide structured findings."];
     logger.info(`Running OpenCode CLI: ${bin} ${args.slice(0, 3).join(" ")} \u2026`);
@@ -32718,6 +32718,10 @@ function filterDiffByFiles(diff, files) {
     if (isHeader) {
       pushChunkIfIncluded();
       const match2 = normalizedLine.match(/^diff --git\s+a\/(.+?)\s+b\/(.+)$/);
+      if (!match2) {
+        currentChunk.push(line);
+        continue;
+      }
       if (match2) {
         const rawA = match2[1].trim();
         const rawB = match2[2].trim();
@@ -36294,7 +36298,9 @@ var PromptGenerator = class {
 // src/utils/sanitize.ts
 function encodeURIComponentSafe(value) {
   const encoded = encodeURIComponent(value);
-  return encoded.replace(/[+]/g, "_").replace(/%/g, "_").replace(/[<>:"|?*]/g, "_");
+  const normalized = encoded.replace(/[+]/g, "_").replace(/%/g, "_").replace(/[<>:"|?*]/g, "_");
+  const hash = crypto.createHash("sha256").update(value).digest("hex").slice(0, 8);
+  return `${normalized}-${hash}`;
 }
 
 // src/providers/circuit-breaker.ts
@@ -36421,6 +36427,19 @@ var CircuitBreaker = class _CircuitBreaker {
         release();
         if (this.locks.get(lockKey) === tail) {
           this.locks.delete(lockKey);
+        }
+      }
+      if (this.locks.size > 500) {
+        for (const [key, promise] of this.locks.entries()) {
+          promise.finally(() => {
+            if (this.locks.get(key) === promise) {
+              this.locks.delete(key);
+            }
+          }).catch(() => {
+            if (this.locks.get(key) === promise) {
+              this.locks.delete(key);
+            }
+          });
         }
       }
     })();
@@ -36929,7 +36948,7 @@ var MetricsCollector = class _MetricsCollector {
 // src/plugins/plugin-loader.ts
 var fs6 = __toESM(require("fs/promises"));
 var path7 = __toESM(require("path"));
-var crypto3 = __toESM(require("crypto"));
+var crypto4 = __toESM(require("crypto"));
 var import_url = require("url");
 var PluginLoader = class {
   // provider name -> plugin name
@@ -37084,7 +37103,7 @@ var PluginLoader = class {
         throw new Error("Manifest missing valid sha256 checksum");
       }
       const pluginCode = await fs6.readFile(indexPath, "utf8");
-      const hash = crypto3.createHash("sha256");
+      const hash = crypto4.createHash("sha256");
       hash.update(pluginCode);
       const actualChecksum = hash.digest("hex");
       if (actualChecksum !== manifest.sha256) {
@@ -39378,7 +39397,7 @@ var PathMatcher = class {
    * Allows typical glob tokens and path separators; disallows pipes, backticks, and negation.
    */
   checkAllowedCharacters(pattern) {
-    const allowed = new RegExp("^[A-Za-z0-9.@+^ !_\\-/*?{}\\[\\],()~=]+$");
+    const allowed = new RegExp("^[A-Za-z0-9.@+^ !_\\-/*?{}\\[\\],()~=\\\\]+$");
     if (!allowed.test(pattern)) {
       throw new Error(`Pattern contains unsupported characters: ${pattern}`);
     }

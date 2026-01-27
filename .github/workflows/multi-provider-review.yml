@@ -20,10 +20,9 @@ on:
         type: string
 
 # Cancel in-progress runs for the same PR to prevent duplicate reviews
-# Use PR number + head SHA (not merge commit SHA) for uniqueness per commit
+# Include event name to avoid cross-event cancellation (pull_request vs pull_request_target)
 concurrency:
-  # PR-aware grouping to prevent duplicate reviews per commit
-  group: review-${{ (github.event.pull_request && github.event.pull_request.number) || inputs.pr_number || 'manual' }}-${{ (github.event.pull_request && github.event.pull_request.head && github.event.pull_request.head.sha) || github.sha }}
+  group: review-${{ github.event_name }}-${{ (github.event.pull_request && github.event.pull_request.number) || inputs.pr_number || 'manual' }}-${{ (github.event.pull_request && github.event.pull_request.head && github.event.pull_request.head.sha) || github.sha }}
   cancel-in-progress: true
 
 # Permissions: Principle of least privilege
@@ -147,11 +146,13 @@ jobs:
       OPENROUTER_API_KEY: '' # ensure repo secrets are not exposed to forks
       IS_FORK: true
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout base repo (safe)
+        uses: actions/checkout@v4
         with:
+          repository: ${{ github.event.pull_request.base.repo.full_name }}
+          ref: ${{ github.event.pull_request.base.sha }}
           fetch-depth: 0
           persist-credentials: false
-          ref: ${{ github.event.pull_request.head.sha }}
       - name: Resolve PR number
         id: resolve-pr
         env:
@@ -176,17 +177,19 @@ jobs:
           fi
       - name: Install OpenCode CLI
         run: npm install -g opencode-ai@1.1.35
-      - name: Warn Fork PR Without OpenRouter Key
-        if: steps.resolve-pr.outputs.pr != '' && env.OPENROUTER_API_KEY == ''
+      - name: Validate no repo secrets are exposed
+        run: |
+          echo "Ensuring fork run has no repository secrets"
+          if [ -n "${{ secrets.OPENROUTER_API_KEY }}" ]; then
+            echo "❌ OPENROUTER_API_KEY must not be used in fork runs"
+            exit 1
+          fi
+          echo "✅ Repo secrets not used in fork run"
+      - name: Fetch fork diff only (no checkout of fork code)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "ℹ️  Fork PR detected without OPENROUTER_API_KEY."
-          if ! command -v opencode-ai >/dev/null 2>&1; then
-            echo "❌ OpenCode CLI not available. Install opencode-ai or set OPENROUTER_API_KEY for premium providers."
-            exit 1
-          fi
-          echo "✅ Proceeding with free providers only (OpenCode CLI / built-in fallbacks)."
+          git fetch origin +refs/pull/${{ steps.resolve-pr.outputs.pr }}/head:refs/remotes/origin/pr-${{ steps.resolve-pr.outputs.pr }}
       - name: Multi-Provider Code Review (Fork)
         if: steps.resolve-pr.outputs.pr != ''
         uses: ./

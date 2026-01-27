@@ -181,6 +181,21 @@ export class CircuitBreaker {
           this.locks.delete(lockKey);
         }
       }
+      // Sweep occasionally to prevent unbounded growth in pathological cases
+      if (this.locks.size > 500) {
+        for (const [key, promise] of this.locks.entries()) {
+          // If promise has already resolved (best-effort), drop it
+          promise.finally(() => {
+            if (this.locks.get(key) === promise) {
+              this.locks.delete(key);
+            }
+          }).catch(() => {
+            if (this.locks.get(key) === promise) {
+              this.locks.delete(key);
+            }
+          });
+        }
+      }
     })();
 
     return run;

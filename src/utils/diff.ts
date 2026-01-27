@@ -142,7 +142,7 @@ export function mapLinesToPositions(patch: string | undefined): Map<number, numb
 
 /**
  * Filter a full diff to only include chunks for the given files.
- * Uses string scanning (no regex) to avoid ReDoS and keep memory usage low.
+ * Uses lightweight line scanning with a minimal regex for headers.
  */
 export function filterDiffByFiles(diff: string, files: { filename: string }[]): string {
   if (files.length === 0) return '';
@@ -168,6 +168,10 @@ export function filterDiffByFiles(diff: string, files: { filename: string }[]): 
     if (isHeader) {
       pushChunkIfIncluded();
       const match = normalizedLine.match(/^diff --git\s+a\/(.+?)\s+b\/(.+)$/);
+      if (!match) {
+        currentChunk.push(line);
+        continue;
+      }
       if (match) {
         const rawA = match[1].trim();
         const rawB = match[2].trim();
