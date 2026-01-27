@@ -1,4 +1,5 @@
 import { GitHubClient } from '../../../src/github/client';
+import * as github from '@actions/github';
 
 describe('GitHubClient', () => {
   const mockToken = 'ghp_test123456789';
@@ -45,6 +46,8 @@ describe('GitHubClient', () => {
 
     it('handles GITHUB_REPOSITORY not set', () => {
       delete process.env.GITHUB_REPOSITORY;
+      // Simulate missing GitHub context as well
+      (github as any).context = { repo: { owner: '', repo: '' } };
 
       const client = new GitHubClient(mockToken);
 
