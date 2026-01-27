@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ReviewOrchestrator, ReviewComponents } from '../../src/core/orchestrator';
 import { ReviewConfig, ProviderResult } from '../../src/types';
 import { PromptBuilder } from '../../src/analysis/llm/prompt-builder';

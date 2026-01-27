@@ -1,8 +1,6 @@
 name: Multi-Provider Code Review
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
   pull_request_target:
     types: [opened, synchronize, reopened]
   # Note: pull_request_review trigger removed to prevent duplicate runs
@@ -40,7 +38,7 @@ permissions:
 jobs:
   review:
     # Internal PRs, pushes, and manual runs (non-fork)
-    if: (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false) || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.fork == false) || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     env:
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}

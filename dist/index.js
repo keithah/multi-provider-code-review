@@ -180,7 +180,7 @@ var require_file_command = __commonJS({
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.prepareKeyValueMessage = exports2.issueFileCommand = void 0;
-    var crypto5 = __importStar(require("crypto"));
+    var crypto3 = __importStar(require("crypto"));
     var fs8 = __importStar(require("fs"));
     var os3 = __importStar(require("os"));
     var utils_1 = require_utils();
@@ -198,7 +198,7 @@ var require_file_command = __commonJS({
     }
     exports2.issueFileCommand = issueFileCommand;
     function prepareKeyValueMessage(key, value) {
-      const delimiter = `ghadelimiter_${crypto5.randomUUID()}`;
+      const delimiter = `ghadelimiter_${crypto3.randomUUID()}`;
       const convertedValue = (0, utils_1.toCommandValue)(value);
       if (key.includes(delimiter)) {
         throw new Error(`Unexpected input: name should not contain the delimiter "${delimiter}"`);
@@ -3633,11 +3633,11 @@ var require_util2 = __commonJS({
     var assert = require("assert");
     var { isUint8Array } = require("util/types");
     var supportedHashes = [];
-    var crypto5;
+    var crypto3;
     try {
-      crypto5 = require("crypto");
+      crypto3 = require("crypto");
       const possibleRelevantHashes = ["sha256", "sha384", "sha512"];
-      supportedHashes = crypto5.getHashes().filter((hash) => possibleRelevantHashes.includes(hash));
+      supportedHashes = crypto3.getHashes().filter((hash) => possibleRelevantHashes.includes(hash));
     } catch {
     }
     function responseURL(response) {
@@ -3914,7 +3914,7 @@ var require_util2 = __commonJS({
       }
     }
     function bytesMatch(bytes, metadataList) {
-      if (crypto5 === void 0) {
+      if (crypto3 === void 0) {
         return true;
       }
       const parsedMetadata = parseMetadata(metadataList);
@@ -3929,7 +3929,7 @@ var require_util2 = __commonJS({
       for (const item of metadata) {
         const algorithm = item.algo;
         const expectedValue = item.hash;
-        let actualValue = crypto5.createHash(algorithm).update(bytes).digest("base64");
+        let actualValue = crypto3.createHash(algorithm).update(bytes).digest("base64");
         if (actualValue[actualValue.length - 1] === "=") {
           if (actualValue[actualValue.length - 2] === "=") {
             actualValue = actualValue.slice(0, -2);
@@ -5275,8 +5275,8 @@ var require_body = __commonJS({
     var { parseMIMEType, serializeAMimeType } = require_dataURL();
     var random;
     try {
-      const crypto5 = require("node:crypto");
-      random = (max) => crypto5.randomInt(0, max);
+      const crypto3 = require("node:crypto");
+      random = (max) => crypto3.randomInt(0, max);
     } catch {
       random = (max) => Math.floor(Math.random(max));
     }
@@ -16326,9 +16326,9 @@ var require_connection = __commonJS({
     channels.open = diagnosticsChannel.channel("undici:websocket:open");
     channels.close = diagnosticsChannel.channel("undici:websocket:close");
     channels.socketError = diagnosticsChannel.channel("undici:websocket:socket_error");
-    var crypto5;
+    var crypto3;
     try {
-      crypto5 = require("crypto");
+      crypto3 = require("crypto");
     } catch {
     }
     function establishWebSocketConnection(url, protocols, ws, onEstablish, options) {
@@ -16347,7 +16347,7 @@ var require_connection = __commonJS({
         const headersList = new Headers(options.headers)[kHeadersList];
         request.headersList = headersList;
       }
-      const keyValue = crypto5.randomBytes(16).toString("base64");
+      const keyValue = crypto3.randomBytes(16).toString("base64");
       request.headersList.append("sec-websocket-key", keyValue);
       request.headersList.append("sec-websocket-version", "13");
       for (const protocol of protocols) {
@@ -16376,7 +16376,7 @@ var require_connection = __commonJS({
             return;
           }
           const secWSAccept = response.headersList.get("Sec-WebSocket-Accept");
-          const digest = crypto5.createHash("sha1").update(keyValue + uid).digest("base64");
+          const digest = crypto3.createHash("sha1").update(keyValue + uid).digest("base64");
           if (secWSAccept !== digest) {
             failWebsocketConnection(ws, "Incorrect hash received in Sec-WebSocket-Accept header.");
             return;
@@ -16456,9 +16456,9 @@ var require_frame = __commonJS({
   "node_modules/undici/lib/websocket/frame.js"(exports2, module2) {
     "use strict";
     var { maxUnsigned16Bit } = require_constants5();
-    var crypto5;
+    var crypto3;
     try {
-      crypto5 = require("crypto");
+      crypto3 = require("crypto");
     } catch {
     }
     var WebsocketFrameSend = class {
@@ -16467,7 +16467,7 @@ var require_frame = __commonJS({
        */
       constructor(data) {
         this.frameData = data;
-        this.maskKey = crypto5.randomBytes(4);
+        this.maskKey = crypto3.randomBytes(4);
       }
       createFrame(opcode) {
         const bodyLength = this.frameData?.byteLength ?? 0;
@@ -31876,7 +31876,7 @@ var import_child_process = require("child_process");
 var fs2 = __toESM(require("fs/promises"));
 var os = __toESM(require("os"));
 var path2 = __toESM(require("path"));
-var crypto2 = __toESM(require("crypto"));
+var crypto = __toESM(require("crypto"));
 var OpenCodeProvider = class extends Provider {
   constructor(modelId) {
     super(`opencode/${modelId}`);
@@ -31902,7 +31902,7 @@ var OpenCodeProvider = class extends Provider {
     const cliModel = this.modelId.startsWith("opencode/") ? this.modelId : `opencode/${this.modelId}`;
     const tmpDir = await fs2.mkdtemp(path2.join(os.tmpdir(), "opencode-"));
     await fs2.chmod(tmpDir, 448);
-    const promptFile = path2.join(tmpDir, `prompt-${crypto2.randomBytes(8).toString("hex")}.txt`);
+    const promptFile = path2.join(tmpDir, `prompt-${crypto.randomBytes(8).toString("hex")}.txt`);
     await fs2.writeFile(promptFile, prompt, { encoding: "utf8", mode: 384 });
     const args = [...baseArgs, "run", "-m", cliModel, "--file", promptFile, "--", "Review the attached PR context and provide structured findings."];
     logger.info(`Running OpenCode CLI: ${bin} ${args.slice(0, 3).join(" ")} \u2026`);
@@ -33937,9 +33937,9 @@ var CacheStorage = class {
 };
 
 // src/cache/key-builder.ts
-var import_crypto = __toESM(require("crypto"));
+var import_crypto = require("crypto");
 function buildCacheKey(pr) {
-  const hash = import_crypto.default.createHash("sha1").update(`${pr.baseSha}:${pr.headSha}`).digest("hex").slice(0, 12);
+  const hash = (0, import_crypto.createHash)("sha1").update(`${pr.baseSha}:${pr.headSha}`).digest("hex").slice(0, 12);
   return `mpr-${hash}`;
 }
 
@@ -34760,7 +34760,6 @@ var MarkdownFormatterV2 = class {
       lines.push("");
     }
     const hasFindings = review.findings.length > 0;
-    const allProvidersDown = review.metrics.providersSuccess === 0;
     if (hasFindings) {
       lines.push("## Findings");
       lines.push("");
@@ -36299,8 +36298,13 @@ var PromptGenerator = class {
 function encodeURIComponentSafe(value) {
   const encoded = encodeURIComponent(value);
   const normalized = encoded.replace(/[+]/g, "_").replace(/%/g, "_").replace(/[<>:"|?*]/g, "_");
-  const hash = crypto.createHash("sha256").update(value).digest("hex").slice(0, 8);
-  return `${normalized}-${hash}`;
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = hash * 16777619 >>> 0;
+  }
+  const hashSuffix = hash.toString(16).padStart(8, "0");
+  return `${normalized}-${hashSuffix}`;
 }
 
 // src/providers/circuit-breaker.ts
@@ -36948,7 +36952,7 @@ var MetricsCollector = class _MetricsCollector {
 // src/plugins/plugin-loader.ts
 var fs6 = __toESM(require("fs/promises"));
 var path7 = __toESM(require("path"));
-var crypto4 = __toESM(require("crypto"));
+var crypto2 = __toESM(require("crypto"));
 var import_url = require("url");
 var PluginLoader = class {
   // provider name -> plugin name
@@ -37103,7 +37107,7 @@ var PluginLoader = class {
         throw new Error("Manifest missing valid sha256 checksum");
       }
       const pluginCode = await fs6.readFile(indexPath, "utf8");
-      const hash = crypto4.createHash("sha256");
+      const hash = crypto2.createHash("sha256");
       hash.update(pluginCode);
       const actualChecksum = hash.digest("hex");
       if (actualChecksum !== manifest.sha256) {
@@ -39664,7 +39668,7 @@ var ProgressTracker = class {
   async initialize() {
     try {
       const body = this.formatProgressComment();
-      const comment = await this.octokit.issues.createComment({
+      const comment = await this.octokit.rest.issues.createComment({
         owner: this.config.owner,
         repo: this.config.repo,
         issue_number: this.config.prNumber,
@@ -39716,7 +39720,6 @@ var ProgressTracker = class {
    * Finalize progress tracking with summary
    */
   async finalize(success) {
-    const finalStatus = success ? "completed" : "failed";
     const duration = Date.now() - this.startTime;
     this.items.forEach((item) => {
       if (item.status === "pending" || item.status === "in_progress") {
@@ -39770,7 +39773,7 @@ var ProgressTracker = class {
     }
     try {
       const body = this.formatProgressComment();
-      await this.octokit.issues.updateComment({
+      await this.octokit.rest.issues.updateComment({
         owner: this.config.owner,
         repo: this.config.repo,
         comment_id: this.commentId,
@@ -40021,12 +40024,10 @@ var ReviewOrchestrator = class {
         const countOpenCode = (list) => list.filter((p) => p.name.startsWith("opencode/")).length;
         const countOpenRouter = (list) => list.filter((p) => p.name.startsWith("openrouter/")).length;
         let attempts = 0;
-        while (attempts < 2 && (healthy.length < MIN_TOTAL_HEALTHY || countOpenCode(healthy) < MIN_OPENCODE_HEALTHY || countOpenRouter(healthy) < MIN_OPENROUTER_HEALTHY)) {
-          const additional = await this.components.providerRegistry.discoverAdditionalFreeProviders(
-            Array.from(triedProviders),
-            6,
-            config
-          );
+        const registry = this.components.providerRegistry;
+        const discoverExtras = typeof registry.discoverAdditionalFreeProviders === "function" ? (names) => registry.discoverAdditionalFreeProviders(names, 6, config) : null;
+        while (attempts < 2 && discoverExtras && (healthy.length < MIN_TOTAL_HEALTHY || countOpenCode(healthy) < MIN_OPENCODE_HEALTHY || countOpenRouter(healthy) < MIN_OPENROUTER_HEALTHY)) {
+          const additional = await discoverExtras(Array.from(triedProviders));
           if (additional.length === 0) break;
           additional.forEach((p) => triedProviders.add(p.name));
           await runHealthCheck(additional);

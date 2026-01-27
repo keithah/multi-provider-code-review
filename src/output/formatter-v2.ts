@@ -38,7 +38,6 @@ export class MarkdownFormatterV2 {
 
     // Findings by severity with visual indicators
     const hasFindings = review.findings.length > 0;
-    const allProvidersDown = review.metrics.providersSuccess === 0;
 
     if (hasFindings) {
       lines.push('## Findings');

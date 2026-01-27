@@ -326,17 +326,23 @@ export class ReviewOrchestrator {
       const countOpenRouter = (list: Provider[]) => list.filter(p => p.name.startsWith('openrouter/')).length;
 
       let attempts = 0;
+      type RegistryWithDiscovery = ProviderRegistry & {
+        discoverAdditionalFreeProviders?: (existing: string[], max?: number, cfg?: ReviewConfig) => Promise<Provider[]>;
+      };
+      const registry = this.components.providerRegistry as RegistryWithDiscovery;
+      const discoverExtras =
+        typeof registry.discoverAdditionalFreeProviders === 'function'
+          ? (names: string[]) => registry.discoverAdditionalFreeProviders!(names, 6, config)
+          : null;
+
       while (
         attempts < 2 &&
+        discoverExtras &&
         (healthy.length < MIN_TOTAL_HEALTHY ||
           countOpenCode(healthy) < MIN_OPENCODE_HEALTHY ||
           countOpenRouter(healthy) < MIN_OPENROUTER_HEALTHY)
       ) {
-        const additional = await this.components.providerRegistry.discoverAdditionalFreeProviders(
-          Array.from(triedProviders),
-          6,
-          config
-        );
+        const additional = await discoverExtras(Array.from(triedProviders));
         if (additional.length === 0) break;
 
         additional.forEach(p => triedProviders.add(p.name));

@@ -19,9 +19,11 @@ describe('ProgressTracker', () => {
     updateCommentMock = jest.fn();
 
     octokit = {
-      issues: {
-        createComment: createCommentMock,
-        updateComment: updateCommentMock,
+      rest: {
+        issues: {
+          createComment: createCommentMock,
+          updateComment: updateCommentMock,
+        },
       },
     } as any;
 
@@ -35,7 +37,7 @@ describe('ProgressTracker', () => {
 
       await tracker.initialize();
 
-      expect(octokit.issues.createComment).toHaveBeenCalledWith({
+      expect(octokit.rest.issues.createComment).toHaveBeenCalledWith({
         owner: 'test-owner',
         repo: 'test-repo',
         issue_number: 123,

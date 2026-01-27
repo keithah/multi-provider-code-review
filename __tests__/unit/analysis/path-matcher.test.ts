@@ -1,4 +1,4 @@
-import { PathMatcher, PathPattern, createDefaultPathMatcherConfig, MAX_PATTERN_LENGTH, MAX_COMPLEXITY_SCORE } from '../../../src/analysis/path-matcher';
+import { PathMatcher, PathPattern, createDefaultPathMatcherConfig, MAX_PATTERN_LENGTH } from '../../../src/analysis/path-matcher';
 import { FileChange } from '../../../src/types';
 
 /**

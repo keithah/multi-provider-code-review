@@ -46,7 +46,7 @@ export class ProgressTracker {
   async initialize(): Promise<void> {
     try {
       const body = this.formatProgressComment();
-      const comment = await this.octokit.issues.createComment({
+      const comment = await this.octokit.rest.issues.createComment({
         owner: this.config.owner,
         repo: this.config.repo,
         issue_number: this.config.prNumber,
@@ -114,7 +114,6 @@ export class ProgressTracker {
    * Finalize progress tracking with summary
    */
   async finalize(success: boolean): Promise<void> {
-    const finalStatus: ProgressStatus = success ? 'completed' : 'failed';
     const duration = Date.now() - this.startTime;
 
     // Update all pending items to final status
@@ -190,7 +189,7 @@ export class ProgressTracker {
     try {
       const body = this.formatProgressComment();
 
-      await this.octokit.issues.updateComment({
+      await this.octokit.rest.issues.updateComment({
         owner: this.config.owner,
         repo: this.config.repo,
         comment_id: this.commentId,
