@@ -85,6 +85,16 @@ jobs:
         run: node scripts/validate-providers.js "${{ inputs.review_providers }}"
       - name: Validate Secrets and Configuration
         run: |
+          # Check for fork PRs attempting to access secrets
+          if [ "${{ github.event.pull_request.head.repo.fork }}" = "true" ] && [ "${{ github.event_name }}" = "pull_request" ]; then
+            if [ -z "$OPENROUTER_API_KEY" ]; then
+              echo "⚠️  Fork PR detected without OPENROUTER_API_KEY. This is expected - fork PRs cannot access secrets."
+              echo "    Review will use only free OpenCode providers (no OpenRouter)."
+            else
+              echo "⚠️  Warning: Fork PR has OPENROUTER_API_KEY. This should only happen if repository settings allow fork PR secret access."
+            fi
+          fi
+
           if [ -z "$OPENROUTER_API_KEY" ]; then
             echo "⚠️  Warning: OPENROUTER_API_KEY not set. OpenRouter providers will be skipped; free OpenCode providers will be used."
           else
