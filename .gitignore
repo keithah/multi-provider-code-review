@@ -10,3 +10,4 @@ npm-debug.log*
 # Generated review output files
 *.sarif
 multi-provider-review.json
+
