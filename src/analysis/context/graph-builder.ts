@@ -473,10 +473,11 @@ export class CodeGraph {
   }
 
   /**
-   * Create a shallow clone of the graph for incremental updates
+   * Create a deep clone of the graph for incremental updates
+   * All arrays are deep copied to prevent shared mutable state
    */
   clone(): CodeGraph {
-    const cloned = new CodeGraph(this.files, this.buildTime);
+    const cloned = new CodeGraph([...this.files], this.buildTime);
     cloned.copyFrom(this);
     return cloned;
   }
