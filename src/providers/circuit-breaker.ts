@@ -262,10 +262,13 @@ export class CircuitBreaker {
         await previous;
         return await fn();
       } finally {
-        // Always release the lock and clear the timeout
+        // CRITICAL: Clear timeout BEFORE releasing lock to prevent race condition
+        // If we release() first, the cleanup timer could fire before clearTimeout()
+        clearTimeout(cleanupTimer);
+
+        // Always release the lock to unblock waiting operations
         // This runs even if fn() throws or previous rejects
         release();
-        clearTimeout(cleanupTimer); // Prevents timer from firing in normal case
 
         // Clean up the lock immediately after execution
         // Only delete if this is still the current tail (not if a new lock was added)
