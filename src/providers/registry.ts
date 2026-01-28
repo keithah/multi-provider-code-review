@@ -92,8 +92,8 @@ export class ProviderRegistry {
     // Use providerDiscoveryLimit for initial selection (health checking)
     // Take min of discoveryLimit and providerLimit to respect both constraints
     // If discovery limit not set, use providerLimit; if both unset, default to 8
-    let discoveryLimit = config.providerDiscoveryLimit > 0
-      ? config.providerDiscoveryLimit
+    let discoveryLimit = (config.providerDiscoveryLimit ?? 0) > 0
+      ? config.providerDiscoveryLimit!
       : (config.providerLimit > 0 ? config.providerLimit : 8);
 
     // Respect providerLimit as an upper bound even during discovery

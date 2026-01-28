@@ -32,6 +32,7 @@ export class LLMExecutor {
         const started = Date.now();
         try {
           const isHealthy = await provider.healthCheck(healthCheckTimeoutMs);
+          // Duration is measured immediately after health check completes
           const duration = Date.now() - started;
 
           if (isHealthy) {

@@ -4,14 +4,30 @@
 
 export type Severity = 'critical' | 'major' | 'minor';
 
+/**
+ * Configuration for multi-provider code review
+ *
+ * New fields added in recent versions:
+ * - providerDiscoveryLimit: Controls health check breadth (default: 8)
+ * - providerBatchOverrides: Provider-specific batch sizes
+ * - enableTokenAwareBatching: Dynamic batching based on token estimation
+ * - targetTokensPerBatch: Target tokens per batch (default: 50000)
+ * - providerSelectionStrategy: How to select providers (default: 'reliability')
+ * - providerExplorationRate: Exploration vs exploitation (default: 0.3)
+ * - intensityProviderCounts: Provider counts per intensity level
+ * - intensityTimeouts: Timeout mappings per intensity level
+ * - intensityPromptDepth: Prompt detail level per intensity
+ *
+ * All new fields are optional and have sensible defaults defined in src/config/defaults.ts
+ */
 export interface ReviewConfig {
   providers: string[];
   synthesisModel: string;
   fallbackProviders: string[];
   providerAllowlist: string[];
   providerBlocklist: string[];
-  providerDiscoveryLimit: number; // Max providers to discover/health-check
-  providerLimit: number;          // Max providers to use for actual review
+  providerDiscoveryLimit?: number; // Max providers to discover/health-check (default: 8)
+  providerLimit: number;           // Max providers to use for actual review (default: 6)
   providerRetries: number;
   providerMaxParallel: number;
   openrouterAllowPaid?: boolean;
