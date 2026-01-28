@@ -100,6 +100,11 @@ export function unversionCache<T>(
       return null;
     }
 
+    // Validate data field exists (prevent returning undefined)
+    if (!('data' in parsed) || parsed.data === undefined) {
+      return null;
+    }
+
     // Version mismatch - schema incompatibility
     // This is the primary mechanism for cache invalidation after breaking changes
     if (parsed.version !== CACHE_VERSION) {
