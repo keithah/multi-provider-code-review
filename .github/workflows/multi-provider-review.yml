@@ -3,11 +3,20 @@ name: Multi-Provider Code Review
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    # Security: pull_request trigger (not pull_request_target) prevents fork PRs
+    # SECURITY: pull_request trigger (not pull_request_target) prevents fork PRs
     # from accessing repository secrets (OPENROUTER_API_KEY, etc.) by default.
     # GitHub runs fork PR workflows with empty secrets UNLESS the repository
     # setting "Send secrets to workflows from pull requests" is enabled.
-    # This workflow assumes that setting is DISABLED (default/recommended).
+    #
+    # CRITICAL ASSUMPTION: This workflow requires that "Send secrets to workflows
+    # from pull requests" is DISABLED in repository settings (default/recommended).
+    # If enabled, fork PRs could access secrets, which is a security risk.
+    # See: Settings → Actions → General → Fork pull request workflows
+    #
+    # Additional security layers in this workflow:
+    # - Explicit fork detection and secret validation (line 87-94)
+    # - Conditional job execution that skips fork PRs (line 113)
+    # - Provider allowlist validation for user-supplied model names
   # Note: pull_request_review trigger removed to prevent duplicate runs
   # when the bot posts its own review comment
   push:
