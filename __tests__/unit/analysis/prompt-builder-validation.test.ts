@@ -42,7 +42,8 @@ describe('PromptBuilder Context Window Validation', () => {
     });
 
     it('should indicate when prompt does not fit', () => {
-      // Create a PR with very large diff
+      // Stress test: intentionally create a PR with very large diff to verify
+      // the prompt builder handles edge cases without crashing
       const largePR: PRContext = {
         ...mockPR,
         diff: 'a'.repeat(500000), // ~137k tokens (conservative) - exceeds gpt-3.5-turbo
@@ -165,7 +166,8 @@ describe('PromptBuilder Context Window Validation', () => {
     });
 
     it('should handle edge case where trimming is not enough', () => {
-      // Create PR so large that even maximum trimming won't fit
+      // Stress test: create PR so large that even maximum trimming won't fit
+      // Verifies graceful degradation without crashes
       const hugePR: PRContext = {
         ...mockPR,
         title: 'x'.repeat(1000),

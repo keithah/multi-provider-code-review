@@ -18,10 +18,10 @@ on:
         type: string
 
 # Cancel in-progress runs for the same commit to prevent duplicate reviews
-# Use PR number + head SHA for uniqueness, excluding event_name to prevent duplicates
-# when both push and pull_request events fire for the same commit
+# Use only the head SHA as the concurrency key so both push and pull_request
+# events for the same commit share the same group and cancel each other
 concurrency:
-  group: review-${{ (github.event.pull_request && github.event.pull_request.number) || inputs.pr_number || github.ref }}-${{ (github.event.pull_request && github.event.pull_request.head && github.event.pull_request.head.sha) || github.sha }}
+  group: review-${{ (github.event.pull_request && github.event.pull_request.head && github.event.pull_request.head.sha) || github.sha }}
   cancel-in-progress: true
 
 # Permissions: Principle of least privilege
