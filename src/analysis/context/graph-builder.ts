@@ -467,6 +467,25 @@ export class CodeGraph {
    * Deserialize graph from JSON
    */
   static deserialize(data: ReturnType<CodeGraph['serialize']>): CodeGraph {
+    // Validate structure to handle corrupted cache data
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid graph data: expected object');
+    }
+    if (!Array.isArray(data.files)) {
+      throw new Error('Invalid graph data: files must be an array');
+    }
+    if (typeof data.buildTime !== 'number') {
+      throw new Error('Invalid graph data: buildTime must be a number');
+    }
+
+    // Validate all map fields are arrays
+    const mapFields = ['definitions', 'imports', 'exports', 'calls', 'callers', 'fileSymbols'];
+    for (const field of mapFields) {
+      if (!Array.isArray((data as any)[field])) {
+        throw new Error(`Invalid graph data: ${field} must be an array`);
+      }
+    }
+
     const graph = new CodeGraph(data.files, data.buildTime);
     graph.definitions = new Map(data.definitions);
     graph.imports = new Map(data.imports);

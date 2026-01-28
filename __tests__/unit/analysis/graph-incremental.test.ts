@@ -134,6 +134,34 @@ describe('Incremental Graph Updates', () => {
       expect(symbols).toHaveLength(1);
       expect(symbols[0]).toMatchObject(def);
     });
+
+    it('should handle circular references in graph serialization', () => {
+      const graph = new CodeGraph(['file1.ts', 'file2.ts'], 100);
+
+      // Create circular imports
+      graph.addImport('file1.ts', './file2');
+      graph.addImport('file2.ts', './file1');
+
+      // Create circular call references
+      graph.addDefinition({ name: 'foo', file: 'file1.ts', line: 1, type: 'function', exported: true });
+      graph.addDefinition({ name: 'bar', file: 'file2.ts', line: 1, type: 'function', exported: true });
+      graph.addCall('file1.ts', 'foo', 'bar');
+      graph.addCall('file2.ts', 'bar', 'foo');
+
+      // Serialization should handle circular structure safely
+      const serialized = graph.serialize();
+      expect(serialized).toBeDefined();
+      expect(typeof serialized).toBe('object');
+
+      // Should be able to JSON.stringify without errors
+      expect(() => JSON.stringify(serialized)).not.toThrow();
+
+      // Should be able to deserialize back
+      const deserialized = CodeGraph.deserialize(serialized);
+      expect(deserialized.files).toEqual(['file1.ts', 'file2.ts']);
+      expect(deserialized.getDependencies('file1.ts')).toContain('./file2');
+      expect(deserialized.getDependencies('file2.ts')).toContain('./file1');
+    });
   });
 
   describe('Node removal', () => {

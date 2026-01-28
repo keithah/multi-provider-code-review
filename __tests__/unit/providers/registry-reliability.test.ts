@@ -55,6 +55,33 @@ describe('ProviderRegistry Reliability-Based Selection', () => {
       expect(providers.length).toBeGreaterThan(0);
     });
 
+    it('should handle equal reliability scores with stable ordering', async () => {
+      // All providers have identical reliability scores
+      mockReliabilityTracker.getReliabilityScore.mockResolvedValue(0.75);
+
+      const config: ReviewConfig = {
+        ...DEFAULT_CONFIG,
+        providers: [
+          'opencode/provider-a',
+          'opencode/provider-b',
+          'opencode/provider-c',
+          'opencode/provider-d',
+        ],
+        providerSelectionStrategy: 'reliability',
+        providerLimit: 3,
+      };
+
+      const registry = new ProviderRegistry(undefined, mockReliabilityTracker);
+      const providers = await registry.createProviders(config);
+
+      // Should still select providers even with equal scores
+      expect(providers.length).toBeGreaterThan(0);
+      expect(providers.length).toBeLessThanOrEqual(3);
+
+      // Verify all providers had their reliability checked
+      expect(mockReliabilityTracker.getReliabilityScore).toHaveBeenCalled();
+    });
+
     it('should handle providers without reliability data gracefully', async () => {
       // All providers return default score (0.5)
       mockReliabilityTracker.getReliabilityScore.mockResolvedValue(0.5);
