@@ -36132,7 +36132,21 @@ var CodeGraph = class _CodeGraph {
         }
         this.calls.delete(qualifiedSymbol);
       }
-      this.callers.delete(qualifiedSymbol);
+      const callersToThis = this.callers.get(qualifiedSymbol);
+      if (callersToThis) {
+        for (const caller of callersToThis) {
+          const calleeList = this.calls.get(caller);
+          if (calleeList) {
+            const filtered = calleeList.filter((c) => c !== qualifiedSymbol);
+            if (filtered.length > 0) {
+              this.calls.set(caller, filtered);
+            } else {
+              this.calls.delete(caller);
+            }
+          }
+        }
+        this.callers.delete(qualifiedSymbol);
+      }
     }
   }
   /**
@@ -36971,11 +36985,7 @@ var CircuitBreaker = class _CircuitBreaker {
     }
     try {
       const parsed = JSON.parse(raw);
-      return {
-        ...parsed,
-        probeInFlight: false
-        // Always clear in-flight flag on load
-      };
+      return parsed;
     } catch (error2) {
       logger.warn(`Failed to parse circuit state for ${providerId}`, error2);
       return { state: "closed", failures: 0, probeInFlight: false };

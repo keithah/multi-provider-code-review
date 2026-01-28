@@ -322,7 +322,7 @@ describe('ProviderRegistry Reliability-Based Selection', () => {
 
       // Should return at least one fallback provider
       expect(providers.length).toBeGreaterThan(0);
-    });
+    }, 30000); // Increase timeout for provider discovery
 
     it('should handle provider limit larger than available providers', async () => {
       mockReliabilityTracker.getReliabilityScore

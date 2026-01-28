@@ -132,8 +132,23 @@ export class CodeGraph {
         this.calls.delete(qualifiedSymbol);
       }
 
-      // Remove calls to this symbol (clean up callers list)
-      this.callers.delete(qualifiedSymbol);
+      // Remove calls to this symbol (clean up callers list and their calls maps)
+      const callersToThis = this.callers.get(qualifiedSymbol);
+      if (callersToThis) {
+        // Remove this symbol from each caller's calls map
+        for (const caller of callersToThis) {
+          const calleeList = this.calls.get(caller);
+          if (calleeList) {
+            const filtered = calleeList.filter(c => c !== qualifiedSymbol);
+            if (filtered.length > 0) {
+              this.calls.set(caller, filtered);
+            } else {
+              this.calls.delete(caller);
+            }
+          }
+        }
+        this.callers.delete(qualifiedSymbol);
+      }
     }
   }
 

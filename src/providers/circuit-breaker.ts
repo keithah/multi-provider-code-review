@@ -161,6 +161,8 @@ export class CircuitBreaker {
     this.locks.set(lockKey, tail);
 
     // Failsafe cleanup: if something wedges the tail promise, clear the lock after a timeout.
+    // This is a safety net - normal cleanup happens in the finally block below.
+    // The timer is always cleared in the finally block, so it won't fire in normal operation.
     const cleanupTimer = setTimeout(() => {
       if (this.locks.get(lockKey) === tail) {
         logger.warn(`Lock cleanup triggered for ${lockKey}`);
@@ -174,8 +176,9 @@ export class CircuitBreaker {
         return await fn();
       } finally {
         // Always release the lock and clear the timeout
+        // This runs even if fn() throws or previous rejects
         release();
-        clearTimeout(cleanupTimer);
+        clearTimeout(cleanupTimer); // Prevents timer from firing in normal case
 
         // Clean up the lock immediately after execution
         // Only delete if this is still the current tail (not if a new lock was added)
