@@ -119,7 +119,20 @@ export class ProviderRegistry {
 
     // Use reliability-based selection with diversity constraints
     const explorationRate = config.providerExplorationRate ?? 0.3;
-    const allProviders = [...openrouterProviders, ...opencodeProviders, ...otherProviders];
+
+    // Concatenate provider groups
+    const concatenated = [...openrouterProviders, ...opencodeProviders, ...otherProviders];
+
+    // For reliability strategy, re-establish global sort order after concatenation
+    // (filtering into groups preserves local order, but concatenation breaks global order)
+    let allProviders: Provider[];
+    if (strategy === 'reliability') {
+      // Re-sort to maintain global reliability order after group concatenation
+      allProviders = await this.sortByReliability(concatenated);
+    } else {
+      // For other strategies, concatenation order is fine
+      allProviders = concatenated;
+    }
 
     let selected: Provider[];
     if (strategy === 'reliability') {
@@ -139,23 +152,43 @@ export class ProviderRegistry {
       }
     } else {
       // round-robin
-      selected = this.applyRotation(allProviders, discoveryLimit);
+      // Guard against empty provider list to prevent division by zero in applyRotation
+      if (allProviders.length > 0 && discoveryLimit > 0) {
+        selected = this.applyRotation(allProviders, discoveryLimit);
+      } else {
+        logger.warn(`Cannot apply rotation: allProviders.length=${allProviders.length}, discoveryLimit=${discoveryLimit}`);
+        selected = [];
+      }
     }
 
     providers = selected.length > 0 ? selected : providers;
 
     // Add fallback providers if we haven't reached the selection limit
+    // Only add as many fallbacks as needed to avoid evicting primary providers
     if (providers.length < discoveryLimit && config.fallbackProviders.length > 0) {
-      logger.info(`Adding ${config.fallbackProviders.length} fallback providers to reach target of ${discoveryLimit}`);
+      const remainingSlots = discoveryLimit - providers.length;
+      logger.info(`Adding fallback providers to fill ${remainingSlots} remaining slots (target: ${discoveryLimit})`);
+
+      // Instantiate and filter fallbacks
       const fallbacks = this.instantiate(config.fallbackProviders, config);
       const filteredFallbacks = await this.filterRateLimited(fallbacks);
-      providers = this.dedupeProviders([...providers, ...filteredFallbacks]);
-      logger.info(`After adding fallbacks: ${providers.length} providers`);
+
+      // Dedupe against existing providers
+      const dedupedFallbacks = this.dedupeProviders([...providers, ...filteredFallbacks])
+        .filter(p => !providers.some(existing => existing.name === p.name));
+
+      // Only add up to remainingSlots fallbacks
+      const fallbacksToAdd = dedupedFallbacks.slice(0, remainingSlots);
+      providers = [...providers, ...fallbacksToAdd];
+
+      logger.info(`Added ${fallbacksToAdd.length} fallback providers (filtered ${dedupedFallbacks.length} candidates, total now: ${providers.length})`);
     } else {
       logger.info(`Skipping fallback providers: providers.length=${providers.length}, discoveryLimit=${discoveryLimit}, fallbackProviders.length=${config.fallbackProviders.length}`);
     }
 
+    // Final check: if still over limit, trim (shouldn't happen with proper remainingSlots logic)
     if (providers.length > discoveryLimit) {
+      logger.warn(`Provider count ${providers.length} exceeds discovery limit ${discoveryLimit}, trimming`);
       providers = this.randomSelect(providers, discoveryLimit, minSelection);
     }
 

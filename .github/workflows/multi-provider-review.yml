@@ -101,8 +101,9 @@ jobs:
         run: npm install -g opencode-ai@1.1.35
 
       - name: Multi-Provider Code Review
-        # Run if PR number resolved (supports pull_request, push, workflow_dispatch)
-        if: steps.resolve-pr.outputs.pr != ''
+        # Run if PR number resolved AND not a fork PR (fork PRs lack secrets and will fail)
+        # github.event.pull_request.head.repo.fork is true for fork PRs, empty/false for same-repo PRs
+        if: steps.resolve-pr.outputs.pr != '' && (github.event.pull_request.head.repo.fork != true || github.event_name != 'pull_request')
         uses: ./
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

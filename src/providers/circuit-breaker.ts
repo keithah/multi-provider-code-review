@@ -21,15 +21,43 @@ export interface CircuitBreakerOptions {
 }
 
 /**
- * Simple circuit breaker to stop hammering unreliable providers.
- * - After N consecutive failures -> open for a cooldown window
- * - After cooldown -> half-open (allow one attempt)
- * - On success -> close and reset counters
+ * Circuit breaker to prevent cascading failures from unreliable providers.
  *
- * Circuit breaker states:
+ * STATE MACHINE:
  * - CLOSED: Normal operation, requests pass through
- * - OPEN: Provider is failing, requests are blocked
- * - HALF_OPEN: Testing if provider has recovered, allows one request
+ *   → After N consecutive failures → OPEN
+ *
+ * - OPEN: Provider is failing, all requests are blocked
+ *   → After cooldown period → HALF_OPEN
+ *
+ * - HALF_OPEN: Testing if provider has recovered, allows exactly ONE probe request
+ *   → On success → CLOSED (reset counters)
+ *   → On failure → OPEN (restart cooldown)
+ *
+ * CONCURRENCY SAFETY:
+ * - Uses promise-chain locks (withLock) to serialize state updates per provider
+ * - probeInFlight flag ensures only one probe during half-open state
+ * - Lock cleanup timer prevents permanent deadlocks if operations hang
+ *
+ * PERSISTENCE:
+ * - State is persisted to CacheStorage (filesystem-based)
+ * - Survives process restarts and allows coordination across multiple instances
+ * - Corrupted state gracefully defaults to CLOSED
+ *
+ * CONFIGURATION:
+ * - failureThreshold: Number of consecutive failures before opening (default: 3)
+ * - openDurationMs: Cooldown period before attempting recovery (default: 5 minutes)
+ *
+ * USAGE:
+ *   if (await breaker.isOpen('provider-id')) {
+ *     return; // Skip this provider
+ *   }
+ *   try {
+ *     const result = await provider.healthCheck();
+ *     await breaker.recordSuccess('provider-id');
+ *   } catch (error) {
+ *     await breaker.recordFailure('provider-id');
+ *   }
  */
 export class CircuitBreaker {
   // Default configuration constants
@@ -49,6 +77,18 @@ export class CircuitBreaker {
     this.openDurationMs = options.openDurationMs ?? CircuitBreaker.DEFAULT_OPEN_DURATION_MS;
   }
 
+  /**
+   * Check if circuit is open (provider should be skipped)
+   * Also handles state transitions: OPEN → HALF_OPEN after cooldown
+   *
+   * Returns:
+   * - true: Circuit is OPEN or HALF_OPEN with probe in flight (block request)
+   * - false: Circuit is CLOSED or HALF_OPEN without probe (allow request)
+   *
+   * Side effects:
+   * - Transitions OPEN → HALF_OPEN if cooldown expired
+   * - Sets probeInFlight flag when allowing half-open probe
+   */
   async isOpen(providerId: string): Promise<boolean> {
     return this.withLock(providerId, async () => {
       let state = await this.load(providerId);
@@ -56,27 +96,44 @@ export class CircuitBreaker {
       if (state.state === 'open') {
         const expired = state.openedAt && Date.now() - state.openedAt > this.openDurationMs;
         if (expired) {
+          // Cooldown expired: transition to half-open for testing
           state = { state: 'half_open', failures: 0, probeInFlight: false };
           await this.setState(providerId, state);
+          logger.debug(`Circuit transitioned to half-open for ${providerId} after cooldown`);
           // fall through to half_open handling below to reserve the probe
         }
         if (state.state === 'open') {
-          return true;
+          return true; // Still in cooldown, block request
         }
       }
 
       if (state.state === 'half_open') {
         // Allow exactly one probe during half-open; block concurrent callers
-        if (state.probeInFlight) return true;
+        // This prevents multiple simultaneous health checks that could:
+        // 1. Double-count failures and immediately re-open the circuit
+        // 2. Overwhelm a recovering provider with concurrent requests
+        if (state.probeInFlight) {
+          return true; // Another probe is in flight, block this request
+        }
 
+        // Reserve this request as the probe
         await this.setState(providerId, { ...state, probeInFlight: true });
-        return false;
+        return false; // Allow this single probe request
       }
 
-      return false;
+      return false; // Circuit is closed, allow request
     });
   }
 
+  /**
+   * Record a successful operation
+   * Transitions any state → CLOSED and resets failure counter
+   *
+   * Call this after:
+   * - Successful health check
+   * - Successful API request
+   * - Any operation indicating the provider is healthy
+   */
   async recordSuccess(providerId: string): Promise<void> {
     await this.withLock(providerId, async () => {
       const state = await this.load(providerId);
@@ -88,32 +145,52 @@ export class CircuitBreaker {
       });
 
       if (state.state !== 'closed') {
-        logger.debug(`Circuit closed for ${providerId} after recovery`);
+        logger.info(`Circuit closed for ${providerId} after successful recovery (was ${state.state})`);
       }
     });
   }
 
+  /**
+   * Record a failed operation
+   * Increments failure counter and opens circuit if threshold reached
+   *
+   * State transitions:
+   * - CLOSED: failures++ → if >= threshold → OPEN
+   * - HALF_OPEN: failures++ → OPEN (probe failed, provider still unhealthy)
+   *
+   * Call this after:
+   * - Failed health check
+   * - API timeout or error
+   * - Any operation indicating the provider is unhealthy
+   */
   async recordFailure(providerId: string): Promise<void> {
     await this.withLock(providerId, async () => {
       const state = await this.load(providerId);
       const failures = state.failures + 1;
 
       if (state.state === 'half_open') {
+        // Probe failed: provider is still unhealthy, re-open circuit
         await this.setState(providerId, {
           state: 'open',
           failures,
           openedAt: Date.now(),
           probeInFlight: false,
         });
-        logger.warn(`Circuit re-opened for ${providerId} after half-open failure`);
+        logger.warn(`Circuit re-opened for ${providerId} after half-open probe failed (${failures} total failures)`);
         return;
       }
 
       if (failures >= this.failureThreshold) {
+        // Threshold reached: open circuit to start cooldown
         await this.setState(providerId, { state: 'open', failures, openedAt: Date.now(), probeInFlight: false });
-        logger.warn(`Circuit opened for ${providerId} after ${failures} failures`);
+        logger.warn(
+          `Circuit opened for ${providerId} after ${failures} consecutive failures ` +
+          `(threshold: ${this.failureThreshold}, cooldown: ${this.openDurationMs}ms)`
+        );
       } else {
+        // Still under threshold: stay closed but increment counter
         await this.setState(providerId, { state: 'closed', failures });
+        logger.debug(`Circuit failure recorded for ${providerId}: ${failures}/${this.failureThreshold}`);
       }
     });
   }

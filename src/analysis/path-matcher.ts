@@ -1,4 +1,4 @@
-import { FileChange } from '../types';
+import { FileChange, ReviewIntensity } from '../types';
 import { logger } from '../utils/logger';
 import { minimatch } from 'minimatch';
 
@@ -28,8 +28,6 @@ export const MAX_COMPLEXITY_SCORE = 50;
  * - "src/{a,b,c}/**" → 2 wildcards × 2 + 1 brace × 3 = 7 points ✓
  * - 25+ wildcards → 50+ points ✗ (rejected)
  */
-
-export type ReviewIntensity = 'thorough' | 'standard' | 'light';
 
 export interface PathPattern {
   pattern: string;
@@ -139,15 +137,49 @@ export class PathMatcher {
   }
 
   /**
-   * Restrict patterns to a safe character allowlist to avoid shell/meta injection.
-   * Allows typical glob tokens and path separators; disallows pipes, backticks, backslashes, and negation.
+   * Restrict patterns to a safe character allowlist for glob matching.
+   *
+   * SECURITY CONTEXT:
+   * These patterns are ONLY used with the minimatch library (pure JavaScript),
+   * NEVER passed to shell commands or eval(). Therefore, shell metacharacters
+   * like $ and ~ are safe in this context.
+   *
+   * ALLOWED CHARACTERS:
+   * - Alphanumeric: A-Z, a-z, 0-9
+   * - Path separators: / (forward slash only)
+   * - Glob wildcards: * (asterisk), ? (question mark)
+   * - Glob braces: { } (brace expansion)
+   * - Character classes: [ ] (bracket expressions)
+   * - Special chars: . - _ @ + ^ ! ( ) ~ = $ % # , (space)
+   *
+   * BLOCKED CHARACTERS (explicit):
+   * - Backslash (\) - Prevents path traversal and escape sequences
+   * - Pipe (|) - No shell piping (not needed for globs)
+   * - Backtick (`) - No command substitution (not needed for globs)
+   * - Semicolon (;) - No command chaining (not needed for globs)
+   * - Ampersand (&) - No backgrounding (not needed for globs)
+   * - Angle brackets (< >) - No redirection (not needed for globs)
+   *
+   * MINIMATCH SAFETY:
+   * - nonegate: true (blocks ! negation at start of pattern)
+   * - nocomment: true (blocks # comments)
+   * - These options prevent pattern injection attacks
+   *
+   * DEFENSE IN DEPTH:
+   * Even though minimatch is safe, we enforce a strict allowlist to:
+   * 1. Catch accidental misuse (e.g., copy-paste errors)
+   * 2. Prevent future regressions if code changes
+   * 3. Make security properties explicit and auditable
    */
   private checkAllowedCharacters(pattern: string): void {
-    // Allow common glob tokens including spaces, @, +, ^, !, parentheses, tildes, $, %, #.
-    // Block backticks, pipes, and backslashes to avoid shell injection and escape sequence vectors.
+    // Allowlist for glob patterns used with minimatch library (never passed to shell)
+    // Note: $ % # ~ are safe here because patterns are NOT executed in shell context
     const allowed = new RegExp('^[A-Za-z0-9.@+^ !_\\-/*?{}\\[\\],()~=$%#]+$');
     if (!allowed.test(pattern)) {
-      throw new Error(`Pattern contains unsupported characters: ${pattern}`);
+      throw new Error(
+        `Pattern contains unsupported characters: ${pattern}. ` +
+        `Only alphanumerics, glob wildcards (*, ?, {}, []), and safe punctuation are allowed.`
+      );
     }
   }
 

@@ -78,6 +78,10 @@ export class ConfigLoader {
       providerMaxParallel: this.parseNumber(env.PROVIDER_MAX_PARALLEL),
       quietModeEnabled: this.parseBoolean(env.QUIET_MODE_ENABLED),
       quietMinConfidence: this.parseFloat(env.QUIET_MIN_CONFIDENCE),
+      quietUseLearning: this.parseBoolean(env.QUIET_USE_LEARNING),
+      learningEnabled: this.parseBoolean(env.LEARNING_ENABLED),
+      learningMinFeedbackCount: this.parseNumber(env.LEARNING_MIN_FEEDBACK_COUNT),
+      learningLookbackDays: this.parseNumber(env.LEARNING_LOOKBACK_DAYS),
 
       inlineMaxComments: this.parseNumber(env.INLINE_MAX_COMMENTS),
       inlineMinSeverity: this.parseSeverity(env.INLINE_MIN_SEVERITY),

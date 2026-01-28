@@ -150,6 +150,58 @@ export class CodeGraph {
         this.callers.delete(qualifiedSymbol);
       }
     }
+
+    // Clean up non-definition call edges (e.g., <top>, anonymous functions)
+    // Scan all calls/callers for keys belonging to this file that weren't in fileSymbols
+    const filePrefix = `${file}:`;
+    const callKeysToRemove: string[] = [];
+    const callerKeysToRemove: string[] = [];
+
+    // Find all call edges originating from this file (even non-definitions)
+    for (const [caller, callees] of this.calls.entries()) {
+      if (caller.startsWith(filePrefix)) {
+        callKeysToRemove.push(caller);
+        // Remove this caller from all its callees' callers lists
+        for (const callee of callees) {
+          const callerList = this.callers.get(callee);
+          if (callerList) {
+            const filtered = callerList.filter(c => c !== caller);
+            if (filtered.length > 0) {
+              this.callers.set(callee, filtered);
+            } else {
+              this.callers.delete(callee);
+            }
+          }
+        }
+      }
+    }
+
+    // Find all callers lists for symbols in this file (even non-definitions)
+    for (const [callee, callers] of this.callers.entries()) {
+      if (callee.startsWith(filePrefix)) {
+        callerKeysToRemove.push(callee);
+        // Remove this callee from all its callers' calls lists
+        for (const caller of callers) {
+          const calleeList = this.calls.get(caller);
+          if (calleeList) {
+            const filtered = calleeList.filter(c => c !== callee);
+            if (filtered.length > 0) {
+              this.calls.set(caller, filtered);
+            } else {
+              this.calls.delete(caller);
+            }
+          }
+        }
+      }
+    }
+
+    // Remove the stale keys
+    for (const key of callKeysToRemove) {
+      this.calls.delete(key);
+    }
+    for (const key of callerKeysToRemove) {
+      this.callers.delete(key);
+    }
   }
 
   /**
@@ -419,14 +471,28 @@ export class CodeGraph {
   /**
    * Copy graph data from another CodeGraph instance
    * Type-safe alternative to direct private field assignment
+   * Deep copies all arrays to prevent shared mutable state
    */
   copyFrom(other: CodeGraph): void {
+    // Deep copy definitions (value is Definition object, not array)
     this.definitions = new Map(other.definitions);
-    this.imports = new Map(other.imports.entries());
-    this.exports = new Map(other.exports.entries());
-    this.calls = new Map(other.calls.entries());
-    this.callers = new Map(other.callers.entries());
-    this.fileSymbols = new Map(other.fileSymbols.entries());
+
+    // Deep copy array values in all maps to prevent shared mutable state
+    this.imports = new Map(
+      Array.from(other.imports.entries()).map(([k, v]) => [k, [...v]])
+    );
+    this.exports = new Map(
+      Array.from(other.exports.entries()).map(([k, v]) => [k, [...v]])
+    );
+    this.calls = new Map(
+      Array.from(other.calls.entries()).map(([k, v]) => [k, [...v]])
+    );
+    this.callers = new Map(
+      Array.from(other.callers.entries()).map(([k, v]) => [k, [...v]])
+    );
+    this.fileSymbols = new Map(
+      Array.from(other.fileSymbols.entries()).map(([k, v]) => [k, [...v]])
+    );
   }
 
   /**
@@ -440,6 +506,7 @@ export class CodeGraph {
 
   /**
    * Serialize graph to JSON for caching
+   * Deep copies all arrays to prevent mutations from affecting the graph
    */
   serialize(): {
     files: string[];
@@ -452,19 +519,21 @@ export class CodeGraph {
     fileSymbols: Array<[string, string[]]>;
   } {
     return {
-      files: this.files,
+      files: [...this.files], // Copy files array
       buildTime: this.buildTime,
       definitions: Array.from(this.definitions.entries()),
-      imports: Array.from(this.imports.entries()),
-      exports: Array.from(this.exports.entries()),
-      calls: Array.from(this.calls.entries()),
-      callers: Array.from(this.callers.entries()),
-      fileSymbols: Array.from(this.fileSymbols.entries()),
+      // Deep copy array values to prevent shared mutable references
+      imports: Array.from(this.imports.entries()).map(([k, v]) => [k, [...v]]),
+      exports: Array.from(this.exports.entries()).map(([k, v]) => [k, [...v]]),
+      calls: Array.from(this.calls.entries()).map(([k, v]) => [k, [...v]]),
+      callers: Array.from(this.callers.entries()).map(([k, v]) => [k, [...v]]),
+      fileSymbols: Array.from(this.fileSymbols.entries()).map(([k, v]) => [k, [...v]]),
     };
   }
 
   /**
    * Deserialize graph from JSON
+   * Deep copies all arrays to ensure the graph owns its own memory
    */
   static deserialize(data: ReturnType<CodeGraph['serialize']>): CodeGraph {
     // Validate structure to handle corrupted cache data
@@ -486,13 +555,16 @@ export class CodeGraph {
       }
     }
 
-    const graph = new CodeGraph(data.files, data.buildTime);
+    // Create graph with copied files array
+    const graph = new CodeGraph([...data.files], data.buildTime);
+
+    // Deep copy array values when constructing maps to ensure graph owns its own memory
     graph.definitions = new Map(data.definitions);
-    graph.imports = new Map(data.imports);
-    graph.exports = new Map(data.exports);
-    graph.calls = new Map(data.calls);
-    graph.callers = new Map(data.callers);
-    graph.fileSymbols = new Map(data.fileSymbols);
+    graph.imports = new Map(data.imports.map(([k, v]) => [k, [...v]]));
+    graph.exports = new Map(data.exports.map(([k, v]) => [k, [...v]]));
+    graph.calls = new Map(data.calls.map(([k, v]) => [k, [...v]]));
+    graph.callers = new Map(data.callers.map(([k, v]) => [k, [...v]]));
+    graph.fileSymbols = new Map(data.fileSymbols.map(([k, v]) => [k, [...v]]));
     return graph;
   }
 }

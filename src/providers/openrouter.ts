@@ -90,9 +90,26 @@ export class OpenRouterProvider extends Provider {
           throw new RateLimitError(`Rate limited: ${this.name}`, minutes * 60);
         }
 
-        // Treat payment-required models as unavailable for a full day to avoid reselecting them
+        // HTTP 402 Payment Required: Model requires payment/credits
+        // Strategy: Block for 24 hours (or retry-after if longer) to prevent:
+        // 1. Repeated selection attempts that always fail (wastes API quota)
+        // 2. Unnecessary error logging and circuit breaker trips
+        // 3. User confusion from recurring payment errors
+        //
+        // Rationale for 24-hour minimum:
+        // - Payment status rarely changes within a day
+        // - Gives time for users to add credits/upgrade plan
+        // - Prevents rapid retry cycles that could trigger rate limits
+        //
+        // Note: This is a soft block via rate limiter, not permanent.
+        // Manually clearing rate limit cache will allow retry if needed.
         if (response.status === 402) {
           const blockMinutes = Math.max(minutes || 0, 60 * 24);
+          logger.warn(
+            `Model ${this.name} returned 402 Payment Required. ` +
+            `Blocking for ${blockMinutes} minutes to avoid repeated failures. ` +
+            `This usually means the model requires credits or a paid plan.`
+          );
           await this.rateLimiter.markRateLimited(this.name, blockMinutes, 'HTTP 402 Payment Required from OpenRouter');
           throw new RateLimitError(`Payment required: ${this.name}`, blockMinutes * 60);
         }
