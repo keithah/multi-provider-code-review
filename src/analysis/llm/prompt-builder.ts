@@ -16,6 +16,17 @@ export class PromptBuilder {
   }
 
   build(pr: PRContext): string {
+    // Validate PR context
+    if (!pr || typeof pr !== 'object') {
+      throw new Error('Invalid PR context: must be a valid PRContext object');
+    }
+    if (!pr.diff || typeof pr.diff !== 'string') {
+      throw new Error('Invalid PR context: diff must be a non-empty string');
+    }
+    if (!Array.isArray(pr.files)) {
+      throw new Error('Invalid PR context: files must be an array');
+    }
+
     const diff = trimDiff(pr.diff, this.config.diffMaxBytes);
 
     // Extract which files are actually in the trimmed diff to avoid false positives
