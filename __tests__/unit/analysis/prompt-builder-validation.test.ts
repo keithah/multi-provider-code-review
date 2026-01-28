@@ -43,11 +43,11 @@ describe('PromptBuilder Context Window Validation', () => {
 
     it('should indicate when prompt does not fit', () => {
       // Test context window overflow with reasonably-sized diff
-      // Using 50k chars (~13k tokens) which is enough to exceed gpt-3.5-turbo (16k tokens)
+      // Using 50k chars (~13k tokens) which is enough to exceed gpt-3.5-turbo (4k tokens)
       // without causing test performance issues
       const largePR: PRContext = {
         ...mockPR,
-        diff: 'a'.repeat(50000), // ~13k tokens - exceeds gpt-3.5-turbo (16k total, ~4k for system prompt)
+        diff: 'a'.repeat(50000), // ~13k tokens - exceeds gpt-3.5-turbo (4k total, ~2k available after reserved)
         files: Array(100).fill(null).map((_, i) => ({
           filename: `file${i}.ts`,
           status: 'modified' as const,
@@ -87,10 +87,10 @@ describe('PromptBuilder Context Window Validation', () => {
     });
 
     it('should detect high utilization', () => {
-      // Create PR that uses ~80% of a small context window
+      // Create PR that uses significant portion of a small context window
       const mediumPR: PRContext = {
         ...mockPR,
-        diff: 'a'.repeat(6000), // ~1650 tokens for gpt-3.5-turbo (4k window - 2k reserved = 2k available)
+        diff: 'a'.repeat(6000), // ~1650 tokens for gpt-3.5-turbo (4k total window - 2k reserved = 2k available)
       };
 
       const builder = new PromptBuilder(DEFAULT_CONFIG, 'standard');
@@ -112,7 +112,7 @@ describe('PromptBuilder Context Window Validation', () => {
 
     it('should trim diff when prompt exceeds context window', () => {
       // Create PR with diff that definitely exceeds small context window
-      // gpt-3.5-turbo: 4k window - 2k reserved = 2k available
+      // gpt-3.5-turbo: 4k total window - 2k reserved = 2k available
       const largePR: PRContext = {
         ...mockPR,
         diff: 'a'.repeat(50000), // Large enough to likely exceed

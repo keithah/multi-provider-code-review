@@ -20,8 +20,8 @@ export class PromptBuilder {
     if (!pr || typeof pr !== 'object') {
       throw new Error('Invalid PR context: must be a valid PRContext object');
     }
-    if (!pr.diff || typeof pr.diff !== 'string') {
-      throw new Error('Invalid PR context: diff must be a non-empty string');
+    if (pr.diff === undefined || pr.diff === null || typeof pr.diff !== 'string') {
+      throw new Error('Invalid PR context: diff must be a string (can be empty)');
     }
     if (!Array.isArray(pr.files)) {
       throw new Error('Invalid PR context: files must be an array');
