@@ -31,7 +31,8 @@
  * VERSION HISTORY:
  * - v1: Initial implementation with basic findings
  * - v2: Added AI detection fields (aiLikelihood, aiReasoning)
- * - v3: Current version with extended Finding schema
+ * - v3: Extended Finding schema
+ * - v4: Added graph serialization features (CodeGraph with deep copy support)
  *
  * TESTING:
  * When bumping version, verify:
@@ -41,7 +42,7 @@
  * See: __tests__/unit/cache/version.test.ts
  */
 
-export const CACHE_VERSION = 3; // Current version - increment for breaking changes
+export const CACHE_VERSION = 4; // Current version - increment for breaking changes
 
 export interface VersionedCache<T> {
   version: number;
