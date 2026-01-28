@@ -7,6 +7,7 @@ export const ReviewConfigSchema = z.object({
   fallback_providers: z.array(z.string()).optional(),
   provider_allowlist: z.array(z.string()).optional(),
   provider_blocklist: z.array(z.string()).optional(),
+  openrouter_allow_paid: z.boolean().optional(),
   provider_limit: z.number().int().min(0).optional(),
   provider_retries: z.number().int().min(1).optional(),
   provider_max_parallel: z.number().int().min(1).optional(),

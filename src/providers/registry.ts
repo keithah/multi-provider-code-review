@@ -215,6 +215,10 @@ export class ProviderRegistry {
           logger.warn(`OPENROUTER_API_KEY not set; skipping OpenRouter provider ${name}`);
           continue;
         }
+        if (!config.openrouterAllowPaid && !model.endsWith(':free')) {
+          logger.warn(`Skipping paid OpenRouter model ${name} (set openrouterAllowPaid=true to enable)`);
+          continue;
+        }
         list.push(new OpenRouterProvider(model, apiKey, this.rateLimiter));
         continue;
       }

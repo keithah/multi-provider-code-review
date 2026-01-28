@@ -26873,6 +26873,7 @@ var DEFAULT_CONFIG = {
   fallbackProviders: [],
   providerAllowlist: [],
   providerBlocklist: [],
+  openrouterAllowPaid: false,
   providerLimit: 8,
   providerRetries: 2,
   providerMaxParallel: 3,
@@ -31048,6 +31049,7 @@ var ReviewConfigSchema = external_exports.object({
   fallback_providers: external_exports.array(external_exports.string()).optional(),
   provider_allowlist: external_exports.array(external_exports.string()).optional(),
   provider_blocklist: external_exports.array(external_exports.string()).optional(),
+  openrouter_allow_paid: external_exports.boolean().optional(),
   provider_limit: external_exports.number().int().min(0).optional(),
   provider_retries: external_exports.number().int().min(1).optional(),
   provider_max_parallel: external_exports.number().int().min(1).optional(),
@@ -31307,9 +31309,9 @@ function formatValidationError(error2) {
   }
   return `\u274C ${error2.message}`;
 }
-function validateConfig(config) {
-  if (config.providers) {
-    const providers = validateArray(config.providers, "providers");
+function validateConfig(config2) {
+  if (config2.providers) {
+    const providers = validateArray(config2.providers, "providers");
     validateStringArray(providers, "providers");
     providers.forEach((p) => {
       if (typeof p === "string") {
@@ -31317,31 +31319,31 @@ function validateConfig(config) {
       }
     });
   }
-  if (config.providerLimit !== void 0 && config.providerLimit !== null) {
-    const limit = validateNonNegativeNumber(config.providerLimit, "providerLimit");
+  if (config2.providerLimit !== void 0 && config2.providerLimit !== null) {
+    const limit = validateNonNegativeNumber(config2.providerLimit, "providerLimit");
     if (limit > 0) {
       validateInRange(limit, "providerLimit", 1, 100);
     }
   }
-  if (config.inlineMaxComments !== void 0) {
-    const maxComments = validateNonNegativeNumber(config.inlineMaxComments, "inlineMaxComments");
+  if (config2.inlineMaxComments !== void 0) {
+    const maxComments = validateNonNegativeNumber(config2.inlineMaxComments, "inlineMaxComments");
     if (maxComments > 100) {
       logger.warn(
         `inlineMaxComments is set to ${maxComments}. Very high values may cause rate limiting on GitHub API.`
       );
     }
   }
-  if (config.budgetMaxUsd !== void 0) {
-    const budget = validateNonNegativeNumber(config.budgetMaxUsd, "budgetMaxUsd");
+  if (config2.budgetMaxUsd !== void 0) {
+    const budget = validateNonNegativeNumber(config2.budgetMaxUsd, "budgetMaxUsd");
     if (budget > 100) {
       logger.warn(
         `budgetMaxUsd is set to $${budget}. This is unusually high. Make sure this is intentional.`
       );
     }
   }
-  if (config.inlineMinSeverity) {
+  if (config2.inlineMinSeverity) {
     validateEnum(
-      config.inlineMinSeverity,
+      config2.inlineMinSeverity,
       "inlineMinSeverity",
       ["critical", "major", "minor"]
     );
@@ -31403,6 +31405,7 @@ var ConfigLoader = class {
       fallbackProviders: this.parseArray(env.FALLBACK_PROVIDERS),
       providerAllowlist: this.parseArray(env.PROVIDER_ALLOWLIST),
       providerBlocklist: this.parseArray(env.PROVIDER_BLOCKLIST),
+      openrouterAllowPaid: this.parseBoolean(env.OPENROUTER_ALLOW_PAID),
       providerLimit: this.parseNumber(env.PROVIDER_LIMIT),
       providerRetries: this.parseNumber(env.PROVIDER_RETRIES),
       providerMaxParallel: this.parseNumber(env.PROVIDER_MAX_PARALLEL),
@@ -31442,50 +31445,51 @@ var ConfigLoader = class {
       dryRun: this.parseBoolean(env.DRY_RUN)
     };
   }
-  static normalizeKeys(config) {
+  static normalizeKeys(config2) {
     return {
-      providers: config.providers,
-      synthesisModel: config.synthesis_model,
-      fallbackProviders: config.fallback_providers,
-      providerAllowlist: config.provider_allowlist,
-      providerBlocklist: config.provider_blocklist,
-      providerLimit: config.provider_limit,
-      providerRetries: config.provider_retries,
-      providerMaxParallel: config.provider_max_parallel,
-      quietModeEnabled: config.quiet_mode_enabled,
-      quietMinConfidence: config.quiet_min_confidence,
-      inlineMaxComments: config.inline_max_comments,
-      inlineMinSeverity: config.inline_min_severity,
-      inlineMinAgreement: config.inline_min_agreement,
-      skipLabels: config.skip_labels,
-      skipDrafts: config.skip_drafts,
-      skipBots: config.skip_bots,
-      minChangedLines: config.min_changed_lines,
-      maxChangedFiles: config.max_changed_files,
-      diffMaxBytes: config.diff_max_bytes,
-      runTimeoutSeconds: config.run_timeout_seconds,
-      budgetMaxUsd: config.budget_max_usd,
-      enableAstAnalysis: config.enable_ast_analysis,
-      enableSecurity: config.enable_security,
-      enableCaching: config.enable_caching,
-      enableTestHints: config.enable_test_hints,
-      enableAiDetection: config.enable_ai_detection,
-      incrementalEnabled: config.incremental_enabled,
-      incrementalCacheTtlDays: config.incremental_cache_ttl_days,
-      batchMaxFiles: config.batch_max_files,
-      providerBatchOverrides: config.provider_batch_overrides,
-      skipTrivialChanges: config.skip_trivial_changes,
-      skipDependencyUpdates: config.skip_dependency_updates,
-      skipDocumentationOnly: config.skip_documentation_only,
-      skipFormattingOnly: config.skip_formatting_only,
-      skipTestFixtures: config.skip_test_fixtures,
-      skipConfigFiles: config.skip_config_files,
-      skipBuildArtifacts: config.skip_build_artifacts,
-      trivialPatterns: config.trivial_patterns,
-      pathBasedIntensity: config.path_based_intensity,
-      pathIntensityPatterns: config.path_intensity_patterns,
-      pathDefaultIntensity: config.path_default_intensity,
-      dryRun: config.dry_run
+      providers: config2.providers,
+      synthesisModel: config2.synthesis_model,
+      fallbackProviders: config2.fallback_providers,
+      providerAllowlist: config2.provider_allowlist,
+      providerBlocklist: config2.provider_blocklist,
+      openrouterAllowPaid: config2.openrouter_allow_paid,
+      providerLimit: config2.provider_limit,
+      providerRetries: config2.provider_retries,
+      providerMaxParallel: config2.provider_max_parallel,
+      quietModeEnabled: config2.quiet_mode_enabled,
+      quietMinConfidence: config2.quiet_min_confidence,
+      inlineMaxComments: config2.inline_max_comments,
+      inlineMinSeverity: config2.inline_min_severity,
+      inlineMinAgreement: config2.inline_min_agreement,
+      skipLabels: config2.skip_labels,
+      skipDrafts: config2.skip_drafts,
+      skipBots: config2.skip_bots,
+      minChangedLines: config2.min_changed_lines,
+      maxChangedFiles: config2.max_changed_files,
+      diffMaxBytes: config2.diff_max_bytes,
+      runTimeoutSeconds: config2.run_timeout_seconds,
+      budgetMaxUsd: config2.budget_max_usd,
+      enableAstAnalysis: config2.enable_ast_analysis,
+      enableSecurity: config2.enable_security,
+      enableCaching: config2.enable_caching,
+      enableTestHints: config2.enable_test_hints,
+      enableAiDetection: config2.enable_ai_detection,
+      incrementalEnabled: config2.incremental_enabled,
+      incrementalCacheTtlDays: config2.incremental_cache_ttl_days,
+      batchMaxFiles: config2.batch_max_files,
+      providerBatchOverrides: config2.provider_batch_overrides,
+      skipTrivialChanges: config2.skip_trivial_changes,
+      skipDependencyUpdates: config2.skip_dependency_updates,
+      skipDocumentationOnly: config2.skip_documentation_only,
+      skipFormattingOnly: config2.skip_formatting_only,
+      skipTestFixtures: config2.skip_test_fixtures,
+      skipConfigFiles: config2.skip_config_files,
+      skipBuildArtifacts: config2.skip_build_artifacts,
+      trivialPatterns: config2.trivial_patterns,
+      pathBasedIntensity: config2.path_based_intensity,
+      pathIntensityPatterns: config2.path_intensity_patterns,
+      pathDefaultIntensity: config2.path_default_intensity,
+      dryRun: config2.dry_run
     };
   }
   static merge(defaults2, ...overrides) {
@@ -32367,10 +32371,10 @@ var ProviderRegistry = class {
   rateLimiter = new RateLimiter();
   rotationIndex = 0;
   openRouterPricing = new PricingService(process.env.OPENROUTER_API_KEY);
-  async createProviders(config) {
-    let providers = this.instantiate(config.providers);
+  async createProviders(config2) {
+    let providers = this.instantiate(config2.providers);
     const userProvidedList = Boolean(process.env.REVIEW_PROVIDERS);
-    const usingDefaults = this.usesDefaultProviders(config.providers);
+    const usingDefaults = this.usesDefaultProviders(config2.providers);
     if (providers.length === 0 && usingDefaults && !userProvidedList) {
       logger.info("\u{1F50D} No providers specified, starting dynamic model discovery...");
       const discoveredModels = [];
@@ -32407,13 +32411,13 @@ var ProviderRegistry = class {
       providers = this.instantiate(FALLBACK_STATIC_PROVIDERS);
     }
     providers = this.shuffle(this.dedupeProviders(providers));
-    providers = this.applyAllowBlock(providers, config);
+    providers = this.applyAllowBlock(providers, config2);
     logger.info(`After allowBlock: ${providers.length} providers`);
     providers = await this.filterRateLimited(providers);
     logger.info(`After filterRateLimited: ${providers.length} providers`);
-    const selectionLimit = config.providerLimit > 0 ? config.providerLimit : 8;
+    const selectionLimit = config2.providerLimit > 0 ? config2.providerLimit : 8;
     const minSelection = Math.min(4, selectionLimit);
-    logger.info(`Selection limit: ${selectionLimit} (configured: ${config.providerLimit}), min: ${minSelection}, fallback count: ${config.fallbackProviders.length}`);
+    logger.info(`Selection limit: ${selectionLimit} (configured: ${config2.providerLimit}), min: ${minSelection}, fallback count: ${config2.fallbackProviders.length}`);
     const MIN_OPENROUTER = 4;
     const MIN_OPENCODE = 2;
     const openrouterProviders = this.filterUniqueFamilies(
@@ -32439,21 +32443,21 @@ var ProviderRegistry = class {
       selected.push(next);
     }
     providers = selected.length > 0 ? selected : providers;
-    if (providers.length < selectionLimit && config.fallbackProviders.length > 0) {
-      logger.info(`Adding ${config.fallbackProviders.length} fallback providers to reach target of ${selectionLimit}`);
-      const fallbacks = this.instantiate(config.fallbackProviders);
+    if (providers.length < selectionLimit && config2.fallbackProviders.length > 0) {
+      logger.info(`Adding ${config2.fallbackProviders.length} fallback providers to reach target of ${selectionLimit}`);
+      const fallbacks = this.instantiate(config2.fallbackProviders);
       const filteredFallbacks = await this.filterRateLimited(fallbacks);
       providers = this.dedupeProviders([...providers, ...filteredFallbacks]);
       logger.info(`After adding fallbacks: ${providers.length} providers`);
     } else {
-      logger.info(`Skipping fallback providers: providers.length=${providers.length}, selectionLimit=${selectionLimit}, fallbackProviders.length=${config.fallbackProviders.length}`);
+      logger.info(`Skipping fallback providers: providers.length=${providers.length}, selectionLimit=${selectionLimit}, fallbackProviders.length=${config2.fallbackProviders.length}`);
     }
     if (providers.length > selectionLimit) {
       providers = this.randomSelect(providers, selectionLimit, minSelection);
     }
-    if (providers.length === 0 && config.fallbackProviders.length > 0) {
+    if (providers.length === 0 && config2.fallbackProviders.length > 0) {
       logger.warn("Primary providers unavailable, using fallbacks");
-      providers = this.instantiate(config.fallbackProviders);
+      providers = this.instantiate(config2.fallbackProviders);
       providers = await this.filterRateLimited(providers);
     }
     if (providers.length === 0) {
@@ -32466,7 +32470,7 @@ var ProviderRegistry = class {
    * Discover additional free providers, excluding ones we've already tried.
    * Used when initial health checks fail to yield enough healthy providers.
    */
-  async discoverAdditionalFreeProviders(existing, max = 6, config = DEFAULT_CONFIG) {
+  async discoverAdditionalFreeProviders(existing, max = 6, config2 = DEFAULT_CONFIG) {
     const existingSet = new Set(existing);
     const discovered = [];
     if (process.env.OPENROUTER_API_KEY) {
@@ -32480,7 +32484,7 @@ var ProviderRegistry = class {
     }
     let providers = this.instantiate(this.shuffle(discovered));
     providers = this.dedupeProviders(providers);
-    providers = this.applyAllowBlock(providers, config);
+    providers = this.applyAllowBlock(providers, config2);
     providers = await this.filterRateLimited(providers);
     if (providers.length > max) {
       providers = this.randomSelect(providers, max, Math.min(2, max));
@@ -32514,6 +32518,10 @@ var ProviderRegistry = class {
           logger.warn(`OPENROUTER_API_KEY not set; skipping OpenRouter provider ${name}`);
           continue;
         }
+        if (!config.openrouterAllowPaid && !model.endsWith(":free")) {
+          logger.warn(`Skipping paid OpenRouter model ${name} (set openrouterAllowPaid=true to enable)`);
+          continue;
+        }
         list.push(new OpenRouterProvider(model, apiKey, this.rateLimiter));
         continue;
       }
@@ -32525,16 +32533,16 @@ var ProviderRegistry = class {
     }
     return list;
   }
-  applyAllowBlock(providers, config) {
+  applyAllowBlock(providers, config2) {
     let filtered = providers;
-    if (config.providerAllowlist.length > 0) {
+    if (config2.providerAllowlist.length > 0) {
       filtered = filtered.filter(
-        (provider) => config.providerAllowlist.some((pattern) => provider.name.includes(pattern))
+        (provider) => config2.providerAllowlist.some((pattern) => provider.name.includes(pattern))
       );
     }
-    if (config.providerBlocklist.length > 0) {
+    if (config2.providerBlocklist.length > 0) {
       filtered = filtered.filter(
-        (provider) => !config.providerBlocklist.some((pattern) => provider.name.includes(pattern))
+        (provider) => !config2.providerBlocklist.some((pattern) => provider.name.includes(pattern))
       );
     }
     return filtered;
@@ -32770,8 +32778,8 @@ function unquoteGitPath(path10) {
 
 // src/analysis/llm/prompt-builder.ts
 var PromptBuilder = class {
-  constructor(config) {
-    this.config = config;
+  constructor(config2) {
+    this.config = config2;
   }
   build(pr) {
     const diff = trimDiff(pr.diff, this.config.diffMaxBytes);
@@ -33303,8 +33311,8 @@ function createQueue(concurrency) {
 
 // src/analysis/llm/executor.ts
 var LLMExecutor = class {
-  constructor(config) {
-    this.config = config;
+  constructor(config2) {
+    this.config = config2;
   }
   /**
    * Filter providers by running health checks to identify responsive providers
@@ -33487,8 +33495,8 @@ var ConsensusEngine = class {
 
 // src/analysis/synthesis.ts
 var SynthesisEngine = class {
-  constructor(config) {
-    this.config = config;
+  constructor(config2) {
+    this.config = config2;
   }
   synthesize(findings, pr, testHints, aiAnalysis, providerResults, runDetails, impactAnalysis, mermaidDiagram) {
     const metrics = this.buildMetrics(findings, providerResults, runDetails);
@@ -33984,9 +33992,9 @@ var CacheManager = class {
 // src/cache/incremental.ts
 var import_child_process3 = require("child_process");
 var IncrementalReviewer = class _IncrementalReviewer {
-  constructor(storage = new CacheStorage(), config = { enabled: true, cacheTtlDays: 7 }) {
+  constructor(storage = new CacheStorage(), config2 = { enabled: true, cacheTtlDays: 7 }) {
     this.storage = storage;
-    this.config = config;
+    this.config = config2;
   }
   static CACHE_KEY_PREFIX = "incremental-review-pr-";
   static DEFAULT_TTL_DAYS = 7;
@@ -35443,8 +35451,8 @@ var FeedbackTracker = class _FeedbackTracker {
 
 // src/learning/quiet-mode.ts
 var QuietModeFilter = class {
-  constructor(config, feedbackTracker) {
-    this.config = config;
+  constructor(config2, feedbackTracker) {
+    this.config = config2;
     this.feedbackTracker = feedbackTracker;
   }
   /**
@@ -36743,9 +36751,9 @@ var ReliabilityTracker = class _ReliabilityTracker {
 
 // src/analytics/metrics-collector.ts
 var MetricsCollector = class _MetricsCollector {
-  constructor(storage = new CacheStorage(), config) {
+  constructor(storage = new CacheStorage(), config2) {
     this.storage = storage;
-    this.config = config;
+    this.config = config2;
   }
   static CACHE_KEY = "analytics-metrics-data";
   /**
@@ -36968,8 +36976,8 @@ var crypto2 = __toESM(require("crypto"));
 var import_url = require("url");
 var PluginLoader = class {
   // provider name -> plugin name
-  constructor(config) {
-    this.config = config;
+  constructor(config2) {
+    this.config = config2;
   }
   plugins = /* @__PURE__ */ new Map();
   providerMap = /* @__PURE__ */ new Map();
@@ -37236,32 +37244,32 @@ var BatchOrchestrator = class {
 };
 
 // src/setup.ts
-async function createComponents(config, githubToken) {
-  const pluginLoader = config.pluginsEnabled ? new PluginLoader({
-    pluginDir: config.pluginDir || "./plugins",
-    enabled: config.pluginsEnabled,
-    allowlist: config.pluginAllowlist,
-    blocklist: config.pluginBlocklist
+async function createComponents(config2, githubToken) {
+  const pluginLoader = config2.pluginsEnabled ? new PluginLoader({
+    pluginDir: config2.pluginDir || "./plugins",
+    enabled: config2.pluginsEnabled,
+    allowlist: config2.pluginAllowlist,
+    blocklist: config2.pluginBlocklist
   }) : void 0;
   if (pluginLoader) {
     await pluginLoader.loadPlugins();
   }
   const providerRegistry = new ProviderRegistry(pluginLoader);
-  const promptBuilder = new PromptBuilder(config);
-  const llmExecutor = new LLMExecutor(config);
+  const promptBuilder = new PromptBuilder(config2);
+  const llmExecutor = new LLMExecutor(config2);
   const deduplicator = new Deduplicator();
   const consensus = new ConsensusEngine({
-    minAgreement: config.inlineMinAgreement,
-    minSeverity: config.inlineMinSeverity,
-    maxComments: config.inlineMaxComments
+    minAgreement: config2.inlineMinAgreement,
+    minSeverity: config2.inlineMinSeverity,
+    maxComments: config2.inlineMaxComments
   });
-  const synthesis = new SynthesisEngine(config);
+  const synthesis = new SynthesisEngine(config2);
   const testCoverage = new TestCoverageAnalyzer();
   const astAnalyzer = new ASTAnalyzer();
   const cache = new CacheManager();
   const incrementalReviewer = new IncrementalReviewer(new CacheStorage(), {
-    enabled: config.incrementalEnabled,
-    cacheTtlDays: config.incrementalCacheTtlDays
+    enabled: config2.incrementalEnabled,
+    cacheTtlDays: config2.incrementalCacheTtlDays
   });
   const pricing = new PricingService(process.env.OPENROUTER_API_KEY);
   const costTracker = new CostTracker(pricing);
@@ -37269,7 +37277,7 @@ async function createComponents(config, githubToken) {
   const rules = RuleLoader.load();
   const githubClient = new GitHubClient(githubToken);
   const prLoader = new PullRequestLoader(githubClient);
-  const commentPoster = new CommentPoster(githubClient, config.dryRun);
+  const commentPoster = new CommentPoster(githubClient, config2.dryRun);
   const formatter = new MarkdownFormatterV2();
   const contextRetriever = new ContextRetriever();
   const impactAnalyzer = new ImpactAnalyzer();
@@ -37277,25 +37285,25 @@ async function createComponents(config, githubToken) {
   const mermaidGenerator = new MermaidGenerator();
   const feedbackFilter = new FeedbackFilter(githubClient);
   const cacheStorage = new CacheStorage();
-  const feedbackTracker = config.learningEnabled ? new FeedbackTracker(cacheStorage, config.learningMinFeedbackCount) : void 0;
-  const quietModeFilter = config.quietModeEnabled ? new QuietModeFilter(
+  const feedbackTracker = config2.learningEnabled ? new FeedbackTracker(cacheStorage, config2.learningMinFeedbackCount) : void 0;
+  const quietModeFilter = config2.quietModeEnabled ? new QuietModeFilter(
     {
-      enabled: config.quietModeEnabled,
-      minConfidence: config.quietMinConfidence || 0.5,
-      useLearning: config.quietUseLearning || false
+      enabled: config2.quietModeEnabled,
+      minConfidence: config2.quietMinConfidence || 0.5,
+      useLearning: config2.quietUseLearning || false
     },
     feedbackTracker
   ) : void 0;
-  const graphBuilder = config.graphEnabled ? new CodeGraphBuilder(config.graphMaxDepth || 5, (config.graphTimeoutSeconds || 10) * 1e3) : void 0;
+  const graphBuilder = config2.graphEnabled ? new CodeGraphBuilder(config2.graphMaxDepth || 5, (config2.graphTimeoutSeconds || 10) * 1e3) : void 0;
   const promptGenerator = new PromptGenerator("plain");
   const reliabilityTracker = new ReliabilityTracker(cacheStorage);
-  const metricsCollector = config.analyticsEnabled ? new MetricsCollector(cacheStorage, config) : void 0;
+  const metricsCollector = config2.analyticsEnabled ? new MetricsCollector(cacheStorage, config2) : void 0;
   const batchOrchestrator = new BatchOrchestrator({
-    defaultBatchSize: config.batchMaxFiles || 30,
-    providerOverrides: config.providerBatchOverrides
+    defaultBatchSize: config2.batchMaxFiles || 30,
+    providerOverrides: config2.providerBatchOverrides
   });
   return {
-    config,
+    config: config2,
     providerRegistry,
     promptBuilder,
     llmExecutor,
@@ -37476,8 +37484,8 @@ var TrivialDetector = class {
     /\.map$/
     // Source maps
   ];
-  constructor(config) {
-    this.config = config;
+  constructor(config2) {
+    this.config = config2;
   }
   /**
    * Analyze PR files to determine if the change is trivial
@@ -39351,8 +39359,8 @@ minimatch.unescape = unescape;
 var MAX_PATTERN_LENGTH2 = 500;
 var MAX_COMPLEXITY_SCORE = 50;
 var PathMatcher = class {
-  constructor(config) {
-    this.config = config;
+  constructor(config2) {
+    this.config = config2;
     this.validatePatterns();
   }
   // Cache for pattern matching results: `${filePath}:${pattern}` -> boolean
@@ -39666,9 +39674,9 @@ function createDefaultPathMatcherConfig() {
 
 // src/github/progress-tracker.ts
 var ProgressTracker = class {
-  constructor(octokit, config) {
+  constructor(octokit, config2) {
     this.octokit = octokit;
-    this.config = config;
+    this.config = config2;
   }
   commentId = null;
   items = /* @__PURE__ */ new Map();
@@ -39896,7 +39904,7 @@ var ReviewOrchestrator = class {
    * Tests verify that pr.files array is not modified by this function.
    */
   async executeReview(pr) {
-    const { config } = this.components;
+    const { config: config2 } = this.components;
     const start = Date.now();
     let progressTracker;
     let review = null;
@@ -39909,7 +39917,7 @@ var ReviewOrchestrator = class {
       progressTracker?.addItem("synthesis", "Synthesize & report");
       let codeGraph;
       let contextRetriever = this.components.contextRetriever;
-      if (config.graphEnabled && this.components.graphBuilder) {
+      if (config2.graphEnabled && this.components.graphBuilder) {
         try {
           const graphStart = Date.now();
           codeGraph = await this.components.graphBuilder.buildGraph(pr.files);
@@ -39925,16 +39933,16 @@ var ReviewOrchestrator = class {
         }
       }
       let reviewContext = pr;
-      if (config.skipTrivialChanges) {
+      if (config2.skipTrivialChanges) {
         const trivialDetector = new TrivialDetector({
           enabled: true,
-          skipDependencyUpdates: config.skipDependencyUpdates ?? true,
-          skipDocumentationOnly: config.skipDocumentationOnly ?? true,
-          skipFormattingOnly: config.skipFormattingOnly ?? false,
-          skipTestFixtures: config.skipTestFixtures ?? true,
-          skipConfigFiles: config.skipConfigFiles ?? true,
-          skipBuildArtifacts: config.skipBuildArtifacts ?? true,
-          customTrivialPatterns: config.trivialPatterns ?? []
+          skipDependencyUpdates: config2.skipDependencyUpdates ?? true,
+          skipDocumentationOnly: config2.skipDocumentationOnly ?? true,
+          skipFormattingOnly: config2.skipFormattingOnly ?? false,
+          skipTestFixtures: config2.skipTestFixtures ?? true,
+          skipConfigFiles: config2.skipConfigFiles ?? true,
+          skipBuildArtifacts: config2.skipBuildArtifacts ?? true,
+          customTrivialPatterns: config2.trivialPatterns ?? []
         });
         const trivialResult = trivialDetector.detect(pr.files);
         if (trivialResult.isTrivial) {
@@ -39942,7 +39950,7 @@ var ReviewOrchestrator = class {
           const trivialReview = this.createTrivialReview(trivialResult.reason, pr.files.length, start);
           const markdown2 = this.components.formatter.format(trivialReview);
           await this.components.commentPoster.postSummary(pr.number, markdown2, false);
-          if (config.analyticsEnabled && this.components.metricsCollector) {
+          if (config2.analyticsEnabled && this.components.metricsCollector) {
             try {
               await this.components.metricsCollector.recordReview(trivialReview, pr.number);
               logger.debug(`Recorded trivial review metrics for PR #${pr.number}`);
@@ -39964,11 +39972,11 @@ var ReviewOrchestrator = class {
           };
         }
       }
-      if (config.pathBasedIntensity) {
+      if (config2.pathBasedIntensity) {
         let patterns = [];
-        if (config.pathIntensityPatterns) {
+        if (config2.pathIntensityPatterns) {
           try {
-            const parsed = JSON.parse(config.pathIntensityPatterns);
+            const parsed = JSON.parse(config2.pathIntensityPatterns);
             if (!Array.isArray(parsed)) {
               logger.warn("pathIntensityPatterns is not an array, using defaults");
               patterns = createDefaultPathMatcherConfig().patterns;
@@ -40003,7 +40011,7 @@ var ReviewOrchestrator = class {
         }
         const pathMatcher = new PathMatcher({
           enabled: true,
-          defaultIntensity: config.pathDefaultIntensity ?? "standard",
+          defaultIntensity: config2.pathDefaultIntensity ?? "standard",
           patterns
         });
         const intensityResult = pathMatcher.determineIntensity(reviewContext.files);
@@ -40030,25 +40038,25 @@ var ReviewOrchestrator = class {
           }
         }
       }
-      const cachedFindings = config.enableCaching ? await this.components.cache.load(reviewContext) : null;
+      const cachedFindings = config2.enableCaching ? await this.components.cache.load(reviewContext) : null;
       const reviewPR = useIncremental ? { ...reviewContext, files: filesToReview, diff: filterDiffByFiles(reviewContext.diff, filesToReview) } : reviewContext;
       const llmFindings = [];
       let providerResults = [];
       let aiAnalysis;
-      let providers = await this.components.providerRegistry.createProviders(config);
+      let providers = await this.components.providerRegistry.createProviders(config2);
       providers = await this.applyReliabilityFilters(providers);
       if (providers.length === 0) {
         logger.warn("All providers filtered out by circuit breakers/reliability; skipping LLM execution");
         await progressTracker?.updateProgress("llm", "failed", "No available providers after reliability filtering");
       }
       const batchOrchestrator = this.components.batchOrchestrator || new BatchOrchestrator({
-        defaultBatchSize: config.batchMaxFiles || 30,
-        providerOverrides: config.providerBatchOverrides
+        defaultBatchSize: config2.batchMaxFiles || 30,
+        providerOverrides: config2.providerBatchOverrides
       });
       if (filesToReview.length === 0) {
         logger.info("No files to review in incremental update, using cached findings only");
       } else {
-        await this.ensureBudget(config);
+        await this.ensureBudget(config2);
         let allHealthResults = [];
         let healthy = [];
         const triedProviders = new Set(providers.map((p) => p.name));
@@ -40061,7 +40069,7 @@ var ReviewOrchestrator = class {
           allHealthResults = allHealthResults.concat(healthCheckResults);
         };
         await runHealthCheck(providers);
-        const selectionLimit = Math.max(1, config.providerLimit || 8);
+        const selectionLimit = Math.max(1, config2.providerLimit || 8);
         const desiredOpenRouter = Math.min(4, providers.filter((p) => p.name.startsWith("openrouter/")).length);
         const desiredOpenCode = Math.min(2, providers.filter((p) => p.name.startsWith("opencode/")).length);
         const MIN_OPENROUTER_HEALTHY = desiredOpenRouter;
@@ -40072,7 +40080,7 @@ var ReviewOrchestrator = class {
         const countOpenRouter = (list) => list.filter((p) => p.name.startsWith("openrouter/")).length;
         let attempts = 0;
         const registry = this.components.providerRegistry;
-        const discoverExtras = typeof registry.discoverAdditionalFreeProviders === "function" ? (names) => registry.discoverAdditionalFreeProviders(names, selectionLimit * 2, config) : null;
+        const discoverExtras = typeof registry.discoverAdditionalFreeProviders === "function" ? (names) => registry.discoverAdditionalFreeProviders(names, selectionLimit * 2, config2) : null;
         while (attempts < 6 && discoverExtras && (healthy.length < MIN_TOTAL_HEALTHY || countOpenCode(healthy) < MIN_OPENCODE_HEALTHY || countOpenRouter(healthy) < MIN_OPENROUTER_HEALTHY)) {
           const additional = await discoverExtras(Array.from(triedProviders));
           if (additional.length === 0) break;
@@ -40104,7 +40112,7 @@ var ReviewOrchestrator = class {
             );
             batches = batchOrchestrator.createBatches(filesToReview, 1);
           }
-          const batchQueue = createQueue(Math.max(1, Number(config.providerMaxParallel) || 1));
+          const batchQueue = createQueue(Math.max(1, Number(config2.providerMaxParallel) || 1));
           logger.info(`Processing ${batches.length} batch(es) with size ${batchSize}`);
           const batchPromises = batches.map(
             (batch) => batchQueue.add(async () => {
@@ -40114,7 +40122,7 @@ var ReviewOrchestrator = class {
               try {
                 const results = await this.components.llmExecutor.execute(healthy, prompt);
                 for (const result of results) {
-                  await this.components.costTracker.record(result.name, result.result?.usage, config.budgetMaxUsd);
+                  await this.components.costTracker.record(result.name, result.result?.usage, config2.budgetMaxUsd);
                 }
                 return results;
               } catch (error2) {
@@ -40179,12 +40187,12 @@ var ReviewOrchestrator = class {
           }
           llmFindings.push(...extractFindings(batchResults));
           providerResults = mergedResults;
-          aiAnalysis = config.enableAiDetection ? summarizeAIDetection(providerResults) : void 0;
+          aiAnalysis = config2.enableAiDetection ? summarizeAIDetection(providerResults) : void 0;
         }
       }
-      const astFindings = config.enableAstAnalysis ? this.components.astAnalyzer.analyze(filesToReview) : [];
+      const astFindings = config2.enableAstAnalysis ? this.components.astAnalyzer.analyze(filesToReview) : [];
       const ruleFindings = this.components.rules.run(filesToReview);
-      const securityFindings = config.enableSecurity ? this.components.security.scan(filesToReview) : [];
+      const securityFindings = config2.enableSecurity ? this.components.security.scan(filesToReview) : [];
       const context2 = contextRetriever.findRelatedContext(filesToReview);
       const combinedFindings = [
         ...astFindings,
@@ -40199,9 +40207,9 @@ var ReviewOrchestrator = class {
       const enriched = consensus.map(
         (f) => this.enrichFinding(f, pr.files, context2, providerCount, codeGraph)
       );
-      const quietFiltered = await this.applyQuietMode(enriched, config);
+      const quietFiltered = await this.applyQuietMode(enriched, config2);
       await progressTracker?.updateProgress("static", "completed", "AST, security, and rules processed");
-      const testHints = config.enableTestHints ? this.components.testCoverage.analyze(pr.files) : void 0;
+      const testHints = config2.enableTestHints ? this.components.testCoverage.analyze(pr.files) : void 0;
       const impactAnalysis = this.components.impactAnalyzer.analyze(pr.files, context2, quietFiltered.length > 0);
       const mermaidDiagram = this.components.mermaidGenerator.generateImpactDiagram(pr.files, context2);
       const costSummary = this.components.costTracker.summary();
@@ -40218,7 +40226,7 @@ var ReviewOrchestrator = class {
         totalTokens: costSummary.totalTokens,
         durationSeconds: 0,
         cacheHit: Boolean(cachedFindings),
-        synthesisModel: config.synthesisModel,
+        synthesisModel: config2.synthesisModel,
         providerPoolSize: providers.length
       };
       review = this.components.synthesis.synthesize(
@@ -40260,23 +40268,23 @@ var ReviewOrchestrator = class {
         review.runDetails.durationSeconds = review.metrics.durationSeconds;
       }
       review.metrics.cached = Boolean(cachedFindings);
-      if (config.generateFixPrompts && this.components.promptGenerator) {
+      if (config2.generateFixPrompts && this.components.promptGenerator) {
         const fixPrompts = this.components.promptGenerator.generateFixPrompts(review.findings);
         if (fixPrompts.length > 0) {
           const basename2 = this.sanitizeFilename(process.env.REPORT_BASENAME || "multi-provider-review");
           const fixPromptsPath = import_path.default.join(process.cwd(), `${basename2}-fix-prompts.md`);
-          const format = config.fixPromptFormat || "plain";
+          const format = config2.fixPromptFormat || "plain";
           await this.components.promptGenerator.saveToFile(fixPrompts, fixPromptsPath, format);
           logger.info(`Generated ${fixPrompts.length} fix prompts: ${fixPromptsPath}`);
         }
       }
-      if (config.enableCaching) {
+      if (config2.enableCaching) {
         await this.components.cache.save(pr, review);
       }
-      if (config.incrementalEnabled) {
+      if (config2.incrementalEnabled) {
         await this.components.incrementalReviewer.saveReview(pr, review);
       }
-      if (config.analyticsEnabled && this.components.metricsCollector) {
+      if (config2.analyticsEnabled && this.components.metricsCollector) {
         try {
           await this.components.metricsCollector.recordReview(review, pr.number);
           logger.debug(`Recorded review metrics for PR #${pr.number}`);
@@ -40319,22 +40327,22 @@ var ReviewOrchestrator = class {
     logger.debug("Orchestrator resources disposed");
   }
   shouldSkip(pr) {
-    const { config } = this.components;
-    if (config.skipDrafts && pr.draft) return "PR is a draft";
-    if (config.skipBots && this.isBot(pr.author)) return `Author ${pr.author} is a bot`;
-    if (config.skipLabels.length > 0) {
+    const { config: config2 } = this.components;
+    if (config2.skipDrafts && pr.draft) return "PR is a draft";
+    if (config2.skipBots && this.isBot(pr.author)) return `Author ${pr.author} is a bot`;
+    if (config2.skipLabels.length > 0) {
       for (const label of pr.labels) {
-        if (config.skipLabels.includes(label)) {
+        if (config2.skipLabels.includes(label)) {
           return `Label ${label} triggers skip`;
         }
       }
     }
     const totalLines = pr.additions + pr.deletions;
-    if (config.minChangedLines > 0 && totalLines < config.minChangedLines) {
-      return `Change size ${totalLines} below minimum ${config.minChangedLines}`;
+    if (config2.minChangedLines > 0 && totalLines < config2.minChangedLines) {
+      return `Change size ${totalLines} below minimum ${config2.minChangedLines}`;
     }
-    if (config.maxChangedFiles > 0 && pr.files.length > config.maxChangedFiles) {
-      return `File count ${pr.files.length} exceeds max ${config.maxChangedFiles}`;
+    if (config2.maxChangedFiles > 0 && pr.files.length > config2.maxChangedFiles) {
+      return `File count ${pr.files.length} exceeds max ${config2.maxChangedFiles}`;
     }
     return null;
   }
@@ -40389,12 +40397,12 @@ var ReviewOrchestrator = class {
       return void 0;
     }
   }
-  async ensureBudget(config) {
-    if (config.budgetMaxUsd <= 0) return;
+  async ensureBudget(config2) {
+    if (config2.budgetMaxUsd <= 0) return;
     const projected = this.components.costTracker.summary().totalCost;
-    if (projected >= config.budgetMaxUsd) {
+    if (projected >= config2.budgetMaxUsd) {
       throw new Error(
-        `Budget exhausted: current recorded cost $${projected.toFixed(4)} exceeds or equals cap $${config.budgetMaxUsd.toFixed(2)}`
+        `Budget exhausted: current recorded cost $${projected.toFixed(4)} exceeds or equals cap $${config2.budgetMaxUsd.toFixed(2)}`
       );
     }
   }
@@ -40455,15 +40463,15 @@ var ReviewOrchestrator = class {
       }
     };
   }
-  async applyQuietMode(findings, config) {
-    if (!config.quietModeEnabled) return findings;
+  async applyQuietMode(findings, config2) {
+    if (!config2.quietModeEnabled) return findings;
     if (this.components.quietModeFilter) {
       const filtered = await this.components.quietModeFilter.filterByConfidence(findings);
       const filterStats = await this.components.quietModeFilter.getFilterStats(findings);
       logger.info(`Quiet mode: filtered ${filterStats.filtered}/${filterStats.total} findings (${filterStats.filterRate.toFixed(1)}% reduction)`);
       return filtered;
     }
-    const threshold = config.quietMinConfidence ?? 0.5;
+    const threshold = config2.quietMinConfidence ?? 0.5;
     return findings.filter((f) => (f.evidence?.confidence ?? 1) >= threshold);
   }
   /**
@@ -40560,13 +40568,13 @@ async function run() {
     syncEnvFromInputs();
     const token = core3.getInput("GITHUB_TOKEN") || process.env.GITHUB_TOKEN;
     validateRequired(token, "GITHUB_TOKEN");
-    const config = ConfigLoader.load();
-    const components = await createComponents(config, token);
+    const config2 = ConfigLoader.load();
+    const components = await createComponents(config2, token);
     const orchestrator = new ReviewOrchestrator(components);
     const prInput = core3.getInput("PR_NUMBER") || process.env.PR_NUMBER;
     validateRequired(prInput, "PR_NUMBER");
     const prNumber = validatePositiveInteger(prInput, "PR_NUMBER");
-    if (config.dryRun) {
+    if (config2.dryRun) {
       core3.info("\u{1F50D} DRY RUN MODE - Review will run but no comments will be posted");
     }
     core3.info(`Starting review for PR #${prNumber}`);

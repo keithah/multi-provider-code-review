@@ -8,6 +8,7 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   fallbackProviders: [],
   providerAllowlist: [],
   providerBlocklist: [],
+  openrouterAllowPaid: false,
   providerLimit: 8,
   providerRetries: 2,
   providerMaxParallel: 3,
