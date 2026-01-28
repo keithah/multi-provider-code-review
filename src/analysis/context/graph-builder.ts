@@ -532,6 +532,32 @@ export class CodeGraph {
       }
     }
 
+    // Validate Definition objects have required fields
+    if (!Array.isArray(data.definitions)) {
+      throw new Error('Invalid graph data: definitions must be an array');
+    }
+    for (const [key, def] of data.definitions) {
+      if (!def || typeof def !== 'object') {
+        throw new Error(`Invalid definition for key ${key}: must be an object`);
+      }
+      if (typeof def.name !== 'string' || !def.name) {
+        throw new Error(`Invalid definition for key ${key}: name must be a non-empty string`);
+      }
+      if (typeof def.file !== 'string' || !def.file) {
+        throw new Error(`Invalid definition for key ${key}: file must be a non-empty string`);
+      }
+      if (typeof def.line !== 'number' || def.line < 0) {
+        throw new Error(`Invalid definition for key ${key}: line must be a non-negative number`);
+      }
+      const validTypes = ['function', 'class', 'variable', 'type', 'interface'];
+      if (!validTypes.includes(def.type)) {
+        throw new Error(`Invalid definition for key ${key}: type must be one of ${validTypes.join(', ')}`);
+      }
+      if (typeof def.exported !== 'boolean') {
+        throw new Error(`Invalid definition for key ${key}: exported must be a boolean`);
+      }
+    }
+
     // Create graph with copied files array
     const graph = new CodeGraph([...data.files], data.buildTime);
 
