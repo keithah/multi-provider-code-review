@@ -180,7 +180,7 @@ describe('ProgressTracker', () => {
       const lastCall = updateCommentMock.mock.calls[updateCommentMock.mock.calls.length - 1];
       const body = lastCall?.[0]?.body as string;
 
-      expect(body).toContain('⏳'); // Pending items remain pending when not executed
+      expect(body).toContain('✅'); // All items marked as completed on successful finalization
       expect(body).not.toContain('❌'); // No failures
     });
 

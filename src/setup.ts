@@ -83,7 +83,6 @@ async function createComponentsForCLI(config: ReviewConfig): Promise<ReviewCompo
     await pluginLoader.loadPlugins();
   }
 
-  const providerRegistry = new ProviderRegistry(pluginLoader);
   const promptBuilder = new PromptBuilder(config);
   const llmExecutor = new LLMExecutor(config);
   const deduplicator = new Deduplicator();
@@ -95,7 +94,7 @@ async function createComponentsForCLI(config: ReviewConfig): Promise<ReviewCompo
   const synthesis = new SynthesisEngine(config);
   const testCoverage = new TestCoverageAnalyzer();
   const astAnalyzer = new ASTAnalyzer();
-  const cache = new CacheManager();
+  const cache = new CacheManager(undefined, config);
   const incrementalReviewer = new IncrementalReviewer(new CacheStorage(), {
     enabled: config.incrementalEnabled,
     cacheTtlDays: config.incrementalCacheTtlDays,
@@ -127,6 +126,7 @@ async function createComponentsForCLI(config: ReviewConfig): Promise<ReviewCompo
     : undefined;
   const promptGenerator = new PromptGenerator('plain');
   const reliabilityTracker = new ReliabilityTracker(cacheStorage);
+  const providerRegistry = new ProviderRegistry(pluginLoader, reliabilityTracker);
   const metricsCollector = config.analyticsEnabled
     ? new MetricsCollector(cacheStorage, config)
     : undefined;
@@ -196,7 +196,6 @@ export async function createComponents(config: ReviewConfig, githubToken: string
     await pluginLoader.loadPlugins();
   }
 
-  const providerRegistry = new ProviderRegistry(pluginLoader);
   const promptBuilder = new PromptBuilder(config);
   const llmExecutor = new LLMExecutor(config);
   const deduplicator = new Deduplicator();
@@ -208,7 +207,7 @@ export async function createComponents(config: ReviewConfig, githubToken: string
   const synthesis = new SynthesisEngine(config);
   const testCoverage = new TestCoverageAnalyzer();
   const astAnalyzer = new ASTAnalyzer();
-  const cache = new CacheManager();
+  const cache = new CacheManager(undefined, config);
   const incrementalReviewer = new IncrementalReviewer(new CacheStorage(), {
     enabled: config.incrementalEnabled,
     cacheTtlDays: config.incrementalCacheTtlDays,
@@ -245,6 +244,7 @@ export async function createComponents(config: ReviewConfig, githubToken: string
     : undefined;
   const promptGenerator = new PromptGenerator('plain');
   const reliabilityTracker = new ReliabilityTracker(cacheStorage);
+  const providerRegistry = new ProviderRegistry(pluginLoader, reliabilityTracker);
   const metricsCollector = config.analyticsEnabled
     ? new MetricsCollector(cacheStorage, config)
     : undefined;

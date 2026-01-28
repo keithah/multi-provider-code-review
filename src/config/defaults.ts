@@ -45,6 +45,8 @@ export const DEFAULT_CONFIG: ReviewConfig = {
 
   batchMaxFiles: 30,
   providerBatchOverrides: {},
+  enableTokenAwareBatching: true,
+  targetTokensPerBatch: 50000, // ~50k tokens per batch
 
   graphEnabled: false,
   graphCacheEnabled: true,
@@ -76,6 +78,27 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   pathBasedIntensity: false, // Disabled by default, opt-in
   pathIntensityPatterns: undefined,
   pathDefaultIntensity: 'standard',
+
+  // Provider selection strategy
+  providerSelectionStrategy: 'reliability',
+  providerExplorationRate: 0.3,  // 70% exploit, 30% explore
+
+  // Intensity behavior mappings
+  intensityProviderCounts: {
+    thorough: 8,
+    standard: 5,
+    light: 3,
+  },
+  intensityTimeouts: {
+    thorough: 180000,  // 3 minutes
+    standard: 120000,  // 2 minutes
+    light: 60000,      // 1 minute
+  },
+  intensityPromptDepth: {
+    thorough: 'detailed',
+    standard: 'standard',
+    light: 'brief',
+  },
 
   dryRun: false,
 };

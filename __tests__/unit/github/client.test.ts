@@ -1,6 +1,5 @@
 import { GitHubClient } from '../../../src/github/client';
 import * as github from '@actions/github';
-import * as github from '@actions/github';
 
 describe('GitHubClient', () => {
   const mockToken = 'ghp_test123456789';

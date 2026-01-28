@@ -3,6 +3,7 @@ import { OpenRouterProvider } from './openrouter';
 import { OpenCodeProvider } from './opencode';
 import { ReviewConfig } from '../types';
 import { RateLimiter } from './rate-limiter';
+import { ReliabilityTracker } from './reliability-tracker';
 import { logger } from '../utils/logger';
 import { PricingService } from '../cost/pricing';
 import { DEFAULT_CONFIG, FALLBACK_STATIC_PROVIDERS } from '../config/defaults';
@@ -15,10 +16,13 @@ export class ProviderRegistry {
   private rotationIndex = 0;
   private openRouterPricing = new PricingService(process.env.OPENROUTER_API_KEY);
 
-  constructor(private readonly pluginLoader?: PluginLoader) {}
+  constructor(
+    private readonly pluginLoader?: PluginLoader,
+    private readonly reliabilityTracker?: ReliabilityTracker
+  ) {}
 
   async createProviders(config: ReviewConfig): Promise<Provider[]> {
-    let providers = this.instantiate(config.providers);
+    let providers = this.instantiate(config.providers, config);
 
     const userProvidedList = Boolean(process.env.REVIEW_PROVIDERS);
     const usingDefaults = this.usesDefaultProviders(config.providers);
@@ -56,7 +60,7 @@ export class ProviderRegistry {
       if (discoveredModels.length > 0) {
         logger.info(`🎯 Total discovered: ${discoveredModels.length} free models`);
         logger.info(`   Models: ${discoveredModels.join(', ')}`);
-        providers.push(...this.instantiate(discoveredModels));
+        providers.push(...this.instantiate(discoveredModels, config));
       } else {
         logger.warn('⚠️  Dynamic discovery found no models, using static fallbacks');
       }
@@ -65,16 +69,25 @@ export class ProviderRegistry {
     // Ensure we have at least some providers; if discovery failed, use static fallbacks
     if (providers.length === 0) {
       logger.warn('Using static fallback providers as last resort');
-      providers = this.instantiate(FALLBACK_STATIC_PROVIDERS);
+      providers = this.instantiate(FALLBACK_STATIC_PROVIDERS, config);
     }
 
-    // De-dup providers and randomize order slightly to avoid sticky first picks
-    providers = this.shuffle(this.dedupeProviders(providers));
+    // De-dup providers
+    providers = this.dedupeProviders(providers);
 
     providers = this.applyAllowBlock(providers, config);
     logger.info(`After allowBlock: ${providers.length} providers`);
     providers = await this.filterRateLimited(providers);
     logger.info(`After filterRateLimited: ${providers.length} providers`);
+
+    // Sort by reliability if using reliability-based selection
+    const strategy = config.providerSelectionStrategy ?? 'reliability';
+    if (strategy === 'reliability') {
+      providers = await this.sortByReliability(providers);
+    } else if (strategy === 'random') {
+      providers = this.shuffle(providers);
+    }
+    // round-robin uses applyRotation later
 
     // If providerLimit is 0 or unset, default to 8. Otherwise use the configured limit.
     const selectionLimit = config.providerLimit > 0 ? config.providerLimit : 8;
@@ -94,21 +107,29 @@ export class ProviderRegistry {
       p => !p.name.startsWith('openrouter/') && !p.name.startsWith('opencode/')
     );
 
-    const selected: Provider[] = [];
-    selected.push(...this.shuffle(openrouterProviders).slice(0, MIN_OPENROUTER));
-    selected.push(...this.shuffle(opencodeProviders).slice(0, MIN_OPENCODE));
+    // Use reliability-based selection with diversity constraints
+    const explorationRate = config.providerExplorationRate ?? 0.3;
+    const allProviders = [...openrouterProviders, ...opencodeProviders, ...otherProviders];
 
-    // Build remaining pool from all providers excluding already selected
-    const selectedNames = new Set(selected.map(s => s.name));
-    const remainingPool = this.shuffle([
-      ...openrouterProviders,
-      ...opencodeProviders,
-      ...otherProviders,
-    ]).filter(p => !selectedNames.has(p.name));
+    let selected: Provider[];
+    if (strategy === 'reliability') {
+      selected = this.selectWithDiversity(allProviders, selectionLimit, minSelection, explorationRate);
+    } else if (strategy === 'random') {
+      // Random selection with diversity requirements
+      selected = [];
+      selected.push(...this.shuffle(openrouterProviders).slice(0, MIN_OPENROUTER));
+      selected.push(...this.shuffle(opencodeProviders).slice(0, MIN_OPENCODE));
 
-    while (selected.length < selectionLimit && remainingPool.length > 0) {
-      const next = remainingPool.shift()!;
-      selected.push(next);
+      const selectedNames = new Set(selected.map(s => s.name));
+      const remainingPool = this.shuffle(allProviders).filter(p => !selectedNames.has(p.name));
+
+      while (selected.length < selectionLimit && remainingPool.length > 0) {
+        const next = remainingPool.shift()!;
+        selected.push(next);
+      }
+    } else {
+      // round-robin
+      selected = this.applyRotation(allProviders, selectionLimit);
     }
 
     providers = selected.length > 0 ? selected : providers;
@@ -116,7 +137,7 @@ export class ProviderRegistry {
     // Add fallback providers if we haven't reached the selection limit
     if (providers.length < selectionLimit && config.fallbackProviders.length > 0) {
       logger.info(`Adding ${config.fallbackProviders.length} fallback providers to reach target of ${selectionLimit}`);
-      const fallbacks = this.instantiate(config.fallbackProviders);
+      const fallbacks = this.instantiate(config.fallbackProviders, config);
       const filteredFallbacks = await this.filterRateLimited(fallbacks);
       providers = this.dedupeProviders([...providers, ...filteredFallbacks]);
       logger.info(`After adding fallbacks: ${providers.length} providers`);
@@ -130,13 +151,13 @@ export class ProviderRegistry {
 
     if (providers.length === 0 && config.fallbackProviders.length > 0) {
       logger.warn('Primary providers unavailable, using fallbacks');
-      providers = this.instantiate(config.fallbackProviders);
+      providers = this.instantiate(config.fallbackProviders, config);
       providers = await this.filterRateLimited(providers);
     }
 
     if (providers.length === 0) {
       logger.warn('No providers available; falling back to opencode/minimax-m2.1-free');
-      providers = this.instantiate(['opencode/minimax-m2.1-free']);
+      providers = this.instantiate(['opencode/minimax-m2.1-free'], config);
     }
 
     return providers;
@@ -169,7 +190,7 @@ export class ProviderRegistry {
     }
 
     // Shuffle early to avoid always picking the same heads of the list
-    let providers = this.instantiate(this.shuffle(discovered));
+    let providers = this.instantiate(this.shuffle(discovered), config);
     providers = this.dedupeProviders(providers);
     providers = this.applyAllowBlock(providers, config);
     providers = await this.filterRateLimited(providers);
@@ -181,7 +202,7 @@ export class ProviderRegistry {
     return providers;
   }
 
-  private instantiate(names: string[]): Provider[] {
+  private instantiate(names: string[], config: ReviewConfig = DEFAULT_CONFIG): Provider[] {
     const list: Provider[] = [];
 
     for (const name of names) {
@@ -320,13 +341,130 @@ export class ProviderRegistry {
     if (parts.length < 3) return name;
     const vendor = parts[1];
     const modelWithVariant = parts[2].split(':')[0];
-    // Strip trailing size/version tokens (-9b, -12b, -30b, -v2, etc.)
-    const base = modelWithVariant.replace(/-[0-9]+[a-z]*.*$/i, '');
+    // Strip only size tokens (-9b, -12b, -30b) and version markers (-v2, -v10)
+    // Preserve numeric model versions like "phi-4", "gemini-2.0", "devstral-2512"
+    const base = modelWithVariant
+      .replace(/-\d+b$/i, '')      // Remove size tokens like -9b, -12b
+      .replace(/-v\d+[a-z]*$/i, ''); // Remove version markers like -v2, -v10
     return `${vendor}/${base}`;
   }
 
   private usesDefaultProviders(list: string[]): boolean {
     if (!Array.isArray(list) || list.length !== DEFAULT_CONFIG.providers.length) return false;
     return list.every(p => DEFAULT_CONFIG.providers.includes(p));
+  }
+
+  /**
+   * Sort providers by reliability score (highest first)
+   * Providers without reliability data get default score (0.5)
+   */
+  private async sortByReliability(providers: Provider[]): Promise<Provider[]> {
+    if (!this.reliabilityTracker) {
+      // No tracker available, return as-is
+      return providers;
+    }
+
+    const scored: Array<{ provider: Provider; score: number }> = [];
+
+    for (const provider of providers) {
+      const score = await this.reliabilityTracker.getReliabilityScore(provider.name);
+      scored.push({ provider, score });
+    }
+
+    // Sort by score descending (highest reliability first)
+    scored.sort((a, b) => b.score - a.score);
+
+    const sorted = scored.map(s => s.provider);
+
+    if (scored.length > 0) {
+      logger.debug(
+        `Provider reliability ranking: ${scored.map(s => `${s.provider.name}=${(s.score ?? 0.5).toFixed(2)}`).join(', ')}`
+      );
+    }
+
+    return sorted;
+  }
+
+  /**
+   * Select providers with diversity constraints and controlled randomization
+   *
+   * Strategy:
+   * 1. Take top N% by reliability (deterministic exploit)
+   * 2. Randomly select remaining slots from pool (exploration)
+   * 3. Ensure minimum diversity (OpenRouter/OpenCode mix)
+   */
+  private selectWithDiversity(
+    providers: Provider[],
+    selectionLimit: number,
+    minSelection: number,
+    explorationRate: number = 0.3
+  ): Provider[] {
+    if (providers.length <= selectionLimit) {
+      return providers; // Use all available
+    }
+
+    const selected: Provider[] = [];
+
+    // Take top (1-explorationRate)% slots deterministically (exploit best performers)
+    const deterministicCount = Math.floor(selectionLimit * (1 - explorationRate));
+    selected.push(...providers.slice(0, deterministicCount));
+
+    // Randomly select remaining slots (exploration)
+    const explorationCount = selectionLimit - deterministicCount;
+    const explorationPool = providers.slice(deterministicCount);
+    const shuffled = this.shuffle(explorationPool);
+    selected.push(...shuffled.slice(0, explorationCount));
+
+    // Ensure diversity: check OpenRouter/OpenCode mix
+    const openrouterCount = selected.filter(p => p.name.startsWith('openrouter/')).length;
+    const opencodeCount = selected.filter(p => p.name.startsWith('opencode/')).length;
+
+    const MIN_OPENROUTER = Math.min(2, selectionLimit);
+    const MIN_OPENCODE = Math.min(1, selectionLimit);
+
+    // If diversity requirements not met, adjust selection
+    if (openrouterCount < MIN_OPENROUTER || opencodeCount < MIN_OPENCODE) {
+      return this.adjustForDiversity(providers, selectionLimit, MIN_OPENROUTER, MIN_OPENCODE);
+    }
+
+    logger.info(
+      `Selected ${selected.length} providers: ${deterministicCount} by reliability + ${explorationCount} exploration`
+    );
+
+    return selected;
+  }
+
+  /**
+   * Adjust selection to meet diversity requirements
+   */
+  private adjustForDiversity(
+    providers: Provider[],
+    limit: number,
+    minOpenRouter: number,
+    minOpenCode: number
+  ): Provider[] {
+    const openrouter = providers.filter(p => p.name.startsWith('openrouter/'));
+    const opencode = providers.filter(p => p.name.startsWith('opencode/'));
+    const others = providers.filter(
+      p => !p.name.startsWith('openrouter/') && !p.name.startsWith('opencode/')
+    );
+
+    const selected: Provider[] = [];
+
+    // Ensure minimums
+    selected.push(...openrouter.slice(0, minOpenRouter));
+    selected.push(...opencode.slice(0, minOpenCode));
+
+    // Fill remaining slots from all pools (already sorted by reliability)
+    const remaining = limit - selected.length;
+    const pool = [
+      ...openrouter.slice(minOpenRouter),
+      ...opencode.slice(minOpenCode),
+      ...others,
+    ].filter(p => !selected.includes(p));
+
+    selected.push(...pool.slice(0, remaining));
+
+    return selected.slice(0, limit);
   }
 }

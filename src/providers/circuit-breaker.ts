@@ -35,7 +35,7 @@ export class CircuitBreaker {
   // Default configuration constants
   private static readonly DEFAULT_FAILURE_THRESHOLD = 3;
   private static readonly DEFAULT_OPEN_DURATION_MS = 5 * 60 * 1000; // 5 minutes
-  private static readonly LOCK_CLEANUP_MS = 30_000; // 30 seconds
+  private static readonly LOCK_CLEANUP_MS = 10_000; // 10 seconds (reduced for faster recovery)
 
   private readonly failureThreshold: number;
   private readonly openDurationMs: number;
@@ -162,7 +162,7 @@ export class CircuitBreaker {
     this.locks.set(lockKey, tail);
 
     // Failsafe cleanup: if something wedges the tail promise, clear the lock after a timeout.
-    setTimeout(() => {
+    const cleanupTimer = setTimeout(() => {
       if (this.locks.get(lockKey) === tail) {
         logger.warn(`Lock cleanup triggered for ${lockKey}`);
         this.locks.delete(lockKey);
@@ -170,30 +170,18 @@ export class CircuitBreaker {
     }, CircuitBreaker.LOCK_CLEANUP_MS);
 
     const run = (async () => {
-      await previous;
       try {
+        await previous;
         return await fn();
       } finally {
+        // Always release the lock and clear the timeout
         release();
+        clearTimeout(cleanupTimer);
+
         // Clean up the lock immediately after execution
         // Only delete if this is still the current tail (not if a new lock was added)
         if (this.locks.get(lockKey) === tail) {
           this.locks.delete(lockKey);
-        }
-      }
-      // Sweep occasionally to prevent unbounded growth in pathological cases
-      if (this.locks.size > 500) {
-        for (const [key, promise] of this.locks.entries()) {
-          // If promise has already resolved (best-effort), drop it
-          promise.finally(() => {
-            if (this.locks.get(key) === promise) {
-              this.locks.delete(key);
-            }
-          }).catch(() => {
-            if (this.locks.get(key) === promise) {
-              this.locks.delete(key);
-            }
-          });
         }
       }
     })();

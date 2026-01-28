@@ -177,7 +177,8 @@ export function filterDiffByFiles(diff: string, files: { filename: string }[]): 
         const rawB = match[2].trim();
         const aPath = unquoteGitPath(rawA);
         const bPath = unquoteGitPath(rawB);
-        includeCurrent = target.has(bPath) || target.has(aPath);
+        // Prioritize bPath (new path) to correctly handle renames/moves
+        includeCurrent = target.has(bPath);
       }
       currentChunk.push(line);
     } else {

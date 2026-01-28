@@ -68,7 +68,21 @@ export class OpenRouterProvider extends Provider {
 
       if (!response.ok) {
         const retryAfter = response.headers.get('retry-after');
-        const seconds = retryAfter ? parseInt(retryAfter, 10) : NaN;
+        let seconds: number = NaN;
+
+        if (retryAfter) {
+          // Try parsing as integer (delay-seconds format)
+          seconds = parseInt(retryAfter, 10);
+
+          // If NaN, try parsing as HTTP-date
+          if (isNaN(seconds)) {
+            const parsedDate = Date.parse(retryAfter);
+            if (!isNaN(parsedDate) && parsedDate > Date.now()) {
+              seconds = Math.ceil((parsedDate - Date.now()) / 1000);
+            }
+          }
+        }
+
         const minutes = !isNaN(seconds) && seconds > 0 ? Math.ceil(seconds / 60) : 60;
 
         if (response.status === 429) {

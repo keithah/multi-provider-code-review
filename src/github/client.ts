@@ -1,11 +1,13 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import { Octokit } from '@octokit/rest';
+import { GitHubRateLimitTracker } from './rate-limit';
 
 export class GitHubClient {
   public readonly octokit: Octokit;
   public readonly owner: string;
   public readonly repo: string;
+  private readonly rateLimitTracker = new GitHubRateLimitTracker();
 
   constructor(token: string) {
     this.octokit = github.getOctokit(token) as unknown as Octokit;
@@ -29,12 +31,43 @@ export class GitHubClient {
   }
 
   /**
+   * Get current GitHub API rate limit status
+   */
+  getRateLimitStatus() {
+    return this.rateLimitTracker.getStatus();
+  }
+
+  /**
+   * Check if we're approaching rate limit and log warning
+   */
+  checkRateLimitStatus(): void {
+    if (this.rateLimitTracker.isApproachingLimit()) {
+      const status = this.rateLimitTracker.getStatus();
+      core.warning(
+        `Approaching GitHub API rate limit: ${status?.remaining}/${status?.limit} remaining`
+      );
+    }
+  }
+
+  /**
+   * Wait for rate limit to reset if exceeded
+   */
+  private async handleRateLimit(): Promise<void> {
+    if (this.rateLimitTracker.isExceeded()) {
+      await this.rateLimitTracker.waitForReset();
+    }
+  }
+
+  /**
    * Fetch file content from a specific ref (commit SHA, branch, or tag)
    * @param filePath - Path to the file in the repository
    * @param ref - Git ref (commit SHA, branch name, or tag)
    * @returns File content as string, or null if file doesn't exist/inaccessible
    */
   async getFileContent(filePath: string, ref: string): Promise<string | null> {
+    // Wait if rate limit is exceeded
+    await this.handleRateLimit();
+
     try {
       const response = await this.octokit.rest.repos.getContent({
         owner: this.owner,
@@ -42,6 +75,11 @@ export class GitHubClient {
         path: filePath,
         ref,
       });
+
+      // Update rate limit tracker from response headers
+      if (response.headers) {
+        this.rateLimitTracker.updateFromHeaders(response.headers as Record<string, string>);
+      }
 
       // Check if the response is a file (not a directory)
       if ('content' in response.data && !Array.isArray(response.data)) {

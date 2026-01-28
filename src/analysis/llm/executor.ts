@@ -84,16 +84,16 @@ export class LLMExecutor {
     return { healthy: healthyProviders, healthCheckResults };
   }
 
-  async execute(providers: Provider[], prompt: string): Promise<ProviderResult[]> {
+  async execute(providers: Provider[], prompt: string, timeoutMs?: number): Promise<ProviderResult[]> {
     const queue = createQueue(this.config.providerMaxParallel);
     const results: ProviderResult[] = [];
 
     for (const provider of providers) {
       queue.add(async () => {
         const started = Date.now();
-        const timeoutMs = this.config.runTimeoutSeconds * 1000;
+        const actualTimeoutMs = timeoutMs ?? (this.config.runTimeoutSeconds * 1000);
 
-        const runner = async () => provider.review(prompt, timeoutMs);
+        const runner = async () => provider.review(prompt, actualTimeoutMs);
 
         try {
           const result = await withRetry(runner, {

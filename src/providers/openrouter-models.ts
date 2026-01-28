@@ -136,8 +136,11 @@ export async function getBestFreeModels(
   logger.info(`Found ${freeModels.length} free OpenRouter models`);
 
   // Rank and sort models
+  // Note: Popularity boost is added even though API returns models ordered by top-weekly
+  // This ensures popular models are strongly preferred in the final ranking, combining
+  // API ordering with our quality metrics (context length, code-focus, instruction tuning)
   const rankedModels: ModelRanking[] = freeModels.map((model, idx) => {
-    const popularityBoost = (freeModels.length - idx); // API is already ordered by popularity (top-weekly)
+    const popularityBoost = (freeModels.length - idx); // Boost decreases with position
     return {
       modelId: `openrouter/${model.id}`,
       score: rankModel(model) + popularityBoost,

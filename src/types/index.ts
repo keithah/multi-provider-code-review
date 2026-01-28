@@ -13,6 +13,7 @@ export interface ReviewConfig {
   providerLimit: number;
   providerRetries: number;
   providerMaxParallel: number;
+  openrouterAllowPaid?: boolean;
   quietModeEnabled?: boolean;
   quietMinConfidence?: number;
   quietUseLearning?: boolean;
@@ -46,6 +47,8 @@ export interface ReviewConfig {
 
   batchMaxFiles?: number;
   providerBatchOverrides?: Record<string, number>;
+  enableTokenAwareBatching?: boolean;
+  targetTokensPerBatch?: number;
 
   graphEnabled?: boolean;
   graphCacheEnabled?: boolean;
@@ -77,6 +80,27 @@ export interface ReviewConfig {
   pathBasedIntensity?: boolean;
   pathIntensityPatterns?: string; // JSON string of PathPattern[]
   pathDefaultIntensity?: 'thorough' | 'standard' | 'light';
+
+  // Provider selection strategy
+  providerSelectionStrategy?: 'reliability' | 'random' | 'round-robin';
+  providerExplorationRate?: number;  // 0.0-1.0, default 0.3 (30% exploration)
+
+  // Intensity behavior mappings
+  intensityProviderCounts?: {
+    thorough: number;
+    standard: number;
+    light: number;
+  };
+  intensityTimeouts?: {
+    thorough: number;
+    standard: number;
+    light: number;
+  };
+  intensityPromptDepth?: {
+    thorough: 'detailed' | 'standard' | 'brief';
+    standard: 'detailed' | 'standard' | 'brief';
+    light: 'detailed' | 'standard' | 'brief';
+  };
 
   dryRun: boolean;
 }
@@ -326,3 +350,5 @@ export interface CodeGraph {
   findDependencies(file: string): CodeSnippet[];
   findImpactRadius(file: string): ImpactAnalysis;
 }
+
+export type ReviewIntensity = 'thorough' | 'standard' | 'light';

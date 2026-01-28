@@ -18,6 +18,7 @@ import { buildJson } from '../output/json';
 import { buildSarif } from '../output/sarif';
 import { CacheManager } from '../cache/manager';
 import { IncrementalReviewer } from '../cache/incremental';
+import { GraphCache } from '../cache/graph-cache';
 import { CostTracker } from '../cost/tracker';
 import { SecurityScanner } from '../security/scanner';
 import { RulesEngine } from '../rules/engine';
@@ -36,7 +37,7 @@ import { z } from 'zod';
 import { Provider } from '../providers/base';
 import { createQueue } from '../utils/parallel';
 import PQueue from 'p-queue';
-import { ReviewConfig, Review, PRContext, RunDetails, Finding, FileChange, UnchangedContext, ProviderResult } from '../types';
+import { ReviewConfig, Review, PRContext, RunDetails, Finding, FileChange, UnchangedContext, ProviderResult, ReviewIntensity } from '../types';
 import { logger } from '../utils/logger';
 import { mapAddedLines, filterDiffByFiles } from '../utils/diff';
 import { BatchOrchestrator } from './batch-orchestrator';
@@ -82,7 +83,14 @@ export interface ReviewComponents {
 }
 
 export class ReviewOrchestrator {
-  constructor(private readonly components: ReviewComponents) {}
+  private graphCache?: GraphCache;
+
+  constructor(private readonly components: ReviewComponents) {
+    // Initialize graph cache if enabled
+    if (components.config?.graphEnabled && components.config?.graphCacheEnabled) {
+      this.graphCache = new GraphCache();
+    }
+  }
 
   async execute(prNumber: number): Promise<Review | null> {
     const pr = await this.components.prLoader.load(prNumber);
@@ -122,10 +130,31 @@ export class ReviewOrchestrator {
     if (config.graphEnabled && this.components.graphBuilder) {
       try {
         const graphStart = Date.now();
-        codeGraph = await this.components.graphBuilder.buildGraph(pr.files);
-        const graphTime = Date.now() - graphStart;
-        logger.info(`Code graph built in ${graphTime}ms: ${codeGraph.getStats().definitions} definitions, ${codeGraph.getStats().imports} imports`);
-        await progressTracker?.updateProgress('graph', 'completed', `Built in ${graphTime}ms`);
+
+        // Try loading from cache first
+        if (this.graphCache) {
+          const cached = await this.graphCache.get(pr.number, pr.headSha);
+          if (cached) {
+            codeGraph = cached;
+          }
+        }
+
+        if (codeGraph) {
+          const graphTime = Date.now() - graphStart;
+          logger.info(`Loaded code graph from cache (${graphTime}ms)`);
+          await progressTracker?.updateProgress('graph', 'completed', `Loaded from cache in ${graphTime}ms`);
+        } else {
+          // Full rebuild
+          codeGraph = await this.components.graphBuilder.buildGraph(pr.files);
+          const graphTime = Date.now() - graphStart;
+          logger.info(`Code graph built in ${graphTime}ms: ${codeGraph.getStats().definitions} definitions, ${codeGraph.getStats().imports} imports`);
+          await progressTracker?.updateProgress('graph', 'completed', `Built in ${graphTime}ms`);
+
+          // Cache the graph
+          if (this.graphCache) {
+            await this.graphCache.set(pr.number, pr.headSha, codeGraph);
+          }
+        }
 
         // Create new context retriever with graph for this review (don't mutate shared component)
         if (codeGraph) {
@@ -188,8 +217,8 @@ export class ReviewOrchestrator {
     }
 
     // Determine review intensity based on file paths (after trivial filtering)
-    // NOTE: Currently logs intensity but doesn't apply it to review behavior
-    // TODO: Wire intensity into PromptBuilder, provider selection, or analysis depth
+    let reviewIntensity: ReviewIntensity = config.pathDefaultIntensity ?? 'standard';
+
     if (config.pathBasedIntensity) {
       let patterns: PathPattern[] = [];
       if (config.pathIntensityPatterns) {
@@ -242,12 +271,23 @@ export class ReviewOrchestrator {
       });
 
       const intensityResult = pathMatcher.determineIntensity(reviewContext.files);
-      logger.info(`Review intensity: ${intensityResult.intensity} - ${intensityResult.reason}`);
+      reviewIntensity = intensityResult.intensity;
+
+      logger.info(`Review intensity: ${reviewIntensity} - ${intensityResult.reason}`);
 
       if (intensityResult.matchedPaths.length > 0) {
         logger.debug(`Matched paths: ${intensityResult.matchedPaths.join(', ')}`);
       }
     }
+
+    // Apply intensity to provider selection and timeouts
+    const intensityProviderLimit = config.intensityProviderCounts?.[reviewIntensity] ?? config.providerLimit;
+    const intensityTimeout = config.intensityTimeouts?.[reviewIntensity] ?? (config.runTimeoutSeconds * 1000);
+
+    logger.info(
+      `Intensity settings: ${intensityProviderLimit} providers, ` +
+      `${intensityTimeout}ms timeout (${reviewIntensity} mode)`
+    );
 
     // Check for incremental review (use reviewContext which may have filtered trivial files)
     const useIncremental = await this.components.incrementalReviewer.shouldUseIncremental(reviewContext);
@@ -295,6 +335,9 @@ export class ReviewOrchestrator {
       new BatchOrchestrator({
         defaultBatchSize: config.batchMaxFiles || 30,
         providerOverrides: config.providerBatchOverrides,
+        enableTokenAwareBatching: config.enableTokenAwareBatching,
+        targetTokensPerBatch: config.targetTokensPerBatch,
+        maxBatchSize: config.batchMaxFiles,
       });
 
     if (filesToReview.length === 0) {
@@ -319,7 +362,7 @@ export class ReviewOrchestrator {
       await runHealthCheck(providers);
 
       // Dynamic minima: prefer 4 OpenRouter + 2 OpenCode when limit allows
-      const selectionLimit = Math.max(1, config.providerLimit || 8);
+      const selectionLimit = Math.max(1, intensityProviderLimit || 8);
       const desiredOpenRouter = Math.min(4, providers.filter(p => p.name.startsWith('openrouter/')).length);
       const desiredOpenCode = Math.min(2, providers.filter(p => p.name.startsWith('opencode/')).length);
       const MIN_OPENROUTER_HEALTHY = desiredOpenRouter;
@@ -372,21 +415,37 @@ export class ReviewOrchestrator {
           )}, opencode=${countOpenCode(healthy)})`
         );
       } else {
-        const batchSize = batchOrchestrator.getBatchSize(healthy.map(p => p.name));
+        // Use token-aware batching if enabled
         let batches: FileChange[][];
-        try {
-          batches = batchOrchestrator.createBatches(filesToReview, batchSize);
-        } catch (error) {
-          logger.warn(
-            `Invalid batch size ${batchSize} computed from providers (${healthy.map(p => p.name).join(', ')}) - falling back to size 1`,
-            error as Error
-          );
-          batches = batchOrchestrator.createBatches(filesToReview, 1);
+        const providerNames = healthy.map(p => p.name);
+
+        if (config.enableTokenAwareBatching) {
+          try {
+            batches = batchOrchestrator.createTokenAwareBatches(filesToReview, providerNames);
+          } catch (error) {
+            logger.warn(
+              `Token-aware batching failed, falling back to fixed-size batching`,
+              error as Error
+            );
+            const batchSize = batchOrchestrator.getBatchSize(providerNames);
+            batches = batchOrchestrator.createBatches(filesToReview, batchSize);
+          }
+        } else {
+          const batchSize = batchOrchestrator.getBatchSize(providerNames);
+          try {
+            batches = batchOrchestrator.createBatches(filesToReview, batchSize);
+          } catch (error) {
+            logger.warn(
+              `Invalid batch size computed from providers - falling back to size 1`,
+              error as Error
+            );
+            batches = batchOrchestrator.createBatches(filesToReview, 1);
+          }
         }
 
         const batchQueue = createQueue(Math.max(1, Number(config.providerMaxParallel) || 1));
 
-        logger.info(`Processing ${batches.length} batch(es) with size ${batchSize}`);
+        logger.info(`Processing ${batches.length} batch(es)`);
 
         // Create batch execution functions and queue them for parallel processing
         // Using Promise.allSettled() enables true parallel execution and partial success handling
@@ -394,10 +453,11 @@ export class ReviewOrchestrator {
           batchQueue.add(async () => {
             const batchDiff = filterDiffByFiles(reviewContext.diff, batch);
             const batchContext: PRContext = { ...reviewContext, files: batch, diff: batchDiff };
-            const prompt = this.components.promptBuilder.build(batchContext);
+            const promptBuilder = new PromptBuilder(config, reviewIntensity);
+            const prompt = promptBuilder.build(batchContext);
 
             try {
-              const results = await this.components.llmExecutor.execute(healthy, prompt);
+              const results = await this.components.llmExecutor.execute(healthy, prompt, intensityTimeout);
 
               for (const result of results) {
                 await this.components.costTracker.record(result.name, result.result?.usage, config.budgetMaxUsd);
@@ -474,7 +534,7 @@ export class ReviewOrchestrator {
             await progressTracker?.updateProgress('llm', 'completed', `Batches: ${batchSuccesses}/${batches.length} succeeded`);
           }
         } else {
-          await progressTracker?.updateProgress('llm', 'completed', `Batches: ${batches.length}, size: ${batchSize}`);
+          await progressTracker?.updateProgress('llm', 'completed', `Processed ${batches.length} batch(es)`);
         }
 
         llmFindings.push(...extractFindings(batchResults));
@@ -483,15 +543,13 @@ export class ReviewOrchestrator {
       }
     }
 
-    const astFindings = config.enableAstAnalysis ? this.components.astAnalyzer.analyze(filesToReview) : [];
-    const ruleFindings = this.components.rules.run(filesToReview);
-    const securityFindings = config.enableSecurity ? this.components.security.scan(filesToReview) : [];
-    const context = contextRetriever.findRelatedContext(filesToReview);
+    // Run static analysis in parallel for better performance
+    const staticAnalysis = await this.runStaticAnalysis(filesToReview, contextRetriever);
 
     const combinedFindings = [
-      ...astFindings,
-      ...ruleFindings,
-      ...securityFindings,
+      ...staticAnalysis.astFindings,
+      ...staticAnalysis.ruleFindings,
+      ...staticAnalysis.securityFindings,
       ...llmFindings,
       ...(cachedFindings || []),
     ];
@@ -500,14 +558,14 @@ export class ReviewOrchestrator {
     const consensus = this.components.consensus.filter(deduped);
     const providerCount = providers.length || 1;
     const enriched = consensus.map(f =>
-      this.enrichFinding(f, pr.files, context, providerCount, codeGraph)
+      this.enrichFinding(f, pr.files, staticAnalysis.context, providerCount, codeGraph)
     );
     const quietFiltered = await this.applyQuietMode(enriched, config);
     await progressTracker?.updateProgress('static', 'completed', 'AST, security, and rules processed');
 
     const testHints = config.enableTestHints ? this.components.testCoverage.analyze(pr.files) : undefined;
-    const impactAnalysis = this.components.impactAnalyzer.analyze(pr.files, context, quietFiltered.length > 0);
-    const mermaidDiagram = this.components.mermaidGenerator.generateImpactDiagram(pr.files, context);
+    const impactAnalysis = this.components.impactAnalyzer.analyze(pr.files, staticAnalysis.context, quietFiltered.length > 0);
+    const mermaidDiagram = this.components.mermaidGenerator.generateImpactDiagram(pr.files, staticAnalysis.context);
     const costSummary = this.components.costTracker.summary();
     const runDetails: RunDetails = {
       providers: providerResults.map(r => ({
@@ -650,6 +708,49 @@ export class ReviewOrchestrator {
     // For in-memory caches, would call cache.clear() here
 
     logger.debug('Orchestrator resources disposed');
+  }
+
+  /**
+   * Run all static analysis operations in parallel
+   */
+  private async runStaticAnalysis(
+    files: FileChange[],
+    contextRetriever: ContextRetriever
+  ): Promise<{
+    astFindings: Finding[];
+    ruleFindings: Finding[];
+    securityFindings: Finding[];
+    context: UnchangedContext[];
+  }> {
+    const { config } = this.components;
+
+    // Run all static analysis operations in parallel
+    const [astFindings, ruleFindings, securityFindings, context] = await Promise.all([
+      config.enableAstAnalysis
+        ? this.components.astAnalyzer.analyze(files)
+        : Promise.resolve([]),
+
+      this.components.rules.run(files),
+
+      config.enableSecurity
+        ? this.components.security.scan(files)
+        : Promise.resolve([]),
+
+      contextRetriever.findRelatedContext(files),
+    ]);
+
+    logger.info(
+      `Static analysis complete: ${astFindings.length} AST, ` +
+      `${ruleFindings.length} rules, ${securityFindings.length} security, ` +
+      `${context.length} context items`
+    );
+
+    return {
+      astFindings,
+      ruleFindings,
+      securityFindings,
+      context,
+    };
   }
 
   private shouldSkip(pr: PRContext): string | null {

@@ -452,10 +452,10 @@ describe('ReviewOrchestrator integration (offline)', () => {
     const review = await orchestrator.execute(1);
 
     expect(review).toBeTruthy();
-    // Verify consensus filtering: 'Agreed' finding should be present, 'Noise' should be filtered
+    // Verify consensus filtering: inline comments should be produced
     expect(review?.inlineComments.length).toBeGreaterThan(0);
-    // Just assert inline comments were produced and are filtered to at least one item
-    expect(review?.inlineComments.length).toBeGreaterThanOrEqual(0);
+    // Verify at least one finding was generated
+    expect(review?.findings.length).toBeGreaterThan(0);
   });
 
   it('generates complete review with all outputs', async () => {

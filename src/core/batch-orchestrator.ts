@@ -1,10 +1,13 @@
 import { FileChange } from '../types';
 import { logger } from '../utils/logger';
+import { calculateOptimalBatchSize, estimateTokensForFiles, getContextWindowSize } from '../utils/token-estimation';
 
 export interface BatchOrchestratorOptions {
   defaultBatchSize: number;
   providerOverrides?: Record<string, number>;
   maxBatchSize?: number;
+  enableTokenAwareBatching?: boolean;
+  targetTokensPerBatch?: number;
 }
 
 /**
@@ -53,6 +56,63 @@ export class BatchOrchestrator {
     }
 
     return batches;
+  }
+
+  /**
+   * Create batches using token-aware sizing
+   * Automatically determines optimal batch size based on file sizes and provider context windows
+   */
+  createTokenAwareBatches(files: FileChange[], providerNames: string[]): FileChange[][] {
+    if (!this.options.enableTokenAwareBatching) {
+      // Fall back to fixed-size batching
+      const batchSize = this.getBatchSize(providerNames);
+      return this.createBatches(files, batchSize);
+    }
+
+    if (files.length === 0) return [];
+
+    // Find smallest context window among providers
+    let smallestWindow = Infinity;
+    for (const providerName of providerNames) {
+      const window = getContextWindowSize(providerName);
+      if (window < smallestWindow) {
+        smallestWindow = window;
+      }
+    }
+
+    // Calculate target tokens per batch based on smallest context window
+    // Use 50% of available context window to leave room for instructions and response
+    const targetTokens = this.options.targetTokensPerBatch ?? Math.floor(smallestWindow * 0.5);
+
+    // Get max files per batch from config
+    const maxFiles = this.options.maxBatchSize ?? 200;
+
+    logger.debug(
+      `Token-aware batching: target ${targetTokens} tokens/batch, ` +
+      `max ${maxFiles} files/batch, smallest context window: ${smallestWindow}`
+    );
+
+    // Calculate optimal batches
+    const recommendation = calculateOptimalBatchSize(files, targetTokens, maxFiles);
+
+    logger.info(`Token-aware batching: ${recommendation.reason}`);
+
+    return recommendation.batches;
+  }
+
+  /**
+   * Get batch size optimized for token budget and provider context windows
+   */
+  getBatchSizeForTokenBudget(files: FileChange[], providerNames: string[]): number {
+    if (!this.options.enableTokenAwareBatching || files.length === 0) {
+      return this.getBatchSize(providerNames);
+    }
+
+    const batches = this.createTokenAwareBatches(files, providerNames);
+    if (batches.length === 0) return this.getBatchSize(providerNames);
+
+    // Return average batch size
+    return Math.ceil(files.length / batches.length);
   }
 
   private getOverrideForProvider(providerName: string): number | undefined {

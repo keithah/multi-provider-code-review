@@ -413,6 +413,54 @@ export class CodeGraph {
     this.callers = new Map(other.callers.entries());
     this.fileSymbols = new Map(other.fileSymbols.entries());
   }
+
+  /**
+   * Create a shallow clone of the graph for incremental updates
+   */
+  clone(): CodeGraph {
+    const cloned = new CodeGraph(this.files, this.buildTime);
+    cloned.copyFrom(this);
+    return cloned;
+  }
+
+  /**
+   * Serialize graph to JSON for caching
+   */
+  serialize(): {
+    files: string[];
+    buildTime: number;
+    definitions: Array<[string, Definition]>;
+    imports: Array<[string, string[]]>;
+    exports: Array<[string, string[]]>;
+    calls: Array<[string, string[]]>;
+    callers: Array<[string, string[]]>;
+    fileSymbols: Array<[string, string[]]>;
+  } {
+    return {
+      files: this.files,
+      buildTime: this.buildTime,
+      definitions: Array.from(this.definitions.entries()),
+      imports: Array.from(this.imports.entries()),
+      exports: Array.from(this.exports.entries()),
+      calls: Array.from(this.calls.entries()),
+      callers: Array.from(this.callers.entries()),
+      fileSymbols: Array.from(this.fileSymbols.entries()),
+    };
+  }
+
+  /**
+   * Deserialize graph from JSON
+   */
+  static deserialize(data: ReturnType<CodeGraph['serialize']>): CodeGraph {
+    const graph = new CodeGraph(data.files, data.buildTime);
+    graph.definitions = new Map(data.definitions);
+    graph.imports = new Map(data.imports);
+    graph.exports = new Map(data.exports);
+    graph.calls = new Map(data.calls);
+    graph.callers = new Map(data.callers);
+    graph.fileSymbols = new Map(data.fileSymbols);
+    return graph;
+  }
 }
 
 /**
