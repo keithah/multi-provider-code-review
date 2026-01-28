@@ -50,6 +50,51 @@ export class GitHubClient {
   }
 
   /**
+   * Implement exponential backoff when approaching rate limit
+   * Returns delay in milliseconds to wait before making next API call
+   */
+  private calculateBackoffDelay(): number {
+    const status = this.rateLimitTracker.getStatus();
+    if (!status) return 0;
+
+    const percentRemaining = (status.remaining / status.limit) * 100;
+
+    // No delay if plenty of requests remaining (>25%)
+    if (percentRemaining > 25) {
+      return 0;
+    }
+
+    // Progressive backoff as we approach limit:
+    // 25% remaining: 100ms delay
+    // 10% remaining: 500ms delay
+    // 5% remaining: 1000ms delay
+    // 1% remaining: 2000ms delay
+    if (percentRemaining > 10) {
+      return 100;
+    } else if (percentRemaining > 5) {
+      return 500;
+    } else if (percentRemaining > 1) {
+      return 1000;
+    } else {
+      return 2000;
+    }
+  }
+
+  /**
+   * Throttle requests when approaching rate limit
+   */
+  private async throttleIfNeeded(): Promise<void> {
+    const delay = this.calculateBackoffDelay();
+    if (delay > 0) {
+      const status = this.rateLimitTracker.getStatus();
+      core.debug(
+        `Throttling GitHub API request (${delay}ms delay, ${status?.remaining} requests remaining)`
+      );
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  /**
    * Wait for rate limit to reset if exceeded
    */
   private async handleRateLimit(): Promise<void> {
@@ -67,6 +112,9 @@ export class GitHubClient {
   async getFileContent(filePath: string, ref: string): Promise<string | null> {
     // Wait if rate limit is exceeded
     await this.handleRateLimit();
+
+    // Throttle requests if approaching limit (exponential backoff)
+    await this.throttleIfNeeded();
 
     try {
       const response = await this.octokit.rest.repos.getContent({
