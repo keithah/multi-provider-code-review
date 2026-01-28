@@ -1,6 +1,7 @@
 import { PromptBuilder } from '../../../src/analysis/llm/prompt-builder';
 import { PRContext } from '../../../src/types';
 import { DEFAULT_CONFIG } from '../../../src/config/defaults';
+import { getContextWindowSize } from '../../../src/utils/token-estimation';
 
 describe('PromptBuilder Context Window Validation', () => {
   const mockPR: PRContext = {
@@ -36,7 +37,7 @@ describe('PromptBuilder Context Window Validation', () => {
       expect(fitCheck).toBeDefined();
       expect(fitCheck.fits).toBe(true); // Should fit for small PR
       expect(fitCheck.promptTokens).toBeGreaterThan(0);
-      expect(fitCheck.contextWindow).toBe(128000); // gpt-4-turbo window
+      expect(fitCheck.contextWindow).toBe(getContextWindowSize('gpt-4-turbo')); // Use actual window size
       expect(fitCheck.utilizationPercent).toBeGreaterThan(0);
     });
 

@@ -1,4 +1,4 @@
-import { CacheManager } from '../../../src/cache/manager';
+import { CacheManager, DEFAULT_CACHE_TTL_MS } from '../../../src/cache/manager';
 import { CacheStorage } from '../../../src/cache/storage';
 import { PRContext, Review, ReviewConfig, Finding } from '../../../src/types';
 import { CACHE_VERSION } from '../../../src/cache/version';
@@ -157,7 +157,7 @@ describe('CacheManager Versioning', () => {
 
       const versioned = {
         version: CACHE_VERSION,
-        timestamp: Date.now() - 8 * 24 * 60 * 60 * 1000, // 8 days ago (TTL is 7 days)
+        timestamp: Date.now() - DEFAULT_CACHE_TTL_MS - 86400000, // 1 day past TTL
         data: payload,
       };
 
@@ -186,7 +186,7 @@ describe('CacheManager Versioning', () => {
 
       const versioned = {
         version: CACHE_VERSION,
-        timestamp: Date.now() - 6 * 24 * 60 * 60 * 1000, // 6 days ago (within 7 day TTL)
+        timestamp: Date.now() - DEFAULT_CACHE_TTL_MS + 86400000, // 1 day before TTL expires
         data: payload,
       };
 

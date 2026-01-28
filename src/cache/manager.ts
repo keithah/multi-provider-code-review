@@ -9,9 +9,12 @@ interface CachedPayload {
   timestamp: number;
 }
 
+// Default TTL: 7 days in milliseconds
+// Exported for testing consistency
+export const DEFAULT_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
 export class CacheManager {
-  // Default TTL: 7 days in milliseconds
-  private readonly TTL_MS = 7 * 24 * 60 * 60 * 1000;
+  private readonly TTL_MS = DEFAULT_CACHE_TTL_MS;
 
   constructor(
     private readonly storage = new CacheStorage(),

@@ -34375,13 +34375,13 @@ function unversionCache(cached, maxAge) {
 }
 
 // src/cache/manager.ts
+var DEFAULT_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1e3;
 var CacheManager = class {
   constructor(storage = new CacheStorage(), config) {
     this.storage = storage;
     this.config = config;
   }
-  // Default TTL: 7 days in milliseconds
-  TTL_MS = 7 * 24 * 60 * 60 * 1e3;
+  TTL_MS = DEFAULT_CACHE_TTL_MS;
   async load(pr) {
     const configHash = this.config ? hashConfig(this.config) : void 0;
     const key = buildCacheKey(pr, configHash);
