@@ -5,6 +5,8 @@ export interface RateLimitStatus {
   remaining: number;
   reset: number; // Unix timestamp
   used: number;
+  resetTime?: string; // ISO 8601 timestamp from x-github-ratelimit-resettime
+  tokenExpiration?: string; // ISO 8601 timestamp from github-authentication-token-expiration
 }
 
 export class GitHubRateLimitTracker {
@@ -18,6 +20,8 @@ export class GitHubRateLimitTracker {
     const remaining = headers['x-ratelimit-remaining'];
     const reset = headers['x-ratelimit-reset'];
     const used = headers['x-ratelimit-used'];
+    const resetTime = headers['x-github-ratelimit-resettime'];
+    const tokenExpiration = headers['github-authentication-token-expiration'];
 
     if (limit && remaining && reset) {
       this.status = {
@@ -25,11 +29,14 @@ export class GitHubRateLimitTracker {
         remaining: parseInt(remaining, 10),
         reset: parseInt(reset, 10),
         used: used ? parseInt(used, 10) : 0,
+        resetTime: resetTime,
+        tokenExpiration: tokenExpiration,
       };
 
       logger.debug(
         `GitHub rate limit: ${this.status.remaining}/${this.status.limit} remaining ` +
-        `(resets at ${new Date(this.status.reset * 1000).toISOString()})`
+        `(resets at ${this.status.resetTime || new Date(this.status.reset * 1000).toISOString()})` +
+        (this.status.tokenExpiration ? ` [token expires: ${this.status.tokenExpiration}]` : '')
       );
 
       if (this.status.remaining < 100) {
