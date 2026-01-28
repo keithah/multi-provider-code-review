@@ -48,7 +48,6 @@ describe('GitHubClient', () => {
 
     it('handles GITHUB_REPOSITORY not set', () => {
       delete process.env.GITHUB_REPOSITORY;
-      (github as any).context = { repo: { owner: '', repo: '' } };
       // Simulate missing GitHub context as well
       (github as any).context = { repo: { owner: '', repo: '' } };
 

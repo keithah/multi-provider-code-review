@@ -320,8 +320,8 @@ describe('ProviderRegistry Reliability-Based Selection', () => {
       const registry = new ProviderRegistry(undefined, mockReliabilityTracker);
       const providers = await registry.createProviders(config);
 
-      // Should return at least fallback providers
-      expect(providers.length).toBeGreaterThanOrEqual(0);
+      // Should return at least one fallback provider
+      expect(providers.length).toBeGreaterThan(0);
     });
 
     it('should handle provider limit larger than available providers', async () => {

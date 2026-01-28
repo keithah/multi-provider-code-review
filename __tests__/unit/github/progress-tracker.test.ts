@@ -171,7 +171,7 @@ describe('ProgressTracker', () => {
       await tracker.initialize();
     });
 
-    it('should leave unstarted items pending on successful finalization', async () => {
+    it('should mark all items as completed on successful finalization', async () => {
       tracker.addItem('item1', 'Test 1');
       tracker.addItem('item2', 'Test 2');
 

@@ -44,9 +44,13 @@ jobs:
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       IS_FORK: false
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout base repository (safe for pull_request_target)
+        uses: actions/checkout@v4
         with:
+          repository: ${{ github.event.pull_request.base.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
           fetch-depth: 0  # Fetch full history for incremental review git diff
+          persist-credentials: false
       - name: Resolve PR number
         id: resolve-pr
         env:
@@ -96,19 +100,6 @@ jobs:
         # - Pin to latest published npm version known-good for CLI commands
         # - Update strategy: Test quarterly (Jan, Apr, Jul, Oct) with full suite + smoke tests
         run: npm install -g opencode-ai@1.1.35
-      # Run review if: PR number found. Fork PRs run with free providers when OPENROUTER_API_KEY is unavailable.
-      - name: Warn Fork PR Without OpenRouter Key
-        if: steps.resolve-pr.outputs.pr != '' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == true && env.OPENROUTER_API_KEY == ''
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "ℹ️  Fork PR detected without OPENROUTER_API_KEY."
-          if ! command -v opencode-ai >/dev/null 2>&1; then
-            echo "❌ OpenCode CLI not available. Install opencode-ai or set OPENROUTER_API_KEY for premium providers."
-            exit 1
-          fi
-          echo "✅ Proceeding with free providers only (OpenCode CLI / built-in fallbacks)."
-          echo "To enable premium OpenRouter models, add OPENROUTER_API_KEY to repository or environment secrets."
 
       - name: Multi-Provider Code Review
         # Run if PR number resolved (supports pull_request, push, workflow_dispatch)
@@ -141,7 +132,7 @@ jobs:
       pull-requests: write
       actions: read
     env:
-      OPENROUTER_API_KEY: '' # ensure repo secrets are not exposed to forks
+      # Do not declare OPENROUTER_API_KEY at all for fork jobs to prevent any exposure
       IS_FORK: true
     steps:
       - name: Checkout base repo (safe)
@@ -179,11 +170,11 @@ jobs:
         run: |
           echo "Ensuring fork run has no repository secrets"
           # Check the environment variable (not the GitHub expression which evaluates at parse time)
-          if [ -n "$OPENROUTER_API_KEY" ]; then
-            echo "❌ OPENROUTER_API_KEY environment variable must be empty for fork runs"
+          if [ -n "${OPENROUTER_API_KEY:-}" ]; then
+            echo "❌ OPENROUTER_API_KEY environment variable must not be set for fork runs"
             exit 1
           fi
-          echo "✅ Repo secrets not used in fork run (OPENROUTER_API_KEY is empty as expected)"
+          echo "✅ Repo secrets not exposed to fork run (OPENROUTER_API_KEY is not set as expected)"
       - name: Fetch fork diff only (no checkout of fork code)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -196,5 +187,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.resolve-pr.outputs.pr }}
           REVIEW_PROVIDERS: ${{ inputs.review_providers }}
-        env:
-          OPENROUTER_API_KEY: '' # enforce zero secret access
+        # Do not set OPENROUTER_API_KEY at all - keep secrets completely unavailable to fork runs
