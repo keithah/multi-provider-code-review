@@ -4,7 +4,13 @@ describe('GitHubRateLimitTracker', () => {
   let tracker: GitHubRateLimitTracker;
 
   beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2024-01-01T00:00:00Z'));
     tracker = new GitHubRateLimitTracker();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   describe('updateFromHeaders', () => {
@@ -105,7 +111,9 @@ describe('GitHubRateLimitTracker', () => {
 
   describe('getWaitTimeMs', () => {
     it('should calculate wait time correctly', () => {
-      const futureReset = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
+      // With fake timers, time is fixed at 2024-01-01T00:00:00Z (1704067200 seconds since epoch)
+      const currentTimeSeconds = 1704067200;
+      const futureReset = currentTimeSeconds + 3600; // 1 hour from now
 
       tracker.updateFromHeaders({
         'x-ratelimit-limit': '5000',
@@ -114,12 +122,14 @@ describe('GitHubRateLimitTracker', () => {
       });
 
       const waitTime = tracker.getWaitTimeMs();
-      expect(waitTime).toBeGreaterThan(3500000); // ~58 minutes (allowing for test execution time)
-      expect(waitTime).toBeLessThan(3700000); // ~62 minutes
+      // Should be exactly 1 hour (3600 seconds = 3,600,000 ms)
+      expect(waitTime).toBe(3600000);
     });
 
     it('should return 0 when reset time has passed', () => {
-      const pastReset = Math.floor(Date.now() / 1000) - 3600; // 1 hour ago
+      // With fake timers, time is fixed at 2024-01-01T00:00:00Z (1704067200 seconds since epoch)
+      const currentTimeSeconds = 1704067200;
+      const pastReset = currentTimeSeconds - 3600; // 1 hour ago
 
       tracker.updateFromHeaders({
         'x-ratelimit-limit': '5000',

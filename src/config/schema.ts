@@ -44,6 +44,8 @@ export const ReviewConfigSchema = z.object({
 
   batch_max_files: z.number().int().min(1).max(200).optional(),
   provider_batch_overrides: z.record(z.coerce.number().int().min(1).max(200)).optional(),
+  enable_token_aware_batching: z.boolean().optional(),
+  target_tokens_per_batch: z.number().int().min(1000).optional(),
 
   graph_enabled: z.boolean().optional(),
   graph_cache_enabled: z.boolean().optional(),
@@ -78,6 +80,25 @@ export const ReviewConfigSchema = z.object({
   path_based_intensity: z.boolean().optional(),
   path_intensity_patterns: z.string().optional(),
   path_default_intensity: z.enum(['thorough', 'standard', 'light']).optional(),
+
+  provider_selection_strategy: z.enum(['reliability', 'random', 'round-robin']).optional(),
+  provider_exploration_rate: z.number().min(0).max(1).optional(),
+
+  intensity_provider_counts: z.object({
+    thorough: z.number().int().min(1),
+    standard: z.number().int().min(1),
+    light: z.number().int().min(1),
+  }).optional(),
+  intensity_timeouts: z.object({
+    thorough: z.number().int().min(1000),
+    standard: z.number().int().min(1000),
+    light: z.number().int().min(1000),
+  }).optional(),
+  intensity_prompt_depth: z.object({
+    thorough: z.enum(['detailed', 'standard', 'brief']),
+    standard: z.enum(['detailed', 'standard', 'brief']),
+    light: z.enum(['detailed', 'standard', 'brief']),
+  }).optional(),
 
   dry_run: z.boolean().optional(),
 });

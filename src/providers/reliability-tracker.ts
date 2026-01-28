@@ -312,7 +312,7 @@ export class ReliabilityTracker {
     const durationsWithValues = results.filter((r) => Number.isFinite(r.durationMs));
     const averageDurationMs =
       durationsWithValues.length > 0
-        ? durationsWithValues.reduce((sum, r) => sum + (r.durationMs || 0), 0) / durationsWithValues.length
+        ? durationsWithValues.reduce((sum, r) => sum + r.durationMs!, 0) / durationsWithValues.length
         : 0;
 
     // False positive rate (0-1, inverted for scoring)
@@ -324,7 +324,17 @@ export class ReliabilityTracker {
     const EXCELLENT_RESPONSE_MS = 500;  // <= 500ms is considered excellent
     const POOR_RESPONSE_MS = 5000;       // >= 5000ms is considered poor
     const responseTimeRange = POOR_RESPONSE_MS - EXCELLENT_RESPONSE_MS;
-    const responseTimeScore = Math.max(0, Math.min(1, 1 - (averageDurationMs - EXCELLENT_RESPONSE_MS) / responseTimeRange));
+
+    // Calculate response time score with explicit boundary handling
+    let responseTimeScore: number;
+    if (averageDurationMs <= EXCELLENT_RESPONSE_MS) {
+      responseTimeScore = 1; // Perfect score for excellent response times
+    } else if (averageDurationMs >= POOR_RESPONSE_MS) {
+      responseTimeScore = 0; // Zero score for poor response times
+    } else {
+      // Linear interpolation between excellent and poor
+      responseTimeScore = 1 - (averageDurationMs - EXCELLENT_RESPONSE_MS) / responseTimeRange;
+    }
 
     // Calculate weighted reliability score (0-1)
     const reliabilityScore =
