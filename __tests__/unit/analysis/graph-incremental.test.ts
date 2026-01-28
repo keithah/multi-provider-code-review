@@ -61,6 +61,107 @@ describe('Incremental Graph Updates', () => {
       expect(symbols.map(s => s.name)).toContain('foo');
       expect(symbols.map(s => s.name)).toContain('bar');
     });
+
+    it('should create completely independent deep copies with no shared mutable state', () => {
+      // Build a graph with complex relationships
+      const original = new CodeGraph(['file1.ts', 'file2.ts'], 100);
+
+      original.addDefinition({
+        name: 'foo',
+        file: 'file1.ts',
+        line: 10,
+        type: 'function',
+        exported: true,
+      });
+      original.addDefinition({
+        name: 'bar',
+        file: 'file2.ts',
+        line: 20,
+        type: 'function',
+        exported: true,
+      });
+
+      original.addImport('file1.ts', './file2');
+      original.addImport('file2.ts', './utils');
+
+      original.addCall('file1.ts', 'foo', 'bar');
+      original.addCall('file2.ts', 'bar', 'utilFn');
+
+      // Clone the graph
+      const cloned = original.clone();
+
+      // Verify initial state matches
+      expect(cloned.files).toEqual(original.files);
+      expect(cloned.getStats()).toEqual(original.getStats());
+
+      // Modify the clone by adding new data
+      cloned.addDefinition({
+        name: 'baz',
+        file: 'file1.ts',
+        line: 30,
+        type: 'class',
+        exported: false,
+      });
+      cloned.addImport('file1.ts', './new-import');
+      cloned.addCall('file1.ts', 'baz', 'newFn');
+
+      // Verify original is unchanged
+      expect(original.getStats().definitions).toBe(2);
+      expect(cloned.getStats().definitions).toBe(3);
+
+      // Verify import counts differ (arrays are not shared)
+      expect(original.getStats().imports).toBe(2);
+      expect(cloned.getStats().imports).toBe(3);
+
+      // Verify call counts differ (call/caller maps are not shared)
+      expect(original.getStats().calls).toBe(2);
+      expect(cloned.getStats().calls).toBe(3);
+
+      // Verify file symbols arrays are not shared (mutations to clone don't affect original)
+      const originalSymbols = original.getFileSymbols('file1.ts');
+      const clonedSymbols = cloned.getFileSymbols('file1.ts');
+      expect(originalSymbols).toHaveLength(1);
+      expect(clonedSymbols).toHaveLength(2);
+    });
+
+    it('should create independent copies during serialize/deserialize roundtrip', () => {
+      // Build original graph
+      const original = new CodeGraph(['file1.ts'], 100);
+      original.addDefinition({
+        name: 'foo',
+        file: 'file1.ts',
+        line: 10,
+        type: 'function',
+        exported: true,
+      });
+      original.addImport('file1.ts', './bar');
+      original.addCall('file1.ts', 'foo', 'bar');
+
+      // Serialize and deserialize
+      const serialized = original.serialize();
+      const deserialized = CodeGraph.deserialize(serialized);
+
+      // Verify deserialized matches original
+      expect(deserialized.files).toEqual(original.files);
+      expect(deserialized.getStats()).toEqual(original.getStats());
+
+      // Modify deserialized graph
+      deserialized.addDefinition({
+        name: 'baz',
+        file: 'file1.ts',
+        line: 20,
+        type: 'class',
+        exported: false,
+      });
+
+      // Verify original is unchanged (no shared mutable state)
+      expect(original.getStats().definitions).toBe(1);
+      expect(deserialized.getStats().definitions).toBe(2);
+
+      // Verify modifying serialized data doesn't affect original
+      serialized.files.push('file2.ts');
+      expect(original.files).not.toContain('file2.ts');
+    });
   });
 
   describe('Graph serialization', () => {
@@ -365,70 +466,162 @@ describe('Incremental Graph Updates', () => {
   });
 
   describe('Error Handling', () => {
-    it('should create graph even with minimal data', () => {
-      const minimalData = {
-        files: [],
-        buildTime: 0,
-        definitions: [],
-        imports: [],
-        exports: [],
-        calls: [],
-        callers: [],
-        fileSymbols: [],
-      };
+    describe('Valid edge cases', () => {
+      it('should create graph with minimal valid data', () => {
+        const minimalData = {
+          files: [],
+          buildTime: 0,
+          definitions: [],
+          imports: [],
+          exports: [],
+          calls: [],
+          callers: [],
+          fileSymbols: [],
+        };
 
-      const graph = CodeGraph.deserialize(minimalData);
-      expect(graph.files).toEqual([]);
-      expect(graph.buildTime).toBe(0);
+        expect(() => CodeGraph.deserialize(minimalData)).not.toThrow();
+        const graph = CodeGraph.deserialize(minimalData);
+        expect(graph.files).toEqual([]);
+        expect(graph.buildTime).toBe(0);
+      });
+
+      it('should handle partial data with valid structure', () => {
+        const partialData = {
+          files: ['file1.ts'],
+          buildTime: 100,
+          definitions: [],
+          imports: [],
+          exports: [],
+          calls: [],
+          callers: [],
+          fileSymbols: [],
+        };
+
+        expect(() => CodeGraph.deserialize(partialData)).not.toThrow();
+        const graph = CodeGraph.deserialize(partialData);
+        expect(graph.files).toEqual(['file1.ts']);
+        expect(graph.buildTime).toBe(100);
+      });
+
+      it('should handle operations on non-existent files gracefully', () => {
+        const graph = new CodeGraph(['file1.ts'], 100);
+
+        // removeFile with non-existent file should not throw (idempotent operation)
+        expect(() => graph.removeFile('non-existent.ts')).not.toThrow();
+
+        // Repeated removal should also not throw
+        expect(() => graph.removeFile('non-existent.ts')).not.toThrow();
+      });
+
+      it('should handle empty file list in graph operations', () => {
+        const graph = new CodeGraph([], 0);
+
+        expect(graph.files).toEqual([]);
+        expect(graph.getStats().definitions).toBe(0);
+        expect(() => graph.serialize()).not.toThrow();
+      });
+
+      it('should handle clone of empty graph', () => {
+        const empty = new CodeGraph([], 0);
+
+        expect(() => empty.clone()).not.toThrow();
+        const cloned = empty.clone();
+
+        expect(cloned.files).toEqual([]);
+        expect(cloned.getStats()).toEqual(empty.getStats());
+      });
+
+      it('should handle serialization/deserialization roundtrip of empty graph', () => {
+        const empty = new CodeGraph([], 0);
+        const serialized = empty.serialize();
+        const deserialized = CodeGraph.deserialize(serialized);
+
+        expect(deserialized.files).toEqual([]);
+        expect(deserialized.getStats()).toEqual(empty.getStats());
+      });
     });
 
-    it('should handle partial data gracefully', () => {
-      const partialData = {
-        files: ['file1.ts'],
-        buildTime: 100,
-        definitions: [],
-        imports: [],
-        exports: [],
-        calls: [],
-        callers: [],
-        fileSymbols: [],
-      };
+    describe('Invalid input handling', () => {
+      it('should throw TypeError when deserializing null', () => {
+        expect(() => CodeGraph.deserialize(null as any)).toThrow('Invalid graph data: expected object');
+      });
 
-      const graph = CodeGraph.deserialize(partialData);
-      expect(graph.files).toEqual(['file1.ts']);
-      expect(graph.buildTime).toBe(100);
-    });
+      it('should throw TypeError when deserializing undefined', () => {
+        expect(() => CodeGraph.deserialize(undefined as any)).toThrow('Invalid graph data: expected object');
+      });
 
-    it('should handle null or undefined inputs gracefully', () => {
-      const graph = new CodeGraph(['file1.ts'], 100);
+      it('should throw TypeError when deserializing primitive', () => {
+        expect(() => CodeGraph.deserialize('string' as any)).toThrow('Invalid graph data: expected object');
+        expect(() => CodeGraph.deserialize(123 as any)).toThrow('Invalid graph data: expected object');
+        expect(() => CodeGraph.deserialize(true as any)).toThrow('Invalid graph data: expected object');
+      });
 
-      // removeFile with non-existent file should not throw
-      expect(() => graph.removeFile('non-existent.ts')).not.toThrow();
-    });
+      it('should throw TypeError when files is not an array', () => {
+        const invalidData = {
+          files: 'not-an-array',
+          buildTime: 0,
+          definitions: [],
+          imports: [],
+          exports: [],
+          calls: [],
+          callers: [],
+          fileSymbols: [],
+        };
 
-    it('should handle empty file list in graph operations', () => {
-      const graph = new CodeGraph([], 0);
+        expect(() => CodeGraph.deserialize(invalidData as any)).toThrow('Invalid graph data: files must be an array');
+      });
 
-      expect(graph.files).toEqual([]);
-      expect(graph.getStats().definitions).toBe(0);
-      expect(() => graph.serialize()).not.toThrow();
-    });
+      it('should throw TypeError when buildTime is not a number', () => {
+        const invalidData = {
+          files: [],
+          buildTime: 'not-a-number',
+          definitions: [],
+          imports: [],
+          exports: [],
+          calls: [],
+          callers: [],
+          fileSymbols: [],
+        };
 
-    it('should handle clone of empty graph', () => {
-      const empty = new CodeGraph([], 0);
-      const cloned = empty.clone();
+        expect(() => CodeGraph.deserialize(invalidData as any)).toThrow('Invalid graph data: buildTime must be a number');
+      });
 
-      expect(cloned.files).toEqual([]);
-      expect(cloned.getStats()).toEqual(empty.getStats());
-    });
+      it('should throw TypeError when map fields are not arrays', () => {
+        const testCases = [
+          { field: 'definitions', message: 'Invalid graph data: definitions must be an array' },
+          { field: 'imports', message: 'Invalid graph data: imports must be an array' },
+          { field: 'exports', message: 'Invalid graph data: exports must be an array' },
+          { field: 'calls', message: 'Invalid graph data: calls must be an array' },
+          { field: 'callers', message: 'Invalid graph data: callers must be an array' },
+          { field: 'fileSymbols', message: 'Invalid graph data: fileSymbols must be an array' },
+        ];
 
-    it('should handle deserialization of empty graph', () => {
-      const empty = new CodeGraph([], 0);
-      const serialized = empty.serialize();
-      const deserialized = CodeGraph.deserialize(serialized);
+        for (const { field, message } of testCases) {
+          const invalidData = {
+            files: [],
+            buildTime: 0,
+            definitions: [],
+            imports: [],
+            exports: [],
+            calls: [],
+            callers: [],
+            fileSymbols: [],
+          };
+          (invalidData as any)[field] = 'not-an-array';
 
-      expect(deserialized.files).toEqual([]);
-      expect(deserialized.getStats()).toEqual(empty.getStats());
+          expect(() => CodeGraph.deserialize(invalidData as any)).toThrow(message);
+        }
+      });
+
+      it('should throw TypeError when missing required fields', () => {
+        const incompleteData = {
+          files: [],
+          buildTime: 0,
+          // Missing map fields
+        };
+
+        expect(() => CodeGraph.deserialize(incompleteData as any)).toThrow('Invalid graph data');
+      });
     });
   });
 });

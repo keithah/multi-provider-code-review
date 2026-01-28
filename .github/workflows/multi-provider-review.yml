@@ -21,12 +21,17 @@ on:
         type: string
 
 # Cancel in-progress runs for the same commit to prevent duplicate reviews
-# Strategy: Use only the head SHA as the concurrency key. This ensures that:
+# Strategy: Use only github.sha as the concurrency key to ensure:
 # - Multiple events (push + pull_request) for the same commit share one group
 # - Only one review runs per commit, others are automatically canceled
-# - Simpler than PR number + SHA which created separate groups per event type
+# - Consistent identifier regardless of trigger type (eliminates race conditions)
+#
+# IMPORTANT: github.sha always refers to the commit being tested:
+# - For pull_request: github.sha = merge commit (base + head)
+# - For push: github.sha = the pushed commit
+# This ensures deterministic concurrency grouping across all event types.
 concurrency:
-  group: review-${{ (github.event.pull_request && github.event.pull_request.head && github.event.pull_request.head.sha) || github.sha }}
+  group: review-${{ github.sha }}
   cancel-in-progress: true
 
 # Permissions: Principle of least privilege

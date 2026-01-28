@@ -171,14 +171,61 @@ export class PathMatcher {
    * 2. Prevent future regressions if code changes
    * 3. Make security properties explicit and auditable
    */
+  /**
+   * Comprehensive character validation with explicit security checks
+   * Uses defense-in-depth: check for dangerous characters AND validate allowlist
+   */
   private checkAllowedCharacters(pattern: string): void {
-    // Allowlist for glob patterns used with minimatch library (never passed to shell)
-    // Note: $ % # ~ are safe here because patterns are NOT executed in shell context
-    const allowed = new RegExp('^[A-Za-z0-9.@+^ !_\\-/*?{}\\[\\],()~=$%#]+$');
+    // First pass: Explicit block list for dangerous characters
+    // This catches obvious security issues before allowlist check
+    const dangerousChars = /[\\`|;&<>'"$\x00-\x1F\x7F]/;
+    if (dangerousChars.test(pattern)) {
+      const found = pattern.match(dangerousChars);
+      throw new Error(
+        `Pattern contains dangerous character: ${found?.[0] ? JSON.stringify(found[0]) : 'control char'}. ` +
+        `Backslashes, backticks, pipes, semicolons, quotes, and control characters are not allowed.`
+      );
+    }
+
+    // Second pass: Check for non-ASCII characters (Unicode)
+    // Glob patterns should only use ASCII for portability and security
+    if (!/^[\x20-\x7E]+$/.test(pattern)) {
+      throw new Error(
+        `Pattern contains non-ASCII characters. ` +
+        `Only printable ASCII characters (0x20-0x7E) are allowed for cross-platform compatibility.`
+      );
+    }
+
+    // Third pass: Whitelist validation with explicit character ranges
+    // This is the primary security control - only known-safe characters pass
+    // Allowed: A-Z a-z 0-9 . @ + ^ ! _ - / * ? { } [ ] , ( ) ~ = % #
+    // Note: $ removed from allowlist as extra precaution (not needed for globs)
+    const allowed = /^[A-Za-z0-9.@+^!_\-/*?{}\[\],()~=%# ]+$/;
     if (!allowed.test(pattern)) {
       throw new Error(
         `Pattern contains unsupported characters: ${pattern}. ` +
-        `Only alphanumerics, glob wildcards (*, ?, {}, []), and safe punctuation are allowed.`
+        `Only alphanumerics (A-Z, a-z, 0-9), glob wildcards (*, ?, {}, []), ` +
+        `path separators (/), and safe punctuation (.@+^!_-,()~=%# space) are allowed.`
+      );
+    }
+
+    // Fourth pass: Validate glob-specific syntax isn't malformed
+    // Check for unbalanced braces and brackets that could cause issues
+    const openBraces = (pattern.match(/\{/g) || []).length;
+    const closeBraces = (pattern.match(/\}/g) || []).length;
+    if (openBraces !== closeBraces) {
+      throw new Error(
+        `Pattern has unbalanced braces: ${openBraces} open, ${closeBraces} close. ` +
+        `Each '{' must have a matching '}'.`
+      );
+    }
+
+    const openBrackets = (pattern.match(/\[/g) || []).length;
+    const closeBrackets = (pattern.match(/\]/g) || []).length;
+    if (openBrackets !== closeBrackets) {
+      throw new Error(
+        `Pattern has unbalanced brackets: ${openBrackets} open, ${closeBrackets} close. ` +
+        `Each '[' must have a matching ']'.`
       );
     }
   }

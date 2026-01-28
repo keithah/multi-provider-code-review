@@ -3,49 +3,63 @@ import { ReliabilityTracker } from '../../../src/providers/reliability-tracker';
 import { ReviewConfig } from '../../../src/types';
 import { DEFAULT_CONFIG } from '../../../src/config/defaults';
 
+/**
+ * Helper to create a mock ReliabilityTracker
+ * Reduces test duplication and ensures consistent mock structure
+ */
+function createMockReliabilityTracker(): jest.Mocked<ReliabilityTracker> {
+  return {
+    getReliabilityScore: jest.fn(),
+    recordResult: jest.fn(),
+    recordFalsePositive: jest.fn(),
+    getStats: jest.fn(),
+    getAllStats: jest.fn(),
+    rankProviders: jest.fn(),
+    getRecommendations: jest.fn(),
+    clearHistory: jest.fn(),
+    getSummary: jest.fn(),
+  } as any;
+}
+
+/**
+ * Helper to create test ReviewConfig with overrides
+ * Reduces duplication of spreading DEFAULT_CONFIG
+ */
+function createTestConfig(overrides: Partial<ReviewConfig>): ReviewConfig {
+  return {
+    ...DEFAULT_CONFIG,
+    ...overrides,
+  };
+}
+
 describe('ProviderRegistry Reliability-Based Selection', () => {
   let mockReliabilityTracker: jest.Mocked<ReliabilityTracker>;
 
   beforeEach(() => {
-    // Create mock reliability tracker
-    mockReliabilityTracker = {
-      getReliabilityScore: jest.fn(),
-      recordResult: jest.fn(),
-      recordFalsePositive: jest.fn(),
-      getStats: jest.fn(),
-      getAllStats: jest.fn(),
-      rankProviders: jest.fn(),
-      getRecommendations: jest.fn(),
-      clearHistory: jest.fn(),
-      getSummary: jest.fn(),
-    } as any;
+    mockReliabilityTracker = createMockReliabilityTracker();
   });
 
   describe('Provider Sorting by Reliability', () => {
     it('should sort providers by reliability score (highest first)', async () => {
       // Use opencode providers which don't require API keys
-      // Mock scores: provider1=0.9, provider2=0.8, provider3=0.5, provider4=0.3, provider5=0.2
-      // Note: sortByReliability is called twice for reliability strategy:
+      // Mock scores: high=0.9, very-good=0.8, medium=0.5, low=0.3, poor=0.2
+      // Note: sortByReliability is called multiple times for reliability strategy:
       // once for initial sorting, once after group concatenation to restore global order
-      mockReliabilityTracker.getReliabilityScore
-        .mockResolvedValue(0.9)  // opencode/high-reliability
-        .mockResolvedValue(0.8)  // opencode/very-good-reliability
-        .mockResolvedValue(0.5)  // opencode/medium-reliability
-        .mockResolvedValue(0.3)  // opencode/low-reliability
-        .mockResolvedValue(0.2); // opencode/poor-reliability
-
-      // Use mockImplementation to return scores based on provider name
+      //
+      // Use mockImplementation (not chained mockResolvedValue) for deterministic,
+      // name-based score lookups that work across multiple sort passes
       mockReliabilityTracker.getReliabilityScore.mockImplementation(async (name: string) => {
-        if (name === 'opencode/high-reliability') return 0.9;
-        if (name === 'opencode/very-good-reliability') return 0.8;
-        if (name === 'opencode/medium-reliability') return 0.5;
-        if (name === 'opencode/low-reliability') return 0.3;
-        if (name === 'opencode/poor-reliability') return 0.2;
-        return 0.5; // default
+        const scores: Record<string, number> = {
+          'opencode/high-reliability': 0.9,
+          'opencode/very-good-reliability': 0.8,
+          'opencode/medium-reliability': 0.5,
+          'opencode/low-reliability': 0.3,
+          'opencode/poor-reliability': 0.2,
+        };
+        return scores[name] ?? 0.5; // default for unknown providers
       });
 
-      const config: ReviewConfig = {
-        ...DEFAULT_CONFIG,
+      const config = createTestConfig({
         providers: [
           'opencode/high-reliability',
           'opencode/very-good-reliability',
@@ -55,7 +69,7 @@ describe('ProviderRegistry Reliability-Based Selection', () => {
         ],
         providerSelectionStrategy: 'reliability',
         providerLimit: 5,
-      };
+      });
 
       const registry = new ProviderRegistry(undefined, mockReliabilityTracker);
       const providers = await registry.createProviders(config);

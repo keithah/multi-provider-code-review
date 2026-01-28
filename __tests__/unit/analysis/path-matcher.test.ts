@@ -601,7 +601,7 @@ describe('PathMatcher', () => {
             defaultIntensity: 'standard',
             patterns: [{ pattern: badPattern, intensity: 'thorough' }],
           });
-        }).toThrow(/unsupported characters/i);
+        }).toThrow(/(unsupported|dangerous) character/i);
       }
     });
 

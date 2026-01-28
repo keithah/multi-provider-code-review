@@ -655,10 +655,11 @@ describe('TrivialDetector', () => {
       const result = detector.detect(files);
 
       expect(result.isTrivial).toBe(true);
-      expect(result.trivialFiles).toEqual(['src\\__snapshots__\\component.snap']);
+      // Paths are normalized to forward slashes for consistent output
+      expect(result.trivialFiles).toEqual(['src/__snapshots__/component.snap']);
     });
 
-    it('preserves non-trivial files when mixed with trivial Windows paths', () => {
+    it('normalizes Windows paths to forward slashes for cross-platform consistency', () => {
       const detector = new TrivialDetector(createDefaultTrivialConfig());
       const files = [
         createFile('src\\app.ts'),
@@ -668,8 +669,9 @@ describe('TrivialDetector', () => {
       const result = detector.detect(files);
 
       expect(result.isTrivial).toBe(false);
-      expect(result.nonTrivialFiles).toContain('src\\app.ts');
-      expect(result.trivialFiles).toContain('docs\\README.md');
+      // Paths are normalized to forward slashes for consistent output
+      expect(result.nonTrivialFiles).toContain('src/app.ts');
+      expect(result.trivialFiles).toContain('docs/README.md');
     });
   });
 });

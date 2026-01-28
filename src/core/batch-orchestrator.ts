@@ -80,6 +80,17 @@ export class BatchOrchestrator {
       }
     }
 
+    // Handle case where no valid context window data is available
+    // Fall back to conservative default (100k tokens ~ 400KB of code)
+    const DEFAULT_CONTEXT_WINDOW = 100000;
+    if (!isFinite(smallestWindow) || smallestWindow === 0) {
+      logger.warn(
+        `No valid context window data available for providers: ${providerNames.join(', ')}. ` +
+        `Falling back to default ${DEFAULT_CONTEXT_WINDOW} tokens.`
+      );
+      smallestWindow = DEFAULT_CONTEXT_WINDOW;
+    }
+
     // Calculate target tokens per batch based on smallest context window
     // Use 50% of available context window to leave room for instructions and response
     const targetTokens = this.options.targetTokensPerBatch ?? Math.floor(smallestWindow * 0.5);

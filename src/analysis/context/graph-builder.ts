@@ -95,33 +95,61 @@ export class CodeGraph {
    * Remove all data for a file from the graph
    * Used when re-analyzing a file to avoid stale data
    */
+  /**
+   * Remove a file and all its relationships from the graph
+   *
+   * PERFORMANCE: Optimized to O(E) where E is the number of edges,
+   * using Sets for O(1) lookups instead of O(n) array filtering.
+   *
+   * CORRECTNESS: Ensures complete cleanup of:
+   * - Definitions (from fileSymbols and definitions map)
+   * - Imports and exports
+   * - Call edges (both directions: calls and callers)
+   * - Non-definition symbols (e.g., <top>, anonymous functions)
+   */
   removeFile(file: string): void {
-    // Remove all definitions for this file
+    // Phase 1: Build Set of all symbols to remove for O(1) lookup
+    // Includes both definitions and non-definitions (e.g., <top>)
     const symbolNames = this.fileSymbols.get(file) || [];
+    const filePrefix = `${file}:`;
+    const symbolsToRemove = new Set<string>();
+
+    // Add known definitions
     for (const name of symbolNames) {
-      this.definitions.delete(`${file}:${name}`);
+      symbolsToRemove.add(`${file}:${name}`);
     }
+
+    // Add non-definition call edges (scan both calls and callers maps)
+    for (const [caller] of this.calls) {
+      if (caller.startsWith(filePrefix)) {
+        symbolsToRemove.add(caller);
+      }
+    }
+    for (const [callee] of this.callers) {
+      if (callee.startsWith(filePrefix)) {
+        symbolsToRemove.add(callee);
+      }
+    }
+
+    // Phase 2: Remove simple entries (no edge cleanup needed)
     this.fileSymbols.delete(file);
-
-    // Remove imports from this file
     this.imports.delete(file);
-
-    // Remove exports from this file
     this.exports.delete(file);
 
-    // Remove calls made from functions in this file
-    // Iterate through this file's symbols and clean up their call edges
-    for (const symbolName of symbolNames) {
-      const qualifiedSymbol = `${file}:${symbolName}`;
+    for (const symbol of symbolsToRemove) {
+      this.definitions.delete(symbol);
+    }
 
-      // Remove calls made by this symbol
-      const callees = this.calls.get(qualifiedSymbol);
+    // Phase 3: Clean up call edges (bidirectional graph)
+    // Use Set-based filtering for O(1) lookup per element instead of O(n)
+    for (const symbol of symbolsToRemove) {
+      // Clean up outgoing calls: remove symbol from callers lists of callees
+      const callees = this.calls.get(symbol);
       if (callees) {
-        // Remove this caller from all callees' caller lists
         for (const callee of callees) {
           const callerList = this.callers.get(callee);
           if (callerList) {
-            const filtered = callerList.filter(c => c !== qualifiedSymbol);
+            const filtered = callerList.filter(c => !symbolsToRemove.has(c));
             if (filtered.length > 0) {
               this.callers.set(callee, filtered);
             } else {
@@ -129,62 +157,15 @@ export class CodeGraph {
             }
           }
         }
-        this.calls.delete(qualifiedSymbol);
       }
 
-      // Remove calls to this symbol (clean up callers list and their calls maps)
-      const callersToThis = this.callers.get(qualifiedSymbol);
+      // Clean up incoming calls: remove symbol from calls lists of callers
+      const callersToThis = this.callers.get(symbol);
       if (callersToThis) {
-        // Remove this symbol from each caller's calls map
         for (const caller of callersToThis) {
           const calleeList = this.calls.get(caller);
           if (calleeList) {
-            const filtered = calleeList.filter(c => c !== qualifiedSymbol);
-            if (filtered.length > 0) {
-              this.calls.set(caller, filtered);
-            } else {
-              this.calls.delete(caller);
-            }
-          }
-        }
-        this.callers.delete(qualifiedSymbol);
-      }
-    }
-
-    // Clean up non-definition call edges (e.g., <top>, anonymous functions)
-    // Scan all calls/callers for keys belonging to this file that weren't in fileSymbols
-    const filePrefix = `${file}:`;
-    const callKeysToRemove: string[] = [];
-    const callerKeysToRemove: string[] = [];
-
-    // Find all call edges originating from this file (even non-definitions)
-    for (const [caller, callees] of this.calls.entries()) {
-      if (caller.startsWith(filePrefix)) {
-        callKeysToRemove.push(caller);
-        // Remove this caller from all its callees' callers lists
-        for (const callee of callees) {
-          const callerList = this.callers.get(callee);
-          if (callerList) {
-            const filtered = callerList.filter(c => c !== caller);
-            if (filtered.length > 0) {
-              this.callers.set(callee, filtered);
-            } else {
-              this.callers.delete(callee);
-            }
-          }
-        }
-      }
-    }
-
-    // Find all callers lists for symbols in this file (even non-definitions)
-    for (const [callee, callers] of this.callers.entries()) {
-      if (callee.startsWith(filePrefix)) {
-        callerKeysToRemove.push(callee);
-        // Remove this callee from all its callers' calls lists
-        for (const caller of callers) {
-          const calleeList = this.calls.get(caller);
-          if (calleeList) {
-            const filtered = calleeList.filter(c => c !== callee);
+            const filtered = calleeList.filter(c => !symbolsToRemove.has(c));
             if (filtered.length > 0) {
               this.calls.set(caller, filtered);
             } else {
@@ -193,14 +174,10 @@ export class CodeGraph {
           }
         }
       }
-    }
 
-    // Remove the stale keys
-    for (const key of callKeysToRemove) {
-      this.calls.delete(key);
-    }
-    for (const key of callerKeysToRemove) {
-      this.callers.delete(key);
+      // Remove symbol's own entries from maps
+      this.calls.delete(symbol);
+      this.callers.delete(symbol);
     }
   }
 

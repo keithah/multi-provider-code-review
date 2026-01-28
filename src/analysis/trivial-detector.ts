@@ -132,7 +132,7 @@ export class TrivialDetector {
       return {
         isTrivial: false,
         trivialFiles: [],
-        nonTrivialFiles: files.map(f => f.filename),
+        nonTrivialFiles: files.map(f => this.normalizePath(f.filename)),
       };
     }
 
@@ -141,10 +141,13 @@ export class TrivialDetector {
 
     // Categorize each file
     for (const file of files) {
+      // Always normalize paths for consistent cross-platform behavior
+      const normalizedPath = this.normalizePath(file.filename);
+
       if (this.isFileTrivial(file)) {
-        trivialFiles.push(file.filename);
+        trivialFiles.push(normalizedPath);
       } else {
-        nonTrivialFiles.push(file.filename);
+        nonTrivialFiles.push(normalizedPath);
       }
     }
 
