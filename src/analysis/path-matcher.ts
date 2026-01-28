@@ -150,7 +150,7 @@ export class PathMatcher {
    * - Glob wildcards: * (asterisk), ? (question mark)
    * - Glob braces: { } (brace expansion)
    * - Character classes: [ ] (bracket expressions)
-   * - Special chars: . - _ @ + ^ ! ( ) ~ = $ % # , (space)
+   * - Special chars: . - _ @ + ^ ! ( ) ~ # , (space)
    *
    * BLOCKED CHARACTERS (explicit):
    * - Backslash (\) - Prevents path traversal and escape sequences
@@ -198,9 +198,9 @@ export class PathMatcher {
 
     // Third pass: Whitelist validation with explicit character ranges
     // This is the primary security control - only known-safe characters pass
-    // Allowed: A-Z a-z 0-9 . @ + ^ ! _ - / * ? { } [ ] , ( ) ~ = % #
-    // Note: $ removed from allowlist as extra precaution (not needed for globs)
-    const allowed = /^[A-Za-z0-9.@+^!_\-/*?{}\[\],()~=%# ]+$/;
+    // Allowed: A-Z a-z 0-9 . @ + ^ ! _ - / * ? { } [ ] , ( ) ~ #
+    // Note: $, =, % removed from allowlist as extra precaution (could be used in encoded payloads)
+    const allowed = /^[A-Za-z0-9.@+^!_\-/*?{}\[\],()~# ]+$/;
     if (!allowed.test(pattern)) {
       throw new Error(
         `Pattern contains unsupported characters: ${pattern}. ` +
