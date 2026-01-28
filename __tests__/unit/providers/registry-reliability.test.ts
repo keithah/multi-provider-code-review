@@ -1,6 +1,5 @@
 import { ProviderRegistry } from '../../../src/providers/registry';
 import { ReliabilityTracker } from '../../../src/providers/reliability-tracker';
-import { Provider } from '../../../src/providers/base';
 import { ReviewConfig } from '../../../src/types';
 import { DEFAULT_CONFIG } from '../../../src/config/defaults';
 
