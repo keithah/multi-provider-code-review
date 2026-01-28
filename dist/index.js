@@ -31104,7 +31104,7 @@ var ReviewConfigSchema = external_exports.object({
   incremental_enabled: external_exports.boolean().optional(),
   incremental_cache_ttl_days: external_exports.number().int().min(1).max(30).optional(),
   batch_max_files: external_exports.number().int().min(1).max(200).optional(),
-  provider_batch_overrides: external_exports.record(external_exports.number().int().min(1).max(200)).optional(),
+  provider_batch_overrides: external_exports.record(external_exports.coerce.number().int().min(1).max(200)).optional(),
   graph_enabled: external_exports.boolean().optional(),
   graph_cache_enabled: external_exports.boolean().optional(),
   graph_max_depth: external_exports.number().int().min(1).max(10).optional(),
@@ -33061,6 +33061,10 @@ var PromptBuilder = class {
   constructor(config, intensity = "standard") {
     this.config = config;
     this.intensity = intensity;
+    const validIntensities = ["light", "standard", "thorough"];
+    if (!validIntensities.includes(intensity)) {
+      throw new Error(`Invalid intensity: ${intensity}. Must be one of: ${validIntensities.join(", ")}`);
+    }
   }
   build(pr) {
     const diff = trimDiff(pr.diff, this.config.diffMaxBytes);
@@ -34337,17 +34341,27 @@ function buildCacheKey(pr, configHash) {
 }
 function hashConfig(config) {
   const relevantConfig = {
+    // Analysis toggles
     enableAstAnalysis: config.enableAstAnalysis,
     enableSecurity: config.enableSecurity,
+    enableTestHints: config.enableTestHints,
+    enableAiDetection: config.enableAiDetection,
+    // Graph analysis config
+    graphEnabled: config.graphEnabled,
+    graphMaxDepth: config.graphMaxDepth,
+    // Triviality detection affects which files are analyzed
+    skipTrivialChanges: config.skipTrivialChanges,
+    trivialPatterns: config.trivialPatterns,
+    // Inline comment filtering
     inlineMinSeverity: config.inlineMinSeverity,
     inlineMinAgreement: config.inlineMinAgreement,
-    // Add other fields that affect findings
+    // Intensity affects prompt depth
     pathBasedIntensity: config.pathBasedIntensity,
     pathIntensityPatterns: config.pathIntensityPatterns,
     pathDefaultIntensity: config.pathDefaultIntensity
   };
-  const hash = (0, import_crypto.createHash)("md5").update(JSON.stringify(relevantConfig)).digest("hex");
-  return hash.slice(0, 8);
+  const hash = (0, import_crypto.createHash)("sha256").update(JSON.stringify(relevantConfig)).digest("hex");
+  return hash.slice(0, 16);
 }
 
 // src/cache/version.ts
@@ -37077,10 +37091,12 @@ var ReliabilityTracker = class _ReliabilityTracker {
       data.results.splice(0, excess);
       logger.debug(`Trimmed ${excess} old reliability results to prevent unbounded growth`);
     }
-    if (success) {
-      await this.circuitBreaker.recordSuccess(providerId);
-    } else {
-      await this.circuitBreaker.recordFailure(providerId);
+    if (this.circuitBreaker) {
+      if (success) {
+        await this.circuitBreaker.recordSuccess(providerId);
+      } else {
+        await this.circuitBreaker.recordFailure(providerId);
+      }
     }
     const timeSinceAggregation = Date.now() - data.lastAggregation;
     if (timeSinceAggregation > _ReliabilityTracker.AGGREGATION_INTERVAL_MS) {
@@ -37176,6 +37192,9 @@ var ReliabilityTracker = class _ReliabilityTracker {
    * Check whether a provider's circuit is open.
    */
   async isCircuitOpen(providerId) {
+    if (!this.circuitBreaker) {
+      return false;
+    }
     return this.circuitBreaker.isOpen(providerId);
   }
   /**
@@ -38026,6 +38045,7 @@ function severityToLevel(severity) {
 }
 
 // src/cache/graph-cache.ts
+var GRAPH_CACHE_VERSION = 1;
 var GraphCache = class _GraphCache {
   // 24 hours
   constructor(storage = new CacheStorage()) {
@@ -38044,6 +38064,10 @@ var GraphCache = class _GraphCache {
     }
     try {
       const data = JSON.parse(cached);
+      if (data.version !== GRAPH_CACHE_VERSION) {
+        logger.debug(`Graph cache version mismatch for PR #${prNumber} (cached: ${data.version}, current: ${GRAPH_CACHE_VERSION})`);
+        return null;
+      }
       if (Date.now() - data.timestamp > _GraphCache.CACHE_TTL_MS) {
         logger.debug(`Graph cache expired for PR #${prNumber}`);
         return null;
@@ -38062,6 +38086,7 @@ var GraphCache = class _GraphCache {
   async set(prNumber, headSha, graph) {
     const key = this.key(prNumber, headSha);
     const data = {
+      version: GRAPH_CACHE_VERSION,
       timestamp: Date.now(),
       graph: graph.serialize()
     };

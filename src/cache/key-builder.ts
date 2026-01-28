@@ -17,19 +17,34 @@ export function buildCacheKey(pr: PRContext, configHash?: string): string {
  */
 export function hashConfig(config: ReviewConfig): string {
   const relevantConfig = {
+    // Analysis toggles
     enableAstAnalysis: config.enableAstAnalysis,
     enableSecurity: config.enableSecurity,
+    enableTestHints: config.enableTestHints,
+    enableAiDetection: config.enableAiDetection,
+
+    // Graph analysis config
+    graphEnabled: config.graphEnabled,
+    graphMaxDepth: config.graphMaxDepth,
+
+    // Triviality detection affects which files are analyzed
+    skipTrivialChanges: config.skipTrivialChanges,
+    trivialPatterns: config.trivialPatterns,
+
+    // Inline comment filtering
     inlineMinSeverity: config.inlineMinSeverity,
     inlineMinAgreement: config.inlineMinAgreement,
-    // Add other fields that affect findings
+
+    // Intensity affects prompt depth
     pathBasedIntensity: config.pathBasedIntensity,
     pathIntensityPatterns: config.pathIntensityPatterns,
     pathDefaultIntensity: config.pathDefaultIntensity,
   };
 
-  const hash = createHash('md5')
+  // Use SHA-256 for better collision resistance than MD5
+  const hash = createHash('sha256')
     .update(JSON.stringify(relevantConfig))
     .digest('hex');
 
-  return hash.slice(0, 8); // Use first 8 chars
+  return hash.slice(0, 16); // Use first 16 chars for better collision resistance
 }

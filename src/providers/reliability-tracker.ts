@@ -111,11 +111,13 @@ export class ReliabilityTracker {
       logger.debug(`Trimmed ${excess} old reliability results to prevent unbounded growth`);
     }
 
-    // Circuit breaker bookkeeping
-    if (success) {
-      await this.circuitBreaker.recordSuccess(providerId);
-    } else {
-      await this.circuitBreaker.recordFailure(providerId);
+    // Circuit breaker bookkeeping (if available)
+    if (this.circuitBreaker) {
+      if (success) {
+        await this.circuitBreaker.recordSuccess(providerId);
+      } else {
+        await this.circuitBreaker.recordFailure(providerId);
+      }
     }
 
     // Check if we should aggregate
@@ -243,6 +245,9 @@ export class ReliabilityTracker {
    * Check whether a provider's circuit is open.
    */
   async isCircuitOpen(providerId: string): Promise<boolean> {
+    if (!this.circuitBreaker) {
+      return false; // If no circuit breaker, assume circuit is closed
+    }
     return this.circuitBreaker.isOpen(providerId);
   }
 

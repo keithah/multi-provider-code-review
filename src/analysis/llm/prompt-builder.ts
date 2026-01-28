@@ -7,7 +7,13 @@ export class PromptBuilder {
   constructor(
     private readonly config: ReviewConfig,
     private readonly intensity: ReviewIntensity = 'standard'
-  ) {}
+  ) {
+    // Validate intensity parameter
+    const validIntensities: ReviewIntensity[] = ['light', 'standard', 'thorough'];
+    if (!validIntensities.includes(intensity)) {
+      throw new Error(`Invalid intensity: ${intensity}. Must be one of: ${validIntensities.join(', ')}`);
+    }
+  }
 
   build(pr: PRContext): string {
     const diff = trimDiff(pr.diff, this.config.diffMaxBytes);

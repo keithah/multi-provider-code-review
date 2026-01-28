@@ -26,6 +26,7 @@ describe('GraphCache', () => {
     it('should deserialize and return cached graph', async () => {
       const graph = new CodeGraph(['file1.ts', 'file2.ts'], 100);
       const cached = {
+        version: 1,
         timestamp: Date.now(),
         graph: graph.serialize(),
       };
@@ -42,6 +43,7 @@ describe('GraphCache', () => {
     it('should return null for expired cache', async () => {
       const graph = new CodeGraph(['file1.ts'], 100);
       const cached = {
+        version: 1,
         timestamp: Date.now() - 25 * 60 * 60 * 1000, // 25 hours ago
         graph: graph.serialize(),
       };
@@ -56,6 +58,7 @@ describe('GraphCache', () => {
     it('should return graph within TTL', async () => {
       const graph = new CodeGraph(['file1.ts'], 100);
       const cached = {
+        version: 1, // Match GRAPH_CACHE_VERSION
         timestamp: Date.now() - 20 * 60 * 60 * 1000, // 20 hours ago (within 24hr TTL)
         graph: graph.serialize(),
       };
@@ -79,11 +82,27 @@ describe('GraphCache', () => {
     it('should handle deserialization errors gracefully', async () => {
       // Test with completely invalid graph structure that will cause deserialize to throw
       const invalid = {
+        version: 1,
         timestamp: Date.now(),
         graph: null,
       };
 
       mockStorage.read.mockResolvedValue(JSON.stringify(invalid));
+
+      const result = await cache.get(123, 'abc123');
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null for version mismatch', async () => {
+      const graph = new CodeGraph(['file1.ts'], 100);
+      const cachedWithOldVersion = {
+        version: 0, // Old version
+        timestamp: Date.now(),
+        graph: graph.serialize(),
+      };
+
+      mockStorage.read.mockResolvedValue(JSON.stringify(cachedWithOldVersion));
 
       const result = await cache.get(123, 'abc123');
 
@@ -102,6 +121,7 @@ describe('GraphCache', () => {
       expect(callArgs[0]).toBe('code-graph-123-abc123');
 
       const serialized = JSON.parse(callArgs[1]);
+      expect(serialized.version).toBe(1); // Should include version
       expect(serialized.timestamp).toBeDefined();
       expect(serialized.graph).toBeDefined();
       expect(serialized.graph.files).toEqual(['file1.ts', 'file2.ts']);

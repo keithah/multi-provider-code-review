@@ -335,4 +335,72 @@ describe('Incremental Graph Updates', () => {
       expect(updated.getStats()).toEqual(graph.getStats());
     });
   });
+
+  describe('Error Handling', () => {
+    it('should create graph even with minimal data', () => {
+      const minimalData = {
+        files: [],
+        buildTime: 0,
+        definitions: [],
+        imports: [],
+        exports: [],
+        calls: [],
+        callers: [],
+        fileSymbols: [],
+      };
+
+      const graph = CodeGraph.deserialize(minimalData);
+      expect(graph.files).toEqual([]);
+      expect(graph.buildTime).toBe(0);
+    });
+
+    it('should handle partial data gracefully', () => {
+      const partialData = {
+        files: ['file1.ts'],
+        buildTime: 100,
+        definitions: [],
+        imports: [],
+        exports: [],
+        calls: [],
+        callers: [],
+        fileSymbols: [],
+      };
+
+      const graph = CodeGraph.deserialize(partialData);
+      expect(graph.files).toEqual(['file1.ts']);
+      expect(graph.buildTime).toBe(100);
+    });
+
+    it('should handle null or undefined inputs gracefully', () => {
+      const graph = new CodeGraph(['file1.ts'], 100);
+
+      // removeFile with non-existent file should not throw
+      expect(() => graph.removeFile('non-existent.ts')).not.toThrow();
+    });
+
+    it('should handle empty file list in graph operations', () => {
+      const graph = new CodeGraph([], 0);
+
+      expect(graph.files).toEqual([]);
+      expect(graph.getStats().definitions).toBe(0);
+      expect(() => graph.serialize()).not.toThrow();
+    });
+
+    it('should handle clone of empty graph', () => {
+      const empty = new CodeGraph([], 0);
+      const cloned = empty.clone();
+
+      expect(cloned.files).toEqual([]);
+      expect(cloned.getStats()).toEqual(empty.getStats());
+    });
+
+    it('should handle deserialization of empty graph', () => {
+      const empty = new CodeGraph([], 0);
+      const serialized = empty.serialize();
+      const deserialized = CodeGraph.deserialize(serialized);
+
+      expect(deserialized.files).toEqual([]);
+      expect(deserialized.getStats()).toEqual(empty.getStats());
+    });
+  });
 });

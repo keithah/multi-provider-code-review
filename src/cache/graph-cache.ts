@@ -2,6 +2,9 @@ import { CacheStorage } from './storage';
 import { CodeGraph } from '../analysis/context/graph-builder';
 import { logger } from '../utils/logger';
 
+// Graph cache schema version - increment when CodeGraph serialization format changes
+const GRAPH_CACHE_VERSION = 1;
+
 export class GraphCache {
   private static readonly CACHE_KEY_PREFIX = 'code-graph-';
   private static readonly CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -21,6 +24,12 @@ export class GraphCache {
 
     try {
       const data = JSON.parse(cached);
+
+      // Check version for schema compatibility
+      if (data.version !== GRAPH_CACHE_VERSION) {
+        logger.debug(`Graph cache version mismatch for PR #${prNumber} (cached: ${data.version}, current: ${GRAPH_CACHE_VERSION})`);
+        return null;
+      }
 
       // Check TTL
       if (Date.now() - data.timestamp > GraphCache.CACHE_TTL_MS) {
@@ -46,6 +55,7 @@ export class GraphCache {
     const key = this.key(prNumber, headSha);
 
     const data = {
+      version: GRAPH_CACHE_VERSION,
       timestamp: Date.now(),
       graph: graph.serialize(),
     };

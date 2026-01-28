@@ -3,6 +3,9 @@ name: Multi-Provider Code Review
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+    # Security: pull_request trigger (not pull_request_target) automatically prevents
+    # fork PRs from accessing repository secrets (OPENROUTER_API_KEY, etc.)
+    # GitHub runs fork PR workflows with empty secrets, so no special handling needed
   # Note: pull_request_review trigger removed to prevent duplicate runs
   # when the bot posts its own review comment
   push:
@@ -18,8 +21,10 @@ on:
         type: string
 
 # Cancel in-progress runs for the same commit to prevent duplicate reviews
-# Use only the head SHA as the concurrency key so both push and pull_request
-# events for the same commit share the same group and cancel each other
+# Strategy: Use only the head SHA as the concurrency key. This ensures that:
+# - Multiple events (push + pull_request) for the same commit share one group
+# - Only one review runs per commit, others are automatically canceled
+# - Simpler than PR number + SHA which created separate groups per event type
 concurrency:
   group: review-${{ (github.event.pull_request && github.event.pull_request.head && github.event.pull_request.head.sha) || github.sha }}
   cancel-in-progress: true
