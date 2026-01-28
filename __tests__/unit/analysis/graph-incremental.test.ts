@@ -225,7 +225,6 @@ describe('Incremental Graph Updates', () => {
       ];
 
       const graph = await builder.buildGraph(initialFiles);
-      const statsBefore = graph.getStats();
 
       // Update with changed file
       const changedFiles: FileChange[] = [

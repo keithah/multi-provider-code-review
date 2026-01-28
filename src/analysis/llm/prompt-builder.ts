@@ -135,11 +135,11 @@ export class PromptBuilder {
     // Strategy: Progressively trim diff until it fits
     // Calculate target diff size based on overage
     const overageTokens = fitCheck.promptTokens - fitCheck.availableTokens;
-    const overageChars = overageTokens * 4; // ~4 chars per token
+    const overageBytes = overageTokens * 4; // ~4 bytes per token for UTF-8
 
     // Calculate new target diff size
     const currentDiffBytes = Buffer.byteLength(pr.diff, 'utf8');
-    const targetDiffBytes = Math.max(1000, currentDiffBytes - overageChars);
+    const targetDiffBytes = Math.max(1000, currentDiffBytes - overageBytes);
 
     logger.info(
       `Trimming diff from ${currentDiffBytes} to ${targetDiffBytes} bytes to fit context window`

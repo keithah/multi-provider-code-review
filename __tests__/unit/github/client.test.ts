@@ -2,7 +2,7 @@ import { GitHubClient } from '../../../src/github/client';
 import * as github from '@actions/github';
 
 describe('GitHubClient', () => {
-  const mockToken = 'ghp_test123456789';
+  const mockToken = 'TEST_TOKEN';
   const originalEnv = process.env;
   const originalContext = github.context;
 

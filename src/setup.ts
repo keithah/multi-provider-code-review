@@ -133,6 +133,9 @@ async function createComponentsForCLI(config: ReviewConfig): Promise<ReviewCompo
   const batchOrchestrator = new BatchOrchestrator({
     defaultBatchSize: config.batchMaxFiles || 30,
     providerOverrides: config.providerBatchOverrides,
+    enableTokenAwareBatching: config.enableTokenAwareBatching,
+    targetTokensPerBatch: config.targetTokensPerBatch,
+    maxBatchSize: config.batchMaxFiles,
   });
 
   // Mock GitHub components for CLI mode
@@ -251,6 +254,9 @@ export async function createComponents(config: ReviewConfig, githubToken: string
   const batchOrchestrator = new BatchOrchestrator({
     defaultBatchSize: config.batchMaxFiles || 30,
     providerOverrides: config.providerBatchOverrides,
+    enableTokenAwareBatching: config.enableTokenAwareBatching,
+    targetTokensPerBatch: config.targetTokensPerBatch,
+    maxBatchSize: config.batchMaxFiles,
   });
 
   return {

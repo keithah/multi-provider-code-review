@@ -4,22 +4,6 @@ import { Provider } from '../../../src/providers/base';
 import { ReviewConfig } from '../../../src/types';
 import { DEFAULT_CONFIG } from '../../../src/config/defaults';
 
-// Mock provider class for testing
-class MockProvider implements Provider {
-  constructor(public readonly name: string) {}
-
-  async review(): Promise<any> {
-    return {
-      content: JSON.stringify({ findings: [] }),
-      usage: { promptTokens: 100, completionTokens: 50, totalTokens: 150 },
-    };
-  }
-
-  async healthCheck(): Promise<boolean> {
-    return true;
-  }
-}
-
 describe('ProviderRegistry Reliability-Based Selection', () => {
   let mockReliabilityTracker: jest.Mocked<ReliabilityTracker>;
 

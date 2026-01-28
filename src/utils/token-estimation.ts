@@ -26,7 +26,7 @@ export function estimateTokensSimple(text: string): TokenEstimate {
   let tokens = Math.ceil(characters / 4);
 
   // Adjust for code (typically denser, more symbols)
-  const codeIndicators = (text.match(/[{}()\[\];]/g) || []).length;
+  const codeIndicators = (text.match(/[{}()[\];]/g) || []).length;
   const isCodeHeavy = codeIndicators > characters * 0.05; // >5% code symbols
 
   if (isCodeHeavy) {
@@ -58,13 +58,13 @@ export function estimateTokensConservative(text: string): TokenEstimate {
  * Estimate tokens for a diff (special handling for unified diff format)
  */
 export function estimateTokensForDiff(diff: string): TokenEstimate {
-  // Diff has lots of +/- symbols and repeated context lines
-  // Slightly more efficient than raw text
+  // Use conservative estimate for diffs (no efficiency multiplier)
+  // Diff format doesn't guarantee token savings
   const estimate = estimateTokensSimple(diff);
 
   return {
     ...estimate,
-    tokens: Math.ceil(estimate.tokens * 0.9), // Diff is ~10% more efficient
+    tokens: estimate.tokens, // Conservative: no multiplier
   };
 }
 

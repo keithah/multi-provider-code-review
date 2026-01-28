@@ -126,10 +126,9 @@ export class CircuitBreaker {
 
     try {
       const parsed = JSON.parse(raw) as CircuitData;
-      return {
-        probeInFlight: false,
-        ...parsed,
-      };
+      // Return parsed state as-is during normal operation
+      // Note: probeInFlight flag is reset by recordSuccess/recordFailure
+      return parsed;
     } catch (error) {
       logger.warn(`Failed to parse circuit state for ${providerId}`, error as Error);
       return { state: 'closed', failures: 0, probeInFlight: false };

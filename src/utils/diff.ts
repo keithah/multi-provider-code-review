@@ -172,14 +172,12 @@ export function filterDiffByFiles(diff: string, files: { filename: string }[]): 
         currentChunk.push(line);
         continue;
       }
-      if (match) {
-        const rawA = match[1].trim();
-        const rawB = match[2].trim();
-        const aPath = unquoteGitPath(rawA);
-        const bPath = unquoteGitPath(rawB);
-        // Prioritize bPath (new path) to correctly handle renames/moves
-        includeCurrent = target.has(bPath);
-      }
+      const rawA = match[1].trim();
+      const rawB = match[2].trim();
+      const aPath = unquoteGitPath(rawA);
+      const bPath = unquoteGitPath(rawB);
+      // Check both paths to correctly handle renames/moves
+      includeCurrent = target.has(bPath) || target.has(aPath);
       currentChunk.push(line);
     } else {
       currentChunk.push(line);

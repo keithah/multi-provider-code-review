@@ -1,6 +1,6 @@
 import { FileChange } from '../types';
 import { logger } from '../utils/logger';
-import { calculateOptimalBatchSize, estimateTokensForFiles, getContextWindowSize } from '../utils/token-estimation';
+import { calculateOptimalBatchSize, getContextWindowSize } from '../utils/token-estimation';
 
 export interface BatchOrchestratorOptions {
   defaultBatchSize: number;

@@ -92,8 +92,8 @@ index 123..456 789
       const estimate = estimateTokensForDiff(diff);
       const simple = estimateTokensSimple(diff);
 
-      // Diff should be ~10% more efficient (0.9 multiplier)
-      expect(estimate.tokens).toBe(Math.ceil(simple.tokens * 0.9));
+      // Conservative estimate: no efficiency multiplier for diffs
+      expect(estimate.tokens).toBe(simple.tokens);
     });
 
     it('should handle empty diff', () => {

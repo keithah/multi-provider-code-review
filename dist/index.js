@@ -32856,13 +32856,11 @@ function filterDiffByFiles(diff, files) {
         currentChunk.push(line);
         continue;
       }
-      if (match2) {
-        const rawA = match2[1].trim();
-        const rawB = match2[2].trim();
-        const aPath = unquoteGitPath(rawA);
-        const bPath = unquoteGitPath(rawB);
-        includeCurrent = target.has(bPath);
-      }
+      const rawA = match2[1].trim();
+      const rawB = match2[2].trim();
+      const aPath = unquoteGitPath(rawA);
+      const bPath = unquoteGitPath(rawB);
+      includeCurrent = target.has(bPath) || target.has(aPath);
       currentChunk.push(line);
     } else {
       currentChunk.push(line);
@@ -32902,7 +32900,7 @@ function estimateTokensSimple(text) {
   const characters = text.length;
   const bytes = Buffer.byteLength(text, "utf8");
   let tokens = Math.ceil(characters / 4);
-  const codeIndicators = (text.match(/[{}()\[\];]/g) || []).length;
+  const codeIndicators = (text.match(/[{}()[\];]/g) || []).length;
   const isCodeHeavy = codeIndicators > characters * 0.05;
   if (isCodeHeavy) {
     tokens = Math.ceil(characters / 3);
@@ -32926,8 +32924,8 @@ function estimateTokensForDiff(diff) {
   const estimate = estimateTokensSimple(diff);
   return {
     ...estimate,
-    tokens: Math.ceil(estimate.tokens * 0.9)
-    // Diff is ~10% more efficient
+    tokens: estimate.tokens
+    // Conservative: no multiplier
   };
 }
 function getContextWindowSize(modelId) {
@@ -33163,9 +33161,9 @@ var PromptBuilder = class {
       `Prompt exceeds context window for ${modelId}. ${fitCheck.promptTokens} tokens > ${fitCheck.availableTokens} available. Trimming diff content...`
     );
     const overageTokens = fitCheck.promptTokens - fitCheck.availableTokens;
-    const overageChars = overageTokens * 4;
+    const overageBytes = overageTokens * 4;
     const currentDiffBytes = Buffer.byteLength(pr.diff, "utf8");
-    const targetDiffBytes = Math.max(1e3, currentDiffBytes - overageChars);
+    const targetDiffBytes = Math.max(1e3, currentDiffBytes - overageBytes);
     logger.info(
       `Trimming diff from ${currentDiffBytes} to ${targetDiffBytes} bytes to fit context window`
     );
@@ -36974,8 +36972,9 @@ var CircuitBreaker = class _CircuitBreaker {
     try {
       const parsed = JSON.parse(raw);
       return {
-        probeInFlight: false,
-        ...parsed
+        ...parsed,
+        probeInFlight: false
+        // Always clear in-flight flag on load
       };
     } catch (error2) {
       logger.warn(`Failed to parse circuit state for ${providerId}`, error2);
@@ -37891,7 +37890,10 @@ async function createComponents(config, githubToken) {
   const metricsCollector = config.analyticsEnabled ? new MetricsCollector(cacheStorage, config) : void 0;
   const batchOrchestrator = new BatchOrchestrator({
     defaultBatchSize: config.batchMaxFiles || 30,
-    providerOverrides: config.providerBatchOverrides
+    providerOverrides: config.providerBatchOverrides,
+    enableTokenAwareBatching: config.enableTokenAwareBatching,
+    targetTokensPerBatch: config.targetTokensPerBatch,
+    maxBatchSize: config.batchMaxFiles
   });
   return {
     config,
@@ -38058,10 +38060,12 @@ var GraphCache = class _GraphCache {
   }
   /**
    * Clear cache for a PR
+   * Note: Currently only logs the intent. Full prefix-based deletion would require
+   * extending CacheStorage interface to support key iteration/scanning.
    */
   async clear(prNumber) {
     const prefix = _GraphCache.CACHE_KEY_PREFIX + prNumber;
-    logger.debug(`Clear graph cache for PR #${prNumber} (prefix: ${prefix})`);
+    logger.info(`Cache clear requested for PR #${prNumber} (prefix: ${prefix}). Full implementation requires CacheStorage.deleteByPrefix() support.`);
   }
   key(prNumber, headSha) {
     return `${_GraphCache.CACHE_KEY_PREFIX}${prNumber}-${headSha}`;

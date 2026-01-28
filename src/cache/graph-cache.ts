@@ -56,13 +56,15 @@ export class GraphCache {
 
   /**
    * Clear cache for a PR
+   * Note: Currently only logs the intent. Full prefix-based deletion would require
+   * extending CacheStorage interface to support key iteration/scanning.
    */
   async clear(prNumber: number): Promise<void> {
-    // Clear all cache entries for this PR (all SHAs)
     const prefix = GraphCache.CACHE_KEY_PREFIX + prNumber;
-    // Note: CacheStorage doesn't support prefix deletion
-    // This would need to be implemented if needed
-    logger.debug(`Clear graph cache for PR #${prNumber} (prefix: ${prefix})`);
+    logger.info(`Cache clear requested for PR #${prNumber} (prefix: ${prefix}). ` +
+      `Full implementation requires CacheStorage.deleteByPrefix() support.`);
+    // TODO: Implement deleteByPrefix() in CacheStorage backends (InMemory, Redis)
+    // and call await this.storage.deleteByPrefix(prefix) here
   }
 
   private key(prNumber: number, headSha: string): string {
