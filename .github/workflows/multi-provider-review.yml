@@ -38,7 +38,7 @@ permissions:
 jobs:
   review:
     # Internal PRs, pushes, and manual runs (non-fork)
-    if: (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.fork == false) || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: (github.event_name == 'pull_request_target' && github.event.pull_request && github.event.pull_request.head.repo.fork == false) || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     env:
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
@@ -178,11 +178,12 @@ jobs:
       - name: Validate no repo secrets are exposed
         run: |
           echo "Ensuring fork run has no repository secrets"
-          if [ -n "${{ secrets.OPENROUTER_API_KEY }}" ]; then
-            echo "❌ OPENROUTER_API_KEY must not be used in fork runs"
+          # Check the environment variable (not the GitHub expression which evaluates at parse time)
+          if [ -n "$OPENROUTER_API_KEY" ]; then
+            echo "❌ OPENROUTER_API_KEY environment variable must be empty for fork runs"
             exit 1
           fi
-          echo "✅ Repo secrets not used in fork run"
+          echo "✅ Repo secrets not used in fork run (OPENROUTER_API_KEY is empty as expected)"
       - name: Fetch fork diff only (no checkout of fork code)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
