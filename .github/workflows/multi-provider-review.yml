@@ -111,7 +111,7 @@ jobs:
         # Version pinning strategy:
         # - Pin to latest published npm version known-good for CLI commands
         # - Update strategy: Test quarterly (Jan, Apr, Jul, Oct) with full suite + smoke tests
-        run: npm install -g opencode-ai@1.1.35
+        run: npm install -g opencode-ai@1.1.40
 
       - name: Multi-Provider Code Review
         # Run if PR number resolved AND (not a fork PR OR not a pull_request event)
