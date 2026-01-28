@@ -72,10 +72,13 @@ export class OpenRouterProvider extends Provider {
 
         if (retryAfter) {
           // Try parsing as integer (delay-seconds format)
-          seconds = parseInt(retryAfter, 10);
+          const parsedSeconds = parseInt(retryAfter, 10);
 
-          // If NaN, try parsing as HTTP-date
-          if (isNaN(seconds)) {
+          // Validate parsed integer: must be a valid non-negative number
+          if (!isNaN(parsedSeconds) && parsedSeconds >= 0) {
+            seconds = parsedSeconds;
+          } else {
+            // If not a valid integer, try parsing as HTTP-date
             const parsedDate = Date.parse(retryAfter);
             if (!isNaN(parsedDate) && parsedDate > Date.now()) {
               seconds = Math.ceil((parsedDate - Date.now()) / 1000);
