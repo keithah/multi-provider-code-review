@@ -89,10 +89,20 @@ export class ProviderRegistry {
     }
     // round-robin uses applyRotation later
 
-    // If providerLimit is 0 or unset, default to 8. Otherwise use the configured limit.
-    const selectionLimit = config.providerLimit > 0 ? config.providerLimit : 8;
-    const minSelection = Math.min(4, selectionLimit);
-    logger.info(`Selection limit: ${selectionLimit} (configured: ${config.providerLimit}), min: ${minSelection}, fallback count: ${config.fallbackProviders.length}`);
+    // Use providerDiscoveryLimit for initial selection (health checking)
+    // Take min of discoveryLimit and providerLimit to respect both constraints
+    // If discovery limit not set, use providerLimit; if both unset, default to 8
+    let discoveryLimit = config.providerDiscoveryLimit > 0
+      ? config.providerDiscoveryLimit
+      : (config.providerLimit > 0 ? config.providerLimit : 8);
+
+    // Respect providerLimit as an upper bound even during discovery
+    if (config.providerLimit > 0) {
+      discoveryLimit = Math.min(discoveryLimit, config.providerLimit);
+    }
+
+    const minSelection = Math.min(4, discoveryLimit);
+    logger.info(`Discovery limit: ${discoveryLimit} (for health checks), execution limit: ${config.providerLimit} (for actual review), min: ${minSelection}, fallback count: ${config.fallbackProviders.length}`);
 
     // Ensure minimum diversity: aim for at least 4 OpenRouter and 2 OpenCode providers when available
     const MIN_OPENROUTER = 4;
@@ -113,7 +123,7 @@ export class ProviderRegistry {
 
     let selected: Provider[];
     if (strategy === 'reliability') {
-      selected = this.selectWithDiversity(allProviders, selectionLimit, minSelection, explorationRate);
+      selected = this.selectWithDiversity(allProviders, discoveryLimit, minSelection, explorationRate);
     } else if (strategy === 'random') {
       // Random selection with diversity requirements
       selected = [];
@@ -123,30 +133,30 @@ export class ProviderRegistry {
       const selectedNames = new Set(selected.map(s => s.name));
       const remainingPool = this.shuffle(allProviders).filter(p => !selectedNames.has(p.name));
 
-      while (selected.length < selectionLimit && remainingPool.length > 0) {
+      while (selected.length < discoveryLimit && remainingPool.length > 0) {
         const next = remainingPool.shift()!;
         selected.push(next);
       }
     } else {
       // round-robin
-      selected = this.applyRotation(allProviders, selectionLimit);
+      selected = this.applyRotation(allProviders, discoveryLimit);
     }
 
     providers = selected.length > 0 ? selected : providers;
 
     // Add fallback providers if we haven't reached the selection limit
-    if (providers.length < selectionLimit && config.fallbackProviders.length > 0) {
-      logger.info(`Adding ${config.fallbackProviders.length} fallback providers to reach target of ${selectionLimit}`);
+    if (providers.length < discoveryLimit && config.fallbackProviders.length > 0) {
+      logger.info(`Adding ${config.fallbackProviders.length} fallback providers to reach target of ${discoveryLimit}`);
       const fallbacks = this.instantiate(config.fallbackProviders, config);
       const filteredFallbacks = await this.filterRateLimited(fallbacks);
       providers = this.dedupeProviders([...providers, ...filteredFallbacks]);
       logger.info(`After adding fallbacks: ${providers.length} providers`);
     } else {
-      logger.info(`Skipping fallback providers: providers.length=${providers.length}, selectionLimit=${selectionLimit}, fallbackProviders.length=${config.fallbackProviders.length}`);
+      logger.info(`Skipping fallback providers: providers.length=${providers.length}, discoveryLimit=${discoveryLimit}, fallbackProviders.length=${config.fallbackProviders.length}`);
     }
 
-    if (providers.length > selectionLimit) {
-      providers = this.randomSelect(providers, selectionLimit, minSelection);
+    if (providers.length > discoveryLimit) {
+      providers = this.randomSelect(providers, discoveryLimit, minSelection);
     }
 
     if (providers.length === 0 && config.fallbackProviders.length > 0) {
@@ -395,22 +405,22 @@ export class ProviderRegistry {
    */
   private selectWithDiversity(
     providers: Provider[],
-    selectionLimit: number,
+    discoveryLimit: number,
     minSelection: number,
     explorationRate: number = 0.3
   ): Provider[] {
-    if (providers.length <= selectionLimit) {
+    if (providers.length <= discoveryLimit) {
       return providers; // Use all available
     }
 
     const selected: Provider[] = [];
 
     // Take top (1-explorationRate)% slots deterministically (exploit best performers)
-    const deterministicCount = Math.floor(selectionLimit * (1 - explorationRate));
+    const deterministicCount = Math.floor(discoveryLimit * (1 - explorationRate));
     selected.push(...providers.slice(0, deterministicCount));
 
     // Randomly select remaining slots (exploration)
-    const explorationCount = selectionLimit - deterministicCount;
+    const explorationCount = discoveryLimit - deterministicCount;
     const explorationPool = providers.slice(deterministicCount);
     const shuffled = this.shuffle(explorationPool);
     selected.push(...shuffled.slice(0, explorationCount));
@@ -419,12 +429,12 @@ export class ProviderRegistry {
     const openrouterCount = selected.filter(p => p.name.startsWith('openrouter/')).length;
     const opencodeCount = selected.filter(p => p.name.startsWith('opencode/')).length;
 
-    const MIN_OPENROUTER = Math.min(2, selectionLimit);
-    const MIN_OPENCODE = Math.min(1, selectionLimit);
+    const MIN_OPENROUTER = Math.min(2, discoveryLimit);
+    const MIN_OPENCODE = Math.min(1, discoveryLimit);
 
     // If diversity requirements not met, adjust selection
     if (openrouterCount < MIN_OPENROUTER || opencodeCount < MIN_OPENCODE) {
-      return this.adjustForDiversity(providers, selectionLimit, MIN_OPENROUTER, MIN_OPENCODE);
+      return this.adjustForDiversity(providers, discoveryLimit, MIN_OPENROUTER, MIN_OPENCODE);
     }
 
     logger.info(

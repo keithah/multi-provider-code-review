@@ -117,7 +117,8 @@ See [Self-Hosted Deployment Guide](docs/self-hosted.md) for details.
 ### Providers
 - `REVIEW_PROVIDERS`: Comma-separated providers (`openrouter/<model>`, `opencode/<model>`)
 - `FALLBACK_PROVIDERS`: Backup providers if primary providers fail
-- `PROVIDER_LIMIT` (default: `8`): Max number of providers to use
+- `PROVIDER_DISCOVERY_LIMIT` (default: `8`): Max providers to discover/health-check
+- `PROVIDER_LIMIT` (default: `6`): Max providers to use for actual review
 - `PROVIDER_MAX_PARALLEL` (default: `3`): Max parallel provider execution
 
 ### Filtering & Thresholds

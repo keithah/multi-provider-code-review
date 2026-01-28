@@ -9,7 +9,8 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   providerAllowlist: [],
   providerBlocklist: [],
   openrouterAllowPaid: false,
-  providerLimit: 8,
+  providerDiscoveryLimit: 8,  // Health-check up to 8 providers for better reliability
+  providerLimit: 6,            // But only use 6 for actual review to control costs
   providerRetries: 2,
   providerMaxParallel: 3,
   quietModeEnabled: false,

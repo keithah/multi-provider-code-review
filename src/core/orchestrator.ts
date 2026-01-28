@@ -415,6 +415,18 @@ export class ReviewOrchestrator {
             )}, opencode=${countOpenCode(healthy)})`
           );
         } else {
+          // Limit healthy providers to providerLimit for actual execution
+          // (we may have checked more providers for reliability)
+          const executionLimit = intensityProviderLimit || config.providerLimit;
+          if (healthy.length > executionLimit) {
+            logger.info(
+              `Limiting execution to ${executionLimit} providers (checked ${healthy.length} for health). ` +
+              `Using top providers by reliability.`
+            );
+            // Keep the first executionLimit providers (already sorted by reliability from discovery)
+            healthy = healthy.slice(0, executionLimit);
+          }
+
           // Use token-aware batching if enabled
           let batches: FileChange[][];
           const providerNames = healthy.map(p => p.name);

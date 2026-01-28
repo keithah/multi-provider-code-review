@@ -128,6 +128,7 @@ describe('ReviewOrchestrator integration (offline)', () => {
     fallbackProviders: [],
     providerAllowlist: [],
     providerBlocklist: [],
+    providerDiscoveryLimit: 8,
     providerLimit: 0,
     providerRetries: 1,
     providerMaxParallel: 1,

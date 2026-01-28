@@ -64,6 +64,7 @@ describe('GitHub integration mock (no network)', () => {
     fallbackProviders: [],
     providerAllowlist: [],
     providerBlocklist: [],
+    providerDiscoveryLimit: 8,
     providerLimit: 0,
     providerRetries: 1,
     providerMaxParallel: 1,
