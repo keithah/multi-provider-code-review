@@ -2,7 +2,7 @@
  * Cache versioning for schema coherency and safe evolution
  *
  * VERSIONING STRATEGY:
- * Increment CACHE_VERSION (current: 3) when making ANY breaking change to:
+ * Increment CACHE_VERSION (current: 4) when making ANY breaking change to:
  * - Finding schema (src/types/index.ts: Finding interface)
  * - Analysis algorithm (changes that alter review output semantics)
  * - Config format (ReviewConfig interface changes that affect cache key)
