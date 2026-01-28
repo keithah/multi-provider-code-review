@@ -40,9 +40,15 @@ export class CacheStorage {
    * Useful for clearing PR-specific or feature-specific caches
    */
   async deleteByPrefix(prefix: string): Promise<number> {
+    // Ensure cache directory exists before attempting deletion
     try {
-      // Ensure cache directory exists
       await fs.mkdir(this.baseDir, { recursive: true });
+    } catch (error) {
+      logger.error(`Failed to create cache directory ${this.baseDir}`, error as Error);
+      return 0;
+    }
+
+    try {
 
       // Read all files in cache directory
       const files = await fs.readdir(this.baseDir);
