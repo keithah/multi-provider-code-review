@@ -3,9 +3,11 @@ name: Multi-Provider Code Review
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    # Security: pull_request trigger (not pull_request_target) automatically prevents
-    # fork PRs from accessing repository secrets (OPENROUTER_API_KEY, etc.)
-    # GitHub runs fork PR workflows with empty secrets, so no special handling needed
+    # Security: pull_request trigger (not pull_request_target) prevents fork PRs
+    # from accessing repository secrets (OPENROUTER_API_KEY, etc.) by default.
+    # GitHub runs fork PR workflows with empty secrets UNLESS the repository
+    # setting "Send secrets to workflows from pull requests" is enabled.
+    # This workflow assumes that setting is DISABLED (default/recommended).
   # Note: pull_request_review trigger removed to prevent duplicate runs
   # when the bot posts its own review comment
   push:
@@ -21,17 +23,13 @@ on:
         type: string
 
 # Cancel in-progress runs for the same commit to prevent duplicate reviews
-# Strategy: Use only github.sha as the concurrency key to ensure:
-# - Multiple events (push + pull_request) for the same commit share one group
-# - Only one review runs per commit, others are automatically canceled
-# - Consistent identifier regardless of trigger type (eliminates race conditions)
-#
-# IMPORTANT: github.sha always refers to the commit being tested:
-# - For pull_request: github.sha = merge commit (base + head)
-# - For push: github.sha = the pushed commit
-# This ensures deterministic concurrency grouping across all event types.
+# Strategy: Use PR number + head SHA for pull requests, github.sha for push
+# - For pull_request: group by PR number and head commit SHA
+# - For push: group by pushed commit SHA
+# - For workflow_dispatch: group by input PR number and current SHA
+# This ensures proper isolation and prevents race conditions between different PRs
 concurrency:
-  group: review-${{ github.sha }}
+  group: review-${{ github.event.pull_request.number || inputs.pr_number || 'push' }}-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 # Permissions: Principle of least privilege
@@ -106,9 +104,13 @@ jobs:
         run: npm install -g opencode-ai@1.1.35
 
       - name: Multi-Provider Code Review
-        # Run if PR number resolved AND not a fork PR (fork PRs lack secrets and will fail)
-        # github.event.pull_request.head.repo.fork is true for fork PRs, empty/false for same-repo PRs
-        if: steps.resolve-pr.outputs.pr != '' && (github.event.pull_request.head.repo.fork != true || github.event_name != 'pull_request')
+        # Run if PR number resolved AND (not a fork PR OR not a pull_request event)
+        # Fork detection: github.event.pull_request.head.repo.fork only exists for pull_request events
+        # - For pull_request: Skip if fork (github.event.pull_request.head.repo.fork == true)
+        # - For push: Always run (no fork concept, secrets available)
+        # - For workflow_dispatch: Always run (manually triggered, secrets available)
+        # This prevents fork PRs from running without secrets while allowing push/dispatch events
+        if: steps.resolve-pr.outputs.pr != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork != true)
         uses: ./
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

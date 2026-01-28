@@ -258,7 +258,7 @@ describe('PromptBuilder Context Window Validation', () => {
       const estimateTime = Date.now() - startEstimate;
 
       const startBuild = Date.now();
-      const built = builder.build(largePR);
+      const _built = builder.build(largePR); // Intentionally unused - just measuring build time
       const buildTime = Date.now() - startBuild;
 
       // Verify estimation produces reasonable results

@@ -77,8 +77,15 @@ export class GitHubClient {
       });
 
       // Update rate limit tracker from response headers
-      if (response.headers) {
-        this.rateLimitTracker.updateFromHeaders(response.headers as Record<string, string>);
+      // Validate headers structure before passing to rate limit tracker
+      if (response.headers && typeof response.headers === 'object' && !Array.isArray(response.headers)) {
+        // Convert headers to Record<string, string | undefined> for type safety
+        // Octokit headers are typed as { [header: string]: string | number | undefined }
+        const headers: Record<string, string | undefined> = {};
+        for (const [key, value] of Object.entries(response.headers)) {
+          headers[key] = value !== undefined ? String(value) : undefined;
+        }
+        this.rateLimitTracker.updateFromHeaders(headers);
       }
 
       // Check if the response is a file (not a directory)

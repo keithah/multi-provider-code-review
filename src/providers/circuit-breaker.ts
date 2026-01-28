@@ -67,6 +67,8 @@ export class CircuitBreaker {
 
   private readonly failureThreshold: number;
   private readonly openDurationMs: number;
+  // Lock map for concurrency control - automatically cleaned up via timer + finally block
+  // Memory leak prevention: locks are removed after LOCK_CLEANUP_MS or immediately after completion
   private readonly locks = new Map<string, Promise<void>>();
 
   constructor(
@@ -75,6 +77,14 @@ export class CircuitBreaker {
   ) {
     this.failureThreshold = options.failureThreshold ?? CircuitBreaker.DEFAULT_FAILURE_THRESHOLD;
     this.openDurationMs = options.openDurationMs ?? CircuitBreaker.DEFAULT_OPEN_DURATION_MS;
+  }
+
+  /**
+   * Get the current number of active locks (for monitoring/debugging)
+   * Used to detect potential lock accumulation issues
+   */
+  getActiveLockCount(): number {
+    return this.locks.size;
   }
 
   /**
