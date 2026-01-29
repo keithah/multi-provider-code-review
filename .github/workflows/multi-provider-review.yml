@@ -3,6 +3,20 @@ name: Multi-Provider Code Review
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+    # SECURITY: pull_request trigger (not pull_request_target) prevents fork PRs
+    # from accessing repository secrets (OPENROUTER_API_KEY, etc.) by default.
+    # GitHub runs fork PR workflows with empty secrets UNLESS the repository
+    # setting "Send secrets to workflows from pull requests" is enabled.
+    #
+    # CRITICAL ASSUMPTION: This workflow requires that "Send secrets to workflows
+    # from pull requests" is DISABLED in repository settings (default/recommended).
+    # If enabled, fork PRs could access secrets, which is a security risk.
+    # See: Settings → Actions → General → Fork pull request workflows
+    #
+    # Additional security layers in this workflow:
+    # - Explicit fork detection and secret validation (line 97-110)
+    # - Conditional job execution that skips fork PRs (line 132)
+    # - Provider allowlist validation for user-supplied model names
   # Note: pull_request_review trigger removed to prevent duplicate runs
   # when the bot posts its own review comment
   workflow_dispatch:
@@ -15,10 +29,18 @@ on:
         required: false
         type: string
 
-# Cancel in-progress runs for the same PR to prevent duplicate reviews
-# Use PR number + head SHA (not merge commit SHA) for uniqueness per commit
+# Cancel in-progress runs for the same commit to prevent duplicate reviews
+# Strategy: Use PR number + head SHA for pull requests, github.sha for push
+# - For pull_request: group by PR number and head commit SHA
+# - For push: group by pushed commit SHA
+# - For workflow_dispatch: group by input PR number and current SHA
+# This ensures proper isolation and prevents race conditions between different PRs
 concurrency:
-  group: review-${{ github.event.pull_request.number || inputs.pr_number }}-${{ github.event.pull_request.head.sha || github.sha }}
+  # Use distinct prefixes for different event types to prevent cross-event cancellation
+  # - pull_request: pr-{number}-{head_sha}
+  # - push: push-{sha}
+  # - workflow_dispatch: dispatch-{pr_number}-{sha}
+  group: ${{ github.event_name == 'pull_request' && format('pr-{0}-{1}', github.event.pull_request.number, github.event.pull_request.head.sha) || github.event_name == 'workflow_dispatch' && format('dispatch-{0}-{1}', inputs.pr_number, github.sha) || format('push-{0}', github.sha) }}
   cancel-in-progress: true
 
 # Permissions: Principle of least privilege
@@ -35,11 +57,7 @@ permissions:
 
 jobs:
   review:
-    # Runner configuration:
-    # Primary: ubicloud-standard-2 (cost-effective, 2 vCPU)
-    # Fallback: GitHub Actions will automatically use ubuntu-latest if ubicloud is unavailable
-    # No explicit fallback needed - GitHub handles runner availability automatically
-    runs-on: ubicloud-standard-2
+    runs-on: ubuntu-latest
     env:
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
     steps:
@@ -78,11 +96,23 @@ jobs:
         run: node scripts/validate-providers.js "${{ inputs.review_providers }}"
       - name: Validate Secrets and Configuration
         run: |
-          # Check if OPENROUTER_API_KEY is available for fork PRs
-          if [ "${{ github.event.pull_request.head.repo.fork }}" = "true" ]; then
-            echo "⚠️  Fork PR detected - secrets are not available"
-            echo "Review will be skipped (see next step for details)"
-          elif [ -z "$OPENROUTER_API_KEY" ]; then
+          # SECURITY: Check for fork PRs with unexpected secret access
+          # If a fork PR has OPENROUTER_API_KEY, the repository setting
+          # "Send secrets to workflows from pull requests" is likely enabled (security risk)
+          if [ "${{ github.event.pull_request.head.repo.fork }}" = "true" ] && [ "${{ github.event_name }}" = "pull_request" ]; then
+            if [ -z "$OPENROUTER_API_KEY" ]; then
+              echo "✅ Fork PR detected without OPENROUTER_API_KEY (expected behavior)."
+              echo "   Fork PR review steps will be skipped for security (see job condition at line 142)."
+            else
+              echo "🔴 SECURITY ALERT: Fork PR has access to OPENROUTER_API_KEY!"
+              echo "   This indicates 'Send secrets to workflows from pull requests' is enabled."
+              echo "   This is a security risk. Failing workflow to prevent secret exposure."
+              echo "   To fix: Settings → Actions → General → Disable 'Send secrets to workflows from pull requests'"
+              exit 1
+            fi
+          fi
+
+          if [ -z "$OPENROUTER_API_KEY" ]; then
             echo "⚠️  Warning: OPENROUTER_API_KEY not set. OpenRouter providers will be skipped; free OpenCode providers will be used."
           else
             echo "✅ OPENROUTER_API_KEY available - full provider access enabled"
@@ -96,50 +126,18 @@ jobs:
           fi
       - name: Install OpenCode CLI
         # Version pinning strategy:
-        # - Pinned to v1.1.32 for compatibility with dynamic provider discovery
-        # - This version supports the `opencode run` command format we use
-        # - Update strategy: Test with newer versions quarterly (Jan, Apr, Jul, Oct)
-        # - Before updating: Run full test suite + manual smoke tests
-        # - Check for breaking changes in opencode-ai changelog
-        # - Verify dynamic discovery still works with new version
-        run: npm install -g opencode-ai@1.1.32
-      # Run review if: PR number found. Fork PRs are allowed without OpenRouter key (falls back to free providers).
-      - name: Skip Fork PR Without Secrets
-        if: steps.resolve-pr.outputs.pr != '' && github.event.pull_request.head.repo.fork == true && env.OPENROUTER_API_KEY == ''
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "⚠️  Skipping review for fork PR without OPENROUTER_API_KEY"
-          echo "Fork PRs cannot access repository secrets for security reasons."
-          echo "The review will not run to avoid API calls without credentials."
-          echo ""
-          echo "To enable review for fork PRs:"
-          echo "1. Repository maintainers can add OPENROUTER_API_KEY to repository secrets"
-          echo "2. Or use workflow_dispatch to manually trigger reviews with approval"
-          echo ""
-          echo "Posting notification comment to PR..."
-
-          # Post a notification comment to the PR using heredoc for multiline body
-          gh pr comment ${{ steps.resolve-pr.outputs.pr }} --body "$(cat <<'EOF'
-          ## ⚠️ Automated Code Review Skipped
-
-          This PR is from a fork and cannot access repository secrets for security reasons.
-
-          The automated code review requires API credentials (OPENROUTER_API_KEY) which are not available to fork PRs to prevent unauthorized access.
-
-          **For maintainers:** You can:
-          - Manually trigger a review using workflow_dispatch after reviewing the changes
-          - Add OPENROUTER_API_KEY to repository secrets to enable reviews for trusted forks
-
-          **For contributors:** Maintainers will review your code manually or trigger an automated review after initial verification.
-          EOF
-          )"
+        # - Pin to latest published npm version known-good for CLI commands
+        # - Update strategy: Test quarterly (Jan, Apr, Jul, Oct) with full suite + smoke tests
+        run: npm install -g opencode-ai@1.1.40
 
       - name: Multi-Provider Code Review
-        # Run if:
-        # 1. PR exists, AND
-        # 2. Either not a fork OR (is a fork AND has OPENROUTER_API_KEY)
-        if: steps.resolve-pr.outputs.pr != '' && (github.event.pull_request.head.repo.fork != true || env.OPENROUTER_API_KEY != '')
+        # Run if PR number resolved AND (not a fork PR OR not a pull_request event)
+        # Fork detection: github.event.pull_request.head.repo.fork only exists for pull_request events
+        # - For pull_request: Skip if fork (github.event.pull_request.head.repo.fork == true)
+        # - For push: Always run (no fork concept, secrets available)
+        # - For workflow_dispatch: Always run (manually triggered, secrets available)
+        # This prevents fork PRs from running without secrets while allowing push/dispatch events
+        if: steps.resolve-pr.outputs.pr != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork != true)
         uses: ./
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

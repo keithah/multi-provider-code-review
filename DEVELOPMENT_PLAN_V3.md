@@ -9,6 +9,11 @@
 
 This is a **focused, ROI-driven plan** to build the best-in-class code review tool by implementing only the highest-value features from the v2.1 specification, plus strategic additions.
 
+**Latest Updates (2026-01-25):**
+- ✅ Progress tracker wired into orchestrator for live PR status
+- ✅ Smart request batching (directory-based, provider overrides, parallel batches)
+- ✅ Provider reliability circuit breaker (fail-fast + ranking)
+
 **Current Status (2026-01-23):**
 - ✅ **Phase 1 COMPLETE** (Weeks 1-4) - Testing, Incremental Review, CLI Mode
 - ✅ **Phase 2 COMPLETE** (Weeks 5-10) - All features implemented and integrated
@@ -1500,3 +1505,1439 @@ suggestions:
 3. Implement BatchOrchestrator
 4. Wire up circuit breaker to ReliabilityTracker
 5. Update config schema and defaults
+
+### Backlog: Inline Reassessment & UX polish (next round)
+- Auto-reassessment for inline replies: detect replies to bot inline comments (parent comment id) and trigger focused re-review of that finding without requiring @ mentions.
+- Better response format: inline replies posted as inline responses; collapse all summary/comments by default (except inline). Add `fluff:off` option to strip positivity and auto-approve when no issues remain.
+- Smart triggering: auto-trigger on replies to the bot's inline comments; still require @claude for top-level comments; clearly differentiate auto-triggered vs @claude-triggered responses.
+- Implementation notes (future):
+  - Add webhook/handler for `issue_comment` and `pull_request_review_comment` to enqueue targeted re-runs (per file/line) when the parent comment is from the bot.
+  - Extend formatter to support collapsed summaries and `fluff:off` behavior.
+  - Ensure collapse defaults keep inline comments visible until resolved.
+
+---
+
+## v0.3.1: Context & AST Enhancements (Repomix Alternatives)
+
+**Date**: TBD (After v0.3.0)
+**Status**: ⏳ Planned
+**Priority**: HIGH - Better ROI than Repomix integration
+**Timeline**: 2-3 weeks
+
+### Overview
+
+Based on the Repomix integration analysis, these 5 improvements provide better ROI than full repository context for PR reviews. They enhance the existing AST and context systems without the cost/performance penalties of Repomix.
+
+### Why These Over Repomix?
+
+- ✅ **Targeted improvements** to existing architecture (no paradigm shift)
+- ✅ **Cost-effective** - no 100-1000x token increase
+- ✅ **Fast** - no full repo processing overhead
+- ✅ **Relevant** - focuses on changed code + immediate dependencies
+- ✅ **Compatible** - works with existing batch processing
+
+### Features
+
+#### Feature 1: Full File Content Fetching ⭐ (High Priority)
+
+**Problem**: Current code graph only parses patch content (partial file view), leading to incomplete AST analysis and missed symbols.
+
+**Solution**: Fetch complete file contents from GitHub API for accurate AST parsing.
+
+**Implementation**:
+```typescript
+// Enhance src/analysis/context/graph-builder.ts
+export class CodeGraphBuilder {
+  async buildGraph(files: FileChange[]): Promise<CodeGraph> {
+    for (const file of files) {
+      // NEW: Fetch full file from GitHub API
+      const fullContent = await this.githubApi.getFileContent(
+        file.filename,
+        this.prContext.ref
+      );
+
+      // Parse complete file (not just patch)
+      const ast = this.parser.parse(fullContent);
+      this.extractSymbols(ast);
+    }
+  }
+
+  private async githubApi.getFileContent(
+    path: string,
+    ref: string
+  ): Promise<string> {
+    // Use GitHub Contents API with caching
+    const response = await octokit.repos.getContent({
+      owner: this.prContext.owner,
+      repo: this.prContext.repo,
+      path,
+      ref
+    });
+
+    // Decode base64 content
+    return Buffer.from(response.data.content, 'base64').toString('utf-8');
+  }
+}
+```
+
+**Benefits**:
+- ✅ Complete symbol tracking (no partial views)
+- ✅ Accurate function signatures and type info
+- ✅ Better dependency resolution
+- ✅ Enables inheritance tracking (Feature 2)
+
+**Configuration**:
+```yaml
+graph:
+  fetch_full_files: true
+  file_fetch_timeout_ms: 5000
+  max_file_size_bytes: 1048576  # 1MB limit
+```
+
+**Files to Modify**:
+- `src/analysis/context/graph-builder.ts` - Add GitHub API fetching
+- `src/github/api-client.ts` - Add file content fetching method
+- `src/config/schema.ts` - Add configuration options
+- `__tests__/unit/analysis/graph-builder.test.ts` - Update tests
+
+**Success Metrics**:
+- [ ] Symbol extraction accuracy >95% (vs ~70% with patches)
+- [ ] File fetch latency <100ms per file (with caching)
+- [ ] Zero incomplete AST errors
+
+---
+
+#### Feature 2: Inheritance Tracking ⭐ (Medium Priority)
+
+**Problem**: Code graph doesn't track class inheritance (extends, implements), missing breaking changes in base classes/interfaces.
+
+**Solution**: Extract and index inheritance relationships during AST parsing.
+
+**Implementation**:
+```typescript
+// Enhance src/analysis/context/graph-builder.ts
+export interface CodeGraph {
+  // ... existing properties
+
+  // NEW: Inheritance tracking
+  inheritance: Map<string, InheritanceInfo>;  // class → inheritance info
+}
+
+export interface InheritanceInfo {
+  baseClasses: string[];      // classes this extends
+  interfaces: string[];       // interfaces this implements
+  derivedClasses: string[];   // classes that extend this
+  implementers: string[];     // classes that implement this
+}
+
+export class CodeGraphBuilder {
+  private extractInheritance(node: Parser.SyntaxNode): void {
+    if (node.type === 'class_declaration') {
+      const className = this.getClassName(node);
+      const baseClasses = this.getExtends(node);
+      const interfaces = this.getImplements(node);
+
+      this.graph.inheritance.set(className, {
+        baseClasses,
+        interfaces,
+        derivedClasses: [],
+        implementers: []
+      });
+
+      // Build reverse index (derived → base)
+      for (const base of baseClasses) {
+        const baseInfo = this.graph.inheritance.get(base);
+        if (baseInfo) {
+          baseInfo.derivedClasses.push(className);
+        }
+      }
+    }
+  }
+
+  // Helper methods for different languages
+  private getExtends(node: Parser.SyntaxNode): string[] {
+    // TypeScript: extends BaseClass
+    // Python: class Foo(BaseClass)
+    // Java: extends BaseClass
+  }
+
+  private getImplements(node: Parser.SyntaxNode): string[] {
+    // TypeScript: implements IFoo, IBar
+    // Java: implements IFoo, IBar
+    // Python: class Foo(Protocol) [via typing]
+  }
+}
+
+// NEW: Query methods
+export class CodeGraph {
+  getDerivedClasses(className: string): string[] {
+    return this.inheritance.get(className)?.derivedClasses || [];
+  }
+
+  getBaseClasses(className: string): string[] {
+    return this.inheritance.get(className)?.baseClasses || [];
+  }
+
+  getImplementers(interfaceName: string): string[] {
+    return this.inheritance.get(interfaceName)?.implementers || [];
+  }
+
+  // Check if change to base class/interface affects derived classes
+  findInheritanceImpact(changedClass: string): string[] {
+    const impact = new Set<string>();
+
+    // Get all derived classes
+    const derived = this.getDerivedClasses(changedClass);
+    impact.add(...derived);
+
+    // Get all implementers if it's an interface
+    const implementers = this.getImplementers(changedClass);
+    impact.add(...implementers);
+
+    return Array.from(impact);
+  }
+}
+```
+
+**Benefits**:
+- ✅ Detect breaking changes in base classes/interfaces
+- ✅ Find all affected derived classes
+- ✅ Better impact analysis for OOP codebases
+- ✅ Support TypeScript, Python, Java, C++
+
+**Use Cases**:
+1. Interface method signature changed → report all implementers
+2. Abstract method added to base class → report all derived classes
+3. Base class constructor changed → report all subclasses
+
+**Configuration**:
+```yaml
+graph:
+  track_inheritance: true
+  max_inheritance_depth: 5
+```
+
+**Files to Modify**:
+- `src/analysis/context/graph-builder.ts` - Add inheritance extraction
+- `src/analysis/impact.ts` - Use inheritance data for impact analysis
+- `__tests__/unit/analysis/graph-builder.test.ts` - Add inheritance tests
+
+**Success Metrics**:
+- [ ] Inheritance extraction accuracy >90%
+- [ ] Detects 100% of base class breaking changes
+- [ ] Works for TypeScript, Python, Java
+
+---
+
+#### Feature 3: Transitive Dependency Analysis (Medium Priority)
+
+**Problem**: Current code graph only tracks direct dependencies (A→B), missing multi-hop impact (A→B→C).
+
+**Solution**: Implement transitive dependency resolution with configurable depth.
+
+**Status**: ⚠️ **PARTIALLY COVERED** in v0.3.0 Feature 2.4 (Context-Aware Retrieval includes transitive dependency tracking)
+
+**Enhancement**: Ensure implementation includes:
+```typescript
+// Enhance src/analysis/context/graph-builder.ts
+export class CodeGraph {
+  findTransitiveImpact(
+    symbol: string,
+    maxDepth: number = 3
+  ): Set<string> {
+    const visited = new Set<string>();
+    const queue: Array<{symbol: string; depth: number}> = [{symbol, depth: 0}];
+
+    while (queue.length > 0) {
+      const {symbol: current, depth} = queue.shift()!;
+
+      if (visited.has(current) || depth > maxDepth) continue;
+      visited.add(current);
+
+      // Get direct dependents
+      const dependents = this.findDependents(current);
+
+      for (const dep of dependents) {
+        queue.push({symbol: dep, depth: depth + 1});
+      }
+    }
+
+    return visited;
+  }
+}
+```
+
+**Configuration**:
+```yaml
+graph:
+  transitive_dependencies: true
+  max_dependency_depth: 3
+```
+
+**Note**: Verify this is fully implemented in v0.3.0 Feature 2.4, otherwise add as enhancement.
+
+---
+
+#### Feature 4: Anti-Hallucination Guardrails (High Priority)
+
+**Problem**: LLM outputs can be plausible but wrong, adding noisy or unsafe findings/fix prompts.
+
+**Solution**:
+- Deterministic validators that confirm file/line/snippet existence before posting findings.
+- Dual-provider agreement or self-consistency for critical findings.
+- Require changed-line evidence; downgrade or drop findings without evidence.
+- Validate auto-fix prompts with lint/parse checks before saving.
+
+**Implementation (sketch)**:
+```typescript
+// src/analysis/self-reviewer.ts (extend) or new helper
+export class AntiHallucinationGuard {
+  validateFinding(f: Finding, files: FileChange[]): ValidationResult;
+  enforceEvidence(f: Finding): boolean;
+  requireConsensus(findings: Finding[]): Finding[];
+}
+```
+
+**Success Metrics**:
+- [ ] <2% of posted findings lack on-disk evidence (spot checks)
+- [ ] Critical findings require dual agreement when multiple providers are available
+- [ ] 0 syntactically invalid fix prompts emitted
+
+---
+
+#### Feature 5: Secretlint Integration (Low Priority)
+
+**Problem**: Current security scanner lacks dedicated secret detection (only pattern-based). Repomix includes Secretlint but we don't need full Repomix for this.
+
+**Solution**: Add Secretlint directly to SecurityScanner.
+
+**Implementation**:
+```typescript
+// Enhance src/analysis/security.ts
+import { lintSource } from '@secretlint/node';
+import { createLintEngineCreator } from '@secretlint/core';
+
+export class SecurityScanner {
+  private secretlintEngine: any;
+
+  async initialize(): Promise<void> {
+    // Initialize Secretlint with default rules
+    const creator = createLintEngineCreator();
+    this.secretlintEngine = await creator.create({
+      configFilePath: undefined, // Use defaults
+      plugins: [
+        '@secretlint/secretlint-rule-preset-recommend'
+      ]
+    });
+  }
+
+  async scanForSecrets(files: FileChange[]): Promise<Finding[]> {
+    const findings: Finding[] = [];
+
+    for (const file of files) {
+      // Scan full file content (not just patch)
+      const content = await this.getFileContent(file);
+      const result = await this.secretlintEngine.lintSource({
+        content,
+        filePath: file.filename
+      });
+
+      for (const message of result.messages) {
+        findings.push({
+          category: 'security',
+          severity: this.mapSeverity(message.severity),
+          message: message.message,
+          file: file.filename,
+          line: message.loc.start.line,
+          ruleId: message.ruleId,
+          evidence: ['secretlint-detected']
+        });
+      }
+    }
+
+    return findings;
+  }
+
+  private mapSeverity(secretlintSeverity: number): Severity {
+    // Secretlint: 0=off, 1=warning, 2=error
+    if (secretlintSeverity >= 2) return 'critical';
+    if (secretlintSeverity >= 1) return 'major';
+    return 'minor';
+  }
+}
+```
+
+**Detected Secret Types**:
+- AWS access keys
+- GitHub tokens
+- API keys (Stripe, SendGrid, etc.)
+- Private keys (RSA, SSH)
+- Database credentials
+- OAuth tokens
+- Slack tokens
+- And 100+ more patterns
+
+**Benefits**:
+- ✅ Industry-standard secret detection
+- ✅ 100+ pre-built rules
+- ✅ Low false positive rate
+- ✅ No full repo context needed (scans changed files only)
+
+**Configuration**:
+```yaml
+security:
+  enable_secretlint: true
+  secretlint_config_path: '.secretlintrc.json'  # Optional custom config
+  secretlint_rules:
+    - '@secretlint/secretlint-rule-preset-recommend'
+    - '@secretlint/secretlint-rule-aws'
+```
+
+**Dependencies to Add**:
+```json
+{
+  "dependencies": {
+    "@secretlint/node": "^8.0.0",
+    "@secretlint/core": "^8.0.0",
+    "@secretlint/secretlint-rule-preset-recommend": "^8.0.0"
+  }
+}
+```
+
+**Files to Modify**:
+- `src/analysis/security.ts` - Add Secretlint integration
+- `src/config/schema.ts` - Add secretlint configuration
+- `package.json` - Add Secretlint dependencies
+- `__tests__/unit/analysis/security.test.ts` - Add secret detection tests
+
+**Success Metrics**:
+- [ ] Detects 100% of common secret types (AWS, GitHub, etc.)
+- [ ] False positive rate <5%
+- [ ] Scan latency <200ms per file
+
+---
+
+#### Feature 5: Enhanced Batch Context Sharing (Low Priority)
+
+**Problem**: When batching large PRs (30 files per batch), each batch loses visibility of symbols/dependencies in other batches.
+
+**Solution**: Share symbol table and dependency graph across all batches.
+
+**Status**: ⚠️ **PARTIALLY COVERED** in v0.3.0 Feature 1.2 (Smart Request Batching), but may not include symbol table sharing.
+
+**Enhancement**:
+```typescript
+// Enhance src/core/batch-orchestrator.ts
+export class BatchOrchestrator {
+  async reviewInBatches(
+    files: FileChange[],
+    prContext: PRContext
+  ): Promise<Review> {
+    // Build global code graph ONCE for all batches
+    const globalGraph = await this.codeGraphBuilder.buildGraph(files);
+
+    // Create shared context
+    const sharedContext: SharedBatchContext = {
+      symbols: globalGraph.getAllSymbols(),
+      imports: globalGraph.getImportMap(),
+      calls: globalGraph.getCallGraph(),
+      inheritance: globalGraph.getInheritance(),
+      dependencies: globalGraph.getDependencyMap()
+    };
+
+    // Create batches
+    const batches = this.createBatches(files);
+
+    // Process batches with shared context
+    const reviews = await Promise.all(
+      batches.map(batch =>
+        this.reviewBatch(batch, prContext, sharedContext)
+      )
+    );
+
+    return this.mergeReviews(reviews);
+  }
+
+  private async reviewBatch(
+    batch: FileChange[],
+    prContext: PRContext,
+    sharedContext: SharedBatchContext
+  ): Promise<Review> {
+    // Build prompt with batch files + shared context summary
+    const prompt = this.promptBuilder.buildWithSharedContext(
+      batch,
+      sharedContext
+    );
+
+    return this.llmProvider.review(prompt);
+  }
+}
+
+export interface SharedBatchContext {
+  symbols: Map<string, Definition>;      // All symbols in PR
+  imports: Map<string, string[]>;        // Import relationships
+  calls: Map<string, string[]>;          // Function calls
+  inheritance: Map<string, InheritanceInfo>;  // Class hierarchy
+  dependencies: Map<string, string[]>;   // File dependencies
+}
+
+// Enhance src/analysis/llm/prompt-builder.ts
+export class PromptBuilder {
+  buildWithSharedContext(
+    batch: FileChange[],
+    sharedContext: SharedBatchContext
+  ): string {
+    const prompt = `${this.basePrompt}
+
+# Files in this batch:
+${this.formatBatchFiles(batch)}
+
+# Shared context (symbols from other files in this PR):
+${this.formatSharedContext(batch, sharedContext)}
+
+# Review these files for issues...
+`;
+    return prompt;
+  }
+
+  private formatSharedContext(
+    batch: FileChange[],
+    context: SharedBatchContext
+  ): string {
+    // Find relevant symbols from other batches that this batch uses
+    const relevantSymbols = this.findRelevantSymbols(batch, context);
+
+    return `
+## Symbols defined in other files (for reference):
+${relevantSymbols.map(s => `- ${s.name}: ${s.signature}`).join('\n')}
+
+## Dependencies:
+${this.formatRelevantDependencies(batch, context)}
+`;
+  }
+}
+```
+
+**Benefits**:
+- ✅ Cross-batch symbol visibility
+- ✅ Better inter-file dependency understanding
+- ✅ Reduced "missing context" errors
+- ✅ No performance penalty (graph built once)
+
+**Configuration**:
+```yaml
+batching:
+  share_context: true
+  max_shared_symbols: 100  # Limit to avoid prompt bloat
+  include_dependencies: true
+  include_inheritance: true
+```
+
+**Files to Modify**:
+- `src/core/batch-orchestrator.ts` - Add shared context (verify this exists in v0.3.0)
+- `src/analysis/llm/prompt-builder.ts` - Add context formatting
+- `__tests__/unit/core/batch-orchestrator.test.ts` - Add context sharing tests
+
+**Success Metrics**:
+- [ ] Cross-batch symbol resolution >90%
+- [ ] "Missing context" errors reduced by 60%
+- [ ] No prompt size increase >10% (via smart filtering)
+
+---
+
+### Implementation Timeline
+
+**Week 1: Full File Fetching + Inheritance Tracking**
+- Days 1-3: Implement GitHub API file fetching with caching
+- Days 4-5: Add inheritance extraction (TypeScript, Python, Java)
+- Days 6-7: Testing and integration
+
+**Week 2: Transitive Deps + Secretlint**
+- Days 1-2: Verify/enhance transitive dependency tracking (from v0.3.0)
+- Days 3-5: Integrate Secretlint into SecurityScanner
+- Days 6-7: Testing and tuning
+
+**Week 3: Batch Context Sharing + Polish**
+- Days 1-3: Implement shared context for batches (verify against v0.3.0)
+- Days 4-5: Prompt builder enhancements
+- Days 6-7: End-to-end testing, documentation, release
+
+### Success Metrics (Overall)
+
+- [ ] Symbol extraction accuracy: >95% (vs ~70% today)
+- [ ] Breaking change detection: >90% for inheritance changes
+- [ ] Secret detection: 100% of common types
+- [ ] Cross-batch context: >90% symbol resolution
+- [ ] Performance: No regression (all improvements <100ms overhead per file)
+- [ ] Cost: No increase in LLM token usage
+
+### Configuration Schema
+
+```yaml
+# .mpr.yml - v0.3.1 additions
+
+graph:
+  # Feature 1: Full file fetching
+  fetch_full_files: true
+  file_fetch_timeout_ms: 5000
+  max_file_size_bytes: 1048576
+
+  # Feature 2: Inheritance tracking
+  track_inheritance: true
+  max_inheritance_depth: 5
+
+  # Feature 3: Transitive dependencies
+  transitive_dependencies: true
+  max_dependency_depth: 3
+
+security:
+  # Feature 4: Secretlint
+  enable_secretlint: true
+  secretlint_config_path: '.secretlintrc.json'
+  secretlint_rules:
+    - '@secretlint/secretlint-rule-preset-recommend'
+
+batching:
+  # Feature 5: Shared context
+  share_context: true
+  max_shared_symbols: 100
+  include_dependencies: true
+  include_inheritance: true
+```
+
+### Dependencies to Add
+
+```json
+{
+  "dependencies": {
+    "@secretlint/node": "^8.0.0",
+    "@secretlint/core": "^8.0.0",
+    "@secretlint/secretlint-rule-preset-recommend": "^8.0.0"
+  }
+}
+```
+
+### Files Overview
+
+**New Files** (3):
+1. `src/github/api-client.ts` (if not exists) - GitHub file content fetching
+2. `src/analysis/inheritance-tracker.ts` - Inheritance tracking utilities
+3. `__tests__/fixtures/inheritance-examples/` - Test fixtures
+
+**Modified Files** (8):
+1. `src/analysis/context/graph-builder.ts` - Full file fetching + inheritance
+2. `src/analysis/security.ts` - Secretlint integration
+3. `src/core/batch-orchestrator.ts` - Shared context (verify v0.3.0)
+4. `src/analysis/llm/prompt-builder.ts` - Context formatting
+5. `src/config/schema.ts` - New configuration options
+6. `src/config/defaults.ts` - Default values
+7. `package.json` - Secretlint dependencies
+8. `README.md` - Feature documentation
+
+**Test Files** (5):
+1. `__tests__/unit/analysis/graph-builder.test.ts` - Enhanced tests
+2. `__tests__/unit/analysis/security.test.ts` - Secretlint tests
+3. `__tests__/unit/core/batch-orchestrator.test.ts` - Context sharing tests
+4. `__tests__/unit/analysis/inheritance-tracker.test.ts` - New tests
+5. `__tests__/integration/full-file-fetching.integration.test.ts` - New tests
+
+### Priority Ranking
+
+1. **HIGH**: Feature 1 (Full File Fetching) - Foundational improvement, enables others
+2. **HIGH**: Feature 2 (Inheritance Tracking) - High value for OOP codebases
+3. **MEDIUM**: Feature 3 (Transitive Deps) - Likely covered in v0.3.0, verify only
+4. **MEDIUM**: Feature 4 (Secretlint) - Good security value, easy to add
+5. **LOW**: Feature 5 (Batch Context) - Likely covered in v0.3.0, enhance if needed
+
+### Comparison to Repomix
+
+| Aspect | Repomix Integration | These 5 Improvements |
+|--------|--------------------|--------------------|
+| **Cost per review** | $15-150 (1-10M tokens) | $0.05-0.15 (30-50K tokens) |
+| **Performance** | Slow (full repo scan) | Fast (changed files only) |
+| **Relevance** | 1% (500 files → 5 changed) | 100% (focused on changes) |
+| **Context quality** | Comprehensive but noisy | Surgical and precise |
+| **Architecture fit** | Paradigm shift required | Natural enhancement |
+| **Maintenance** | External dependency | Internal control |
+| **ROI** | Low for PR reviews | High for PR reviews |
+
+### Recommendation
+
+✅ **Prioritize these 5 improvements over Repomix integration**
+
+These enhancements provide:
+- Better accuracy (full AST, inheritance tracking)
+- Better security (Secretlint)
+- Better context (transitive deps, shared symbols)
+- Lower cost (no token explosion)
+- Faster performance (no full repo scan)
+- Better architectural fit (incremental enhancement)
+
+---
+
+## v0.3.2: Advanced Optimizations & Intelligence (Post-v0.3.1)
+
+**Date**: TBD (After v0.3.1)
+**Status**: ⏳ Planned
+**Priority**: MEDIUM - Enhancement and optimization phase
+**Timeline**: 3-4 weeks
+
+### Overview
+
+Building on the foundation of v0.3.0 (batching, circuit breaker, progress tracking) and v0.3.1 (AST enhancements), this phase focuses on intelligent optimization and enhanced developer experience through automated configuration and adaptive systems.
+
+### Future Enhancements (Priority 2)
+
+#### 1. Real Tokenizer Integration ⭐
+
+**Problem**: Current token estimation uses heuristics (4 chars/token for prose, 3 for code) with ~10-20% error rate. This can lead to underutilization of context windows or occasional overflows.
+
+**Solution**: Replace heuristics with model-specific tokenizers for accurate token counting.
+
+**Implementation**:
+```typescript
+// src/utils/token-estimation-accurate.ts
+import { encoding_for_model } from 'tiktoken';
+
+export class AccurateTokenEstimator {
+  private encoders = new Map<string, Tiktoken>();
+
+  async estimateTokens(text: string, modelId: string): Promise<number> {
+    // Use real tokenizer for OpenAI models
+    if (modelId.includes('gpt')) {
+      const encoder = this.getEncoder(modelId);
+      const tokens = encoder.encode(text);
+      return tokens.length;
+    }
+
+    // Fall back to heuristics for other models
+    return estimateTokensSimple(text).tokens;
+  }
+
+  private getEncoder(modelId: string): Tiktoken {
+    if (!this.encoders.has(modelId)) {
+      const encoding = encoding_for_model(
+        modelId.includes('gpt-4') ? 'gpt-4' : 'gpt-3.5-turbo'
+      );
+      this.encoders.set(modelId, encoding);
+    }
+    return this.encoders.get(modelId)!;
+  }
+}
+```
+
+**Benefits**:
+- ✅ Accurate token counts (0-2% error vs 10-20%)
+- ✅ Better context window utilization
+- ✅ Fewer overflow errors
+- ✅ Optimal batch sizing
+
+**Metrics**:
+- Token estimation accuracy: 98%+ (vs 80-90% current)
+- Context window utilization: 85-90% (vs 70-80% current)
+- Overflow errors: <0.1% (vs ~1% current)
+
+---
+
+#### 2. Configuration Wizard 🧙
+
+**Problem**: 15+ new configuration options in v0.3.0 can be overwhelming for new users. Misconfiguration can lead to suboptimal performance or unexpected behavior.
+
+**Solution**: Interactive CLI wizard to guide users through configuration setup with intelligent defaults and recommendations.
+
+**Implementation**:
+```typescript
+// src/cli/config-wizard.ts
+import inquirer from 'inquirer';
+
+export async function runConfigWizard(): Promise<ReviewConfig> {
+  console.log('🧙 Multi-Provider Review Configuration Wizard\n');
+
+  const answers = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'reviewGoal',
+      message: 'What is your primary goal?',
+      choices: [
+        { name: 'Speed (fastest reviews)', value: 'speed' },
+        { name: 'Quality (most thorough)', value: 'quality' },
+        { name: 'Cost (minimize API costs)', value: 'cost' },
+        { name: 'Balanced (default)', value: 'balanced' },
+      ],
+    },
+    {
+      type: 'confirm',
+      name: 'hasOpenRouterKey',
+      message: 'Do you have an OpenRouter API key?',
+      default: false,
+    },
+    {
+      type: 'number',
+      name: 'budgetMaxUsd',
+      message: 'Maximum budget per review (USD)?',
+      default: 1.0,
+      when: (answers) => answers.hasOpenRouterKey,
+    },
+    {
+      type: 'list',
+      name: 'intensity',
+      message: 'Default review intensity?',
+      choices: ['light', 'standard', 'thorough'],
+      default: 'standard',
+    },
+  ]);
+
+  // Generate optimized config based on answers
+  return generateConfig(answers);
+}
+
+function generateConfig(answers: WizardAnswers): ReviewConfig {
+  const presets = {
+    speed: {
+      providerLimit: 2,
+      targetTokensPerBatch: 30000,
+      providerSelectionStrategy: 'reliability',
+    },
+    quality: {
+      providerLimit: 5,
+      targetTokensPerBatch: 80000,
+      providerSelectionStrategy: 'reliability',
+      providerExplorationRate: 0.4,
+    },
+    cost: {
+      providerLimit: 1,
+      targetTokensPerBatch: 50000,
+      openrouterAllowPaid: false,
+    },
+  };
+
+  const base = presets[answers.reviewGoal] || presets.balanced;
+
+  return {
+    ...DEFAULT_CONFIG,
+    ...base,
+    budgetMaxUsd: answers.budgetMaxUsd,
+    defaultIntensity: answers.intensity,
+    // Auto-configure providers
+    providers: answers.hasOpenRouterKey
+      ? ['openrouter/google/gemini-2.0-flash-exp:free', 'opencode/gpt-5-nano']
+      : ['opencode/gpt-5-nano', 'opencode/big-pickle'],
+  };
+}
+```
+
+**Usage**:
+```bash
+# Run wizard
+npx multi-provider-review init
+
+# Or during first run
+npx multi-provider-review review --pr 123
+# Detects no config, offers to run wizard
+```
+
+**Benefits**:
+- ✅ Guided setup for new users
+- ✅ Optimal configurations out of the box
+- ✅ Validation and error checking
+- ✅ Preset templates for common scenarios
+
+**Metrics**:
+- Setup time: <2 minutes (vs 10+ minutes manual)
+- Configuration errors: <5% (vs 30%+ manual)
+- User satisfaction: 90%+ (survey)
+
+---
+
+#### 3. Adaptive Circuit Breaker 🔄
+
+**Problem**: Current circuit breaker uses fixed thresholds (3 failures, 5 min cooldown). Optimal values vary by provider, network conditions, and time of day.
+
+**Solution**: Auto-tune circuit breaker parameters based on provider behavior and success patterns.
+
+**Implementation**:
+```typescript
+// src/providers/adaptive-circuit-breaker.ts
+export class AdaptiveCircuitBreaker extends CircuitBreaker {
+  private providerStats = new Map<string, ProviderStats>();
+
+  async recordFailure(providerId: string): Promise<void> {
+    // Update statistics
+    const stats = this.getStats(providerId);
+    stats.failures++;
+    stats.lastFailureTime = Date.now();
+
+    // Calculate adaptive threshold
+    const adaptiveThreshold = this.calculateThreshold(stats);
+
+    // Use adaptive threshold instead of fixed
+    if (stats.consecutiveFailures >= adaptiveThreshold) {
+      await this.openCircuit(providerId, this.calculateCooldown(stats));
+    }
+  }
+
+  private calculateThreshold(stats: ProviderStats): number {
+    // Higher threshold for historically reliable providers
+    if (stats.successRate > 0.95) {
+      return 5; // Give benefit of doubt
+    }
+
+    // Lower threshold for flaky providers
+    if (stats.successRate < 0.80) {
+      return 2; // Fail fast
+    }
+
+    // Standard threshold for average providers
+    return 3;
+  }
+
+  private calculateCooldown(stats: ProviderStats): number {
+    const baseMs = 5 * 60 * 1000; // 5 minutes
+
+    // Shorter cooldown if provider usually recovers quickly
+    if (stats.avgRecoveryTime < 2 * 60 * 1000) {
+      return Math.max(2 * 60 * 1000, baseMs / 2);
+    }
+
+    // Longer cooldown for persistent issues
+    if (stats.consecutiveOpenings > 3) {
+      return Math.min(15 * 60 * 1000, baseMs * 2);
+    }
+
+    return baseMs;
+  }
+}
+
+interface ProviderStats {
+  successRate: number;
+  consecutiveFailures: number;
+  consecutiveOpenings: number;
+  avgRecoveryTime: number;
+  lastFailureTime: number;
+}
+```
+
+**Benefits**:
+- ✅ Optimized thresholds per provider
+- ✅ Faster recovery for reliable providers
+- ✅ Better protection from flaky providers
+- ✅ Reduced false positives
+
+**Metrics**:
+- Circuit breaker accuracy: 95%+ (vs 85% fixed)
+- False positive rate: <2% (vs 5-10% fixed)
+- Average recovery time: -30% (faster)
+- Provider utilization: +15% (fewer unnecessary blocks)
+
+---
+
+#### 4. Performance Dashboard 📊
+
+**Problem**: No visibility into batch performance, token usage, provider health. Difficult to debug issues or optimize configurations.
+
+**Solution**: Real-time dashboard showing key metrics and trends.
+
+**Implementation**:
+```typescript
+// src/analytics/performance-dashboard.ts
+import blessed from 'blessed';
+
+export class PerformanceDashboard {
+  private screen: blessed.Widgets.Screen;
+  private metrics: DashboardMetrics;
+
+  async start(): Promise<void> {
+    this.screen = blessed.screen({ smartCSR: true });
+
+    // Create layout
+    const batchStats = this.createBatchStatsWidget();
+    const tokenUsage = this.createTokenUsageWidget();
+    const providerHealth = this.createProviderHealthWidget();
+    const timeline = this.createTimelineWidget();
+
+    // Update every 1s
+    setInterval(() => this.update(), 1000);
+
+    this.screen.render();
+  }
+
+  private createBatchStatsWidget(): blessed.Widgets.BoxElement {
+    return blessed.box({
+      top: 0,
+      left: 0,
+      width: '50%',
+      height: '30%',
+      content: `
+╔════ Batch Statistics ════╗
+│ Total Batches: 5         │
+│ Avg Files/Batch: 12      │
+│ Avg Tokens/Batch: 45.2k  │
+│ Completion: 60% ████░░   │
+╚══════════════════════════╝
+      `,
+      border: { type: 'line' },
+      style: { border: { fg: 'cyan' } },
+    });
+  }
+
+  private createTokenUsageWidget(): blessed.Widgets.BoxElement {
+    return blessed.box({
+      top: 0,
+      left: '50%',
+      width: '50%',
+      height: '30%',
+      content: `
+╔═══ Token Utilization ════╗
+│ Context Window: 128k     │
+│ Current Batch: 45k (35%) │
+│ Safety Margin: OK ✓      │
+│ Overflows: 0             │
+╚══════════════════════════╝
+      `,
+      border: { type: 'line' },
+      style: { border: { fg: 'green' } },
+    });
+  }
+
+  private createProviderHealthWidget(): blessed.Widgets.BoxElement {
+    return blessed.box({
+      top: '30%',
+      left: 0,
+      width: '50%',
+      height: '40%',
+      content: `
+╔═══ Provider Health ══════╗
+│ gemini-2.0   ✓ CLOSED   │
+│ gpt-5-nano   ✓ CLOSED   │
+│ big-pickle   ⚠ HALF_OPEN│
+│ devstral     ✗ OPEN     │
+╚══════════════════════════╝
+      `,
+      border: { type: 'line' },
+      style: { border: { fg: 'yellow' } },
+    });
+  }
+
+  private createTimelineWidget(): blessed.Widgets.ListElement {
+    return blessed.list({
+      top: '30%',
+      left: '50%',
+      width: '50%',
+      height: '40%',
+      label: 'Recent Events',
+      items: [
+        '15:23:45 - Batch 1/5 complete (12 files, 42k tokens)',
+        '15:23:50 - gemini-2.0 responded (3.2s)',
+        '15:23:52 - Circuit opened: devstral (3 failures)',
+        '15:24:01 - Batch 2/5 started',
+      ],
+      border: { type: 'line' },
+      style: { border: { fg: 'magenta' } },
+    });
+  }
+}
+```
+
+**Usage**:
+```bash
+# Run with live dashboard
+npx multi-provider-review review --pr 123 --dashboard
+
+# Or export metrics to file
+npx multi-provider-review review --pr 123 --metrics-file ./metrics.json
+```
+
+**Benefits**:
+- ✅ Real-time visibility into review progress
+- ✅ Early detection of issues
+- ✅ Performance optimization insights
+- ✅ Debugging support
+
+**Metrics**:
+- Debug time: -50% (faster issue diagnosis)
+- Configuration optimization: +40% (data-driven decisions)
+- User confidence: 95%+ (visibility reduces anxiety)
+
+---
+
+### Implementation Timeline
+
+**Week 1-2: Real Tokenizer Integration**
+- Day 1-2: Research and select tokenizer libraries
+- Day 3-5: Implement AccurateTokenEstimator
+- Day 6-7: Testing and benchmarking
+- Day 8-10: Integration and rollout
+
+**Week 2-3: Configuration Wizard**
+- Day 1-3: Design wizard flow and presets
+- Day 4-7: Implement interactive prompts
+- Day 8-10: Testing and user feedback
+
+**Week 3-4: Adaptive Circuit Breaker**
+- Day 1-3: Design adaptive algorithms
+- Day 4-7: Implement statistics tracking
+- Day 8-10: Testing and tuning
+
+**Week 4: Performance Dashboard**
+- Day 1-2: Design dashboard layout
+- Day 3-5: Implement widgets and updates
+- Day 6-7: Testing and polish
+
+---
+
+### Success Metrics
+
+| Metric | Current (v0.3.0) | Target (v0.3.2) |
+|--------|------------------|-----------------|
+| Token estimation accuracy | 80-90% | 98%+ |
+| Context window utilization | 70-80% | 85-90% |
+| Overflow errors | ~1% | <0.1% |
+| Setup time (new users) | 10+ min | <2 min |
+| Configuration errors | 30%+ | <5% |
+| Circuit breaker accuracy | 85% | 95%+ |
+| False positive rate | 5-10% | <2% |
+| Debug time | baseline | -50% |
+
+---
+
+### Dependencies
+
+- **Requires**: v0.3.0 (batching, circuit breaker) + v0.3.1 (AST enhancements)
+- **Blocked by**: None
+- **Enables**: v0.4.0 (ML-based suggestions, multi-language support)
+
+---
+
+### Risks & Mitigation
+
+**Risk 1**: Tokenizer library bloat
+**Mitigation**: Lazy-load tokenizers, optional dependency
+
+**Risk 2**: Wizard complexity
+**Mitigation**: Start simple, add options incrementally
+
+**Risk 3**: Adaptive algorithm tuning
+**Mitigation**: A/B testing, gradual rollout with feature flag
+
+**Risk 4**: Dashboard performance overhead
+**Mitigation**: Optional feature, efficient updates (1s interval)
+
+---
+
+## Repomix Integration Analysis
+
+**Date**: 2026-01-25
+**Status**: ❌ Not Recommended for Default Integration
+**Decision**: Prioritize alternative improvements instead
+
+### Executive Summary
+
+**Recommendation: DO NOT make repomix default-on. Consider as optional feature for specific use cases.**
+
+Repomix is designed to pack entire codebases into AI-friendly formats for general codebase analysis. This project is a **PR review tool** optimized for incremental, diff-based analysis. The architectural philosophies are fundamentally different.
+
+### What is Repomix?
+
+[Repomix](https://repomix.com/) is a tool that packages entire repositories into single AI-friendly files (XML, Markdown, JSON, plain text). It's designed to give LLMs complete codebase context for tasks like:
+- Code reviews of entire projects
+- Documentation generation
+- Architecture understanding
+- Bug investigation across the whole codebase
+
+**Key Features:**
+- Full repository packaging (all files)
+- Token counting per file and total
+- Git-aware filtering (.gitignore)
+- Secretlint security scanning
+- Tree-sitter-based code compression
+- Remote repository support
+
+**Sources:**
+- [Repomix Documentation](https://repomix.com/guide/development/using-repomix-as-a-library)
+- [Repomix GitHub](https://github.com/yamadashy/repomix)
+
+### Current Project Architecture
+
+#### Context Management Strategy
+This project uses a **surgical, diff-focused approach**:
+
+1. **ContextRetriever** - Finds related files/symbols around changes
+2. **CodeGraphBuilder** - AST-based dependency mapping (Tree-sitter)
+3. **PromptBuilder** - Sends only diffs (120KB default) to LLMs
+4. **Batch Processing** - Splits large PRs into manageable chunks
+5. **Evidence Scoring** - Multi-source validation (LLM + AST + rules)
+
+#### What Gets Sent to LLMs Today
+- **Diff content only** (~120KB, ~30-40K tokens)
+- **File metadata** (names, status, line counts)
+- **Instructions** (role, output format, rules)
+- **Total:** ~120KB per batch
+
+#### What Does NOT Get Sent
+- Full file contents (only changed lines + context)
+- Unchanged files
+- Code graph (used internally for enrichment)
+- AST analysis results
+- Historical PR data
+
+#### Current Limitations
+1. **Patch-only AST** - Incomplete symbol tracking (TODO: fetch full files)
+2. **No inheritance tracking** - Missing derived class relationships
+3. **Batch context loss** - Files batched separately lose cross-file visibility
+4. **Graph timeout** - Large repos may not complete in 10s
+
+### Analysis: Why NOT Make It Default-On
+
+#### 1. Architectural Mismatch
+- **Repomix philosophy:** "Give AI the entire codebase for comprehensive understanding"
+- **This project's philosophy:** "Give AI only relevant changes + smart context"
+- These are fundamentally different approaches
+
+#### 2. Context Size Explosion
+```
+Typical PR Review:
+- Changed files: 5-20 files
+- Diff size: 50-200KB
+- Token cost: 30-50K tokens
+- LLM cost: $0.05-0.15
+
+With Full Repo (Repomix):
+- All files: 500-5000+ files
+- Repo size: 5-50MB
+- Token cost: 1-10M tokens
+- LLM cost: $15-150 per review
+- Context limit: Would exceed most model limits
+```
+
+**Cost increase: 100-1000x**
+
+#### 3. Irrelevant Context
+For a PR changing 5 files:
+- Repomix provides 500+ files
+- 99% is irrelevant to the review
+- LLM "lost in the noise" problem
+- Attention dilution on unchanged code
+
+#### 4. Performance Impact
+- Repomix processes entire repo (slow for large repos)
+- Current system: processes only changed files (fast)
+- PR reviews need quick turnaround
+- Full repo processing doesn't fit CI/CD workflow
+
+#### 5. Redundant Capabilities
+This project already has:
+- ✅ Tree-sitter AST parsing (CodeGraphBuilder)
+- ✅ Token awareness (via provider APIs)
+- ✅ Git-aware filtering (trivial detector)
+- ✅ Security scanning (SecurityScanner)
+- ❌ Only missing: Secretlint (but can be added directly)
+
+#### 6. Batch Processing Conflict
+Current batching strategy:
+- Splits large PRs into 30-file batches
+- Each batch is independent for parallel processing
+- Sending full repo to each batch defeats the purpose
+
+### Where Repomix COULD Be Useful (Optional)
+
+#### Optional Use Cases (NOT Default)
+
+**1. Initial Repository Analysis**
+```typescript
+// One-time setup when adding new repo
+if (config.enableRepoAnalysis && !hasSeenRepoBefore) {
+  const repoContext = await repomix.process(repoUrl);
+  await storage.saveRepoContext(repoContext);
+}
+```
+**Benefit:** LLM understands project structure before first review
+
+**2. Major Refactoring PRs**
+```typescript
+// Only for PRs with 50+ file changes
+if (pr.files.length > 50 && config.allowFullRepoContext) {
+  const fullContext = await repomix.process(repoPath);
+  // Use for comprehensive impact analysis
+}
+```
+**Benefit:** Catch subtle breaking changes across large refactors
+
+**3. Documentation Generation**
+```typescript
+// Separate command: npm run generate-docs
+const repoContext = await repomix.process(repoPath);
+const docs = await llm.generate(repoContext, "Generate architecture docs");
+```
+**Benefit:** Creates comprehensive docs using full codebase
+
+**4. Security Audits**
+```typescript
+// Separate command: npm run security-audit
+const repoContext = await repomix.process(repoPath, {
+  includeSecretlint: true
+});
+const findings = await llm.analyze(repoContext, "Find security issues");
+```
+**Benefit:** Deep security scan beyond PR changes
+
+### Better Alternatives for This Project
+
+Instead of repomix integration, prioritize these 5 improvements (see **v0.3.1** section below for full implementation details):
+
+#### 1. Fetch Full File Contents (High Priority)
+```typescript
+// In CodeGraphBuilder
+async buildGraph(files: FileChange[]): Promise<CodeGraph> {
+  // Current: Parse patch content only
+  // TODO: Fetch full file from GitHub API
+  for (const file of files) {
+    const fullContent = await githubApi.getFileContent(file.filename);
+    const ast = parser.parse(fullContent); // Complete AST
+    this.extractSymbols(ast);
+  }
+}
+```
+**Benefit:** Accurate AST analysis without repomix overhead
+
+#### 2. Implement Inheritance Tracking (Medium Priority)
+```typescript
+class CodeGraph {
+  private inheritance: Map<string, string[]>; // class → base classes
+
+  getDerivedClasses(baseClass: string): string[] {
+    // Find all classes that extend/implement this
+  }
+}
+```
+**Benefit:** Catch interface/base class breaking changes
+
+#### 3. Transitive Dependency Analysis (Medium Priority)
+```typescript
+interface ImpactAnalyzer {
+  findTransitiveImpact(file: string, depth: number): string[] {
+    // Current: Only direct dependents
+    // TODO: Multi-hop dependency resolution
+    // Example: A → B → C (if A changes, report impact to C)
+  }
+}
+```
+**Benefit:** Better impact radius without full repo context
+
+#### 4. Improved Batch Context Sharing (Low Priority)
+```typescript
+// Share symbol table across batches
+const sharedContext = {
+  symbols: codeGraph.getAllSymbols(),
+  imports: codeGraph.getImportMap(),
+  calls: codeGraph.getCallGraph()
+};
+
+for (const batch of batches) {
+  const prompt = promptBuilder.build(batch, sharedContext);
+}
+```
+**Benefit:** Cross-batch awareness without repomix
+
+#### 5. Add Secretlint Directly (Low Priority)
+```typescript
+// In SecurityScanner
+import { lintSource } from '@secretlint/node';
+
+async scanForSecrets(files: FileChange[]): Promise<Finding[]> {
+  const results = await lintSource({ content: file.patch });
+  return results.messages.map(convertToFinding);
+}
+```
+**Benefit:** Secret detection without full repomix integration
+
+### Final Recommendation
+
+#### For This Project: ❌ Do NOT integrate repomix by default
+
+**Reasons:**
+1. ❌ Architectural mismatch (full repo vs. diff-focused)
+2. ❌ 100-1000x cost increase
+3. ❌ Performance degradation (slow repo processing)
+4. ❌ 99% irrelevant context for typical PRs
+5. ❌ Already has Tree-sitter, token counting, security scanning
+6. ❌ Conflicts with batch processing strategy
+
+#### Alternative: ✅ Prioritize these improvements instead
+
+1. **Fetch full file contents** (not just patches) for accurate AST
+2. **Implement inheritance tracking** for OOP codebases
+3. **Add transitive dependency analysis** for impact radius
+4. **Add Secretlint directly** for secret detection
+5. **Improve batch context sharing** for cross-file awareness
+
+**See v0.3.1 section below for full implementation plan with timelines, code examples, and success metrics.**
+
+#### Optional: 🤔 Consider repomix as off-by-default feature
+
+**Only useful for:**
+- Initial repository understanding (one-time setup)
+- Major refactoring PRs (50+ files changed)
+- Separate documentation/audit commands (not PR reviews)
+
+**Configuration:** Must be explicitly enabled + high file threshold (50+)
+
+**Cost safeguards:** Token limits, budget warnings, caching (24h TTL)
+
+### Conclusion
+
+Repomix is a powerful tool, but it's designed for **full codebase analysis**, not **incremental PR reviews**. This project's diff-focused, batch-processing architecture is optimized for fast, cost-effective PR reviews. Integrating repomix would fundamentally change the architecture and explode costs without providing meaningful benefits for typical PRs.
+
+**Better ROI:** Fix existing limitations (full file fetching, inheritance tracking, transitive deps) rather than adding full repo context that's 99% irrelevant.
+
+**If stakeholders insist:** Implement as optional, off-by-default feature with strict thresholds and cost safeguards.
+
+---
+
+**Action Item**: The 5 recommended alternatives have been integrated into the development roadmap as **v0.3.1: Context & AST Enhancements** (see section below). This provides a concrete implementation plan with:
+- Detailed technical specifications
+- Code examples and architecture
+- 2-3 week timeline
+- Success metrics and priorities
+- Configuration schema
+
+**Priority**: HIGH - Schedule after v0.3.0 completion
+
+---
+
+## Deferred: Anti-Hallucination Guardrails (Next Phase)
+
+**Problem**: LLM outputs can be plausible but wrong, adding noisy or unsafe findings/fix prompts.
+
+**Planned Solution**:
+- Deterministic validators confirming file/line/snippet existence before posting findings.
+- Dual-provider agreement or self-consistency for critical findings.
+- Require changed-line evidence; downgrade or drop findings without evidence.
+- Validate auto-fix prompts with lint/parse checks before saving.
+
+**Status**: Deferred to next phase (post-v0.3.1).
+
+---
+
+## Planned: GitHub Models Provider Support
+
+**Problem**: We lack first-class support for GitHub-hosted models (e.g., GH Models API).
+
+**Planned Solution**:
+- Add a GitHub provider that uses `GITHUB_MODELS_API_KEY` (or PAT) for auth.
+- Include GH Models in discovery/rotation with cost/context constraints.
+- Respect org/repo allow/deny lists via config.
+
+**Status**: Planned (post-v0.3.1).
+
+---
+
+## Planned: Hugging Face Inference/Endpoints Support
+
+**Problem**: Users want to run reviews against HF Inference API or private Inference Endpoints.
+
+**Planned Solution**:
+- Add HF provider that reads `HUGGINGFACE_API_TOKEN`.
+- Support both hosted Inference API models and custom Inference Endpoints (configurable URL/model id).
+- Include HF models in dynamic discovery/rotation when token present; allow per-model cost caps.
+
+**Status**: Planned (post-v0.3.1).

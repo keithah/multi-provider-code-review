@@ -22,4 +22,21 @@ describe('ConfigLoader', () => {
     expect(config.enableAstAnalysis).toBe(false);
     expect(config.inlineMinSeverity).toBe(DEFAULT_CONFIG.inlineMinSeverity);
   });
+
+  it('parses provider batch overrides and clamps to schema range', () => {
+    process.env.PROVIDER_BATCH_OVERRIDES = '{"openrouter":250,"opencode":"2"}';
+
+    const config = ConfigLoader.load();
+
+    expect(config.providerBatchOverrides?.openrouter).toBe(200); // clamped to max 200
+    expect(config.providerBatchOverrides?.opencode).toBe(2); // string numeric accepted
+  });
+
+  it('ignores non-numeric or negative provider batch overrides', () => {
+    process.env.PROVIDER_BATCH_OVERRIDES = '{"bad":"abc","neg":-1}';
+
+    const config = ConfigLoader.load();
+
+    expect(config.providerBatchOverrides).toEqual({});
+  });
 });

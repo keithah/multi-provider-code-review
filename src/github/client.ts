@@ -1,11 +1,13 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import { Octokit } from '@octokit/rest';
+import { GitHubRateLimitTracker } from './rate-limit';
 
 export class GitHubClient {
   public readonly octokit: Octokit;
   public readonly owner: string;
   public readonly repo: string;
+  private readonly rateLimitTracker = new GitHubRateLimitTracker();
 
   constructor(token: string) {
     this.octokit = github.getOctokit(token) as unknown as Octokit;
@@ -29,12 +31,91 @@ export class GitHubClient {
   }
 
   /**
+   * Get current GitHub API rate limit status
+   */
+  getRateLimitStatus() {
+    return this.rateLimitTracker.getStatus();
+  }
+
+  /**
+   * Check if we're approaching rate limit and log warning
+   */
+  checkRateLimitStatus(): void {
+    if (this.rateLimitTracker.isApproachingLimit()) {
+      const status = this.rateLimitTracker.getStatus();
+      core.warning(
+        `Approaching GitHub API rate limit: ${status?.remaining}/${status?.limit} remaining`
+      );
+    }
+  }
+
+  /**
+   * Implement exponential backoff when approaching rate limit
+   * Returns delay in milliseconds to wait before making next API call
+   */
+  private calculateBackoffDelay(): number {
+    const status = this.rateLimitTracker.getStatus();
+    if (!status) return 0;
+
+    const percentRemaining = (status.remaining / status.limit) * 100;
+
+    // No delay if plenty of requests remaining (>25%)
+    if (percentRemaining > 25) {
+      return 0;
+    }
+
+    // Progressive backoff as we approach limit:
+    // 25% remaining: 100ms delay
+    // 10% remaining: 500ms delay
+    // 5% remaining: 1000ms delay
+    // 1% remaining: 2000ms delay
+    if (percentRemaining > 10) {
+      return 100;
+    } else if (percentRemaining > 5) {
+      return 500;
+    } else if (percentRemaining > 1) {
+      return 1000;
+    } else {
+      return 2000;
+    }
+  }
+
+  /**
+   * Throttle requests when approaching rate limit
+   */
+  private async throttleIfNeeded(): Promise<void> {
+    const delay = this.calculateBackoffDelay();
+    if (delay > 0) {
+      const status = this.rateLimitTracker.getStatus();
+      core.debug(
+        `Throttling GitHub API request (${delay}ms delay, ${status?.remaining} requests remaining)`
+      );
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  /**
+   * Wait for rate limit to reset if exceeded
+   */
+  private async handleRateLimit(): Promise<void> {
+    if (this.rateLimitTracker.isExceeded()) {
+      await this.rateLimitTracker.waitForReset();
+    }
+  }
+
+  /**
    * Fetch file content from a specific ref (commit SHA, branch, or tag)
    * @param filePath - Path to the file in the repository
    * @param ref - Git ref (commit SHA, branch name, or tag)
    * @returns File content as string, or null if file doesn't exist/inaccessible
    */
   async getFileContent(filePath: string, ref: string): Promise<string | null> {
+    // Wait if rate limit is exceeded
+    await this.handleRateLimit();
+
+    // Throttle requests if approaching limit (exponential backoff)
+    await this.throttleIfNeeded();
+
     try {
       const response = await this.octokit.rest.repos.getContent({
         owner: this.owner,
@@ -42,6 +123,18 @@ export class GitHubClient {
         path: filePath,
         ref,
       });
+
+      // Update rate limit tracker from response headers
+      // Validate headers structure before passing to rate limit tracker
+      if (response.headers && typeof response.headers === 'object' && !Array.isArray(response.headers)) {
+        // Convert headers to Record<string, string | undefined> for type safety
+        // Octokit headers are typed as { [header: string]: string | number | undefined }
+        const headers: Record<string, string | undefined> = {};
+        for (const [key, value] of Object.entries(response.headers)) {
+          headers[key] = value !== undefined ? String(value) : undefined;
+        }
+        this.rateLimitTracker.updateFromHeaders(headers);
+      }
 
       // Check if the response is a file (not a directory)
       if ('content' in response.data && !Array.isArray(response.data)) {

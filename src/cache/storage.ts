@@ -35,6 +35,53 @@ export class CacheStorage {
     }
   }
 
+  /**
+   * Delete all cache entries matching a given prefix
+   * Useful for clearing PR-specific or feature-specific caches
+   */
+  async deleteByPrefix(prefix: string): Promise<number> {
+    // Ensure cache directory exists before attempting deletion
+    try {
+      await fs.mkdir(this.baseDir, { recursive: true });
+    } catch (error) {
+      logger.error(`Failed to create cache directory ${this.baseDir}`, error as Error);
+      return 0;
+    }
+
+    try {
+
+      // Read all files in cache directory
+      const files = await fs.readdir(this.baseDir);
+
+      // Filter files matching the prefix pattern
+      const matchingFiles = files.filter(file => {
+        // Remove .json extension and check if it starts with prefix
+        const key = file.replace(/\.json$/, '');
+        return key.startsWith(prefix);
+      });
+
+      // Delete matching files
+      let deletedCount = 0;
+      for (const file of matchingFiles) {
+        try {
+          await fs.unlink(path.join(this.baseDir, file));
+          deletedCount++;
+        } catch (error) {
+          logger.warn(`Failed to delete cache file ${file}`, error as Error);
+        }
+      }
+
+      if (deletedCount > 0) {
+        logger.info(`Deleted ${deletedCount} cache entries with prefix: ${prefix}`);
+      }
+
+      return deletedCount;
+    } catch (error) {
+      logger.warn(`Failed to delete cache entries by prefix ${prefix}`, error as Error);
+      return 0;
+    }
+  }
+
   private async acquireLock(key: string): Promise<void> {
     // If there's an existing lock, wait for it
     const existingLock = this.locks.get(key);

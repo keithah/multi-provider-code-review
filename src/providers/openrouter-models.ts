@@ -34,12 +34,12 @@ export interface ModelRanking {
 /**
  * Fetch available models from OpenRouter API
  */
-export async function fetchOpenRouterModels(timeoutMs = 5000): Promise<OpenRouterModel[]> {
+export async function fetchOpenRouterModels(timeoutMs = 5000, query = 'max_price=0&order=top-weekly'): Promise<OpenRouterModel[]> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await fetch('https://openrouter.ai/api/v1/models', {
+    const response = await fetch(`https://openrouter.ai/api/v1/models?${query}`, {
       signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
@@ -136,16 +136,25 @@ export async function getBestFreeModels(
   logger.info(`Found ${freeModels.length} free OpenRouter models`);
 
   // Rank and sort models
-  const rankedModels: ModelRanking[] = freeModels.map(model => ({
-    modelId: `openrouter/${model.id}`,
-    score: rankModel(model),
-    contextLength: model.context_length || 0,
-    isFree: true,
-  }));
+  // Note: Popularity boost is added even though API returns models ordered by top-weekly
+  // This ensures popular models are strongly preferred in the final ranking, combining
+  // API ordering with our quality metrics (context length, code-focus, instruction tuning)
+  const rankedModels: ModelRanking[] = freeModels.map((model, idx) => {
+    const popularityBoost = (freeModels.length - idx); // Boost decreases with position
+    return {
+      modelId: `openrouter/${model.id}`,
+      score: rankModel(model) + popularityBoost,
+      contextLength: model.context_length || 0,
+      isFree: true,
+    };
+  });
 
   rankedModels.sort((a, b) => b.score - a.score);
 
-  const selectedModels = rankedModels.slice(0, count).map(m => m.modelId);
+  // Take a slightly oversized pool to encourage diversity, then shuffle
+  const poolSize = Math.min(rankedModels.length, Math.max(count * 2, count + 2));
+  const pool = rankedModels.slice(0, poolSize).map(m => m.modelId);
+  const selectedModels = shuffle(pool).slice(0, count);
 
   logger.info(
     `Selected ${selectedModels.length}/${count} best free OpenRouter models: ${selectedModels.join(', ')}`
@@ -167,6 +176,15 @@ export function getFallbackModels(count = 4): string[] {
   ];
 
   return fallbacks.slice(0, count);
+}
+
+function shuffle<T>(arr: T[]): T[] {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
 }
 
 /**

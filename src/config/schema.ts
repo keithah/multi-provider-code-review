@@ -7,6 +7,8 @@ export const ReviewConfigSchema = z.object({
   fallback_providers: z.array(z.string()).optional(),
   provider_allowlist: z.array(z.string()).optional(),
   provider_blocklist: z.array(z.string()).optional(),
+  openrouter_allow_paid: z.boolean().optional(),
+  provider_discovery_limit: z.number().int().min(1).optional(),
   provider_limit: z.number().int().min(0).optional(),
   provider_retries: z.number().int().min(1).optional(),
   provider_max_parallel: z.number().int().min(1).optional(),
@@ -41,6 +43,11 @@ export const ReviewConfigSchema = z.object({
   incremental_enabled: z.boolean().optional(),
   incremental_cache_ttl_days: z.number().int().min(1).max(30).optional(),
 
+  batch_max_files: z.number().int().min(1).max(200).optional(),
+  provider_batch_overrides: z.record(z.coerce.number().int().min(1).max(200)).optional(),
+  enable_token_aware_batching: z.boolean().optional(),
+  target_tokens_per_batch: z.number().int().min(1000).optional(),
+
   graph_enabled: z.boolean().optional(),
   graph_cache_enabled: z.boolean().optional(),
   graph_max_depth: z.number().int().min(1).max(10).optional(),
@@ -74,6 +81,25 @@ export const ReviewConfigSchema = z.object({
   path_based_intensity: z.boolean().optional(),
   path_intensity_patterns: z.string().optional(),
   path_default_intensity: z.enum(['thorough', 'standard', 'light']).optional(),
+
+  provider_selection_strategy: z.enum(['reliability', 'random', 'round-robin']).optional(),
+  provider_exploration_rate: z.number().min(0).max(1).optional(),
+
+  intensity_provider_counts: z.object({
+    thorough: z.number().int().min(1),
+    standard: z.number().int().min(1),
+    light: z.number().int().min(1),
+  }).optional(),
+  intensity_timeouts: z.object({
+    thorough: z.number().int().min(1000),
+    standard: z.number().int().min(1000),
+    light: z.number().int().min(1000),
+  }).optional(),
+  intensity_prompt_depth: z.object({
+    thorough: z.enum(['detailed', 'standard', 'brief']),
+    standard: z.enum(['detailed', 'standard', 'brief']),
+    light: z.enum(['detailed', 'standard', 'brief']),
+  }).optional(),
 
   dry_run: z.boolean().optional(),
 });

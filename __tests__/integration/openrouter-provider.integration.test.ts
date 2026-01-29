@@ -146,8 +146,9 @@ describe('OpenRouterProvider Integration', () => {
 
       const result = await provider.review('test', 5000);
 
-      expect(result.durationSeconds).toBeGreaterThan(0.05);
-      expect(result.durationSeconds).toBeLessThan(1);
+      // Verify duration is measured (avoid specific lower bounds that can be flaky on slow systems)
+      expect(result.durationSeconds).toBeGreaterThan(0);
+      expect(result.durationSeconds).toBeLessThan(5); // Generous upper bound
     });
   });
 

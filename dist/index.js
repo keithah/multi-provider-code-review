@@ -180,7 +180,7 @@ var require_file_command = __commonJS({
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.prepareKeyValueMessage = exports2.issueFileCommand = void 0;
-    var crypto4 = __importStar(require("crypto"));
+    var crypto3 = __importStar(require("crypto"));
     var fs8 = __importStar(require("fs"));
     var os3 = __importStar(require("os"));
     var utils_1 = require_utils();
@@ -198,7 +198,7 @@ var require_file_command = __commonJS({
     }
     exports2.issueFileCommand = issueFileCommand;
     function prepareKeyValueMessage(key, value) {
-      const delimiter = `ghadelimiter_${crypto4.randomUUID()}`;
+      const delimiter = `ghadelimiter_${crypto3.randomUUID()}`;
       const convertedValue = (0, utils_1.toCommandValue)(value);
       if (key.includes(delimiter)) {
         throw new Error(`Unexpected input: name should not contain the delimiter "${delimiter}"`);
@@ -3633,11 +3633,11 @@ var require_util2 = __commonJS({
     var assert = require("assert");
     var { isUint8Array } = require("util/types");
     var supportedHashes = [];
-    var crypto4;
+    var crypto3;
     try {
-      crypto4 = require("crypto");
+      crypto3 = require("crypto");
       const possibleRelevantHashes = ["sha256", "sha384", "sha512"];
-      supportedHashes = crypto4.getHashes().filter((hash) => possibleRelevantHashes.includes(hash));
+      supportedHashes = crypto3.getHashes().filter((hash) => possibleRelevantHashes.includes(hash));
     } catch {
     }
     function responseURL(response) {
@@ -3914,7 +3914,7 @@ var require_util2 = __commonJS({
       }
     }
     function bytesMatch(bytes, metadataList) {
-      if (crypto4 === void 0) {
+      if (crypto3 === void 0) {
         return true;
       }
       const parsedMetadata = parseMetadata(metadataList);
@@ -3929,7 +3929,7 @@ var require_util2 = __commonJS({
       for (const item of metadata) {
         const algorithm = item.algo;
         const expectedValue = item.hash;
-        let actualValue = crypto4.createHash(algorithm).update(bytes).digest("base64");
+        let actualValue = crypto3.createHash(algorithm).update(bytes).digest("base64");
         if (actualValue[actualValue.length - 1] === "=") {
           if (actualValue[actualValue.length - 2] === "=") {
             actualValue = actualValue.slice(0, -2);
@@ -5275,8 +5275,8 @@ var require_body = __commonJS({
     var { parseMIMEType, serializeAMimeType } = require_dataURL();
     var random;
     try {
-      const crypto4 = require("node:crypto");
-      random = (max) => crypto4.randomInt(0, max);
+      const crypto3 = require("node:crypto");
+      random = (max) => crypto3.randomInt(0, max);
     } catch {
       random = (max) => Math.floor(Math.random(max));
     }
@@ -16326,9 +16326,9 @@ var require_connection = __commonJS({
     channels.open = diagnosticsChannel.channel("undici:websocket:open");
     channels.close = diagnosticsChannel.channel("undici:websocket:close");
     channels.socketError = diagnosticsChannel.channel("undici:websocket:socket_error");
-    var crypto4;
+    var crypto3;
     try {
-      crypto4 = require("crypto");
+      crypto3 = require("crypto");
     } catch {
     }
     function establishWebSocketConnection(url, protocols, ws, onEstablish, options) {
@@ -16347,7 +16347,7 @@ var require_connection = __commonJS({
         const headersList = new Headers(options.headers)[kHeadersList];
         request.headersList = headersList;
       }
-      const keyValue = crypto4.randomBytes(16).toString("base64");
+      const keyValue = crypto3.randomBytes(16).toString("base64");
       request.headersList.append("sec-websocket-key", keyValue);
       request.headersList.append("sec-websocket-version", "13");
       for (const protocol of protocols) {
@@ -16376,7 +16376,7 @@ var require_connection = __commonJS({
             return;
           }
           const secWSAccept = response.headersList.get("Sec-WebSocket-Accept");
-          const digest = crypto4.createHash("sha1").update(keyValue + uid).digest("base64");
+          const digest = crypto3.createHash("sha1").update(keyValue + uid).digest("base64");
           if (secWSAccept !== digest) {
             failWebsocketConnection(ws, "Incorrect hash received in Sec-WebSocket-Accept header.");
             return;
@@ -16456,9 +16456,9 @@ var require_frame = __commonJS({
   "node_modules/undici/lib/websocket/frame.js"(exports2, module2) {
     "use strict";
     var { maxUnsigned16Bit } = require_constants5();
-    var crypto4;
+    var crypto3;
     try {
-      crypto4 = require("crypto");
+      crypto3 = require("crypto");
     } catch {
     }
     var WebsocketFrameSend = class {
@@ -16467,7 +16467,7 @@ var require_frame = __commonJS({
        */
       constructor(data) {
         this.frameData = data;
-        this.maskKey = crypto4.randomBytes(4);
+        this.maskKey = crypto3.randomBytes(4);
       }
       createFrame(opcode) {
         const bodyLength = this.frameData?.byteLength ?? 0;
@@ -26873,7 +26873,18 @@ var DEFAULT_CONFIG = {
   fallbackProviders: [],
   providerAllowlist: [],
   providerBlocklist: [],
+  // COST CONTROLS:
+  // - openrouterAllowPaid: false = Only free models (blocks models with $/token pricing)
+  // - providerDiscoveryLimit: 8 = Health-check up to 8 providers for reliability
+  // - providerLimit: 6 = Actually use only 6 providers to control API usage
+  // - budgetMaxUsd: 0 = No budget allocated for paid APIs
+  // Combined these settings ensure zero cost when using default configuration
+  openrouterAllowPaid: false,
+  // IMPORTANT: Set to true only if you have OpenRouter credits
+  providerDiscoveryLimit: 8,
+  // Health-check pool size (higher = better reliability)
   providerLimit: 6,
+  // Actual execution pool size (lower = lower costs)
   providerRetries: 2,
   providerMaxParallel: 3,
   quietModeEnabled: false,
@@ -26900,6 +26911,11 @@ var DEFAULT_CONFIG = {
   enableAiDetection: true,
   incrementalEnabled: true,
   incrementalCacheTtlDays: 7,
+  batchMaxFiles: 30,
+  providerBatchOverrides: {},
+  enableTokenAwareBatching: true,
+  targetTokensPerBatch: 5e4,
+  // ~50k tokens per batch
   graphEnabled: false,
   graphCacheEnabled: true,
   graphMaxDepth: 5,
@@ -26929,6 +26945,29 @@ var DEFAULT_CONFIG = {
   // Disabled by default, opt-in
   pathIntensityPatterns: void 0,
   pathDefaultIntensity: "standard",
+  // Provider selection strategy
+  providerSelectionStrategy: "reliability",
+  providerExplorationRate: 0.3,
+  // 70% exploit, 30% explore
+  // Intensity behavior mappings
+  intensityProviderCounts: {
+    thorough: 8,
+    standard: 5,
+    light: 3
+  },
+  intensityTimeouts: {
+    thorough: 18e4,
+    // 3 minutes
+    standard: 12e4,
+    // 2 minutes
+    light: 6e4
+    // 1 minute
+  },
+  intensityPromptDepth: {
+    thorough: "detailed",
+    standard: "standard",
+    light: "brief"
+  },
   dryRun: false
 };
 var FALLBACK_STATIC_PROVIDERS = [
@@ -31046,6 +31085,8 @@ var ReviewConfigSchema = external_exports.object({
   fallback_providers: external_exports.array(external_exports.string()).optional(),
   provider_allowlist: external_exports.array(external_exports.string()).optional(),
   provider_blocklist: external_exports.array(external_exports.string()).optional(),
+  openrouter_allow_paid: external_exports.boolean().optional(),
+  provider_discovery_limit: external_exports.number().int().min(1).optional(),
   provider_limit: external_exports.number().int().min(0).optional(),
   provider_retries: external_exports.number().int().min(1).optional(),
   provider_max_parallel: external_exports.number().int().min(1).optional(),
@@ -31073,6 +31114,10 @@ var ReviewConfigSchema = external_exports.object({
   enable_ai_detection: external_exports.boolean().optional(),
   incremental_enabled: external_exports.boolean().optional(),
   incremental_cache_ttl_days: external_exports.number().int().min(1).max(30).optional(),
+  batch_max_files: external_exports.number().int().min(1).max(200).optional(),
+  provider_batch_overrides: external_exports.record(external_exports.coerce.number().int().min(1).max(200)).optional(),
+  enable_token_aware_batching: external_exports.boolean().optional(),
+  target_tokens_per_batch: external_exports.number().int().min(1e3).optional(),
   graph_enabled: external_exports.boolean().optional(),
   graph_cache_enabled: external_exports.boolean().optional(),
   graph_max_depth: external_exports.number().int().min(1).max(10).optional(),
@@ -31101,6 +31146,23 @@ var ReviewConfigSchema = external_exports.object({
   path_based_intensity: external_exports.boolean().optional(),
   path_intensity_patterns: external_exports.string().optional(),
   path_default_intensity: external_exports.enum(["thorough", "standard", "light"]).optional(),
+  provider_selection_strategy: external_exports.enum(["reliability", "random", "round-robin"]).optional(),
+  provider_exploration_rate: external_exports.number().min(0).max(1).optional(),
+  intensity_provider_counts: external_exports.object({
+    thorough: external_exports.number().int().min(1),
+    standard: external_exports.number().int().min(1),
+    light: external_exports.number().int().min(1)
+  }).optional(),
+  intensity_timeouts: external_exports.object({
+    thorough: external_exports.number().int().min(1e3),
+    standard: external_exports.number().int().min(1e3),
+    light: external_exports.number().int().min(1e3)
+  }).optional(),
+  intensity_prompt_depth: external_exports.object({
+    thorough: external_exports.enum(["detailed", "standard", "brief"]),
+    standard: external_exports.enum(["detailed", "standard", "brief"]),
+    light: external_exports.enum(["detailed", "standard", "brief"])
+  }).optional(),
   dry_run: external_exports.boolean().optional()
 });
 
@@ -31399,11 +31461,17 @@ var ConfigLoader = class {
       fallbackProviders: this.parseArray(env.FALLBACK_PROVIDERS),
       providerAllowlist: this.parseArray(env.PROVIDER_ALLOWLIST),
       providerBlocklist: this.parseArray(env.PROVIDER_BLOCKLIST),
+      openrouterAllowPaid: this.parseBoolean(env.OPENROUTER_ALLOW_PAID),
+      providerDiscoveryLimit: this.parseNumber(env.PROVIDER_DISCOVERY_LIMIT),
       providerLimit: this.parseNumber(env.PROVIDER_LIMIT),
       providerRetries: this.parseNumber(env.PROVIDER_RETRIES),
       providerMaxParallel: this.parseNumber(env.PROVIDER_MAX_PARALLEL),
       quietModeEnabled: this.parseBoolean(env.QUIET_MODE_ENABLED),
       quietMinConfidence: this.parseFloat(env.QUIET_MIN_CONFIDENCE),
+      quietUseLearning: this.parseBoolean(env.QUIET_USE_LEARNING),
+      learningEnabled: this.parseBoolean(env.LEARNING_ENABLED),
+      learningMinFeedbackCount: this.parseNumber(env.LEARNING_MIN_FEEDBACK_COUNT),
+      learningLookbackDays: this.parseNumber(env.LEARNING_LOOKBACK_DAYS),
       inlineMaxComments: this.parseNumber(env.INLINE_MAX_COMMENTS),
       inlineMinSeverity: this.parseSeverity(env.INLINE_MIN_SEVERITY),
       inlineMinAgreement: this.parseNumber(env.INLINE_MIN_AGREEMENT),
@@ -31422,6 +31490,8 @@ var ConfigLoader = class {
       enableAiDetection: this.parseBoolean(env.ENABLE_AI_DETECTION),
       incrementalEnabled: this.parseBoolean(env.INCREMENTAL_ENABLED),
       incrementalCacheTtlDays: this.parseNumber(env.INCREMENTAL_CACHE_TTL_DAYS),
+      batchMaxFiles: this.parseNumber(env.BATCH_MAX_FILES),
+      providerBatchOverrides: this.parseOverrides(env.PROVIDER_BATCH_OVERRIDES),
       skipTrivialChanges: this.parseBoolean(env.SKIP_TRIVIAL_CHANGES),
       skipDependencyUpdates: this.parseBoolean(env.SKIP_DEPENDENCY_UPDATES),
       skipDocumentationOnly: this.parseBoolean(env.SKIP_DOCUMENTATION_ONLY),
@@ -31443,11 +31513,17 @@ var ConfigLoader = class {
       fallbackProviders: config.fallback_providers,
       providerAllowlist: config.provider_allowlist,
       providerBlocklist: config.provider_blocklist,
+      openrouterAllowPaid: config.openrouter_allow_paid,
+      providerDiscoveryLimit: config.provider_discovery_limit,
       providerLimit: config.provider_limit,
       providerRetries: config.provider_retries,
       providerMaxParallel: config.provider_max_parallel,
       quietModeEnabled: config.quiet_mode_enabled,
       quietMinConfidence: config.quiet_min_confidence,
+      quietUseLearning: config.quiet_use_learning,
+      learningEnabled: config.learning_enabled,
+      learningMinFeedbackCount: config.learning_min_feedback_count,
+      learningLookbackDays: config.learning_lookback_days,
       inlineMaxComments: config.inline_max_comments,
       inlineMinSeverity: config.inline_min_severity,
       inlineMinAgreement: config.inline_min_agreement,
@@ -31466,6 +31542,24 @@ var ConfigLoader = class {
       enableAiDetection: config.enable_ai_detection,
       incrementalEnabled: config.incremental_enabled,
       incrementalCacheTtlDays: config.incremental_cache_ttl_days,
+      batchMaxFiles: config.batch_max_files,
+      providerBatchOverrides: config.provider_batch_overrides,
+      enableTokenAwareBatching: config.enable_token_aware_batching,
+      targetTokensPerBatch: config.target_tokens_per_batch,
+      graphEnabled: config.graph_enabled,
+      graphCacheEnabled: config.graph_cache_enabled,
+      graphMaxDepth: config.graph_max_depth,
+      graphTimeoutSeconds: config.graph_timeout_seconds,
+      generateFixPrompts: config.generate_fix_prompts,
+      fixPromptFormat: config.fix_prompt_format,
+      analyticsEnabled: config.analytics_enabled,
+      analyticsMaxReviews: config.analytics_max_reviews,
+      analyticsDeveloperRate: config.analytics_developer_rate,
+      analyticsManualReviewTime: config.analytics_manual_review_time,
+      pluginsEnabled: config.plugins_enabled,
+      pluginDir: config.plugin_dir,
+      pluginAllowlist: config.plugin_allowlist,
+      pluginBlocklist: config.plugin_blocklist,
       skipTrivialChanges: config.skip_trivial_changes,
       skipDependencyUpdates: config.skip_dependency_updates,
       skipDocumentationOnly: config.skip_documentation_only,
@@ -31477,6 +31571,11 @@ var ConfigLoader = class {
       pathBasedIntensity: config.path_based_intensity,
       pathIntensityPatterns: config.path_intensity_patterns,
       pathDefaultIntensity: config.path_default_intensity,
+      providerSelectionStrategy: config.provider_selection_strategy,
+      providerExplorationRate: config.provider_exploration_rate,
+      intensityProviderCounts: config.intensity_provider_counts,
+      intensityTimeouts: config.intensity_timeouts,
+      intensityPromptDepth: config.intensity_prompt_depth,
       dryRun: config.dry_run
     };
   }
@@ -31508,6 +31607,35 @@ var ConfigLoader = class {
     if (!value) return void 0;
     const num = Number.parseFloat(value);
     return Number.isFinite(num) ? num : void 0;
+  }
+  static parseOverrides(value) {
+    if (!value) return void 0;
+    try {
+      const parsed = JSON.parse(value);
+      if (typeof parsed !== "object" || Array.isArray(parsed) || parsed === null) {
+        throw new Error("Overrides must be a JSON object");
+      }
+      const result = {};
+      for (const [key, val] of Object.entries(parsed)) {
+        const num = Number(val);
+        if (!Number.isFinite(num)) continue;
+        const intVal = Math.trunc(num);
+        if (intVal < 1) {
+          logger.warn(`Ignoring PROVIDER_BATCH_OVERRIDES entry for "${key}": value ${intVal} is below minimum 1`);
+          continue;
+        }
+        const clamped = Math.min(intVal, 200);
+        if (clamped !== intVal) {
+          logger.warn(`Clamping PROVIDER_BATCH_OVERRIDES entry for "${key}" from ${intVal} to maximum 200`);
+        }
+        result[key] = clamped;
+      }
+      return result;
+    } catch (error2) {
+      const message = `Failed to parse PROVIDER_BATCH_OVERRIDES: ${error2.message}`;
+      logger.warn(message);
+      return void 0;
+    }
   }
   static parseSeverity(value) {
     if (!value) return void 0;
@@ -31772,12 +31900,31 @@ var OpenRouterProvider = class _OpenRouterProvider extends Provider {
         throw new Error("OpenRouter API returned invalid response");
       }
       if (!response.ok) {
+        const retryAfter = response.headers.get("retry-after");
+        let seconds = NaN;
+        if (retryAfter) {
+          const parsedSeconds = parseInt(retryAfter, 10);
+          if (!isNaN(parsedSeconds) && parsedSeconds >= 0) {
+            seconds = parsedSeconds;
+          } else {
+            const parsedDate = Date.parse(retryAfter);
+            if (!isNaN(parsedDate) && parsedDate > Date.now()) {
+              seconds = Math.ceil((parsedDate - Date.now()) / 1e3);
+            }
+          }
+        }
+        const minutes = !isNaN(seconds) && seconds > 0 ? Math.ceil(seconds / 60) : 60;
         if (response.status === 429) {
-          const retryAfter = response.headers.get("retry-after");
-          const seconds = retryAfter ? parseInt(retryAfter, 10) : NaN;
-          const minutes = !isNaN(seconds) && seconds > 0 ? Math.ceil(seconds / 60) : 60;
           await this.rateLimiter.markRateLimited(this.name, minutes, "HTTP 429 from OpenRouter");
           throw new RateLimitError(`Rate limited: ${this.name}`, minutes * 60);
+        }
+        if (response.status === 402) {
+          const blockMinutes = Math.max(minutes || 0, 60 * 24);
+          logger.warn(
+            `Model ${this.name} returned 402 Payment Required. Blocking for ${blockMinutes} minutes to avoid repeated failures. This usually means the model requires credits or a paid plan.`
+          );
+          await this.rateLimiter.markRateLimited(this.name, blockMinutes, "HTTP 402 Payment Required from OpenRouter");
+          throw new RateLimitError(`Payment required: ${this.name}`, blockMinutes * 60);
         }
         throw new Error(`OpenRouter API error: ${response.status} ${response.statusText}`);
       }
@@ -31844,6 +31991,36 @@ var OpenCodeProvider = class extends Provider {
   constructor(modelId) {
     super(`opencode/${modelId}`);
     this.modelId = modelId;
+  }
+  // Lightweight health check: verify CLI is available; skip full review run
+  async healthCheck(_timeoutMs = 5e3) {
+    const timeoutMs = Math.max(500, _timeoutMs ?? 5e3);
+    let timeoutId;
+    let isTimedOut = false;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = setTimeout(() => {
+        isTimedOut = true;
+        reject(new Error(`OpenCode health check timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+    });
+    try {
+      await Promise.race([
+        this.resolveBinary().then(() => {
+          if (isTimedOut) {
+            logger.debug(`OpenCode binary resolved after timeout (${this.name})`);
+          }
+        }),
+        timeoutPromise
+      ]);
+      clearTimeout(timeoutId);
+      return true;
+    } catch (error2) {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      logger.warn(`OpenCode health check failed for ${this.name}: ${error2.message}`);
+      return false;
+    }
   }
   async review(prompt, timeoutMs) {
     const started = Date.now();
@@ -32053,11 +32230,11 @@ var PricingService = class _PricingService {
 };
 
 // src/providers/openrouter-models.ts
-async function fetchOpenRouterModels(timeoutMs = 5e3) {
+async function fetchOpenRouterModels(timeoutMs = 5e3, query = "max_price=0&order=top-weekly") {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch("https://openrouter.ai/api/v1/models", {
+    const response = await fetch(`https://openrouter.ai/api/v1/models?${query}`, {
       signal: controller.signal,
       headers: {
         "Content-Type": "application/json"
@@ -32114,14 +32291,19 @@ async function getBestFreeModels(count = 4, timeoutMs = 5e3) {
     return getFallbackModels(count);
   }
   logger.info(`Found ${freeModels.length} free OpenRouter models`);
-  const rankedModels = freeModels.map((model) => ({
-    modelId: `openrouter/${model.id}`,
-    score: rankModel(model),
-    contextLength: model.context_length || 0,
-    isFree: true
-  }));
+  const rankedModels = freeModels.map((model, idx) => {
+    const popularityBoost = freeModels.length - idx;
+    return {
+      modelId: `openrouter/${model.id}`,
+      score: rankModel(model) + popularityBoost,
+      contextLength: model.context_length || 0,
+      isFree: true
+    };
+  });
   rankedModels.sort((a, b) => b.score - a.score);
-  const selectedModels = rankedModels.slice(0, count).map((m) => m.modelId);
+  const poolSize = Math.min(rankedModels.length, Math.max(count * 2, count + 2));
+  const pool = rankedModels.slice(0, poolSize).map((m) => m.modelId);
+  const selectedModels = shuffle(pool).slice(0, count);
   logger.info(
     `Selected ${selectedModels.length}/${count} best free OpenRouter models: ${selectedModels.join(", ")}`
   );
@@ -32135,6 +32317,14 @@ function getFallbackModels(count = 4) {
     "openrouter/google/gemini-2.0-flash-exp:free"
   ];
   return fallbacks.slice(0, count);
+}
+function shuffle(arr) {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
 }
 var modelCache = null;
 var CACHE_TTL_MS = 60 * 60 * 1e3;
@@ -32292,14 +32482,15 @@ async function getBestFreeOpenCodeModelsCached(count = 4, timeoutMs = 1e4) {
 
 // src/providers/registry.ts
 var ProviderRegistry = class {
-  constructor(pluginLoader) {
+  constructor(pluginLoader, reliabilityTracker) {
     this.pluginLoader = pluginLoader;
+    this.reliabilityTracker = reliabilityTracker;
   }
   rateLimiter = new RateLimiter();
   rotationIndex = 0;
   openRouterPricing = new PricingService(process.env.OPENROUTER_API_KEY);
   async createProviders(config) {
-    let providers = this.instantiate(config.providers);
+    let providers = this.instantiate(config.providers, config);
     const userProvidedList = Boolean(process.env.REVIEW_PROVIDERS);
     const usingDefaults = this.usesDefaultProviders(config.providers);
     if (providers.length === 0 && usingDefaults && !userProvidedList) {
@@ -32307,7 +32498,7 @@ var ProviderRegistry = class {
       const discoveredModels = [];
       if (process.env.OPENROUTER_API_KEY) {
         logger.info("Discovering OpenRouter models...");
-        const openRouterModels = await getBestFreeModelsCached(4, 5e3);
+        const openRouterModels = await getBestFreeModelsCached(8, 5e3);
         if (openRouterModels.length > 0) {
           logger.info(`\u2705 Discovered ${openRouterModels.length} OpenRouter models`);
           discoveredModels.push(...openRouterModels);
@@ -32318,7 +32509,7 @@ var ProviderRegistry = class {
         logger.info("Skipping OpenRouter discovery (no API key)");
       }
       logger.info("Discovering OpenCode models...");
-      const openCodeModels = await getBestFreeOpenCodeModelsCached(4, 1e4);
+      const openCodeModels = await getBestFreeOpenCodeModelsCached(8, 1e4);
       if (openCodeModels.length > 0) {
         logger.info(`\u2705 Discovered ${openCodeModels.length} OpenCode models`);
         discoveredModels.push(...openCodeModels);
@@ -32328,47 +32519,126 @@ var ProviderRegistry = class {
       if (discoveredModels.length > 0) {
         logger.info(`\u{1F3AF} Total discovered: ${discoveredModels.length} free models`);
         logger.info(`   Models: ${discoveredModels.join(", ")}`);
-        providers.push(...this.instantiate(discoveredModels));
+        providers.push(...this.instantiate(discoveredModels, config));
       } else {
         logger.warn("\u26A0\uFE0F  Dynamic discovery found no models, using static fallbacks");
       }
     }
     if (providers.length === 0) {
       logger.warn("Using static fallback providers as last resort");
-      providers = this.instantiate(FALLBACK_STATIC_PROVIDERS);
+      providers = this.instantiate(FALLBACK_STATIC_PROVIDERS, config);
     }
     providers = this.dedupeProviders(providers);
     providers = this.applyAllowBlock(providers, config);
     logger.info(`After allowBlock: ${providers.length} providers`);
     providers = await this.filterRateLimited(providers);
     logger.info(`After filterRateLimited: ${providers.length} providers`);
-    const selectionLimit = config.providerLimit > 0 ? config.providerLimit : 6;
-    const minSelection = Math.min(5, selectionLimit);
-    logger.info(`Selection limit: ${selectionLimit} (configured: ${config.providerLimit}), min: ${minSelection}, fallback count: ${config.fallbackProviders.length}`);
-    if (providers.length < selectionLimit && config.fallbackProviders.length > 0) {
-      logger.info(`Adding ${config.fallbackProviders.length} fallback providers to reach target of ${selectionLimit}`);
-      const fallbacks = this.instantiate(config.fallbackProviders);
-      const filteredFallbacks = await this.filterRateLimited(fallbacks);
-      providers = this.dedupeProviders([...providers, ...filteredFallbacks]);
-      logger.info(`After adding fallbacks: ${providers.length} providers`);
-    } else {
-      logger.info(`Skipping fallback providers: providers.length=${providers.length}, selectionLimit=${selectionLimit}, fallbackProviders.length=${config.fallbackProviders.length}`);
+    const strategy = config.providerSelectionStrategy ?? "reliability";
+    if (strategy === "reliability") {
+      providers = await this.sortByReliability(providers);
+    } else if (strategy === "random") {
+      providers = this.shuffle(providers);
     }
-    if (providers.length > selectionLimit) {
-      providers = this.randomSelect(providers, selectionLimit, minSelection);
+    let discoveryLimit = (config.providerDiscoveryLimit ?? 0) > 0 ? config.providerDiscoveryLimit : config.providerLimit > 0 ? config.providerLimit : 8;
+    if (config.providerLimit > 0) {
+      discoveryLimit = Math.min(discoveryLimit, config.providerLimit);
+    }
+    const minSelection = Math.min(4, discoveryLimit);
+    logger.info(`Discovery limit: ${discoveryLimit} (for health checks), execution limit: ${config.providerLimit} (for actual review), min: ${minSelection}, fallback count: ${config.fallbackProviders.length}`);
+    const MIN_OPENROUTER = 4;
+    const MIN_OPENCODE = 2;
+    const openrouterProviders = this.filterUniqueFamilies(
+      providers.filter((p) => p.name.startsWith("openrouter/"))
+    );
+    const opencodeProviders = this.filterUniqueFamilies(
+      providers.filter((p) => p.name.startsWith("opencode/"))
+    );
+    const otherProviders = providers.filter(
+      (p) => !p.name.startsWith("openrouter/") && !p.name.startsWith("opencode/")
+    );
+    const explorationRate = config.providerExplorationRate ?? 0.3;
+    const concatenated = [...openrouterProviders, ...opencodeProviders, ...otherProviders];
+    let allProviders;
+    if (strategy === "reliability") {
+      allProviders = await this.sortByReliability(concatenated);
+    } else {
+      allProviders = concatenated;
+    }
+    let selected;
+    if (strategy === "reliability") {
+      selected = this.selectWithDiversity(allProviders, discoveryLimit, minSelection, explorationRate);
+    } else if (strategy === "random") {
+      selected = [];
+      selected.push(...this.shuffle(openrouterProviders).slice(0, MIN_OPENROUTER));
+      selected.push(...this.shuffle(opencodeProviders).slice(0, MIN_OPENCODE));
+      const selectedNames = new Set(selected.map((s) => s.name));
+      const remainingPool = this.shuffle(allProviders).filter((p) => !selectedNames.has(p.name));
+      while (selected.length < discoveryLimit && remainingPool.length > 0) {
+        const next = remainingPool.shift();
+        selected.push(next);
+      }
+    } else {
+      if (allProviders.length > 0 && discoveryLimit > 0) {
+        selected = this.applyRotation(allProviders, discoveryLimit);
+      } else {
+        logger.warn(`Cannot apply rotation: allProviders.length=${allProviders.length}, discoveryLimit=${discoveryLimit}`);
+        selected = [];
+      }
+    }
+    providers = selected.length > 0 ? selected : providers;
+    if (providers.length < discoveryLimit && config.fallbackProviders.length > 0) {
+      const remainingSlots = discoveryLimit - providers.length;
+      logger.info(`Adding fallback providers to fill ${remainingSlots} remaining slots (target: ${discoveryLimit})`);
+      const fallbacks = this.instantiate(config.fallbackProviders, config);
+      const filteredFallbacks = await this.filterRateLimited(fallbacks);
+      const dedupedFallbacks = this.dedupeProviders([...providers, ...filteredFallbacks]).filter((p) => !providers.some((existing) => existing.name === p.name));
+      const fallbacksToAdd = dedupedFallbacks.slice(0, remainingSlots);
+      providers = [...providers, ...fallbacksToAdd];
+      logger.info(`Added ${fallbacksToAdd.length} fallback providers (filtered ${dedupedFallbacks.length} candidates, total now: ${providers.length})`);
+    } else {
+      logger.info(`Skipping fallback providers: providers.length=${providers.length}, discoveryLimit=${discoveryLimit}, fallbackProviders.length=${config.fallbackProviders.length}`);
+    }
+    if (providers.length > discoveryLimit) {
+      logger.warn(`Provider count ${providers.length} exceeds discovery limit ${discoveryLimit}, trimming`);
+      providers = this.randomSelect(providers, discoveryLimit, minSelection);
     }
     if (providers.length === 0 && config.fallbackProviders.length > 0) {
       logger.warn("Primary providers unavailable, using fallbacks");
-      providers = this.instantiate(config.fallbackProviders);
+      providers = this.instantiate(config.fallbackProviders, config);
       providers = await this.filterRateLimited(providers);
     }
     if (providers.length === 0) {
       logger.warn("No providers available; falling back to opencode/minimax-m2.1-free");
-      providers = this.instantiate(["opencode/minimax-m2.1-free"]);
+      providers = this.instantiate(["opencode/minimax-m2.1-free"], config);
     }
     return providers;
   }
-  instantiate(names) {
+  /**
+   * Discover additional free providers, excluding ones we've already tried.
+   * Used when initial health checks fail to yield enough healthy providers.
+   */
+  async discoverAdditionalFreeProviders(existing, max = 6, config = DEFAULT_CONFIG) {
+    const existingSet = new Set(existing);
+    const discovered = [];
+    if (process.env.OPENROUTER_API_KEY) {
+      const moreOpenRouter = await getBestFreeModelsCached(20, 5e3);
+      discovered.push(...moreOpenRouter.filter((m) => !existingSet.has(m)));
+    }
+    const moreOpenCode = await getBestFreeOpenCodeModelsCached(12, 1e4);
+    discovered.push(...moreOpenCode.filter((m) => !existingSet.has(m)));
+    if (discovered.length === 0) {
+      discovered.push(...FALLBACK_STATIC_PROVIDERS.filter((m) => !existingSet.has(m)));
+    }
+    let providers = this.instantiate(this.shuffle(discovered), config);
+    providers = this.dedupeProviders(providers);
+    providers = this.applyAllowBlock(providers, config);
+    providers = await this.filterRateLimited(providers);
+    if (providers.length > max) {
+      providers = this.randomSelect(providers, max, Math.min(2, max));
+    }
+    return providers;
+  }
+  instantiate(names, config = DEFAULT_CONFIG) {
     const list = [];
     for (const name of names) {
       if (this.pluginLoader?.hasProvider(name)) {
@@ -32393,6 +32663,10 @@ var ProviderRegistry = class {
         const apiKey = process.env.OPENROUTER_API_KEY;
         if (!apiKey) {
           logger.warn(`OPENROUTER_API_KEY not set; skipping OpenRouter provider ${name}`);
+          continue;
+        }
+        if (!config.openrouterAllowPaid && !model.endsWith(":free")) {
+          logger.warn(`Skipping paid OpenRouter model ${name} (set openrouterAllowPaid=true to enable)`);
           continue;
         }
         list.push(new OpenRouterProvider(model, apiKey, this.rateLimiter));
@@ -32438,9 +32712,17 @@ var ProviderRegistry = class {
     return selected;
   }
   randomSelect(providers, max, min) {
-    const shuffled = [...providers].sort(() => Math.random() - 0.5);
+    const shuffled = this.shuffle(providers);
     const count = Math.max(min, Math.min(max, shuffled.length));
     return shuffled.slice(0, count);
+  }
+  shuffle(list) {
+    const copy = [...list];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
   }
   dedupeProviders(providers) {
     const seen = /* @__PURE__ */ new Set();
@@ -32452,9 +32734,106 @@ var ProviderRegistry = class {
     }
     return result;
   }
+  /**
+   * Avoid selecting multiple variants of the same underlying model family.
+   * e.g., openrouter/nvidia/nemotron-nano-12b... and ...-9b... count as one family.
+   */
+  filterUniqueFamilies(providers) {
+    const seenFamilies = /* @__PURE__ */ new Set();
+    const unique = [];
+    for (const p of providers) {
+      const family = this.getModelFamily(p.name);
+      if (seenFamilies.has(family)) continue;
+      seenFamilies.add(family);
+      unique.push(p);
+    }
+    return unique;
+  }
+  getModelFamily(name) {
+    const parts = name.split("/");
+    if (parts.length < 3) return name;
+    const vendor = parts[1];
+    const modelWithVariant = parts[2].split(":")[0];
+    const base = modelWithVariant.replace(/-\d+b$/i, "").replace(/-v\d+[a-z]*$/i, "");
+    return `${vendor}/${base}`;
+  }
   usesDefaultProviders(list) {
     if (!Array.isArray(list) || list.length !== DEFAULT_CONFIG.providers.length) return false;
     return list.every((p) => DEFAULT_CONFIG.providers.includes(p));
+  }
+  /**
+   * Sort providers by reliability score (highest first)
+   * Providers without reliability data get default score (0.5)
+   */
+  async sortByReliability(providers) {
+    if (!this.reliabilityTracker) {
+      return providers;
+    }
+    const scored = [];
+    for (const provider of providers) {
+      const score = await this.reliabilityTracker.getReliabilityScore(provider.name);
+      scored.push({ provider, score });
+    }
+    scored.sort((a, b) => b.score - a.score);
+    const sorted = scored.map((s) => s.provider);
+    if (scored.length > 0) {
+      logger.debug(
+        `Provider reliability ranking: ${scored.map((s) => `${s.provider.name}=${(s.score ?? 0.5).toFixed(2)}`).join(", ")}`
+      );
+    }
+    return sorted;
+  }
+  /**
+   * Select providers with diversity constraints and controlled randomization
+   *
+   * Strategy:
+   * 1. Take top N% by reliability (deterministic exploit)
+   * 2. Randomly select remaining slots from pool (exploration)
+   * 3. Ensure minimum diversity (OpenRouter/OpenCode mix)
+   */
+  selectWithDiversity(providers, discoveryLimit, minSelection, explorationRate = 0.3) {
+    if (providers.length <= discoveryLimit) {
+      return providers;
+    }
+    const selected = [];
+    const deterministicCount = Math.floor(discoveryLimit * (1 - explorationRate));
+    selected.push(...providers.slice(0, deterministicCount));
+    const explorationCount = discoveryLimit - deterministicCount;
+    const explorationPool = providers.slice(deterministicCount);
+    const shuffled = this.shuffle(explorationPool);
+    selected.push(...shuffled.slice(0, explorationCount));
+    const openrouterCount = selected.filter((p) => p.name.startsWith("openrouter/")).length;
+    const opencodeCount = selected.filter((p) => p.name.startsWith("opencode/")).length;
+    const MIN_OPENROUTER = Math.min(2, discoveryLimit);
+    const MIN_OPENCODE = Math.min(1, discoveryLimit);
+    if (openrouterCount < MIN_OPENROUTER || opencodeCount < MIN_OPENCODE) {
+      return this.adjustForDiversity(providers, discoveryLimit, MIN_OPENROUTER, MIN_OPENCODE);
+    }
+    logger.info(
+      `Selected ${selected.length} providers: ${deterministicCount} by reliability + ${explorationCount} exploration`
+    );
+    return selected;
+  }
+  /**
+   * Adjust selection to meet diversity requirements
+   */
+  adjustForDiversity(providers, limit, minOpenRouter, minOpenCode) {
+    const openrouter = providers.filter((p) => p.name.startsWith("openrouter/"));
+    const opencode = providers.filter((p) => p.name.startsWith("opencode/"));
+    const others = providers.filter(
+      (p) => !p.name.startsWith("openrouter/") && !p.name.startsWith("opencode/")
+    );
+    const selected = [];
+    selected.push(...openrouter.slice(0, minOpenRouter));
+    selected.push(...opencode.slice(0, minOpenCode));
+    const remaining = limit - selected.length;
+    const pool = [
+      ...openrouter.slice(minOpenRouter),
+      ...opencode.slice(minOpenCode),
+      ...others
+    ].filter((p) => !selected.includes(p));
+    selected.push(...pool.slice(0, remaining));
+    return selected.slice(0, limit);
   }
 };
 
@@ -32552,13 +32931,251 @@ function mapLinesToPositions(patch) {
   }
   return map2;
 }
+function filterDiffByFiles(diff, files) {
+  if (files.length === 0) return "";
+  if (!diff || diff.trim().length === 0) return "";
+  const target = new Set(files.map((f) => f.filename));
+  const lines = diff.split("\n");
+  const chunks = [];
+  let currentChunk = [];
+  let includeCurrent = false;
+  const pushChunkIfIncluded = () => {
+    if (includeCurrent && currentChunk.length > 0) {
+      chunks.push(currentChunk.join("\n"));
+    }
+    currentChunk = [];
+    includeCurrent = false;
+  };
+  for (const line of lines) {
+    const normalizedLine = line.replace(/\r$/, "");
+    const isHeader = normalizedLine.startsWith("diff --git ");
+    if (isHeader) {
+      pushChunkIfIncluded();
+      const match2 = normalizedLine.match(/^diff --git\s+a\/(.+?)\s+b\/(.+)$/);
+      if (!match2) {
+        currentChunk.push(line);
+        continue;
+      }
+      const rawA = match2[1].trim();
+      const rawB = match2[2].trim();
+      const aPath = unquoteGitPath(rawA);
+      const bPath = unquoteGitPath(rawB);
+      includeCurrent = target.has(bPath) || target.has(aPath);
+      currentChunk.push(line);
+    } else {
+      currentChunk.push(line);
+    }
+  }
+  pushChunkIfIncluded();
+  return chunks.join("\n").trimEnd();
+}
+function unquoteGitPath(path10) {
+  if (path10.startsWith('"') && path10.endsWith('"')) {
+    path10 = path10.slice(1, -1);
+  }
+  try {
+    path10 = path10.replace(/\\([\\"tnr])/g, (_m, ch) => {
+      switch (ch) {
+        case "\\":
+          return "\\";
+        case '"':
+          return '"';
+        case "t":
+          return "	";
+        case "n":
+          return "\n";
+        case "r":
+          return "\r";
+        default:
+          return ch;
+      }
+    });
+  } catch {
+  }
+  return path10;
+}
+
+// src/utils/token-estimation.ts
+function estimateTokensSimple(text) {
+  const characters = text.length;
+  const bytes = Buffer.byteLength(text, "utf8");
+  let tokens = Math.ceil(characters / 4);
+  const codeIndicators = (text.match(/[{}()[\];]/g) || []).length;
+  const isCodeHeavy = codeIndicators > characters * 0.05;
+  if (isCodeHeavy) {
+    tokens = Math.ceil(characters / 3);
+  }
+  return {
+    tokens,
+    bytes,
+    characters,
+    method: "simple"
+  };
+}
+function estimateTokensConservative(text) {
+  const simple = estimateTokensSimple(text);
+  const SAFETY_MARGIN = 1.1;
+  return {
+    ...simple,
+    tokens: Math.ceil(simple.tokens * SAFETY_MARGIN)
+  };
+}
+function estimateTokensForDiff(diff) {
+  const estimate = estimateTokensSimple(diff);
+  return {
+    ...estimate,
+    tokens: estimate.tokens
+    // Conservative: no multiplier
+  };
+}
+function getContextWindowSize(modelId) {
+  const CONTEXT_WINDOWS = {
+    // OpenRouter models (common ones)
+    "openrouter/google/gemini-2.0-flash-exp:free": 1e6,
+    // 1M tokens
+    "openrouter/mistralai/devstral-2512:free": 256e3,
+    // 256k tokens
+    "openrouter/xiaomi/mimo-v2-flash:free": 128e3,
+    // 128k tokens
+    "openrouter/microsoft/phi-4:free": 16e3,
+    // 16k tokens
+    // Generic patterns
+    "gemini-2.0": 1e6,
+    "gemini-1.5-pro": 1e6,
+    "gemini-1.5-flash": 1e6,
+    "claude-3-opus": 2e5,
+    "claude-3-sonnet": 2e5,
+    "claude-3-haiku": 2e5,
+    "claude-3.5-sonnet": 2e5,
+    "claude-3.5-haiku": 2e5,
+    "gpt-4": 8e3,
+    "gpt-4-turbo": 128e3,
+    "gpt-4o": 128e3,
+    "gpt-3.5-turbo": 4e3,
+    "o1": 2e5,
+    "o1-mini": 128e3
+  };
+  if (CONTEXT_WINDOWS[modelId]) {
+    return CONTEXT_WINDOWS[modelId];
+  }
+  for (const [pattern, size] of Object.entries(CONTEXT_WINDOWS)) {
+    if (modelId.includes(pattern)) {
+      return size;
+    }
+  }
+  return 4e3;
+}
+function checkContextWindowFit(prompt, modelId, reservedTokensForResponse = 2e3) {
+  const estimate = estimateTokensConservative(prompt);
+  const contextWindow = getContextWindowSize(modelId);
+  const availableTokens = contextWindow - reservedTokensForResponse;
+  const fits = estimate.tokens <= availableTokens;
+  const utilization = estimate.tokens / contextWindow * 100;
+  let recommendation = "";
+  if (!fits) {
+    const overage = estimate.tokens - availableTokens;
+    recommendation = `Prompt exceeds context window by ${overage} tokens. Reduce batch size or trim diff content.`;
+  } else if (utilization > 90) {
+    recommendation = `High utilization (${utilization.toFixed(0)}%). Consider reducing batch size for better response quality.`;
+  } else if (utilization > 75) {
+    recommendation = `Moderate utilization (${utilization.toFixed(0)}%). Acceptable but monitor response quality.`;
+  } else {
+    recommendation = `Good utilization (${utilization.toFixed(0)}%). Context window has sufficient headroom.`;
+  }
+  return {
+    fits,
+    promptTokens: estimate.tokens,
+    contextWindow,
+    availableTokens,
+    utilizationPercent: utilization,
+    recommendation
+  };
+}
+function estimateTokensForFile(file) {
+  if (file.patch) {
+    const estimate = estimateTokensForDiff(file.patch);
+    return estimate.tokens;
+  }
+  const linesChanged = file.additions + file.deletions;
+  return linesChanged * 20;
+}
+function estimateTokensForFiles(files) {
+  return files.reduce((total, file) => total + estimateTokensForFile(file), 0);
+}
+function calculateOptimalBatchSize(files, targetTokensPerBatch = 5e4, maxFilesPerBatch = 200) {
+  if (files.length === 0) {
+    return {
+      batchSize: 0,
+      reason: "No files to batch",
+      estimatedTokensPerBatch: 0,
+      batches: []
+    };
+  }
+  const filesWithSizes = files.map((file) => ({
+    file,
+    tokens: estimateTokensForFile(file)
+  }));
+  filesWithSizes.sort((a, b) => b.tokens - a.tokens);
+  const batches = [];
+  let currentBatch = [];
+  let currentBatchTokens = 0;
+  for (const { file, tokens } of filesWithSizes) {
+    if (currentBatchTokens + tokens > targetTokensPerBatch && currentBatch.length > 0) {
+      batches.push(currentBatch);
+      currentBatch = [];
+      currentBatchTokens = 0;
+    }
+    currentBatch.push(file);
+    currentBatchTokens += tokens;
+    if (currentBatch.length >= maxFilesPerBatch) {
+      batches.push(currentBatch);
+      currentBatch = [];
+      currentBatchTokens = 0;
+    }
+  }
+  if (currentBatch.length > 0) {
+    batches.push(currentBatch);
+  }
+  const avgBatchSize = batches.length > 0 ? Math.ceil(files.length / batches.length) : 0;
+  const avgTokensPerBatch = batches.length > 0 ? batches.reduce((sum, batch) => sum + estimateTokensForFiles(batch), 0) / batches.length : 0;
+  let reason;
+  if (batches.length === 1) {
+    reason = `All ${files.length} files fit in single batch (~${avgTokensPerBatch.toFixed(0)} tokens)`;
+  } else if (avgBatchSize < 10) {
+    reason = `Large files require small batches (avg ${avgBatchSize} files, ~${avgTokensPerBatch.toFixed(0)} tokens each)`;
+  } else if (avgBatchSize > 100) {
+    reason = `Small files allow large batches (avg ${avgBatchSize} files, ~${avgTokensPerBatch.toFixed(0)} tokens each)`;
+  } else {
+    reason = `Mixed file sizes, ${batches.length} batches (avg ${avgBatchSize} files, ~${avgTokensPerBatch.toFixed(0)} tokens each)`;
+  }
+  return {
+    batchSize: avgBatchSize,
+    reason,
+    estimatedTokensPerBatch: avgTokensPerBatch,
+    batches
+  };
+}
 
 // src/analysis/llm/prompt-builder.ts
 var PromptBuilder = class {
-  constructor(config) {
+  constructor(config, intensity = "standard") {
     this.config = config;
+    this.intensity = intensity;
+    const validIntensities = ["light", "standard", "thorough"];
+    if (!validIntensities.includes(intensity)) {
+      throw new Error(`Invalid intensity: ${intensity}. Must be one of: ${validIntensities.join(", ")}`);
+    }
   }
   build(pr) {
+    if (!pr || typeof pr !== "object") {
+      throw new Error("Invalid PR context: must be a valid PRContext object");
+    }
+    if (pr.diff === void 0 || pr.diff === null || typeof pr.diff !== "string") {
+      throw new Error("Invalid PR context: diff must be a string (can be empty)");
+    }
+    if (!Array.isArray(pr.files)) {
+      throw new Error("Invalid PR context: files must be an array");
+    }
     const diff = trimDiff(pr.diff, this.config.diffMaxBytes);
     const filesInDiff = /* @__PURE__ */ new Set();
     const diffGitPattern = /^diff --git a\/(.+?) b\/(.+?)$/gm;
@@ -32574,9 +33191,36 @@ var PromptBuilder = class {
     if (excludedCount > 0) {
       fileList.push(`  (${excludedCount} additional file(s) truncated)`);
     }
+    const depth = this.config.intensityPromptDepth?.[this.intensity] ?? "standard";
     const instructions = [
-      "You are a senior engineer performing a pull request review.",
-      "Identify critical, major, and minor issues. Include actionable suggestions when possible.",
+      `You are a senior engineer performing a ${this.intensity} code review.`
+    ];
+    if (depth === "detailed") {
+      instructions.push(
+        "Provide extremely thorough analysis including:",
+        "- Security implications and vulnerability patterns",
+        "- Performance considerations and optimization opportunities",
+        "- Edge cases and error handling completeness",
+        "- Architectural impact and design patterns",
+        "- Testing requirements and coverage gaps",
+        "- Documentation completeness and clarity",
+        ""
+      );
+    } else if (depth === "brief") {
+      instructions.push(
+        "Focus on high-priority issues:",
+        "- Critical bugs and security vulnerabilities",
+        "- Major logic errors that affect correctness",
+        "- Clear code quality problems",
+        ""
+      );
+    } else {
+      instructions.push(
+        "Identify critical, major, and minor issues. Include actionable suggestions when possible.",
+        ""
+      );
+    }
+    instructions.push(
       "Return JSON with findings: [{file, line, severity, title, message, suggestion?}] and optional ai_likelihood/ai_reasoning.",
       "",
       "IMPORTANT RULES:",
@@ -32592,8 +33236,74 @@ var PromptBuilder = class {
       "",
       "Diff:",
       diff
-    ];
+    );
     return instructions.join("\n");
+  }
+  /**
+   * Build review prompt with context window validation
+   *
+   * @param pr - Pull request context
+   * @param modelId - Target model ID for context window sizing
+   * @returns Prompt string and fit check result
+   */
+  buildWithValidation(pr, modelId) {
+    const prompt = this.build(pr);
+    const fitCheck = checkContextWindowFit(prompt, modelId);
+    if (!fitCheck.fits) {
+      logger.warn(
+        `Prompt for ${modelId} exceeds context window: ${fitCheck.promptTokens} tokens > ${fitCheck.availableTokens} available. ${fitCheck.recommendation}`
+      );
+    }
+    return { prompt, fitCheck };
+  }
+  /**
+   * Build optimized prompt that fits within context window
+   * Automatically trims content if needed
+   *
+   * @param pr - Pull request context
+   * @param modelId - Target model ID
+   * @returns Optimized prompt that fits in context window
+   */
+  buildOptimized(pr, modelId) {
+    let prompt = this.build(pr);
+    let fitCheck = checkContextWindowFit(prompt, modelId);
+    if (fitCheck.fits) {
+      return prompt;
+    }
+    logger.warn(
+      `Prompt exceeds context window for ${modelId}. ${fitCheck.promptTokens} tokens > ${fitCheck.availableTokens} available. Trimming diff content...`
+    );
+    const overageTokens = fitCheck.promptTokens - fitCheck.availableTokens;
+    const overageBytes = overageTokens * 4;
+    const currentDiffBytes = Buffer.byteLength(pr.diff, "utf8");
+    const targetDiffBytes = Math.max(1e3, currentDiffBytes - overageBytes);
+    logger.info(
+      `Trimming diff from ${currentDiffBytes} to ${targetDiffBytes} bytes to fit context window`
+    );
+    const trimmedPR = {
+      ...pr,
+      diff: trimDiff(pr.diff, targetDiffBytes)
+    };
+    prompt = this.build(trimmedPR);
+    fitCheck = checkContextWindowFit(prompt, modelId);
+    if (!fitCheck.fits) {
+      logger.warn(
+        `Prompt still exceeds context window after trimming. ${fitCheck.promptTokens} tokens > ${fitCheck.availableTokens} available. Provider may fail or truncate.`
+      );
+    } else {
+      logger.info(`Trimmed prompt now fits: ${fitCheck.promptTokens} tokens (${fitCheck.utilizationPercent.toFixed(0)}% utilization)`);
+    }
+    return prompt;
+  }
+  /**
+   * Estimate token count for a PR without building the full prompt
+   * Useful for pre-validation and batch sizing
+   */
+  estimateTokens(pr) {
+    const baseOverhead = 500;
+    const fileListTokens = pr.files.length * 20;
+    const diffEstimate = estimateTokensConservative(pr.diff);
+    return baseOverhead + fileListTokens + diffEstimate.tokens;
   }
 };
 
@@ -33112,6 +33822,11 @@ var LLMExecutor = class {
           const duration = Date.now() - started;
           if (isHealthy) {
             healthyProviders.push(provider);
+            healthCheckResults.push({
+              name: provider.name,
+              status: "success",
+              durationSeconds: duration / 1e3
+            });
             logger.info(`\u2713 Provider ${provider.name} health check passed (${duration}ms)`);
           } else {
             const result = {
@@ -33145,14 +33860,14 @@ var LLMExecutor = class {
     logger.info(`Health checks complete: ${healthyProviders.length}/${providers.length} provider(s) are responsive`);
     return { healthy: healthyProviders, healthCheckResults };
   }
-  async execute(providers, prompt) {
+  async execute(providers, prompt, timeoutMs) {
     const queue = createQueue(this.config.providerMaxParallel);
     const results = [];
     for (const provider of providers) {
       queue.add(async () => {
         const started = Date.now();
-        const timeoutMs = this.config.runTimeoutSeconds * 1e3;
-        const runner = async () => provider.review(prompt, timeoutMs);
+        const actualTimeoutMs = timeoutMs ?? this.config.runTimeoutSeconds * 1e3;
+        const runner = async () => provider.review(prompt, actualTimeoutMs);
         try {
           const result = await withRetry(runner, {
             retries: Math.max(0, this.config.providerRetries - 1),
@@ -33703,6 +34418,41 @@ var CacheStorage = class {
       this.releaseLock(key);
     }
   }
+  /**
+   * Delete all cache entries matching a given prefix
+   * Useful for clearing PR-specific or feature-specific caches
+   */
+  async deleteByPrefix(prefix) {
+    try {
+      await fs5.mkdir(this.baseDir, { recursive: true });
+    } catch (error2) {
+      logger.error(`Failed to create cache directory ${this.baseDir}`, error2);
+      return 0;
+    }
+    try {
+      const files = await fs5.readdir(this.baseDir);
+      const matchingFiles = files.filter((file) => {
+        const key = file.replace(/\.json$/, "");
+        return key.startsWith(prefix);
+      });
+      let deletedCount = 0;
+      for (const file of matchingFiles) {
+        try {
+          await fs5.unlink(path5.join(this.baseDir, file));
+          deletedCount++;
+        } catch (error2) {
+          logger.warn(`Failed to delete cache file ${file}`, error2);
+        }
+      }
+      if (deletedCount > 0) {
+        logger.info(`Deleted ${deletedCount} cache entries with prefix: ${prefix}`);
+      }
+      return deletedCount;
+    } catch (error2) {
+      logger.warn(`Failed to delete cache entries by prefix ${prefix}`, error2);
+      return 0;
+    }
+  }
   async acquireLock(key) {
     const existingLock = this.locks.get(key);
     if (existingLock) {
@@ -33727,37 +34477,101 @@ var CacheStorage = class {
 };
 
 // src/cache/key-builder.ts
-var import_crypto = __toESM(require("crypto"));
-function buildCacheKey(pr) {
-  const hash = import_crypto.default.createHash("sha1").update(`${pr.baseSha}:${pr.headSha}`).digest("hex").slice(0, 12);
-  return `mpr-${hash}`;
+var import_crypto = require("crypto");
+function buildCacheKey(pr, configHash) {
+  const hash = (0, import_crypto.createHash)("sha1").update(`${pr.baseSha}:${pr.headSha}`).digest("hex").slice(0, 12);
+  const suffix = configHash ? `-${configHash}` : "";
+  return `mpr-${hash}${suffix}`;
+}
+function hashConfig(config) {
+  const relevantConfig = {
+    // Analysis toggles
+    enableAstAnalysis: config.enableAstAnalysis,
+    enableSecurity: config.enableSecurity,
+    enableTestHints: config.enableTestHints,
+    enableAiDetection: config.enableAiDetection,
+    // Graph analysis config
+    graphEnabled: config.graphEnabled,
+    graphMaxDepth: config.graphMaxDepth,
+    // Triviality detection affects which files are analyzed
+    skipTrivialChanges: config.skipTrivialChanges,
+    trivialPatterns: config.trivialPatterns,
+    // Inline comment filtering
+    inlineMinSeverity: config.inlineMinSeverity,
+    inlineMinAgreement: config.inlineMinAgreement,
+    // Intensity affects prompt depth
+    pathBasedIntensity: config.pathBasedIntensity,
+    pathIntensityPatterns: config.pathIntensityPatterns,
+    pathDefaultIntensity: config.pathDefaultIntensity
+  };
+  const hash = (0, import_crypto.createHash)("sha256").update(JSON.stringify(relevantConfig)).digest("hex");
+  return hash.slice(0, 16);
+}
+
+// src/cache/version.ts
+var CACHE_VERSION = 4;
+function versionCache(data) {
+  return {
+    version: CACHE_VERSION,
+    timestamp: Date.now(),
+    data
+  };
+}
+function unversionCache(cached, maxAge) {
+  try {
+    const parsed = JSON.parse(cached);
+    if (typeof parsed !== "object" || parsed === null) {
+      return null;
+    }
+    if (typeof parsed.version !== "number" || typeof parsed.timestamp !== "number") {
+      return null;
+    }
+    if (!("data" in parsed) || parsed.data === void 0) {
+      return null;
+    }
+    if (parsed.version !== CACHE_VERSION) {
+      return null;
+    }
+    if (maxAge && Date.now() - parsed.timestamp > maxAge) {
+      return null;
+    }
+    return parsed.data;
+  } catch (error2) {
+    return null;
+  }
 }
 
 // src/cache/manager.ts
+var DEFAULT_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1e3;
 var CacheManager = class {
-  constructor(storage = new CacheStorage()) {
+  constructor(storage = new CacheStorage(), config) {
     this.storage = storage;
+    this.config = config;
   }
+  TTL_MS = DEFAULT_CACHE_TTL_MS;
   async load(pr) {
-    const key = buildCacheKey(pr);
+    const configHash = this.config ? hashConfig(this.config) : void 0;
+    const key = buildCacheKey(pr, configHash);
     const raw = await this.storage.read(key);
     if (!raw) return null;
-    try {
-      const parsed = JSON.parse(raw);
-      logger.info(`Loaded cached findings for ${key}`);
-      return parsed.findings;
-    } catch (error2) {
-      logger.warn("Failed to parse cache payload", error2);
+    const payload = unversionCache(raw, this.TTL_MS);
+    if (!payload) {
+      logger.debug(`Cache invalid or expired for ${key}`);
       return null;
     }
+    logger.info(`Cache hit for ${key}: ${payload.findings.length} findings`);
+    return payload.findings;
   }
   async save(pr, review) {
-    const key = buildCacheKey(pr);
+    const configHash = this.config ? hashConfig(this.config) : void 0;
+    const key = buildCacheKey(pr, configHash);
     const payload = {
       findings: review.findings,
       timestamp: Date.now()
     };
-    await this.storage.write(key, JSON.stringify(payload));
+    const versioned = versionCache(payload);
+    await this.storage.write(key, JSON.stringify(versioned));
+    logger.info(`Cached ${review.findings.length} findings for ${key}`);
   }
 };
 
@@ -34478,10 +35292,94 @@ ${comment.body.substring(0, 200)}...`);
 // src/github/client.ts
 var core2 = __toESM(require_core());
 var github = __toESM(require_github());
+
+// src/github/rate-limit.ts
+var GitHubRateLimitTracker = class {
+  status = null;
+  /**
+   * Update rate limit status from response headers
+   */
+  updateFromHeaders(headers) {
+    const limit = headers["x-ratelimit-limit"];
+    const remaining = headers["x-ratelimit-remaining"];
+    const reset = headers["x-ratelimit-reset"];
+    const used = headers["x-ratelimit-used"];
+    const resetTime = headers["x-github-ratelimit-resettime"];
+    const tokenExpiration = headers["github-authentication-token-expiration"];
+    if (limit && remaining && reset) {
+      this.status = {
+        limit: parseInt(limit, 10),
+        remaining: parseInt(remaining, 10),
+        reset: parseInt(reset, 10),
+        used: used ? parseInt(used, 10) : 0,
+        resetTime,
+        tokenExpiration
+      };
+      logger.debug(
+        `GitHub rate limit: ${this.status.remaining}/${this.status.limit} remaining (resets at ${this.status.resetTime || new Date(this.status.reset * 1e3).toISOString()})` + (this.status.tokenExpiration ? ` [token expires: ${this.status.tokenExpiration}]` : "")
+      );
+      if (this.status.remaining < 100) {
+        logger.warn(
+          `GitHub API rate limit low: ${this.status.remaining} requests remaining`
+        );
+      }
+      if (this.status.remaining === 0) {
+        const resetTime2 = new Date(this.status.reset * 1e3);
+        const waitSeconds = Math.ceil((this.status.reset * 1e3 - Date.now()) / 1e3);
+        logger.error(
+          `GitHub API rate limit exceeded. Resets at ${resetTime2.toISOString()} (in ${waitSeconds} seconds)`
+        );
+      }
+    }
+  }
+  /**
+   * Get current rate limit status
+   */
+  getStatus() {
+    return this.status;
+  }
+  /**
+   * Check if we're approaching rate limit (< 10% remaining)
+   */
+  isApproachingLimit() {
+    if (!this.status) return false;
+    const percentRemaining = this.status.remaining / this.status.limit * 100;
+    return percentRemaining < 10;
+  }
+  /**
+   * Check if rate limit is exceeded
+   */
+  isExceeded() {
+    if (!this.status) return false;
+    return this.status.remaining === 0;
+  }
+  /**
+   * Calculate wait time until rate limit resets (in milliseconds)
+   */
+  getWaitTimeMs() {
+    if (!this.status) return 0;
+    const now = Date.now();
+    const resetMs = this.status.reset * 1e3;
+    return Math.max(0, resetMs - now);
+  }
+  /**
+   * Wait for rate limit to reset
+   */
+  async waitForReset() {
+    if (!this.isExceeded()) return;
+    const waitMs = this.getWaitTimeMs();
+    if (waitMs === 0) return;
+    logger.info(`Waiting ${Math.ceil(waitMs / 1e3)} seconds for GitHub rate limit to reset...`);
+    await new Promise((resolve2) => setTimeout(resolve2, waitMs + 1e3));
+  }
+};
+
+// src/github/client.ts
 var GitHubClient = class {
   octokit;
   owner;
   repo;
+  rateLimitTracker = new GitHubRateLimitTracker();
   constructor(token) {
     this.octokit = github.getOctokit(token);
     let repoEnv = process.env.GITHUB_REPOSITORY;
@@ -34498,12 +35396,73 @@ var GitHubClient = class {
     core2.debug(`GitHub client initialized for ${this.owner}/${this.repo}`);
   }
   /**
+   * Get current GitHub API rate limit status
+   */
+  getRateLimitStatus() {
+    return this.rateLimitTracker.getStatus();
+  }
+  /**
+   * Check if we're approaching rate limit and log warning
+   */
+  checkRateLimitStatus() {
+    if (this.rateLimitTracker.isApproachingLimit()) {
+      const status = this.rateLimitTracker.getStatus();
+      core2.warning(
+        `Approaching GitHub API rate limit: ${status?.remaining}/${status?.limit} remaining`
+      );
+    }
+  }
+  /**
+   * Implement exponential backoff when approaching rate limit
+   * Returns delay in milliseconds to wait before making next API call
+   */
+  calculateBackoffDelay() {
+    const status = this.rateLimitTracker.getStatus();
+    if (!status) return 0;
+    const percentRemaining = status.remaining / status.limit * 100;
+    if (percentRemaining > 25) {
+      return 0;
+    }
+    if (percentRemaining > 10) {
+      return 100;
+    } else if (percentRemaining > 5) {
+      return 500;
+    } else if (percentRemaining > 1) {
+      return 1e3;
+    } else {
+      return 2e3;
+    }
+  }
+  /**
+   * Throttle requests when approaching rate limit
+   */
+  async throttleIfNeeded() {
+    const delay = this.calculateBackoffDelay();
+    if (delay > 0) {
+      const status = this.rateLimitTracker.getStatus();
+      core2.debug(
+        `Throttling GitHub API request (${delay}ms delay, ${status?.remaining} requests remaining)`
+      );
+      await new Promise((resolve2) => setTimeout(resolve2, delay));
+    }
+  }
+  /**
+   * Wait for rate limit to reset if exceeded
+   */
+  async handleRateLimit() {
+    if (this.rateLimitTracker.isExceeded()) {
+      await this.rateLimitTracker.waitForReset();
+    }
+  }
+  /**
    * Fetch file content from a specific ref (commit SHA, branch, or tag)
    * @param filePath - Path to the file in the repository
    * @param ref - Git ref (commit SHA, branch name, or tag)
    * @returns File content as string, or null if file doesn't exist/inaccessible
    */
   async getFileContent(filePath, ref) {
+    await this.handleRateLimit();
+    await this.throttleIfNeeded();
     try {
       const response = await this.octokit.rest.repos.getContent({
         owner: this.owner,
@@ -34511,6 +35470,13 @@ var GitHubClient = class {
         path: filePath,
         ref
       });
+      if (response.headers && typeof response.headers === "object" && !Array.isArray(response.headers)) {
+        const headers = {};
+        for (const [key, value] of Object.entries(response.headers)) {
+          headers[key] = value !== void 0 ? String(value) : void 0;
+        }
+        this.rateLimitTracker.updateFromHeaders(headers);
+      }
       if ("content" in response.data && !Array.isArray(response.data)) {
         if (!response.data.content || response.data.content === "" || response.data.encoding === "none") {
           core2.debug(`File content empty or encoding 'none': ${filePath}`);
@@ -34549,7 +35515,8 @@ var MarkdownFormatterV2 = class {
       lines.push(this.generateReleaseNotes(review));
       lines.push("");
     }
-    if (review.findings.length > 0) {
+    const hasFindings = review.findings.length > 0;
+    if (hasFindings) {
       lines.push("## Findings");
       lines.push("");
       const critical = review.findings.filter((f) => f.severity === "critical");
@@ -34565,9 +35532,10 @@ var MarkdownFormatterV2 = class {
         lines.push(this.formatSeveritySection("\u{1F535} Minor", minor, "minor"));
       }
     } else {
+      const allClearMessage = this.generateAllClearMessage(review, { suppressRepeat: true });
       lines.push("## All Clear!");
       lines.push("");
-      lines.push("> No issues found. Great job!");
+      lines.push(`> ${allClearMessage}`);
       lines.push("");
     }
     if (review.actionItems && review.actionItems.length > 0) {
@@ -34599,6 +35567,9 @@ var MarkdownFormatterV2 = class {
   generatePRSummary(review) {
     const { metrics, findings } = review;
     if (findings.length === 0) {
+      if (metrics.providersSuccess === 0) {
+        return "LLM review skipped: no healthy providers were available. Static checks did not find issues.";
+      }
       return "This PR looks great! No issues detected by the automated review.";
     }
     const parts = [];
@@ -34615,6 +35586,13 @@ var MarkdownFormatterV2 = class {
     const filesReviewed = new Set(findings.map((f) => f.file)).size;
     const context2 = `Found across ${filesReviewed} file${filesReviewed > 1 ? "s" : ""}.`;
     return `${summary}. ${context2}`;
+  }
+  generateAllClearMessage(review, options = {}) {
+    const { metrics } = review;
+    if (metrics.providersSuccess === 0) {
+      return options.suppressRepeat ? "LLM analysis skipped because no providers were healthy." : "LLM analysis skipped because no providers were healthy. Static checks found no issues.";
+    }
+    return "No issues found. Great job!";
   }
   hasSignificantChanges(review) {
     return review.metrics.critical > 0 || review.metrics.major > 0;
@@ -35309,7 +36287,7 @@ function resolveImportPath(importerFile, moduleSpecifier) {
   }
   return moduleSpecifier;
 }
-var CodeGraph = class {
+var CodeGraph = class _CodeGraph {
   // file → symbols defined
   constructor(files = [], buildTime = 0) {
     this.files = files;
@@ -35339,22 +36317,48 @@ var CodeGraph = class {
    * Remove all data for a file from the graph
    * Used when re-analyzing a file to avoid stale data
    */
+  /**
+   * Remove a file and all its relationships from the graph
+   *
+   * PERFORMANCE: Optimized to O(E) where E is the number of edges,
+   * using Sets for O(1) lookups instead of O(n) array filtering.
+   *
+   * CORRECTNESS: Ensures complete cleanup of:
+   * - Definitions (from fileSymbols and definitions map)
+   * - Imports and exports
+   * - Call edges (both directions: calls and callers)
+   * - Non-definition symbols (e.g., <top>, anonymous functions)
+   */
   removeFile(file) {
     const symbolNames = this.fileSymbols.get(file) || [];
+    const filePrefix = `${file}:`;
+    const symbolsToRemove = /* @__PURE__ */ new Set();
     for (const name of symbolNames) {
-      this.definitions.delete(`${file}:${name}`);
+      symbolsToRemove.add(`${file}:${name}`);
+    }
+    for (const [caller] of this.calls) {
+      if (caller.startsWith(filePrefix)) {
+        symbolsToRemove.add(caller);
+      }
+    }
+    for (const [callee] of this.callers) {
+      if (callee.startsWith(filePrefix)) {
+        symbolsToRemove.add(callee);
+      }
     }
     this.fileSymbols.delete(file);
     this.imports.delete(file);
     this.exports.delete(file);
-    for (const symbolName of symbolNames) {
-      const qualifiedSymbol = `${file}:${symbolName}`;
-      const callees = this.calls.get(qualifiedSymbol);
+    for (const symbol of symbolsToRemove) {
+      this.definitions.delete(symbol);
+    }
+    for (const symbol of symbolsToRemove) {
+      const callees = this.calls.get(symbol);
       if (callees) {
         for (const callee of callees) {
           const callerList = this.callers.get(callee);
           if (callerList) {
-            const filtered = callerList.filter((c) => c !== qualifiedSymbol);
+            const filtered = callerList.filter((c) => !symbolsToRemove.has(c));
             if (filtered.length > 0) {
               this.callers.set(callee, filtered);
             } else {
@@ -35362,9 +36366,23 @@ var CodeGraph = class {
             }
           }
         }
-        this.calls.delete(qualifiedSymbol);
       }
-      this.callers.delete(qualifiedSymbol);
+      const callersToThis = this.callers.get(symbol);
+      if (callersToThis) {
+        for (const caller of callersToThis) {
+          const calleeList = this.calls.get(caller);
+          if (calleeList) {
+            const filtered = calleeList.filter((c) => !symbolsToRemove.has(c));
+            if (filtered.length > 0) {
+              this.calls.set(caller, filtered);
+            } else {
+              this.calls.delete(caller);
+            }
+          }
+        }
+      }
+      this.calls.delete(symbol);
+      this.callers.delete(symbol);
     }
   }
   /**
@@ -35582,14 +36600,105 @@ var CodeGraph = class {
   /**
    * Copy graph data from another CodeGraph instance
    * Type-safe alternative to direct private field assignment
+   * Deep copies all arrays to prevent shared mutable state
    */
   copyFrom(other) {
     this.definitions = new Map(other.definitions);
-    this.imports = new Map(other.imports.entries());
-    this.exports = new Map(other.exports.entries());
-    this.calls = new Map(other.calls.entries());
-    this.callers = new Map(other.callers.entries());
-    this.fileSymbols = new Map(other.fileSymbols.entries());
+    this.imports = new Map(
+      Array.from(other.imports.entries()).map(([k, v]) => [k, [...v]])
+    );
+    this.exports = new Map(
+      Array.from(other.exports.entries()).map(([k, v]) => [k, [...v]])
+    );
+    this.calls = new Map(
+      Array.from(other.calls.entries()).map(([k, v]) => [k, [...v]])
+    );
+    this.callers = new Map(
+      Array.from(other.callers.entries()).map(([k, v]) => [k, [...v]])
+    );
+    this.fileSymbols = new Map(
+      Array.from(other.fileSymbols.entries()).map(([k, v]) => [k, [...v]])
+    );
+  }
+  /**
+   * Create a deep clone of the graph for incremental updates
+   * All arrays are deep copied to prevent shared mutable state
+   */
+  clone() {
+    const cloned = new _CodeGraph([...this.files], this.buildTime);
+    cloned.copyFrom(this);
+    return cloned;
+  }
+  /**
+   * Serialize graph to JSON for caching
+   * Deep copies all arrays to prevent mutations from affecting the graph
+   */
+  serialize() {
+    return {
+      files: [...this.files],
+      // Copy files array
+      buildTime: this.buildTime,
+      definitions: Array.from(this.definitions.entries()),
+      // Deep copy array values to prevent shared mutable references
+      imports: Array.from(this.imports.entries()).map(([k, v]) => [k, [...v]]),
+      exports: Array.from(this.exports.entries()).map(([k, v]) => [k, [...v]]),
+      calls: Array.from(this.calls.entries()).map(([k, v]) => [k, [...v]]),
+      callers: Array.from(this.callers.entries()).map(([k, v]) => [k, [...v]]),
+      fileSymbols: Array.from(this.fileSymbols.entries()).map(([k, v]) => [k, [...v]])
+    };
+  }
+  /**
+   * Deserialize graph from JSON
+   * Deep copies all arrays to ensure the graph owns its own memory
+   */
+  static deserialize(data) {
+    if (!data || typeof data !== "object") {
+      throw new Error("Invalid graph data: expected object");
+    }
+    if (!Array.isArray(data.files)) {
+      throw new Error("Invalid graph data: files must be an array");
+    }
+    if (typeof data.buildTime !== "number") {
+      throw new Error("Invalid graph data: buildTime must be a number");
+    }
+    const mapFields = ["definitions", "imports", "exports", "calls", "callers", "fileSymbols"];
+    for (const field of mapFields) {
+      if (!Array.isArray(data[field])) {
+        throw new Error(`Invalid graph data: ${field} must be an array`);
+      }
+    }
+    if (!Array.isArray(data.definitions)) {
+      throw new Error("Invalid graph data: definitions must be an array");
+    }
+    for (const [key, def] of data.definitions) {
+      if (!def || typeof def !== "object") {
+        throw new Error(`Invalid definition for key ${key}: must be an object`);
+      }
+      if (typeof def.name !== "string" || !def.name) {
+        throw new Error(`Invalid definition for key ${key}: name must be a non-empty string`);
+      }
+      if (typeof def.file !== "string" || !def.file) {
+        throw new Error(`Invalid definition for key ${key}: file must be a non-empty string`);
+      }
+      if (typeof def.line !== "number" || def.line < 1) {
+        throw new Error(`Invalid definition for key ${key}: line must be a positive number (>= 1)`);
+      }
+      const validTypes = ["function", "class", "variable", "type", "interface"];
+      if (!validTypes.includes(def.type)) {
+        throw new Error(`Invalid definition for key ${key}: type must be one of ${validTypes.join(", ")}`);
+      }
+      if (typeof def.exported !== "boolean") {
+        throw new Error(`Invalid definition for key ${key}: exported must be a boolean`);
+      }
+    }
+    const graph = new _CodeGraph([...data.files], data.buildTime);
+    graph.definitions = new Map(data.definitions);
+    graph.imports = new Map(data.imports.map(([k, v]) => [k, [...v]]));
+    graph.exports = new Map(data.exports.map(([k, v]) => [k, [...v]]));
+    graph.calls = new Map(data.calls.map(([k, v]) => [k, [...v]]));
+    graph.callers = new Map(data.callers.map(([k, v]) => [k, [...v]]));
+    graph.fileSymbols = new Map(data.fileSymbols.map(([k, v]) => [k, [...v]]));
+    return graph;
   }
 };
 var CodeGraphBuilder = class {
@@ -36072,38 +37181,288 @@ var PromptGenerator = class {
   }
 };
 
+// src/utils/sanitize.ts
+function encodeURIComponentSafe(value) {
+  const encoded = encodeURIComponent(value);
+  const normalized = encoded.replace(/[+]/g, "_").replace(/%/g, "_").replace(/[<>:"|?*]/g, "_");
+  const MAX_PREFIX = 120;
+  const prefix = normalized.length > MAX_PREFIX ? normalized.slice(0, MAX_PREFIX) : normalized;
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = hash * 16777619 >>> 0;
+  }
+  const hashSuffix = hash.toString(16).padStart(8, "0");
+  return `${prefix}-${hashSuffix}`;
+}
+
+// src/providers/circuit-breaker.ts
+var CircuitBreaker = class _CircuitBreaker {
+  // Track storage health
+  constructor(storage = new CacheStorage(), options = {}) {
+    this.storage = storage;
+    this.failureThreshold = options.failureThreshold ?? _CircuitBreaker.DEFAULT_FAILURE_THRESHOLD;
+    this.openDurationMs = options.openDurationMs ?? _CircuitBreaker.DEFAULT_OPEN_DURATION_MS;
+  }
+  // Default configuration constants
+  static DEFAULT_FAILURE_THRESHOLD = 3;
+  static DEFAULT_OPEN_DURATION_MS = 5 * 60 * 1e3;
+  // 5 minutes
+  static LOCK_CLEANUP_MS = 1e4;
+  // 10 seconds (reduced for faster recovery)
+  failureThreshold;
+  openDurationMs;
+  // Lock map for concurrency control - automatically cleaned up via timer + finally block
+  // Memory leak prevention: locks are removed after LOCK_CLEANUP_MS or immediately after completion
+  locks = /* @__PURE__ */ new Map();
+  // In-memory fallback for when storage is unavailable
+  // Ensures circuit breaker continues working even if filesystem/cache fails
+  inMemoryState = /* @__PURE__ */ new Map();
+  storageAvailable = true;
+  /**
+   * Get the current number of active locks (for monitoring/debugging)
+   * Used to detect potential lock accumulation issues
+   */
+  getActiveLockCount() {
+    return this.locks.size;
+  }
+  /**
+   * Check if circuit is open (provider should be skipped)
+   * Also handles state transitions: OPEN → HALF_OPEN after cooldown
+   *
+   * Returns:
+   * - true: Circuit is OPEN or HALF_OPEN with probe in flight (block request)
+   * - false: Circuit is CLOSED or HALF_OPEN without probe (allow request)
+   *
+   * Side effects:
+   * - Transitions OPEN → HALF_OPEN if cooldown expired
+   * - Sets probeInFlight flag when allowing half-open probe
+   */
+  async isOpen(providerId) {
+    return this.withLock(providerId, async () => {
+      let state = await this.load(providerId);
+      if (state.state === "open") {
+        const expired = state.openedAt && Date.now() - state.openedAt > this.openDurationMs;
+        if (expired) {
+          state = { state: "half_open", failures: 0, probeInFlight: false };
+          await this.setState(providerId, state);
+          logger.debug(`Circuit transitioned to half-open for ${providerId} after cooldown`);
+        }
+        if (state.state === "open") {
+          return true;
+        }
+      }
+      if (state.state === "half_open") {
+        if (state.probeInFlight) {
+          return true;
+        }
+        await this.setState(providerId, { ...state, probeInFlight: true });
+        return false;
+      }
+      return false;
+    });
+  }
+  /**
+   * Record a successful operation
+   * Transitions any state → CLOSED and resets failure counter
+   *
+   * Call this after:
+   * - Successful health check
+   * - Successful API request
+   * - Any operation indicating the provider is healthy
+   */
+  async recordSuccess(providerId) {
+    await this.withLock(providerId, async () => {
+      const state = await this.load(providerId);
+      await this.setState(providerId, {
+        state: "closed",
+        failures: 0,
+        openedAt: void 0,
+        probeInFlight: false
+      });
+      if (state.state !== "closed") {
+        logger.info(`Circuit closed for ${providerId} after successful recovery (was ${state.state})`);
+      }
+    });
+  }
+  /**
+   * Record a failed operation
+   * Increments failure counter and opens circuit if threshold reached
+   *
+   * State transitions:
+   * - CLOSED: failures++ → if >= threshold → OPEN
+   * - HALF_OPEN: failures++ → OPEN (probe failed, provider still unhealthy)
+   *
+   * Call this after:
+   * - Failed health check
+   * - API timeout or error
+   * - Any operation indicating the provider is unhealthy
+   */
+  async recordFailure(providerId) {
+    await this.withLock(providerId, async () => {
+      const state = await this.load(providerId);
+      const failures = state.failures + 1;
+      if (state.state === "half_open") {
+        await this.setState(providerId, {
+          state: "open",
+          failures,
+          openedAt: Date.now(),
+          probeInFlight: false
+        });
+        logger.warn(`Circuit re-opened for ${providerId} after half-open probe failed (${failures} total failures)`);
+        return;
+      }
+      if (failures >= this.failureThreshold) {
+        await this.setState(providerId, { state: "open", failures, openedAt: Date.now(), probeInFlight: false });
+        logger.warn(
+          `Circuit opened for ${providerId} after ${failures} consecutive failures (threshold: ${this.failureThreshold}, cooldown: ${this.openDurationMs}ms)`
+        );
+      } else {
+        await this.setState(providerId, { state: "closed", failures });
+        logger.debug(`Circuit failure recorded for ${providerId}: ${failures}/${this.failureThreshold}`);
+      }
+    });
+  }
+  async load(providerId) {
+    const key = this.key(providerId);
+    if (!this.storageAvailable && this.inMemoryState.has(key)) {
+      logger.debug(`Using in-memory state for ${providerId} (storage unavailable)`);
+      return this.inMemoryState.get(key);
+    }
+    try {
+      const raw = await this.storage.read(key);
+      if (!raw) {
+        if (this.inMemoryState.has(key)) {
+          return this.inMemoryState.get(key);
+        }
+        return { state: "closed", failures: 0, probeInFlight: false };
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        this.inMemoryState.set(key, parsed);
+        this.storageAvailable = true;
+        return parsed;
+      } catch (parseError) {
+        logger.warn(`Failed to parse circuit state for ${providerId}`, parseError);
+        if (this.inMemoryState.has(key)) {
+          return this.inMemoryState.get(key);
+        }
+        return { state: "closed", failures: 0, probeInFlight: false };
+      }
+    } catch (storageError) {
+      this.storageAvailable = false;
+      logger.warn(`Storage read failed for circuit ${providerId}, using in-memory fallback`, storageError);
+      if (this.inMemoryState.has(key)) {
+        return this.inMemoryState.get(key);
+      }
+      return { state: "closed", failures: 0, probeInFlight: false };
+    }
+  }
+  async setState(providerId, state) {
+    const key = this.key(providerId);
+    this.inMemoryState.set(key, state);
+    if (this.storageAvailable) {
+      try {
+        await this.storage.write(key, JSON.stringify(state));
+      } catch (error2) {
+        this.storageAvailable = false;
+        logger.error(
+          `Storage write failed for circuit ${providerId}, continuing with in-memory state only`,
+          error2
+        );
+      }
+    }
+  }
+  key(providerId) {
+    return `circuit-breaker-${encodeURIComponentSafe(providerId)}`;
+  }
+  /**
+   * Serialize concurrent access to circuit breaker state using a promise chain lock.
+   * This prevents race conditions when multiple operations try to update the same provider's state.
+   *
+   * The lock implementation uses a promise chain where each operation waits for the previous
+   * operation to complete before executing. The finally block ensures the lock is always
+   * released and cleaned up, even if the operation throws an error.
+   */
+  withLock(providerId, fn) {
+    const lockKey = this.key(providerId);
+    const previous = this.locks.get(lockKey)?.catch(() => void 0) ?? Promise.resolve();
+    let release;
+    const current = new Promise((resolve2) => release = resolve2);
+    const tail = previous.then(() => current);
+    this.locks.set(lockKey, tail);
+    const cleanupTimer = setTimeout(() => {
+      if (this.locks.get(lockKey) === tail) {
+        logger.warn(`Lock cleanup triggered for ${lockKey}`);
+        this.locks.delete(lockKey);
+      }
+    }, _CircuitBreaker.LOCK_CLEANUP_MS);
+    const run2 = (async () => {
+      try {
+        await previous;
+        return await fn();
+      } finally {
+        clearTimeout(cleanupTimer);
+        release();
+        if (this.locks.get(lockKey) === tail) {
+          this.locks.delete(lockKey);
+        }
+      }
+    })();
+    return run2;
+  }
+};
+
 // src/providers/reliability-tracker.ts
 var ReliabilityTracker = class _ReliabilityTracker {
-  constructor(storage = new CacheStorage(), minAttempts = _ReliabilityTracker.MIN_ATTEMPTS_FOR_SCORING) {
+  constructor(storage = new CacheStorage(), minAttempts = _ReliabilityTracker.MIN_ATTEMPTS_FOR_SCORING, circuitBreaker = new CircuitBreaker(storage)) {
     this.storage = storage;
     this.minAttempts = minAttempts;
+    this.circuitBreaker = circuitBreaker;
   }
   static CACHE_KEY = "provider-reliability-data";
   static AGGREGATION_INTERVAL_MS = 24 * 60 * 60 * 1e3;
   // 1 day
   static MIN_ATTEMPTS_FOR_SCORING = 5;
-  // Reliability score weights
+  static MAX_RESULTS_HISTORY = 1e3;
+  // Prevent unbounded growth
+  static MAX_FALSE_POSITIVE_HISTORY = 500;
+  // Reliability score weights (must sum to 1.0)
+  // These weights determine the relative importance of each factor in the overall score
   static WEIGHTS = {
     successRate: 0.5,
-    // 50% - Most important
+    // 50% - Most critical: did the provider complete successfully?
     falsePositiveRate: 0.3,
-    // 30% - Very important
+    // 30% - Very important: does it produce accurate results?
     responseTime: 0.2
-    // 20% - Nice to have
+    // 20% - Nice to have: is it fast?
   };
   /**
    * Record a provider execution result
    */
   async recordResult(providerId, success, durationMs, error2) {
     const data = await this.loadData();
+    const safeDurationMs = Number.isFinite(durationMs) && durationMs >= 0 ? durationMs : void 0;
     const result = {
       providerId,
       success,
       timestamp: Date.now(),
-      durationMs,
+      durationMs: safeDurationMs,
       error: error2
     };
     data.results.push(result);
+    if (data.results.length > _ReliabilityTracker.MAX_RESULTS_HISTORY) {
+      const excess = data.results.length - _ReliabilityTracker.MAX_RESULTS_HISTORY;
+      data.results.splice(0, excess);
+      logger.debug(`Trimmed ${excess} old reliability results to prevent unbounded growth`);
+    }
+    if (this.circuitBreaker) {
+      if (success) {
+        await this.circuitBreaker.recordSuccess(providerId);
+      } else {
+        await this.circuitBreaker.recordFailure(providerId);
+      }
+    }
     const timeSinceAggregation = Date.now() - data.lastAggregation;
     if (timeSinceAggregation > _ReliabilityTracker.AGGREGATION_INTERVAL_MS) {
       await this.aggregateStats(data);
@@ -36125,17 +37484,24 @@ var ReliabilityTracker = class _ReliabilityTracker {
       category
     };
     data.falsePositives.push(report);
+    if (data.falsePositives.length > _ReliabilityTracker.MAX_FALSE_POSITIVE_HISTORY) {
+      const excess = data.falsePositives.length - _ReliabilityTracker.MAX_FALSE_POSITIVE_HISTORY;
+      data.falsePositives.splice(0, excess);
+      logger.debug(`Trimmed ${excess} old false positive reports`);
+    }
     await this.saveData(data);
     logger.info(`Recorded false positive from provider ${providerId} (finding: ${findingId})`);
   }
   /**
    * Get reliability score for a provider (0-1, higher is better)
+   * Returns default neutral score (0.5) for providers with insufficient history
    */
   async getReliabilityScore(providerId) {
     const data = await this.loadData();
     const stats = data.stats[providerId];
+    const DEFAULT_SCORE = 0.5;
     if (!stats || stats.totalAttempts < this.minAttempts) {
-      return 0.5;
+      return DEFAULT_SCORE;
     }
     return stats.reliabilityScore;
   }
@@ -36188,6 +37554,15 @@ var ReliabilityTracker = class _ReliabilityTracker {
     return recommended;
   }
   /**
+   * Check whether a provider's circuit is open.
+   */
+  async isCircuitOpen(providerId) {
+    if (!this.circuitBreaker) {
+      return false;
+    }
+    return this.circuitBreaker.isOpen(providerId);
+  }
+  /**
    * Aggregate results and calculate statistics
    */
   async aggregateStats(data) {
@@ -36225,11 +37600,21 @@ var ReliabilityTracker = class _ReliabilityTracker {
     const failureCount = results.filter((r) => !r.success).length;
     const totalAttempts = results.length;
     const successRate = totalAttempts > 0 ? successCount / totalAttempts : 0;
-    const durationsWithValues = results.filter((r) => r.durationMs !== void 0);
-    const averageDurationMs = durationsWithValues.length > 0 ? durationsWithValues.reduce((sum, r) => sum + (r.durationMs || 0), 0) / durationsWithValues.length : 0;
+    const durationsWithValues = results.filter((r) => Number.isFinite(r.durationMs));
+    const averageDurationMs = durationsWithValues.length > 0 ? durationsWithValues.reduce((sum, r) => sum + r.durationMs, 0) / durationsWithValues.length : 0;
     const falsePositiveCount = falsePositives.length;
     const falsePositiveRate = totalAttempts > 0 ? falsePositiveCount / totalAttempts : 0;
-    const responseTimeScore = Math.max(0, Math.min(1, 1 - (averageDurationMs - 500) / 4500));
+    const EXCELLENT_RESPONSE_MS = 500;
+    const POOR_RESPONSE_MS = 5e3;
+    const responseTimeRange = POOR_RESPONSE_MS - EXCELLENT_RESPONSE_MS;
+    let responseTimeScore;
+    if (averageDurationMs <= EXCELLENT_RESPONSE_MS) {
+      responseTimeScore = 1;
+    } else if (averageDurationMs >= POOR_RESPONSE_MS) {
+      responseTimeScore = 0;
+    } else {
+      responseTimeScore = 1 - (averageDurationMs - EXCELLENT_RESPONSE_MS) / responseTimeRange;
+    }
     const reliabilityScore = _ReliabilityTracker.WEIGHTS.successRate * successRate + _ReliabilityTracker.WEIGHTS.falsePositiveRate * (1 - falsePositiveRate) + _ReliabilityTracker.WEIGHTS.responseTime * responseTimeScore;
     return {
       providerId,
@@ -36541,7 +37926,7 @@ var MetricsCollector = class _MetricsCollector {
 // src/plugins/plugin-loader.ts
 var fs6 = __toESM(require("fs/promises"));
 var path7 = __toESM(require("path"));
-var crypto3 = __toESM(require("crypto"));
+var crypto2 = __toESM(require("crypto"));
 var import_url = require("url");
 var PluginLoader = class {
   // provider name -> plugin name
@@ -36696,7 +38081,7 @@ var PluginLoader = class {
         throw new Error("Manifest missing valid sha256 checksum");
       }
       const pluginCode = await fs6.readFile(indexPath, "utf8");
-      const hash = crypto3.createHash("sha256");
+      const hash = crypto2.createHash("sha256");
       hash.update(pluginCode);
       const actualChecksum = hash.digest("hex");
       if (actualChecksum !== manifest.sha256) {
@@ -36768,6 +38153,94 @@ var PluginLoader = class {
   }
 };
 
+// src/core/batch-orchestrator.ts
+var BatchOrchestrator = class {
+  constructor(options) {
+    this.options = options;
+  }
+  /**
+   * Determine the effective batch size for the current provider set.
+   * Uses the smallest override to ensure no provider receives more than it can handle.
+   */
+  getBatchSize(providerNames) {
+    let size = this.options.defaultBatchSize;
+    for (const name of providerNames) {
+      const override = this.getOverrideForProvider(name);
+      if (override) {
+        size = Math.min(size, override);
+      }
+    }
+    const capped = this.options.maxBatchSize ? Math.min(size, this.options.maxBatchSize) : size;
+    const finalSize = Math.max(1, capped);
+    logger.debug(`Batch size resolved: ${finalSize} (providers: ${providerNames.join(",") || "none"})`);
+    return finalSize;
+  }
+  /**
+   * Split files into batches of at most batchSize items.
+   */
+  createBatches(files, batchSize) {
+    if (!Number.isFinite(batchSize) || batchSize <= 0 || !Number.isInteger(batchSize)) {
+      throw new Error(`Invalid batch size: ${batchSize}. Must be a positive integer.`);
+    }
+    if (files.length === 0) return [];
+    const batches = [];
+    for (let i = 0; i < files.length; i += batchSize) {
+      batches.push(files.slice(i, i + batchSize));
+    }
+    return batches;
+  }
+  /**
+   * Create batches using token-aware sizing
+   * Automatically determines optimal batch size based on file sizes and provider context windows
+   */
+  createTokenAwareBatches(files, providerNames) {
+    if (!this.options.enableTokenAwareBatching) {
+      const batchSize = this.getBatchSize(providerNames);
+      return this.createBatches(files, batchSize);
+    }
+    if (files.length === 0) return [];
+    let smallestWindow = Infinity;
+    for (const providerName of providerNames) {
+      const window = getContextWindowSize(providerName);
+      if (window < smallestWindow) {
+        smallestWindow = window;
+      }
+    }
+    const DEFAULT_CONTEXT_WINDOW = 1e5;
+    if (!isFinite(smallestWindow) || smallestWindow === 0) {
+      logger.warn(
+        `No valid context window data available for providers: ${providerNames.join(", ")}. Falling back to default ${DEFAULT_CONTEXT_WINDOW} tokens.`
+      );
+      smallestWindow = DEFAULT_CONTEXT_WINDOW;
+    }
+    const targetTokens = this.options.targetTokensPerBatch ?? Math.floor(smallestWindow * 0.5);
+    const maxFiles = this.options.maxBatchSize ?? 200;
+    logger.debug(
+      `Token-aware batching: target ${targetTokens} tokens/batch, max ${maxFiles} files/batch, smallest context window: ${smallestWindow}`
+    );
+    const recommendation = calculateOptimalBatchSize(files, targetTokens, maxFiles);
+    logger.info(`Token-aware batching: ${recommendation.reason}`);
+    return recommendation.batches;
+  }
+  /**
+   * Get batch size optimized for token budget and provider context windows
+   */
+  getBatchSizeForTokenBudget(files, providerNames) {
+    if (!this.options.enableTokenAwareBatching || files.length === 0) {
+      return this.getBatchSize(providerNames);
+    }
+    const batches = this.createTokenAwareBatches(files, providerNames);
+    if (batches.length === 0) return this.getBatchSize(providerNames);
+    return Math.ceil(files.length / batches.length);
+  }
+  getOverrideForProvider(providerName) {
+    const overrides = this.options.providerOverrides || {};
+    if (overrides[providerName] !== void 0) return overrides[providerName];
+    const prefix = providerName.split("/")[0];
+    return overrides[prefix];
+  }
+};
+
 // src/setup.ts
 async function createComponents(config, githubToken) {
   const pluginLoader = config.pluginsEnabled ? new PluginLoader({
@@ -36779,7 +38252,6 @@ async function createComponents(config, githubToken) {
   if (pluginLoader) {
     await pluginLoader.loadPlugins();
   }
-  const providerRegistry = new ProviderRegistry(pluginLoader);
   const promptBuilder = new PromptBuilder(config);
   const llmExecutor = new LLMExecutor(config);
   const deduplicator = new Deduplicator();
@@ -36791,7 +38263,7 @@ async function createComponents(config, githubToken) {
   const synthesis = new SynthesisEngine(config);
   const testCoverage = new TestCoverageAnalyzer();
   const astAnalyzer = new ASTAnalyzer();
-  const cache = new CacheManager();
+  const cache = new CacheManager(void 0, config);
   const incrementalReviewer = new IncrementalReviewer(new CacheStorage(), {
     enabled: config.incrementalEnabled,
     cacheTtlDays: config.incrementalCacheTtlDays
@@ -36822,7 +38294,15 @@ async function createComponents(config, githubToken) {
   const graphBuilder = config.graphEnabled ? new CodeGraphBuilder(config.graphMaxDepth || 5, (config.graphTimeoutSeconds || 10) * 1e3) : void 0;
   const promptGenerator = new PromptGenerator("plain");
   const reliabilityTracker = new ReliabilityTracker(cacheStorage);
+  const providerRegistry = new ProviderRegistry(pluginLoader, reliabilityTracker);
   const metricsCollector = config.analyticsEnabled ? new MetricsCollector(cacheStorage, config) : void 0;
+  const batchOrchestrator = new BatchOrchestrator({
+    defaultBatchSize: config.batchMaxFiles || 30,
+    providerOverrides: config.providerBatchOverrides,
+    enableTokenAwareBatching: config.enableTokenAwareBatching,
+    targetTokensPerBatch: config.targetTokensPerBatch,
+    maxBatchSize: config.batchMaxFiles
+  });
   return {
     config,
     providerRegistry,
@@ -36851,7 +38331,9 @@ async function createComponents(config, githubToken) {
     graphBuilder,
     promptGenerator,
     reliabilityTracker,
-    metricsCollector
+    metricsCollector,
+    batchOrchestrator,
+    githubClient
   };
 }
 
@@ -36941,6 +38423,69 @@ function severityToLevel(severity) {
   return "note";
 }
 
+// src/cache/graph-cache.ts
+var GRAPH_CACHE_VERSION = 1;
+var GraphCache = class _GraphCache {
+  // 24 hours
+  constructor(storage = new CacheStorage()) {
+    this.storage = storage;
+  }
+  static CACHE_KEY_PREFIX = "code-graph-";
+  static CACHE_TTL_MS = 24 * 60 * 60 * 1e3;
+  /**
+   * Get cached graph for a PR
+   */
+  async get(prNumber, headSha) {
+    const key = this.key(prNumber, headSha);
+    const cached = await this.storage.read(key);
+    if (!cached) {
+      return null;
+    }
+    try {
+      const data = JSON.parse(cached);
+      if (data.version !== GRAPH_CACHE_VERSION) {
+        logger.debug(`Graph cache version mismatch for PR #${prNumber} (cached: ${data.version}, current: ${GRAPH_CACHE_VERSION})`);
+        return null;
+      }
+      if (Date.now() - data.timestamp > _GraphCache.CACHE_TTL_MS) {
+        logger.debug(`Graph cache expired for PR #${prNumber}`);
+        return null;
+      }
+      const graph = CodeGraph.deserialize(data.graph);
+      logger.debug(`Graph cache hit for PR #${prNumber} (${headSha.slice(0, 7)})`);
+      return graph;
+    } catch (error2) {
+      logger.warn(`Failed to deserialize cached graph for PR #${prNumber}`, error2);
+      return null;
+    }
+  }
+  /**
+   * Save graph to cache
+   */
+  async set(prNumber, headSha, graph) {
+    const key = this.key(prNumber, headSha);
+    const data = {
+      version: GRAPH_CACHE_VERSION,
+      timestamp: Date.now(),
+      graph: graph.serialize()
+    };
+    await this.storage.write(key, JSON.stringify(data));
+    logger.debug(`Cached graph for PR #${prNumber} (${headSha.slice(0, 7)})`);
+  }
+  /**
+   * Clear all cached graphs for a specific PR
+   * Deletes all cache entries matching the PR number prefix
+   */
+  async clear(prNumber) {
+    const prefix = _GraphCache.CACHE_KEY_PREFIX + prNumber;
+    const deletedCount = await this.storage.deleteByPrefix(prefix);
+    logger.info(`Cleared ${deletedCount} cached graph(s) for PR #${prNumber}`);
+  }
+  key(prNumber, headSha) {
+    return `${_GraphCache.CACHE_KEY_PREFIX}${prNumber}-${headSha}`;
+  }
+};
+
 // src/analysis/trivial-detector.ts
 var TrivialDetector = class {
   config;
@@ -37014,16 +38559,17 @@ var TrivialDetector = class {
       return {
         isTrivial: false,
         trivialFiles: [],
-        nonTrivialFiles: files.map((f) => f.filename)
+        nonTrivialFiles: files.map((f) => this.normalizePath(f.filename))
       };
     }
     const trivialFiles = [];
     const nonTrivialFiles = [];
     for (const file of files) {
+      const normalizedPath = this.normalizePath(file.filename);
       if (this.isFileTrivial(file)) {
-        trivialFiles.push(file.filename);
+        trivialFiles.push(normalizedPath);
       } else {
-        nonTrivialFiles.push(file.filename);
+        nonTrivialFiles.push(normalizedPath);
       }
     }
     const isTrivial = nonTrivialFiles.length === 0 && trivialFiles.length > 0;
@@ -37044,7 +38590,8 @@ var TrivialDetector = class {
    * Check if a single file is trivial
    */
   isFileTrivial(file) {
-    return this.isFileTrivialByType(file.filename) || this.isFileTrivialByContent(file);
+    const normalized = this.normalizePath(file.filename);
+    return this.isFileTrivialByType(normalized) || this.isFileTrivialByContent(file);
   }
   /**
    * Check if file is trivial based on file type/path
@@ -37253,6 +38800,12 @@ var TrivialDetector = class {
    */
   normalizeWhitespace(text) {
     return text.trim().replace(/\s+/g, " ");
+  }
+  /**
+   * Normalize path separators for consistent matching across platforms.
+   */
+  normalizePath(filename) {
+    return filename.replace(/\\/g, "/");
   }
   /**
    * Generate a human-readable reason for why PR is trivial
@@ -38868,6 +40421,8 @@ minimatch.escape = escape;
 minimatch.unescape = unescape;
 
 // src/analysis/path-matcher.ts
+var MAX_PATTERN_LENGTH2 = 500;
+var MAX_COMPLEXITY_SCORE = 50;
 var PathMatcher = class {
   constructor(config) {
     this.config = config;
@@ -38891,26 +40446,29 @@ var PathMatcher = class {
     this.checkPatternLength(pattern);
     this.checkPatternComplexity(pattern);
     this.checkControlCharacters(pattern);
+    this.checkAllowedCharacters(pattern);
+    this.checkTraversal(pattern);
   }
   /**
    * Check if pattern exceeds maximum length
+   * Uses MAX_PATTERN_LENGTH constant (500 chars)
    */
   checkPatternLength(pattern) {
-    const MAX_LENGTH = 500;
-    if (pattern.length > MAX_LENGTH) {
-      throw new Error(`Pattern too long (${pattern.length} chars, max ${MAX_LENGTH}): ${pattern}`);
+    if (pattern.length > MAX_PATTERN_LENGTH2) {
+      throw new Error(`Pattern too long (${pattern.length} chars, max ${MAX_PATTERN_LENGTH2}): ${pattern}`);
     }
   }
   /**
    * Check if pattern complexity is within acceptable limits
+   * Uses MAX_COMPLEXITY_SCORE constant (50 points)
+   * Scoring: wildcards × 2 + braces × 3
    */
   checkPatternComplexity(pattern) {
     const wildcardCount = (pattern.match(/\*/g) || []).length;
     const braceCount = (pattern.match(/\{/g) || []).length;
     const complexityScore = wildcardCount * 2 + braceCount * 3;
-    const MAX_COMPLEXITY = 50;
-    if (complexityScore > MAX_COMPLEXITY) {
-      throw new Error(`Pattern too complex (score ${complexityScore}): ${pattern}`);
+    if (complexityScore > MAX_COMPLEXITY_SCORE) {
+      throw new Error(`Pattern too complex (score ${complexityScore}, max ${MAX_COMPLEXITY_SCORE}): ${pattern}`);
     }
   }
   /**
@@ -38921,6 +40479,88 @@ var PathMatcher = class {
       if (pattern.charCodeAt(i) <= 31) {
         throw new Error(`Pattern contains control characters: ${pattern}`);
       }
+    }
+  }
+  /**
+   * Restrict patterns to a safe character allowlist for glob matching.
+   *
+   * SECURITY CONTEXT:
+   * These patterns are ONLY used with the minimatch library (pure JavaScript),
+   * NEVER passed to shell commands or eval(). While minimatch is safe, we still
+   * block potentially dangerous characters for defense in depth.
+   *
+   * ALLOWED CHARACTERS:
+   * - Alphanumeric: A-Z, a-z, 0-9
+   * - Path separators: / (forward slash only)
+   * - Glob wildcards: * (asterisk), ? (question mark)
+   * - Glob braces: { } (brace expansion)
+   * - Character classes: [ ] (bracket expressions)
+   * - Special chars: . - _ @ + ^ ! ( ) ~ # , (space)
+   *
+   * BLOCKED CHARACTERS (explicit):
+   * - Backslash (\) - Prevents path traversal and escape sequences
+   * - Pipe (|) - No shell piping (not needed for globs)
+   * - Backtick (`) - No command substitution (not needed for globs)
+   * - Semicolon (;) - No command chaining (not needed for globs)
+   * - Ampersand (&) - No backgrounding (not needed for globs)
+   * - Angle brackets (< >) - No redirection (not needed for globs)
+   *
+   * MINIMATCH SAFETY:
+   * - nonegate: true (blocks ! negation at start of pattern)
+   * - nocomment: true (blocks # comments)
+   * - These options prevent pattern injection attacks
+   *
+   * DEFENSE IN DEPTH:
+   * Even though minimatch is safe, we enforce a strict allowlist to:
+   * 1. Catch accidental misuse (e.g., copy-paste errors)
+   * 2. Prevent future regressions if code changes
+   * 3. Make security properties explicit and auditable
+   */
+  /**
+   * Comprehensive character validation with explicit security checks
+   * Uses defense-in-depth: check for dangerous characters AND validate allowlist
+   */
+  checkAllowedCharacters(pattern) {
+    const dangerousChars = /[\\`|;&<>'"$\x7F]/;
+    if (dangerousChars.test(pattern)) {
+      const found = pattern.match(dangerousChars);
+      throw new Error(
+        `Pattern contains dangerous character: ${found?.[0] ? JSON.stringify(found[0]) : "DEL"}. Backslashes, backticks, pipes, semicolons, quotes, and $ are not allowed.`
+      );
+    }
+    if (!/^[\x20-\x7E]+$/.test(pattern)) {
+      throw new Error(
+        `Pattern contains non-ASCII characters. Only printable ASCII characters (0x20-0x7E) are allowed for cross-platform compatibility.`
+      );
+    }
+    const allowed = /^[A-Za-z0-9.@+^!_\-/*?{}\[\],()~# ]+$/;
+    if (!allowed.test(pattern)) {
+      throw new Error(
+        `Pattern contains unsupported characters: ${pattern}. Only alphanumerics (A-Z, a-z, 0-9), glob wildcards (*, ?, {}, []), path separators (/), and safe punctuation (.@+^!_-,()~# space) are allowed.`
+      );
+    }
+    const openBraces = (pattern.match(/\{/g) || []).length;
+    const closeBraces = (pattern.match(/\}/g) || []).length;
+    if (openBraces !== closeBraces) {
+      throw new Error(
+        `Pattern has unbalanced braces: ${openBraces} open, ${closeBraces} close. Each '{' must have a matching '}'.`
+      );
+    }
+    const openBrackets = (pattern.match(/\[/g) || []).length;
+    const closeBrackets = (pattern.match(/\]/g) || []).length;
+    if (openBrackets !== closeBrackets) {
+      throw new Error(
+        `Pattern has unbalanced brackets: ${openBrackets} open, ${closeBrackets} close. Each '[' must have a matching ']'.`
+      );
+    }
+  }
+  /**
+   * Block path traversal segments ('..') inside patterns to avoid unintended matches.
+   */
+  checkTraversal(pattern) {
+    const traversalSegment = /(^|[\\/])\.\.(?:[\\/]|$)/;
+    if (traversalSegment.test(pattern)) {
+      throw new Error(`Pattern contains path traversal ('..') which is not allowed: ${pattern}`);
     }
   }
   /**
@@ -39160,13 +40800,224 @@ function createDefaultPathMatcherConfig() {
   };
 }
 
+// src/github/progress-tracker.ts
+var ProgressTracker = class {
+  constructor(octokit, config) {
+    this.octokit = octokit;
+    this.config = config;
+  }
+  commentId = null;
+  items = /* @__PURE__ */ new Map();
+  startTime = Date.now();
+  totalCost = 0;
+  overrideBody;
+  /**
+   * Initialize progress tracking by creating the initial comment
+   */
+  async initialize() {
+    if (!this.octokit?.rest?.issues?.createComment) {
+      logger.warn("Progress tracker unavailable: octokit.rest.issues.createComment is missing");
+      return;
+    }
+    try {
+      const body = this.formatProgressComment();
+      const comment = await this.octokit.rest.issues.createComment({
+        owner: this.config.owner,
+        repo: this.config.repo,
+        issue_number: this.config.prNumber,
+        body
+      });
+      this.commentId = comment.data.id;
+      logger.info("Progress tracker initialized", { commentId: this.commentId });
+    } catch (error2) {
+      logger.error("Failed to initialize progress tracker", error2);
+    }
+  }
+  /**
+   * Add a new progress item to track
+   */
+  addItem(id, label) {
+    this.items.set(id, {
+      id,
+      label,
+      status: "pending",
+      startTime: Date.now()
+    });
+    logger.debug(`Progress item added: ${id}`, { label });
+  }
+  /**
+   * Update progress for a specific item
+   * Only updates comment on milestone events (completed/failed)
+   */
+  async updateProgress(itemId, status, details) {
+    const item = this.items.get(itemId);
+    if (!item) {
+      logger.warn(`Progress item not found: ${itemId}`);
+      return;
+    }
+    item.status = status;
+    item.details = details;
+    if (status === "completed" || status === "failed") {
+      item.endTime = Date.now();
+      await this.updateComment();
+    }
+    logger.debug(`Progress updated: ${itemId}`, { status, details });
+  }
+  /**
+   * Set total cost for metadata display
+   */
+  setTotalCost(cost) {
+    this.totalCost = cost;
+  }
+  /**
+   * Finalize progress tracking with summary
+   */
+  async finalize(success) {
+    const duration = Date.now() - this.startTime;
+    this.items.forEach((item) => {
+      if (item.status === "pending" || item.status === "in_progress") {
+        item.status = success ? "completed" : "failed";
+        item.endTime = Date.now();
+      }
+    });
+    if (!this.overrideBody) {
+      await this.updateComment();
+    }
+    logger.info("Progress tracker finalized", {
+      success,
+      duration,
+      totalCost: this.totalCost
+    });
+  }
+  /**
+   * Format progress comment with checkboxes, status emojis, and metadata
+   */
+  formatProgressComment() {
+    const lines = [];
+    lines.push("## \u{1F916} Multi-Provider Code Review Progress\n");
+    const sortedItems = Array.from(this.items.values()).sort(
+      (a, b) => (a.startTime || 0) - (b.startTime || 0)
+    );
+    for (const item of sortedItems) {
+      const checkbox = item.status === "completed" ? "[x]" : "[ ]";
+      const emoji = this.getStatusEmoji(item.status);
+      const duration = this.getDurationString(item);
+      lines.push(`${checkbox} ${emoji} ${item.label}${duration}`);
+      if (item.details) {
+        lines.push(`   \u2514\u2500 ${item.details}`);
+      }
+    }
+    lines.push("\n---");
+    const totalDuration = Date.now() - this.startTime;
+    const durationStr = this.formatDuration(totalDuration);
+    lines.push(`**Duration**: ${durationStr}`);
+    if (this.totalCost > 0) {
+      lines.push(`**Cost**: $${this.totalCost.toFixed(4)}`);
+    }
+    lines.push(`**Last updated**: ${(/* @__PURE__ */ new Date()).toISOString()}`);
+    lines.push("<!-- multi-provider-progress-tracker -->");
+    return lines.join("\n");
+  }
+  /**
+   * Update the progress comment (GitHub API call)
+   */
+  async updateComment() {
+    if (!this.commentId) {
+      logger.warn("Cannot update progress: comment not initialized");
+      return;
+    }
+    if (!this.octokit?.rest?.issues?.updateComment) {
+      logger.warn("Cannot update progress: octokit.rest.issues.updateComment is missing");
+      return;
+    }
+    try {
+      const body = this.overrideBody ?? this.formatProgressComment();
+      await this.octokit.rest.issues.updateComment({
+        owner: this.config.owner,
+        repo: this.config.repo,
+        comment_id: this.commentId,
+        body
+      });
+      logger.debug("Progress comment updated", { commentId: this.commentId });
+    } catch (error2) {
+      logger.error("Failed to update progress comment", error2);
+    }
+  }
+  /**
+   * Replace the progress comment with a final body (e.g., combined progress + review)
+   */
+  async replaceWith(body) {
+    if (!this.commentId) {
+      logger.warn("Cannot replace progress: comment not initialized");
+      return;
+    }
+    if (!this.octokit?.rest?.issues?.updateComment) {
+      logger.warn("Cannot replace progress: octokit.rest.issues.updateComment is missing");
+      return;
+    }
+    this.overrideBody = body;
+    await this.octokit.rest.issues.updateComment({
+      owner: this.config.owner,
+      repo: this.config.repo,
+      comment_id: this.commentId,
+      body
+    });
+  }
+  /**
+   * Get status emoji for visual feedback
+   */
+  getStatusEmoji(status) {
+    switch (status) {
+      case "completed":
+        return "\u2705";
+      case "failed":
+        return "\u274C";
+      case "in_progress":
+        return "\u{1F504}";
+      case "pending":
+        return "\u23F3";
+      default:
+        return "\u2B1C";
+    }
+  }
+  /**
+   * Get duration string for an item
+   */
+  getDurationString(item) {
+    if (!item.endTime || !item.startTime) {
+      return "";
+    }
+    const duration = item.endTime - item.startTime;
+    return ` (${this.formatDuration(duration)})`;
+  }
+  /**
+   * Format duration in human-readable format
+   */
+  formatDuration(ms) {
+    if (ms < 1e3) {
+      return `${ms}ms`;
+    } else if (ms < 6e4) {
+      return `${(ms / 1e3).toFixed(1)}s`;
+    } else {
+      const minutes = Math.floor(ms / 6e4);
+      const seconds = Math.floor(ms % 6e4 / 1e3);
+      return `${minutes}m ${seconds}s`;
+    }
+  }
+};
+
 // src/core/orchestrator.ts
 var fs7 = __toESM(require("fs/promises"));
 var import_path = __toESM(require("path"));
+var HEALTH_CHECK_TIMEOUT_MS = 3e4;
 var ReviewOrchestrator = class {
   constructor(components) {
     this.components = components;
+    if (components.config?.graphEnabled && components.config?.graphCacheEnabled) {
+      this.graphCache = new GraphCache();
+    }
   }
+  graphCache;
   async execute(prNumber) {
     const pr = await this.components.prLoader.load(prNumber);
     const skipReason = this.shouldSkip(pr);
@@ -39187,272 +41038,462 @@ var ReviewOrchestrator = class {
   async executeReview(pr) {
     const { config } = this.components;
     const start = Date.now();
-    let codeGraph;
-    let contextRetriever = this.components.contextRetriever;
-    if (config.graphEnabled && this.components.graphBuilder) {
-      try {
-        const graphStart = Date.now();
-        codeGraph = await this.components.graphBuilder.buildGraph(pr.files);
-        const graphTime = Date.now() - graphStart;
-        logger.info(`Code graph built in ${graphTime}ms: ${codeGraph.getStats().definitions} definitions, ${codeGraph.getStats().imports} imports`);
-        if (codeGraph) {
-          contextRetriever = new ContextRetriever(codeGraph);
-        }
-      } catch (error2) {
-        logger.warn("Failed to build code graph, falling back to regex-based context", error2);
-      }
-    }
-    let reviewContext = pr;
-    if (config.skipTrivialChanges) {
-      const trivialDetector = new TrivialDetector({
-        enabled: true,
-        skipDependencyUpdates: config.skipDependencyUpdates ?? true,
-        skipDocumentationOnly: config.skipDocumentationOnly ?? true,
-        skipFormattingOnly: config.skipFormattingOnly ?? false,
-        skipTestFixtures: config.skipTestFixtures ?? true,
-        skipConfigFiles: config.skipConfigFiles ?? true,
-        skipBuildArtifacts: config.skipBuildArtifacts ?? true,
-        customTrivialPatterns: config.trivialPatterns ?? []
-      });
-      const trivialResult = trivialDetector.detect(pr.files);
-      if (trivialResult.isTrivial) {
-        logger.info(`Skipping review: ${trivialResult.reason}`);
-        const trivialReview = this.createTrivialReview(trivialResult.reason, pr.files.length, start);
-        const markdown2 = this.components.formatter.format(trivialReview);
-        await this.components.commentPoster.postSummary(pr.number, markdown2, false);
-        if (config.analyticsEnabled && this.components.metricsCollector) {
-          try {
-            await this.components.metricsCollector.recordReview(trivialReview, pr.number);
-            logger.debug(`Recorded trivial review metrics for PR #${pr.number}`);
-          } catch (error2) {
-            logger.warn("Failed to record trivial review metrics", error2);
-          }
-        }
-        return trivialReview;
-      }
-      if (trivialResult.trivialFiles.length > 0) {
-        logger.info(`Filtering ${trivialResult.trivialFiles.length} trivial files from review: ${trivialResult.trivialFiles.join(", ")}`);
-        const nonTrivialFiles = pr.files.filter((f) => trivialResult.nonTrivialFiles.includes(f.filename));
-        reviewContext = {
-          ...pr,
-          files: nonTrivialFiles,
-          diff: this.filterDiffByFiles(pr.diff, nonTrivialFiles)
-        };
-      }
-    }
-    if (config.pathBasedIntensity) {
-      let patterns = [];
-      if (config.pathIntensityPatterns) {
+    let progressTracker;
+    let review = null;
+    let success = false;
+    try {
+      progressTracker = await this.initProgressTracker(pr);
+      progressTracker?.addItem("graph", "Build code graph");
+      progressTracker?.addItem("llm", "LLM review (batched)");
+      progressTracker?.addItem("static", "Static analysis & rules");
+      progressTracker?.addItem("synthesis", "Synthesize & report");
+      let codeGraph;
+      let contextRetriever = this.components.contextRetriever;
+      if (config.graphEnabled && this.components.graphBuilder) {
         try {
-          const parsed = JSON.parse(config.pathIntensityPatterns);
-          if (!Array.isArray(parsed)) {
-            logger.warn("pathIntensityPatterns is not an array, using defaults");
-            patterns = createDefaultPathMatcherConfig().patterns;
+          const graphStart = Date.now();
+          if (this.graphCache) {
+            const cached = await this.graphCache.get(pr.number, pr.headSha);
+            if (cached) {
+              codeGraph = cached;
+            }
+          }
+          if (codeGraph) {
+            const graphTime = Date.now() - graphStart;
+            logger.info(`Loaded code graph from cache (${graphTime}ms)`);
+            await progressTracker?.updateProgress("graph", "completed", `Loaded from cache in ${graphTime}ms`);
           } else {
-            const PathPatternSchema = external_exports.object({
-              pattern: external_exports.string(),
-              intensity: external_exports.enum(["thorough", "standard", "light"]),
-              description: external_exports.string().optional()
-            });
-            const validPatterns = [];
-            for (const item of parsed) {
-              const result = PathPatternSchema.safeParse(item);
-              if (result.success) {
-                validPatterns.push(result.data);
-              } else {
-                logger.warn(`Invalid path pattern object, skipping: ${JSON.stringify(item)}`);
-              }
+            codeGraph = await this.components.graphBuilder.buildGraph(pr.files);
+            const graphTime = Date.now() - graphStart;
+            logger.info(`Code graph built in ${graphTime}ms: ${codeGraph.getStats().definitions} definitions, ${codeGraph.getStats().imports} imports`);
+            await progressTracker?.updateProgress("graph", "completed", `Built in ${graphTime}ms`);
+            if (this.graphCache) {
+              await this.graphCache.set(pr.number, pr.headSha, codeGraph);
             }
-            if (validPatterns.length === 0) {
-              logger.warn("No valid path patterns found, using defaults");
-              patterns = createDefaultPathMatcherConfig().patterns;
-            } else {
-              patterns = validPatterns;
-            }
+          }
+          if (codeGraph) {
+            contextRetriever = new ContextRetriever(codeGraph);
           }
         } catch (error2) {
-          logger.warn("Failed to parse pathIntensityPatterns, using defaults", error2);
+          logger.warn("Failed to build code graph, falling back to regex-based context", error2);
+          await progressTracker?.updateProgress("graph", "failed", "Graph build failed, using regex context");
+        }
+      }
+      let reviewContext = pr;
+      if (config.skipTrivialChanges) {
+        const trivialDetector = new TrivialDetector({
+          enabled: true,
+          skipDependencyUpdates: config.skipDependencyUpdates ?? true,
+          skipDocumentationOnly: config.skipDocumentationOnly ?? true,
+          skipFormattingOnly: config.skipFormattingOnly ?? false,
+          skipTestFixtures: config.skipTestFixtures ?? true,
+          skipConfigFiles: config.skipConfigFiles ?? true,
+          skipBuildArtifacts: config.skipBuildArtifacts ?? true,
+          customTrivialPatterns: config.trivialPatterns ?? []
+        });
+        const trivialResult = trivialDetector.detect(pr.files);
+        if (trivialResult.isTrivial) {
+          logger.info(`Skipping review: ${trivialResult.reason}`);
+          const trivialReview = this.createTrivialReview(trivialResult.reason, pr.files.length, start);
+          const markdown2 = this.components.formatter.format(trivialReview);
+          await this.components.commentPoster.postSummary(pr.number, markdown2, false);
+          if (config.analyticsEnabled && this.components.metricsCollector) {
+            try {
+              await this.components.metricsCollector.recordReview(trivialReview, pr.number);
+              logger.debug(`Recorded trivial review metrics for PR #${pr.number}`);
+            } catch (error2) {
+              logger.warn("Failed to record trivial review metrics", error2);
+            }
+          }
+          review = trivialReview;
+          success = true;
+          return trivialReview;
+        }
+        if (trivialResult.trivialFiles.length > 0) {
+          logger.info(`Filtering ${trivialResult.trivialFiles.length} trivial files from review: ${trivialResult.trivialFiles.join(", ")}`);
+          const nonTrivialFiles = pr.files.filter((f) => trivialResult.nonTrivialFiles.includes(f.filename));
+          reviewContext = {
+            ...pr,
+            files: nonTrivialFiles,
+            diff: filterDiffByFiles(pr.diff, nonTrivialFiles)
+          };
+        }
+      }
+      let reviewIntensity = config.pathDefaultIntensity ?? "standard";
+      if (config.pathBasedIntensity) {
+        let patterns = [];
+        if (config.pathIntensityPatterns) {
+          try {
+            const parsed = JSON.parse(config.pathIntensityPatterns);
+            if (!Array.isArray(parsed)) {
+              logger.warn("pathIntensityPatterns is not an array, using defaults");
+              patterns = createDefaultPathMatcherConfig().patterns;
+            } else {
+              const PathPatternSchema = external_exports.object({
+                pattern: external_exports.string(),
+                intensity: external_exports.enum(["thorough", "standard", "light"]),
+                description: external_exports.string().optional()
+              });
+              const validPatterns = [];
+              for (const item of parsed) {
+                const result = PathPatternSchema.safeParse(item);
+                if (result.success) {
+                  validPatterns.push(result.data);
+                } else {
+                  logger.warn(`Invalid path pattern object, skipping: ${JSON.stringify(item)}`);
+                }
+              }
+              if (validPatterns.length === 0) {
+                logger.warn("No valid path patterns found, using defaults");
+                patterns = createDefaultPathMatcherConfig().patterns;
+              } else {
+                patterns = validPatterns;
+              }
+            }
+          } catch (error2) {
+            logger.warn("Failed to parse pathIntensityPatterns, using defaults", error2);
+            patterns = createDefaultPathMatcherConfig().patterns;
+          }
+        } else {
           patterns = createDefaultPathMatcherConfig().patterns;
         }
-      } else {
-        patterns = createDefaultPathMatcherConfig().patterns;
+        const pathMatcher = new PathMatcher({
+          enabled: true,
+          defaultIntensity: config.pathDefaultIntensity ?? "standard",
+          patterns
+        });
+        const intensityResult = pathMatcher.determineIntensity(reviewContext.files);
+        reviewIntensity = intensityResult.intensity;
+        logger.info(`Review intensity: ${reviewIntensity} - ${intensityResult.reason}`);
+        if (intensityResult.matchedPaths.length > 0) {
+          logger.debug(`Matched paths: ${intensityResult.matchedPaths.join(", ")}`);
+        }
       }
-      const pathMatcher = new PathMatcher({
-        enabled: true,
-        defaultIntensity: config.pathDefaultIntensity ?? "standard",
-        patterns
-      });
-      const intensityResult = pathMatcher.determineIntensity(reviewContext.files);
-      logger.info(`Review intensity: ${intensityResult.intensity} - ${intensityResult.reason}`);
-      if (intensityResult.matchedPaths.length > 0) {
-        logger.debug(`Matched paths: ${intensityResult.matchedPaths.join(", ")}`);
-      }
-    }
-    const useIncremental = await this.components.incrementalReviewer.shouldUseIncremental(reviewContext);
-    let filesToReview = reviewContext.files;
-    let lastReviewData = null;
-    if (useIncremental) {
-      lastReviewData = await this.components.incrementalReviewer.getLastReview(reviewContext.number);
-      if (lastReviewData) {
-        filesToReview = await this.components.incrementalReviewer.getChangedFilesSince(reviewContext, lastReviewData.lastReviewedCommit);
-        logger.info(`Incremental review: reviewing ${filesToReview.length} changed files`);
-        if (codeGraph && this.components.graphBuilder) {
-          try {
-            codeGraph = await this.components.graphBuilder.updateGraph(codeGraph, filesToReview);
-            logger.debug("Code graph updated incrementally");
-          } catch (error2) {
-            logger.warn("Failed to update code graph incrementally", error2);
+      const intensityProviderLimit = config.intensityProviderCounts?.[reviewIntensity] ?? config.providerLimit;
+      const intensityTimeout = config.intensityTimeouts?.[reviewIntensity] ?? config.runTimeoutSeconds * 1e3;
+      logger.info(
+        `Intensity settings: ${intensityProviderLimit} providers, ${intensityTimeout}ms timeout (${reviewIntensity} mode)`
+      );
+      const useIncremental = await this.components.incrementalReviewer.shouldUseIncremental(reviewContext);
+      let filesToReview = reviewContext.files;
+      let lastReviewData = null;
+      if (useIncremental) {
+        lastReviewData = await this.components.incrementalReviewer.getLastReview(reviewContext.number);
+        if (lastReviewData) {
+          filesToReview = await this.components.incrementalReviewer.getChangedFilesSince(reviewContext, lastReviewData.lastReviewedCommit);
+          logger.info(`Incremental review: reviewing ${filesToReview.length} changed files`);
+          if (codeGraph && this.components.graphBuilder) {
+            try {
+              codeGraph = await this.components.graphBuilder.updateGraph(codeGraph, filesToReview);
+              logger.debug("Code graph updated incrementally");
+            } catch (error2) {
+              logger.warn("Failed to update code graph incrementally", error2);
+            }
           }
         }
       }
-    }
-    const cachedFindings = config.enableCaching ? await this.components.cache.load(reviewContext) : null;
-    const reviewPR = useIncremental ? { ...reviewContext, files: filesToReview, diff: this.filterDiffByFiles(reviewContext.diff, filesToReview) } : reviewContext;
-    let llmFindings = [];
-    let providerResults = [];
-    let aiAnalysis;
-    const providers = await this.components.providerRegistry.createProviders(config);
-    if (filesToReview.length === 0) {
-      logger.info("No files to review in incremental update, using cached findings only");
-    } else {
-      const prompt = this.components.promptBuilder.build(reviewPR);
-      await this.ensureBudget(config);
-      const healthCheckTimeout = 3e4;
-      const { healthy, healthCheckResults } = await this.components.llmExecutor.filterHealthyProviders(
-        providers,
-        healthCheckTimeout
-      );
-      if (healthy.length === 0) {
-        logger.warn("No healthy providers available after health checks");
-        providerResults = healthCheckResults;
-      } else {
-        const reviewResults = await this.components.llmExecutor.execute(healthy, prompt);
-        providerResults = [...healthCheckResults, ...reviewResults];
+      const cachedFindings = config.enableCaching ? await this.components.cache.load(reviewContext) : null;
+      const reviewPR = useIncremental ? { ...reviewContext, files: filesToReview, diff: filterDiffByFiles(reviewContext.diff, filesToReview) } : reviewContext;
+      const llmFindings = [];
+      let providerResults = [];
+      let aiAnalysis;
+      let providers = await this.components.providerRegistry.createProviders(config);
+      providers = await this.applyReliabilityFilters(providers);
+      if (providers.length === 0) {
+        logger.warn("All providers filtered out by circuit breakers/reliability; skipping LLM execution");
+        await progressTracker?.updateProgress("llm", "failed", "No available providers after reliability filtering");
       }
-      llmFindings = extractFindings(providerResults);
-      aiAnalysis = config.enableAiDetection ? summarizeAIDetection(providerResults) : void 0;
-      if (this.components.reliabilityTracker) {
-        for (const result of providerResults) {
-          await this.components.reliabilityTracker.recordResult(
-            result.name,
-            result.status === "success",
-            result.durationSeconds * 1e3,
-            result.error?.message
+      const batchOrchestrator = this.components.batchOrchestrator || new BatchOrchestrator({
+        defaultBatchSize: config.batchMaxFiles || 30,
+        providerOverrides: config.providerBatchOverrides,
+        enableTokenAwareBatching: config.enableTokenAwareBatching,
+        targetTokensPerBatch: config.targetTokensPerBatch,
+        maxBatchSize: config.batchMaxFiles
+      });
+      if (filesToReview.length === 0) {
+        logger.info("No files to review in incremental update, using cached findings only");
+      } else {
+        await this.ensureBudget(config);
+        let allHealthResults = [];
+        let healthy = [];
+        const triedProviders = new Set(providers.map((p) => p.name));
+        const runHealthCheck = async (candidateProviders) => {
+          const { healthy: h, healthCheckResults } = await this.components.llmExecutor.filterHealthyProviders(
+            candidateProviders,
+            HEALTH_CHECK_TIMEOUT_MS
           );
+          healthy = healthy.concat(h);
+          allHealthResults = allHealthResults.concat(healthCheckResults);
+        };
+        await runHealthCheck(providers);
+        const selectionLimit = Math.max(1, intensityProviderLimit || 8);
+        const desiredOpenRouter = Math.min(4, providers.filter((p) => p.name.startsWith("openrouter/")).length);
+        const desiredOpenCode = Math.min(2, providers.filter((p) => p.name.startsWith("opencode/")).length);
+        const MIN_OPENROUTER_HEALTHY = desiredOpenRouter;
+        const MIN_OPENCODE_HEALTHY = desiredOpenCode;
+        const MIN_TOTAL_HEALTHY = Math.min(selectionLimit, Math.max(2, desiredOpenRouter + desiredOpenCode || 2));
+        const MIN_FALLBACK_HEALTHY = Math.min(2, selectionLimit);
+        const countOpenCode = (list) => list.filter((p) => p.name.startsWith("opencode/")).length;
+        const countOpenRouter = (list) => list.filter((p) => p.name.startsWith("openrouter/")).length;
+        let attempts = 0;
+        const registry = this.components.providerRegistry;
+        const discoverExtras = typeof registry.discoverAdditionalFreeProviders === "function" ? (names) => registry.discoverAdditionalFreeProviders(names, selectionLimit * 2, config) : null;
+        while (attempts < 6 && discoverExtras && (healthy.length < MIN_TOTAL_HEALTHY || countOpenCode(healthy) < MIN_OPENCODE_HEALTHY || countOpenRouter(healthy) < MIN_OPENROUTER_HEALTHY)) {
+          const additional = await discoverExtras(Array.from(triedProviders));
+          if (additional.length === 0) break;
+          additional.forEach((p) => triedProviders.add(p.name));
+          await runHealthCheck(additional);
+          attempts += 1;
+        }
+        const meetsPrimaryTargets = healthy.length >= MIN_TOTAL_HEALTHY && countOpenCode(healthy) >= MIN_OPENCODE_HEALTHY && countOpenRouter(healthy) >= MIN_OPENROUTER_HEALTHY;
+        if (!meetsPrimaryTargets && healthy.length < MIN_FALLBACK_HEALTHY) {
+          logger.warn("Insufficient healthy providers after retries; skipping LLM execution");
+          providerResults = allHealthResults;
+          await this.recordReliability(providerResults);
+          await progressTracker?.updateProgress(
+            "llm",
+            "failed",
+            `Healthy providers insufficient (total=${healthy.length}, openrouter=${countOpenRouter(
+              healthy
+            )}, opencode=${countOpenCode(healthy)})`
+          );
+        } else {
+          const executionLimit = intensityProviderLimit || config.providerLimit;
+          if (healthy.length > executionLimit) {
+            logger.info(
+              `Limiting execution to ${executionLimit} providers (checked ${healthy.length} for health). Using top providers by reliability.`
+            );
+            healthy = healthy.slice(0, executionLimit);
+          }
+          let batches;
+          const providerNames = healthy.map((p) => p.name);
+          if (config.enableTokenAwareBatching) {
+            try {
+              batches = batchOrchestrator.createTokenAwareBatches(filesToReview, providerNames);
+            } catch (error2) {
+              logger.warn(
+                `Token-aware batching failed, falling back to fixed-size batching`,
+                error2
+              );
+              const batchSize = batchOrchestrator.getBatchSize(providerNames);
+              batches = batchOrchestrator.createBatches(filesToReview, batchSize);
+            }
+          } else {
+            const batchSize = batchOrchestrator.getBatchSize(providerNames);
+            try {
+              batches = batchOrchestrator.createBatches(filesToReview, batchSize);
+            } catch (error2) {
+              logger.warn(
+                `Invalid batch size computed from providers - falling back to size 1`,
+                error2
+              );
+              batches = batchOrchestrator.createBatches(filesToReview, 1);
+            }
+          }
+          const batchQueue = createQueue(Math.max(1, Number(config.providerMaxParallel) || 1));
+          logger.info(`Processing ${batches.length} batch(es)`);
+          const batchPromises = batches.map(
+            (batch) => batchQueue.add(async () => {
+              const batchDiff = filterDiffByFiles(reviewContext.diff, batch);
+              const batchContext = { ...reviewContext, files: batch, diff: batchDiff };
+              const promptBuilder = new PromptBuilder(config, reviewIntensity);
+              const prompt = promptBuilder.build(batchContext);
+              try {
+                const results = await this.components.llmExecutor.execute(healthy, prompt, intensityTimeout);
+                for (const result of results) {
+                  await this.components.costTracker.record(result.name, result.result?.usage, config.budgetMaxUsd);
+                }
+                return results;
+              } catch (error2) {
+                logger.error("Batch execution failed", error2);
+                return healthy.map((provider) => ({
+                  name: provider.name,
+                  status: "error",
+                  error: error2,
+                  durationSeconds: 0
+                }));
+              }
+            })
+          );
+          const batchResults = [];
+          let batchFailures = 0;
+          let batchSuccesses = 0;
+          try {
+            const settled = await Promise.allSettled(batchPromises);
+            for (const result of settled) {
+              if (result.status === "fulfilled") {
+                batchResults.push(...result.value);
+                if (result.value.some((r) => r.status !== "success")) {
+                  batchFailures += 1;
+                } else {
+                  batchSuccesses += 1;
+                }
+              } else {
+                batchFailures += 1;
+                logger.error("Batch promise rejected", result.reason);
+                batchResults.push(...healthy.map((provider) => ({
+                  name: provider.name,
+                  status: "error",
+                  error: result.reason,
+                  durationSeconds: 0
+                })));
+              }
+            }
+          } finally {
+            await batchQueue.onIdle();
+            this.cleanupQueue(batchQueue);
+          }
+          const mergedMap = /* @__PURE__ */ new Map();
+          for (const result of allHealthResults) {
+            mergedMap.set(result.name, result);
+          }
+          for (const result of batchResults) {
+            mergedMap.set(result.name, result);
+          }
+          const mergedResults = Array.from(mergedMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+          await this.recordReliability(mergedResults);
+          if (batchFailures > 0) {
+            if (batchSuccesses === 0) {
+              const failedNames = mergedResults.filter((r) => r.status !== "success").map((r) => r.name).join(", ");
+              logger.error(`All LLM batches failed (${batchFailures}/${batches.length}): ${failedNames}. Continuing with static analysis only.`);
+              await progressTracker?.updateProgress("llm", "failed", `All batches failed: ${failedNames}`);
+            } else {
+              logger.warn(`Partial batch failure: ${batchFailures} failed, ${batchSuccesses} succeeded. Using successful results.`);
+              await progressTracker?.updateProgress("llm", "completed", `Batches: ${batchSuccesses}/${batches.length} succeeded`);
+            }
+          } else {
+            await progressTracker?.updateProgress("llm", "completed", `Processed ${batches.length} batch(es)`);
+          }
+          llmFindings.push(...extractFindings(batchResults));
+          providerResults = mergedResults;
+          aiAnalysis = config.enableAiDetection ? summarizeAIDetection(providerResults) : void 0;
         }
       }
-      for (const result of providerResults) {
-        await this.components.costTracker.record(result.name, result.result?.usage, config.budgetMaxUsd);
-      }
-    }
-    const astFindings = config.enableAstAnalysis ? this.components.astAnalyzer.analyze(filesToReview) : [];
-    const ruleFindings = this.components.rules.run(filesToReview);
-    const securityFindings = config.enableSecurity ? this.components.security.scan(filesToReview) : [];
-    const context2 = contextRetriever.findRelatedContext(filesToReview);
-    const combinedFindings = [
-      ...astFindings,
-      ...ruleFindings,
-      ...securityFindings,
-      ...llmFindings,
-      ...cachedFindings || []
-    ];
-    const deduped = this.components.deduplicator.dedupe(combinedFindings);
-    const consensus = this.components.consensus.filter(deduped);
-    const providerCount = providers.length || 1;
-    const enriched = consensus.map(
-      (f) => this.enrichFinding(f, pr.files, context2, providerCount, codeGraph)
-    );
-    const quietFiltered = await this.applyQuietMode(enriched, config);
-    const testHints = config.enableTestHints ? this.components.testCoverage.analyze(pr.files) : void 0;
-    const impactAnalysis = this.components.impactAnalyzer.analyze(pr.files, context2, quietFiltered.length > 0);
-    const mermaidDiagram = this.components.mermaidGenerator.generateImpactDiagram(pr.files, context2);
-    const costSummary = this.components.costTracker.summary();
-    const runDetails = {
-      providers: providerResults.map((r) => ({
-        name: r.name,
-        status: r.status,
-        durationSeconds: r.durationSeconds,
-        tokens: r.result?.usage?.totalTokens,
-        cost: costSummary.breakdown[r.name],
-        errorMessage: r.error?.message
-      })),
-      totalCost: costSummary.totalCost,
-      totalTokens: costSummary.totalTokens,
-      durationSeconds: 0,
-      cacheHit: Boolean(cachedFindings),
-      synthesisModel: config.synthesisModel,
-      providerPoolSize: providers.length
-    };
-    const review = this.components.synthesis.synthesize(
-      quietFiltered,
-      reviewPR,
-      testHints,
-      aiAnalysis,
-      providerResults,
-      runDetails,
-      impactAnalysis,
-      mermaidDiagram
-    );
-    if (useIncremental && lastReviewData) {
-      review.findings = this.components.incrementalReviewer.mergeFindings(
-        lastReviewData.findings,
-        review.findings,
-        filesToReview
+      const staticAnalysis = await this.runStaticAnalysis(filesToReview, contextRetriever);
+      const combinedFindings = [
+        ...staticAnalysis.astFindings,
+        ...staticAnalysis.ruleFindings,
+        ...staticAnalysis.securityFindings,
+        ...llmFindings,
+        ...cachedFindings || []
+      ];
+      const deduped = this.components.deduplicator.dedupe(combinedFindings);
+      const consensus = this.components.consensus.filter(deduped);
+      const providerCount = providers.length || 1;
+      const enriched = consensus.map(
+        (f) => this.enrichFinding(f, pr.files, staticAnalysis.context, providerCount, codeGraph)
       );
-      review.summary = this.components.incrementalReviewer.generateIncrementalSummary(
-        lastReviewData.reviewSummary,
-        review.summary,
-        filesToReview,
-        lastReviewData.lastReviewedCommit,
-        pr.headSha
+      const quietFiltered = await this.applyQuietMode(enriched, config);
+      await progressTracker?.updateProgress("static", "completed", "AST, security, and rules processed");
+      const testHints = config.enableTestHints ? this.components.testCoverage.analyze(pr.files) : void 0;
+      const impactAnalysis = this.components.impactAnalyzer.analyze(pr.files, staticAnalysis.context, quietFiltered.length > 0);
+      const mermaidDiagram = this.components.mermaidGenerator.generateImpactDiagram(pr.files, staticAnalysis.context);
+      const costSummary = this.components.costTracker.summary();
+      const runDetails = {
+        providers: providerResults.map((r) => ({
+          name: r.name,
+          status: r.status,
+          durationSeconds: r.durationSeconds,
+          tokens: r.result?.usage?.totalTokens,
+          cost: costSummary.breakdown[r.name],
+          errorMessage: r.error?.message
+        })),
+        totalCost: costSummary.totalCost,
+        totalTokens: costSummary.totalTokens,
+        durationSeconds: 0,
+        cacheHit: Boolean(cachedFindings),
+        synthesisModel: config.synthesisModel,
+        providerPoolSize: providers.length
+      };
+      review = this.components.synthesis.synthesize(
+        quietFiltered,
+        reviewPR,
+        testHints,
+        aiAnalysis,
+        providerResults,
+        runDetails,
+        impactAnalysis,
+        mermaidDiagram
       );
-      review.metrics.totalFindings = review.findings.length;
-      review.metrics.critical = review.findings.filter((f) => f.severity === "critical").length;
-      review.metrics.major = review.findings.filter((f) => f.severity === "major").length;
-      review.metrics.minor = review.findings.filter((f) => f.severity === "minor").length;
-      logger.info(`Incremental review completed: ${review.findings.length} total findings after merge`);
-    }
-    review.metrics.totalCost = costSummary.totalCost;
-    review.metrics.totalTokens = costSummary.totalTokens;
-    review.metrics.providersUsed = providers.length;
-    review.metrics.providersSuccess = providerResults.filter((r) => r.status === "success").length;
-    review.metrics.providersFailed = providerResults.length - review.metrics.providersSuccess;
-    review.metrics.durationSeconds = (Date.now() - start) / 1e3;
-    if (review.runDetails) {
-      review.runDetails.durationSeconds = review.metrics.durationSeconds;
-    }
-    review.metrics.cached = Boolean(cachedFindings);
-    if (config.generateFixPrompts && this.components.promptGenerator) {
-      const fixPrompts = this.components.promptGenerator.generateFixPrompts(review.findings);
-      if (fixPrompts.length > 0) {
-        const basename2 = this.sanitizeFilename(process.env.REPORT_BASENAME || "multi-provider-review");
-        const fixPromptsPath = import_path.default.join(process.cwd(), `${basename2}-fix-prompts.md`);
-        const format = config.fixPromptFormat || "plain";
-        await this.components.promptGenerator.saveToFile(fixPrompts, fixPromptsPath, format);
-        logger.info(`Generated ${fixPrompts.length} fix prompts: ${fixPromptsPath}`);
+      if (useIncremental && lastReviewData) {
+        review.findings = this.components.incrementalReviewer.mergeFindings(
+          lastReviewData.findings,
+          review.findings,
+          filesToReview
+        );
+        review.summary = this.components.incrementalReviewer.generateIncrementalSummary(
+          lastReviewData.reviewSummary,
+          review.summary,
+          filesToReview,
+          lastReviewData.lastReviewedCommit,
+          pr.headSha
+        );
+        review.metrics.totalFindings = review.findings.length;
+        review.metrics.critical = review.findings.filter((f) => f.severity === "critical").length;
+        review.metrics.major = review.findings.filter((f) => f.severity === "major").length;
+        review.metrics.minor = review.findings.filter((f) => f.severity === "minor").length;
+        logger.info(`Incremental review completed: ${review.findings.length} total findings after merge`);
+      }
+      review.metrics.totalCost = costSummary.totalCost;
+      review.metrics.totalTokens = costSummary.totalTokens;
+      review.metrics.providersUsed = providers.length;
+      review.metrics.providersSuccess = providerResults.filter((r) => r.status === "success").length;
+      review.metrics.providersFailed = providerResults.length - review.metrics.providersSuccess;
+      review.metrics.durationSeconds = (Date.now() - start) / 1e3;
+      if (review.runDetails) {
+        review.runDetails.durationSeconds = review.metrics.durationSeconds;
+      }
+      review.metrics.cached = Boolean(cachedFindings);
+      if (config.generateFixPrompts && this.components.promptGenerator) {
+        const fixPrompts = this.components.promptGenerator.generateFixPrompts(review.findings);
+        if (fixPrompts.length > 0) {
+          const basename2 = this.sanitizeFilename(process.env.REPORT_BASENAME || "multi-provider-review");
+          const fixPromptsPath = import_path.default.join(process.cwd(), `${basename2}-fix-prompts.md`);
+          const format = config.fixPromptFormat || "plain";
+          await this.components.promptGenerator.saveToFile(fixPrompts, fixPromptsPath, format);
+          logger.info(`Generated ${fixPrompts.length} fix prompts: ${fixPromptsPath}`);
+        }
+      }
+      if (config.enableCaching) {
+        await this.components.cache.save(pr, review);
+      }
+      if (config.incrementalEnabled) {
+        await this.components.incrementalReviewer.saveReview(pr, review);
+      }
+      if (config.analyticsEnabled && this.components.metricsCollector) {
+        try {
+          await this.components.metricsCollector.recordReview(review, pr.number);
+          logger.debug(`Recorded review metrics for PR #${pr.number}`);
+        } catch (error2) {
+          logger.warn("Failed to record review metrics", error2);
+        }
+      }
+      const markdown = this.components.formatter.format(review);
+      const suppressed = await this.components.feedbackFilter.loadSuppressed(pr.number);
+      const inlineFiltered = review.inlineComments.filter((c) => this.components.feedbackFilter.shouldPost(c, suppressed));
+      if (progressTracker) {
+        await progressTracker.replaceWith(markdown);
+      } else {
+        await this.components.commentPoster.postSummary(pr.number, markdown, useIncremental);
+      }
+      await this.components.commentPoster.postInline(pr.number, inlineFiltered, pr.files, pr.headSha);
+      await this.writeReports(review);
+      await progressTracker?.updateProgress("synthesis", "completed");
+      success = true;
+      return review;
+    } catch (error2) {
+      await progressTracker?.updateProgress("synthesis", "failed", error2.message);
+      throw error2;
+    } finally {
+      if (progressTracker) {
+        try {
+          progressTracker.setTotalCost(this.components.costTracker.summary().totalCost);
+          await progressTracker.finalize(success);
+        } catch (err) {
+          logger.warn("Failed to finalize progress tracker", err);
+        }
       }
     }
-    if (config.enableCaching) {
-      await this.components.cache.save(pr, review);
-    }
-    if (config.incrementalEnabled) {
-      await this.components.incrementalReviewer.saveReview(pr, review);
-    }
-    if (config.analyticsEnabled && this.components.metricsCollector) {
-      try {
-        await this.components.metricsCollector.recordReview(review, pr.number);
-        logger.debug(`Recorded review metrics for PR #${pr.number}`);
-      } catch (error2) {
-        logger.warn("Failed to record review metrics", error2);
-      }
-    }
-    const markdown = this.components.formatter.format(review);
-    const suppressed = await this.components.feedbackFilter.loadSuppressed(pr.number);
-    const inlineFiltered = review.inlineComments.filter((c) => this.components.feedbackFilter.shouldPost(c, suppressed));
-    await this.components.commentPoster.postSummary(pr.number, markdown, useIncremental);
-    await this.components.commentPoster.postInline(pr.number, inlineFiltered, pr.files, pr.headSha);
-    await this.writeReports(review);
-    return review;
   }
   /**
    * Cleanup resources after review to prevent memory leaks in long-running processes
@@ -39460,6 +41501,27 @@ var ReviewOrchestrator = class {
   async dispose() {
     this.components.costTracker.reset();
     logger.debug("Orchestrator resources disposed");
+  }
+  /**
+   * Run all static analysis operations in parallel
+   */
+  async runStaticAnalysis(files, contextRetriever) {
+    const { config } = this.components;
+    const [astFindings, ruleFindings, securityFindings, context2] = await Promise.all([
+      config.enableAstAnalysis ? this.components.astAnalyzer.analyze(files) : Promise.resolve([]),
+      this.components.rules.run(files),
+      config.enableSecurity ? this.components.security.scan(files) : Promise.resolve([]),
+      contextRetriever.findRelatedContext(files)
+    ]);
+    logger.info(
+      `Static analysis complete: ${astFindings.length} AST, ${ruleFindings.length} rules, ${securityFindings.length} security, ${context2.length} context items`
+    );
+    return {
+      astFindings,
+      ruleFindings,
+      securityFindings,
+      context: context2
+    };
   }
   shouldSkip(pr) {
     const { config } = this.components;
@@ -39484,6 +41546,53 @@ var ReviewOrchestrator = class {
   isBot(author) {
     const lower = author.toLowerCase();
     return ["bot", "dependabot", "renovate", "github-actions", "[bot]"].some((p) => lower.includes(p));
+  }
+  async applyReliabilityFilters(providers) {
+    const tracker = this.components.reliabilityTracker;
+    if (!tracker || providers.length === 0) return providers;
+    const available = [];
+    for (const provider of providers) {
+      const open = await tracker.isCircuitOpen(provider.name);
+      if (open) {
+        logger.warn(`Skipping provider ${provider.name} (circuit open)`);
+        continue;
+      }
+      available.push(provider);
+    }
+    if (available.length === 0) {
+      logger.warn("All providers are currently tripped by circuit breakers; skipping review run");
+      return [];
+    }
+    const rankings = await tracker.rankProviders(available.map((p) => p.name));
+    const scoreMap = new Map(rankings.map((r) => [r.providerId, r.score]));
+    return [...available].sort((a, b) => (scoreMap.get(b.name) ?? 0.5) - (scoreMap.get(a.name) ?? 0.5));
+  }
+  async recordReliability(results) {
+    if (!this.components.reliabilityTracker) return;
+    for (const result of results) {
+      await this.components.reliabilityTracker.recordResult(
+        result.name,
+        result.status === "success",
+        Number.isFinite(result.durationSeconds) ? Math.max(0, result.durationSeconds * 1e3) : void 0,
+        result.error?.message
+      );
+    }
+  }
+  async initProgressTracker(pr) {
+    if (!this.components.githubClient || this.components.config.dryRun) return void 0;
+    try {
+      const tracker = new ProgressTracker(this.components.githubClient.octokit, {
+        owner: this.components.githubClient.owner,
+        repo: this.components.githubClient.repo,
+        prNumber: pr.number,
+        updateStrategy: "milestone"
+      });
+      await tracker.initialize();
+      return tracker;
+    } catch (error2) {
+      logger.warn("Failed to initialize progress tracker", error2);
+      return void 0;
+    }
   }
   async ensureBudget(config) {
     if (config.budgetMaxUsd <= 0) return;
@@ -39513,44 +41622,14 @@ var ReviewOrchestrator = class {
     const sanitized = filename.replace(/[^a-zA-Z0-9_-]/g, "-").substring(0, 50);
     return sanitized || "multi-provider-review";
   }
+  cleanupQueue(queue) {
+    queue.clear?.();
+  }
   /**
    * Filter diff to only include files that changed
    * Used for incremental reviews to send only relevant diffs to LLMs
    * Uses indexOf instead of regex to avoid ReDoS and improve memory efficiency
    */
-  filterDiffByFiles(diff, files) {
-    if (files.length === 0) return "";
-    const fileNames = new Set(files.map((f) => f.filename));
-    const diffChunks = [];
-    const DIFF_MARKER = "diff --git ";
-    let startIdx = 0;
-    while (startIdx < diff.length) {
-      const markerIdx = diff.indexOf(DIFF_MARKER, startIdx);
-      if (markerIdx === -1) break;
-      if (markerIdx > 0 && diff[markerIdx - 1] !== "\n") {
-        startIdx = markerIdx + DIFF_MARKER.length;
-        continue;
-      }
-      let nextIdx = diff.indexOf("\n" + DIFF_MARKER, markerIdx + 1);
-      if (nextIdx === -1) {
-        nextIdx = diff.length;
-      } else {
-        nextIdx += 1;
-      }
-      const chunk = diff.substring(markerIdx, nextIdx);
-      const firstLineEnd = chunk.indexOf("\n");
-      const firstLine = firstLineEnd === -1 ? chunk : chunk.substring(0, firstLineEnd);
-      const bIndex = firstLine.indexOf(" b/");
-      if (bIndex !== -1) {
-        const filename = firstLine.substring(bIndex + 3).trim();
-        if (fileNames.has(filename)) {
-          diffChunks.push(chunk);
-        }
-      }
-      startIdx = nextIdx;
-    }
-    return diffChunks.join("");
-  }
   enrichFinding(finding, files, context2, providerCount, codeGraph) {
     const file = files.find((f) => f.filename === finding.file);
     const changedLines = mapAddedLines(file?.patch);
@@ -39597,7 +41676,7 @@ var ReviewOrchestrator = class {
    * Tracks time saved and cost avoided
    */
   createTrivialReview(reason, fileCount, startTime) {
-    const durationSeconds = (Date.now() - startTime) / 1e3;
+    const durationSeconds = Math.max(1e-3, (Date.now() - startTime) / 1e3);
     return {
       summary: `This PR contains only trivial changes that don't require detailed review.
 

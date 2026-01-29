@@ -19,9 +19,11 @@ describe('ProgressTracker', () => {
     updateCommentMock = jest.fn();
 
     octokit = {
-      issues: {
-        createComment: createCommentMock,
-        updateComment: updateCommentMock,
+      rest: {
+        issues: {
+          createComment: createCommentMock,
+          updateComment: updateCommentMock,
+        },
       },
     } as any;
 
@@ -35,7 +37,7 @@ describe('ProgressTracker', () => {
 
       await tracker.initialize();
 
-      expect(octokit.issues.createComment).toHaveBeenCalledWith({
+      expect(octokit.rest.issues.createComment).toHaveBeenCalledWith({
         owner: 'test-owner',
         repo: 'test-repo',
         issue_number: 123,
@@ -178,7 +180,7 @@ describe('ProgressTracker', () => {
       const lastCall = updateCommentMock.mock.calls[updateCommentMock.mock.calls.length - 1];
       const body = lastCall?.[0]?.body as string;
 
-      expect(body).toContain('✅'); // All items completed
+      expect(body).toContain('✅'); // All items marked as completed on successful finalization
       expect(body).not.toContain('❌'); // No failures
     });
 

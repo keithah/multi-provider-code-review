@@ -34,6 +34,7 @@ export class ProgressTracker {
   private items: Map<string, ProgressItem> = new Map();
   private startTime: number = Date.now();
   private totalCost: number = 0;
+  private overrideBody?: string;
 
   constructor(
     private octokit: Octokit,
@@ -44,9 +45,13 @@ export class ProgressTracker {
    * Initialize progress tracking by creating the initial comment
    */
   async initialize(): Promise<void> {
+    if (!this.octokit?.rest?.issues?.createComment) {
+      logger.warn('Progress tracker unavailable: octokit.rest.issues.createComment is missing');
+      return;
+    }
     try {
       const body = this.formatProgressComment();
-      const comment = await this.octokit.issues.createComment({
+      const comment = await this.octokit.rest.issues.createComment({
         owner: this.config.owner,
         repo: this.config.repo,
         issue_number: this.config.prNumber,
@@ -114,18 +119,19 @@ export class ProgressTracker {
    * Finalize progress tracking with summary
    */
   async finalize(success: boolean): Promise<void> {
-    const finalStatus: ProgressStatus = success ? 'completed' : 'failed';
     const duration = Date.now() - this.startTime;
 
     // Update all pending items to final status
     this.items.forEach((item) => {
       if (item.status === 'pending' || item.status === 'in_progress') {
-        item.status = finalStatus;
+        item.status = success ? 'completed' : 'failed';
         item.endTime = Date.now();
       }
     });
 
-    await this.updateComment();
+    if (!this.overrideBody) {
+      await this.updateComment();
+    }
 
     logger.info('Progress tracker finalized', {
       success,
@@ -186,11 +192,15 @@ export class ProgressTracker {
       logger.warn('Cannot update progress: comment not initialized');
       return;
     }
+    if (!this.octokit?.rest?.issues?.updateComment) {
+      logger.warn('Cannot update progress: octokit.rest.issues.updateComment is missing');
+      return;
+    }
 
     try {
-      const body = this.formatProgressComment();
+      const body = this.overrideBody ?? this.formatProgressComment();
 
-      await this.octokit.issues.updateComment({
+      await this.octokit.rest.issues.updateComment({
         owner: this.config.owner,
         repo: this.config.repo,
         comment_id: this.commentId,
@@ -202,6 +212,27 @@ export class ProgressTracker {
       logger.error('Failed to update progress comment', error as Error);
       // Don't throw - progress tracking failure shouldn't stop the review
     }
+  }
+
+  /**
+   * Replace the progress comment with a final body (e.g., combined progress + review)
+   */
+  async replaceWith(body: string): Promise<void> {
+    if (!this.commentId) {
+      logger.warn('Cannot replace progress: comment not initialized');
+      return;
+    }
+    if (!this.octokit?.rest?.issues?.updateComment) {
+      logger.warn('Cannot replace progress: octokit.rest.issues.updateComment is missing');
+      return;
+    }
+    this.overrideBody = body;
+    await this.octokit.rest.issues.updateComment({
+      owner: this.config.owner,
+      repo: this.config.repo,
+      comment_id: this.commentId,
+      body,
+    });
   }
 
   /**

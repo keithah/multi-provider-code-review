@@ -12,6 +12,42 @@ export class OpenCodeProvider extends Provider {
     super(`opencode/${modelId}`);
   }
 
+  // Lightweight health check: verify CLI is available; skip full review run
+  async healthCheck(_timeoutMs: number = 5000): Promise<boolean> {
+    const timeoutMs = Math.max(500, _timeoutMs ?? 5000);
+
+    // Use timeout tracking to detect promise leaks
+    let timeoutId: NodeJS.Timeout;
+    let isTimedOut = false;
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        isTimedOut = true;
+        reject(new Error(`OpenCode health check timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+    });
+
+    try {
+      await Promise.race([
+        this.resolveBinary().then(() => {
+          // If timeout already fired, we still succeeded - log for debugging
+          if (isTimedOut) {
+            logger.debug(`OpenCode binary resolved after timeout (${this.name})`);
+          }
+        }),
+        timeoutPromise
+      ]);
+      clearTimeout(timeoutId!);
+      return true;
+    } catch (error) {
+      if (timeoutId!) {
+        clearTimeout(timeoutId);
+      }
+      logger.warn(`OpenCode health check failed for ${this.name}: ${(error as Error).message}`);
+      return false;
+    }
+  }
+
   async review(prompt: string, timeoutMs: number): Promise<ReviewResult> {
     const started = Date.now();
 

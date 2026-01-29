@@ -28,6 +28,11 @@ Hybrid AST + LLM GitHub Action that fuses multiple AI providers with consensus f
 - **🐳 Self-Hosted Deployment** - Docker & webhook server for enterprise use
 - **🔌 Plugin System** - Add custom LLM providers without modifying core code
 
+### Safety Defaults
+- **Path patterns** are validated to prevent injection/traversal: allowed chars `[A-Za-z0-9._-/*?{}[] ,]`, leading `!` (negation) and `..` segments are blocked.
+- **Batch overrides** (`PROVIDER_BATCH_OVERRIDES`) must be integers 1-200; out-of-range values are clamped with a warning.
+- **Concurrency control**: workflow runs use a simple `${{ github.workflow }}-${{ github.ref }}-${{ github.run_id }}` group to avoid duplicate reviews per commit/ref.
+
 ## Quick Start
 
 ### GitHub Action (Production)
@@ -112,7 +117,8 @@ See [Self-Hosted Deployment Guide](docs/self-hosted.md) for details.
 ### Providers
 - `REVIEW_PROVIDERS`: Comma-separated providers (`openrouter/<model>`, `opencode/<model>`)
 - `FALLBACK_PROVIDERS`: Backup providers if primary providers fail
-- `PROVIDER_LIMIT` (default: `6`): Max number of providers to use
+- `PROVIDER_DISCOVERY_LIMIT` (default: `8`): Max providers to discover/health-check
+- `PROVIDER_LIMIT` (default: `6`): Max providers to use for actual review
 - `PROVIDER_MAX_PARALLEL` (default: `3`): Max parallel provider execution
 
 ### Filtering & Thresholds
@@ -266,6 +272,8 @@ ANALYTICS_MAX_REVIEWS: '1000'
 - **[Security Guide](./docs/SECURITY.md)** - Security features, best practices, and threat model
 - **[Error Handling Guide](./docs/ERROR_HANDLING.md)** - Error recovery and debugging strategies
 - **[Troubleshooting Guide](./docs/TROUBLESHOOTING.md)** - Common issues and solutions
+- **[Improving Code Reviews](./docs/IMPROVING_CODE_REVIEWS.md)** - Reducing false positives and improving review accuracy
+- **[Auto-Detection System](./docs/AUTO_DETECTION_IMPROVEMENTS.md)** - How auto-detection reduces false positives by 60%
 - **[Self-Hosted Deployment](./docs/self-hosted.md)** - Docker deployment and webhook setup
 - **[Plugin Development](./docs/plugins.md)** - Create custom LLM provider plugins
 - **[Analytics Guide](./docs/analytics.md)** - Track costs, performance, and ROI
