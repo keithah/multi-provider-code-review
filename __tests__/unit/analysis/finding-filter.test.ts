@@ -79,7 +79,7 @@ describe('FindingFilter', () => {
 
       expect(filtered).toHaveLength(0);
       expect(stats.filtered).toBe(1);
-      expect(stats.reasons['intentional test pattern']).toBe(1);
+      expect(stats.reasons['test code quality (not production issue)']).toBe(1);
     });
 
     test('downgrades lint issues from critical to minor', () => {
@@ -429,7 +429,156 @@ describe('FindingFilter', () => {
       // Should filter as intentional test pattern
       expect(filtered).toHaveLength(0);
       expect(stats.filtered).toBe(1);
-      expect(stats.reasons['intentional test pattern']).toBe(1);
+      expect(stats.reasons['test code quality (not production issue)']).toBe(1);
+    });
+
+    test('filters test code quality issues', () => {
+      const findings: Finding[] = [
+        {
+          file: '__tests__/unit/foo.test.ts',
+          line: 10,
+          severity: 'major',
+          title: 'Missing Edge Case Handling',
+          message: 'Test cases don\'t cover edge scenarios',
+        },
+        {
+          file: 'src/utils.spec.ts',
+          line: 20,
+          severity: 'critical',
+          title: 'Missing test coverage',
+          message: 'Function is not tested',
+        },
+      ];
+
+      const { findings: filtered, stats } = filter.filter(findings, '');
+
+      expect(filtered).toHaveLength(0);
+      expect(stats.filtered).toBe(2);
+      expect(stats.reasons['test code quality (not production issue)']).toBe(2);
+    });
+
+    test('downgrades remaining test file issues to minor', () => {
+      const findings: Finding[] = [
+        {
+          file: 'src/app.test.ts',
+          line: 15,
+          severity: 'critical',
+          title: 'Some other issue',
+          message: 'Not a specific pattern',
+        },
+      ];
+
+      const { findings: filtered, stats } = filter.filter(findings, '');
+
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].severity).toBe('minor');
+      expect(stats.downgraded).toBe(1);
+    });
+
+    test('keeps true security issues in test files', () => {
+      const findings: Finding[] = [
+        {
+          file: 'src/auth.test.ts',
+          line: 10,
+          severity: 'critical',
+          title: 'SQL Injection vulnerability',
+          message: 'Test directly concatenates SQL',
+        },
+      ];
+
+      const { findings: filtered, stats } = filter.filter(findings, '');
+
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].severity).toBe('critical');
+      expect(stats.kept).toBe(1);
+      expect(stats.downgraded).toBe(0);
+    });
+
+    test('filters workflow security false positives', () => {
+      const diff = `
+        - name: Security check
+          run: |
+            if [ -n "$OPENROUTER_API_KEY" ]; then
+              echo "SECURITY VIOLATION: Fork PR has access to secrets"
+              exit 1
+            fi
+      `;
+
+      const findings: Finding[] = [
+        {
+          file: '.github/workflows/multi-provider-review.yml',
+          line: 97,
+          severity: 'critical',
+          title: 'Security Risk: Fork PR Secret Exposure',
+          message: 'Fork PRs could access secrets',
+        },
+        {
+          file: '.github/workflows/multi-provider-review.yml',
+          line: 142,
+          severity: 'critical',
+          title: 'Fork PR Security Risk',
+          message: 'Secrets might be exposed to forks',
+        },
+      ];
+
+      const { findings: filtered, stats } = filter.filter(findings, diff);
+
+      expect(filtered).toHaveLength(0);
+      expect(stats.filtered).toBe(2);
+      expect(stats.reasons['workflow security already implemented']).toBe(2);
+    });
+
+    test('deduplicates similar findings', () => {
+      const findings: Finding[] = [
+        {
+          file: 'src/app.ts',
+          line: 10,
+          severity: 'major',
+          title: 'Security Risk: Fork PR Secret Exposure',
+          message: 'First occurrence',
+        },
+        {
+          file: 'src/app.ts',
+          line: 20,
+          severity: 'critical',
+          title: 'Security Risk: Fork PR Secret Exposure!',
+          message: 'Second occurrence',
+        },
+        {
+          file: 'src/app.ts',
+          line: 30,
+          severity: 'major',
+          title: 'Security Risk Fork PR Secret Exposure',
+          message: 'Third occurrence',
+        },
+      ];
+
+      const { findings: filtered, stats } = filter.filter(findings, '');
+
+      // Should keep only one (the most severe)
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].severity).toBe('critical');
+      expect(stats.filtered).toBe(2);
+      expect(stats.reasons['duplicate finding']).toBe(2);
+    });
+
+    test('filters jest.setup.ts issues', () => {
+      const findings: Finding[] = [
+        {
+          file: 'jest.setup.ts',
+          line: 101,
+          severity: 'major',
+          title: 'Unsafe exit code override',
+          message: 'afterAll resets process.exitCode',
+        },
+      ];
+
+      const { findings: filtered, stats } = filter.filter(findings, '');
+
+      // Should downgrade to minor
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].severity).toBe('minor');
+      expect(stats.downgraded).toBe(1);
     });
   });
 });

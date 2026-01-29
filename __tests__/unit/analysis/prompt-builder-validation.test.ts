@@ -88,9 +88,10 @@ describe('PromptBuilder Context Window Validation', () => {
 
     it('should detect high utilization', () => {
       // Create PR that uses significant portion of a small context window
+      // Reduced diff size to account for enhanced prompt instructions
       const mediumPR: PRContext = {
         ...mockPR,
-        diff: 'a'.repeat(5000), // ~1500 tokens with 1.2x safety margin for gpt-3.5-turbo (4k total window - 2k reserved = 2k available)
+        diff: 'a'.repeat(3000), // ~900 tokens with 1.2x safety margin for gpt-3.5-turbo (4k total window - 2k reserved = 2k available)
       };
 
       const builder = new PromptBuilder(DEFAULT_CONFIG, 'standard');

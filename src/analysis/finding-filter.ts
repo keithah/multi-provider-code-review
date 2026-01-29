@@ -61,13 +61,24 @@ export class FindingFilter {
       stats.kept++;
     }
 
+    // Deduplicate similar findings (same file + similar title)
+    const deduplicated = this.deduplicateFindings(filtered);
+    const duplicatesRemoved = filtered.length - deduplicated.length;
+
+    if (duplicatesRemoved > 0) {
+      stats.filtered += duplicatesRemoved;
+      stats.kept -= duplicatesRemoved;
+      stats.reasons['duplicate finding'] = (stats.reasons['duplicate finding'] || 0) + duplicatesRemoved;
+      logger.debug(`Removed ${duplicatesRemoved} duplicate findings`);
+    }
+
     if (stats.filtered > 0 || stats.downgraded > 0) {
       logger.info(
         `Finding filter: ${stats.filtered} filtered, ${stats.downgraded} downgraded, ${stats.kept} kept (from ${stats.total} total)`
       );
     }
 
-    return { findings: filtered, stats };
+    return { findings: deduplicated, stats };
   }
 
   private shouldFilter(finding: Finding, diffContent: string): 'filter' | 'downgrade' | 'keep' {
@@ -81,10 +92,21 @@ export class FindingFilter {
       }
     }
 
-    // Filter: Test files - only flag actual bugs, not intentional edge cases
-    if (this.isTestFile(finding.file)) {
-      if (this.isIntentionalTestPattern(finding)) {
+    // Aggressive filtering for test files - tests are not production code
+    if (this.isTestFile(finding.file) || this.isTestInfrastructure(finding.file)) {
+      // Only keep security vulnerabilities in test files (SQL injection, XSS, etc.)
+      if (this.isTrueSecurityIssue(finding)) {
+        return 'keep';
+      }
+
+      // Filter common false positives in tests
+      if (this.isTestCodeQualityIssue(finding)) {
         return 'filter';
+      }
+
+      // Downgrade everything else in test files to minor
+      if (finding.severity === 'critical' || finding.severity === 'major') {
+        return 'downgrade';
       }
     }
 
@@ -97,6 +119,11 @@ export class FindingFilter {
 
     // Filter: "Missing method" when method exists in diff
     if (this.isMissingMethodFalsePositive(finding, diffContent)) {
+      return 'filter';
+    }
+
+    // Filter: Workflow security checks that are already implemented
+    if (this.isWorkflowSecurityFalsePositive(finding, diffContent)) {
       return 'filter';
     }
 
@@ -119,8 +146,14 @@ export class FindingFilter {
     if (this.isDocumentationFile(finding.file) && this.isStyleOrFormattingIssue(finding)) {
       return 'documentation formatting';
     }
+    if ((this.isTestFile(finding.file) || this.isTestInfrastructure(finding.file)) && this.isTestCodeQualityIssue(finding)) {
+      return 'test code quality (not production issue)';
+    }
     if (this.isTestFile(finding.file) && this.isIntentionalTestPattern(finding)) {
       return 'intentional test pattern';
+    }
+    if (this.isWorkflowSecurityFalsePositive(finding, diffContent)) {
+      return 'workflow security already implemented';
     }
     if (this.isMissingMethodFalsePositive(finding, diffContent)) {
       return 'method exists in code';
@@ -137,6 +170,61 @@ export class FindingFilter {
 
   private isTestFile(file: string): boolean {
     return /\.(test|spec)\.(ts|js|tsx|jsx)$/i.test(file) || file.includes('__tests__');
+  }
+
+  private isTestInfrastructure(file: string): boolean {
+    // Test setup, configuration, and helpers
+    return (
+      file.includes('jest.setup') ||
+      file.includes('jest.config') ||
+      file.includes('test-utils') ||
+      file.includes('test-helpers') ||
+      file.includes('__mocks__') ||
+      file.includes('fixtures/')
+    );
+  }
+
+  private isTrueSecurityIssue(finding: Finding): boolean {
+    const text = (finding.title + ' ' + finding.message).toLowerCase();
+    return (
+      text.includes('sql injection') ||
+      text.includes('xss') ||
+      text.includes('cross-site scripting') ||
+      text.includes('command injection') ||
+      text.includes('path traversal') ||
+      text.includes('remote code execution') ||
+      text.includes('arbitrary code') ||
+      text.includes('prototype pollution')
+    );
+  }
+
+  private isTestCodeQualityIssue(finding: Finding): boolean {
+    const text = (finding.title + ' ' + finding.message).toLowerCase();
+    return (
+      // Test coverage and completeness
+      text.includes('missing edge case') ||
+      text.includes('missing test case') ||
+      text.includes('missing test') ||
+      text.includes('test coverage') ||
+      text.includes('not tested') ||
+      // Test structure and organization
+      text.includes('test structure') ||
+      text.includes('test organization') ||
+      text.includes('test duplicate') ||
+      // Test data and mocks
+      text.includes('mock') ||
+      text.includes('stub') ||
+      text.includes('fixture') ||
+      text.includes('test data') ||
+      text.includes('inconsistent') ||
+      text.includes('mismatch') ||
+      // Test assertions
+      text.includes('assertion') ||
+      text.includes('expect') ||
+      // Documentation in tests
+      text.includes('test documentation') ||
+      text.includes('test comment')
+    );
   }
 
   private isStyleOrFormattingIssue(finding: Finding): boolean {
@@ -225,6 +313,32 @@ export class FindingFilter {
     );
   }
 
+  private isWorkflowSecurityFalsePositive(finding: Finding, diffContent: string): boolean {
+    // Only apply to workflow files
+    if (!finding.file.includes('.github/workflows/')) {
+      return false;
+    }
+
+    const text = (finding.title + ' ' + finding.message).toLowerCase();
+
+    // Check if it's about fork PR security
+    if (text.includes('fork') && text.includes('secret')) {
+      // Check if the diff shows security checks are already in place
+      const hasForkSecurityCheck = (
+        diffContent.includes('SECURITY VIOLATION') ||
+        diffContent.includes('Fork PR has access to secrets') ||
+        diffContent.includes('if [ -n "$OPENROUTER_API_KEY" ]')
+      );
+
+      if (hasForkSecurityCheck) {
+        logger.debug(`Workflow security already implemented: ${finding.title}`);
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   private isLineNumberIssue(finding: Finding, diffContent: string): boolean {
     if (!finding.line) {
       return false; // No line number to check
@@ -256,5 +370,41 @@ export class FindingFilter {
     }
 
     return false;
+  }
+
+  /**
+   * Remove duplicate findings that are essentially the same issue
+   * Uses file + title similarity to detect duplicates
+   */
+  private deduplicateFindings(findings: Finding[]): Finding[] {
+    const seen = new Map<string, Finding>();
+
+    for (const finding of findings) {
+      // Create a dedup key from file + normalized title
+      const normalizedTitle = finding.title.toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '') // Remove punctuation
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .trim();
+
+      const key = `${finding.file}:${normalizedTitle}`;
+
+      // If we haven't seen this finding, keep it
+      // If we have, keep the one with more severe severity
+      if (!seen.has(key)) {
+        seen.set(key, finding);
+      } else {
+        const existing = seen.get(key)!;
+        // Keep the more severe one
+        const severityOrder = { critical: 3, major: 2, minor: 1 };
+        const existingSeverity = severityOrder[existing.severity];
+        const newSeverity = severityOrder[finding.severity];
+
+        if (newSeverity > existingSeverity) {
+          seen.set(key, finding);
+        }
+      }
+    }
+
+    return Array.from(seen.values());
   }
 }
