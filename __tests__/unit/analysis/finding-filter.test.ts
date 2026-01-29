@@ -525,7 +525,11 @@ describe('FindingFilter', () => {
 
       expect(filtered).toHaveLength(0);
       expect(stats.filtered).toBe(2);
-      expect(stats.reasons['workflow security already implemented']).toBe(2);
+      // Can be either reason string depending on which filter catches it first
+      const totalWorkflowFiltered =
+        (stats.reasons['workflow security already handled/config issue'] || 0) +
+        (stats.reasons['workflow/CI configuration (not application code)'] || 0);
+      expect(totalWorkflowFiltered).toBe(2);
     });
 
     test('deduplicates similar findings', () => {
@@ -579,6 +583,133 @@ describe('FindingFilter', () => {
       expect(filtered).toHaveLength(1);
       expect(filtered[0].severity).toBe('minor');
       expect(stats.downgraded).toBe(1);
+    });
+
+    test('filters workflow configuration issues', () => {
+      const findings: Finding[] = [
+        {
+          file: '.github/workflows/ci.yml',
+          line: 46,
+          severity: 'major',
+          title: 'CI test flags',
+          message: 'detectOpenHandles and testTimeout may cause flakiness',
+        },
+        {
+          file: '.github/workflows/deploy.yml',
+          line: 10,
+          severity: 'critical',
+          title: 'Timeout configuration',
+          message: 'Workflow timeout is too long',
+        },
+      ];
+
+      const { findings: filtered, stats } = filter.filter(findings, '');
+
+      // Should filter both
+      expect(filtered).toHaveLength(0);
+      expect(stats.filtered).toBe(2);
+      expect(stats.reasons['workflow/CI configuration (not application code)']).toBe(2);
+    });
+
+    test('filters general workflow security config warnings', () => {
+      const findings: Finding[] = [
+        {
+          file: '.github/workflows/review.yml',
+          line: 97,
+          severity: 'critical',
+          title: 'Security Risk: Fork PR Secret Exposure',
+          message: 'Workflow assumes repository setting is disabled',
+        },
+        {
+          file: '.github/workflows/review.yml',
+          line: 40,
+          severity: 'critical',
+          title: 'Fork PR security',
+          message: 'Disable "Send secrets to workflows from pull requests" in repository settings',
+        },
+      ];
+
+      const { findings: filtered, stats } = filter.filter(findings, '');
+
+      // Should filter both as general config warnings
+      expect(filtered).toHaveLength(0);
+      expect(stats.filtered).toBe(2);
+    });
+
+    test('semantic deduplication groups similar fork PR findings', () => {
+      const findings: Finding[] = [
+        {
+          file: '.github/workflows/review.yml',
+          line: 40,
+          severity: 'critical',
+          title: 'Security vulnerability in fork PR handling',
+          message: 'Fork PRs could access secrets',
+        },
+        {
+          file: '.github/workflows/review.yml',
+          line: 97,
+          severity: 'critical',
+          title: 'Security Risk: Fork PR Secret Exposure',
+          message: 'Secrets might be exposed',
+        },
+        {
+          file: '.github/workflows/review.yml',
+          line: 142,
+          severity: 'major',
+          title: 'Fork PR secret exposure risk and gate logic',
+          message: 'Security risk in fork PR handling',
+        },
+      ];
+
+      const { findings: filtered, stats } = filter.filter(findings, '');
+
+      // All should be filtered as workflow config, and if any survive, deduped to 1
+      expect(filtered.length).toBeLessThanOrEqual(1);
+      expect(stats.filtered).toBeGreaterThanOrEqual(2);
+    });
+
+    test('downgrades code quality issues from critical', () => {
+      const findings: Finding[] = [
+        {
+          file: 'src/utils.ts',
+          line: 10,
+          severity: 'critical',
+          title: 'Missing input validation',
+          message: 'Function lacks parameter validation',
+        },
+        {
+          file: 'src/api.ts',
+          line: 20,
+          severity: 'critical',
+          title: 'Hard-coded configuration',
+          message: 'API URL is hard-coded',
+        },
+      ];
+
+      const { findings: filtered, stats } = filter.filter(findings, '');
+
+      // Both should be downgraded to minor
+      expect(filtered).toHaveLength(2);
+      expect(filtered.every(f => f.severity === 'minor')).toBe(true);
+      expect(stats.downgraded).toBe(2);
+    });
+
+    test('filters findings about files added without visible tests', () => {
+      const findings: Finding[] = [
+        {
+          file: 'src/analysis/context/validation-detector.ts',
+          line: 1,
+          severity: 'major',
+          title: 'ValidationDetector added without visible tests',
+          message: 'New file lacks accompanying tests in diff',
+        },
+      ];
+
+      const { findings: filtered, stats } = filter.filter(findings, '');
+
+      expect(filtered).toHaveLength(0);
+      expect(stats.filtered).toBe(1);
+      expect(stats.reasons['complaint about file added in diff']).toBe(1);
     });
   });
 });

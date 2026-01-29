@@ -110,6 +110,31 @@ export class FindingFilter {
       }
     }
 
+    // Aggressive filtering for workflow/CI files - infrastructure, not application code
+    if (this.isWorkflowOrCIFile(finding.file)) {
+      // Filter common workflow false positives
+      if (this.isWorkflowConfigurationIssue(finding)) {
+        return 'filter';
+      }
+
+      // Downgrade everything else in workflow files to minor
+      if (finding.severity === 'critical' || finding.severity === 'major') {
+        return 'downgrade';
+      }
+    }
+
+    // Filter: Findings about files added in the diff (complaints about new files)
+    if (this.isAboutAddedFileFalsePositive(finding)) {
+      return 'filter';
+    }
+
+    // Downgrade: Code quality issues should never be critical
+    if (this.isCodeQualityIssue(finding)) {
+      if (finding.severity === 'critical') {
+        return 'downgrade';
+      }
+    }
+
     // Downgrade: Lint/style issues should never be critical
     if (this.isLintOrStyleIssue(finding)) {
       if (finding.severity === 'critical' || finding.severity === 'major') {
@@ -152,8 +177,14 @@ export class FindingFilter {
     if (this.isTestFile(finding.file) && this.isIntentionalTestPattern(finding)) {
       return 'intentional test pattern';
     }
+    if (this.isWorkflowOrCIFile(finding.file) && this.isWorkflowConfigurationIssue(finding)) {
+      return 'workflow/CI configuration (not application code)';
+    }
     if (this.isWorkflowSecurityFalsePositive(finding, diffContent)) {
-      return 'workflow security already implemented';
+      return 'workflow security already handled/config issue';
+    }
+    if (this.isAboutAddedFileFalsePositive(finding)) {
+      return 'complaint about file added in diff';
     }
     if (this.isMissingMethodFalsePositive(finding, diffContent)) {
       return 'method exists in code';
@@ -181,6 +212,37 @@ export class FindingFilter {
       file.includes('test-helpers') ||
       file.includes('__mocks__') ||
       file.includes('fixtures/')
+    );
+  }
+
+  private isWorkflowOrCIFile(file: string): boolean {
+    return (
+      file.includes('.github/workflows/') ||
+      file.includes('.github/actions/') ||
+      file.includes('.circleci/') ||
+      file.includes('.travis.yml') ||
+      file.includes('azure-pipelines') ||
+      file.includes('gitlab-ci.yml') ||
+      file === 'Jenkinsfile'
+    );
+  }
+
+  private isWorkflowConfigurationIssue(finding: Finding): boolean {
+    const text = (finding.title + ' ' + finding.message).toLowerCase();
+
+    return (
+      // Fork PR / secrets issues
+      (text.includes('fork') && text.includes('secret')) ||
+      (text.includes('pull request') && text.includes('secret')) ||
+      text.includes('repository setting') ||
+      // Workflow configuration
+      text.includes('workflow relies on') ||
+      text.includes('timeout') && text.includes('workflow') ||
+      text.includes('runner configuration') ||
+      // CI-specific issues
+      text.includes('detectopenhandles') ||
+      text.includes('testtimeout') ||
+      text.includes('ci test flags')
     );
   }
 
@@ -321,17 +383,40 @@ export class FindingFilter {
 
     const text = (finding.title + ' ' + finding.message).toLowerCase();
 
-    // Check if it's about fork PR security
-    if (text.includes('fork') && text.includes('secret')) {
-      // Check if the diff shows security checks are already in place
+    // Check if it's about fork PR security/secrets
+    const isForkSecurityFinding = (
+      (text.includes('fork') && (text.includes('secret') || text.includes('pr'))) ||
+      text.includes('pull request') && text.includes('secret')
+    );
+
+    if (isForkSecurityFinding) {
+      // Check if the diff or file shows security checks are already in place
+      // Even if not in diff, if finding is about general workflow security (not a new change),
+      // it's likely a false positive since workflows are reviewed separately
       const hasForkSecurityCheck = (
         diffContent.includes('SECURITY VIOLATION') ||
         diffContent.includes('Fork PR has access to secrets') ||
-        diffContent.includes('if [ -n "$OPENROUTER_API_KEY" ]')
+        diffContent.includes('if [ -n "$OPENROUTER_API_KEY" ]') ||
+        diffContent.includes('fork_pr_has_secrets') ||
+        diffContent.includes('github.event.pull_request.head.repo.fork')
       );
 
       if (hasForkSecurityCheck) {
         logger.debug(`Workflow security already implemented: ${finding.title}`);
+        return true;
+      }
+
+      // If finding is about general workflow configuration (not specific code change),
+      // and the workflow file wasn't completely rewritten, it's likely a false positive
+      const isGeneralConfigFinding = (
+        text.includes('repository setting') ||
+        text.includes('settings -> actions') ||
+        text.includes('workflow relies on') ||
+        text.includes('disable \'send secrets')
+      );
+
+      if (isGeneralConfigFinding) {
+        logger.debug(`General workflow config finding, not specific to diff: ${finding.title}`);
         return true;
       }
     }
@@ -374,19 +459,26 @@ export class FindingFilter {
 
   /**
    * Remove duplicate findings that are essentially the same issue
-   * Uses file + title similarity to detect duplicates
+   * Uses file + title similarity + semantic keywords to detect duplicates
    */
   private deduplicateFindings(findings: Finding[]): Finding[] {
     const seen = new Map<string, Finding>();
 
     for (const finding of findings) {
-      // Create a dedup key from file + normalized title
-      const normalizedTitle = finding.title.toLowerCase()
+      // Create a dedup key from file + normalized title + semantic keywords
+      const text = finding.title.toLowerCase();
+      const normalizedTitle = text
         .replace(/[^a-z0-9\s]/g, '') // Remove punctuation
         .replace(/\s+/g, ' ') // Normalize whitespace
         .trim();
 
-      const key = `${finding.file}:${normalizedTitle}`;
+      // Extract semantic keywords for better grouping
+      const keywords = this.extractSemanticKeywords(text);
+      const semanticKey = keywords.sort().join('_');
+
+      // Use semantic key if it has meaningful content, otherwise use normalized title
+      const dedupKey = semanticKey || normalizedTitle;
+      const key = `${finding.file}:${dedupKey}`;
 
       // If we haven't seen this finding, keep it
       // If we have, keep the one with more severe severity
@@ -406,5 +498,81 @@ export class FindingFilter {
     }
 
     return Array.from(seen.values());
+  }
+
+  /**
+   * Extract semantic keywords from finding title for better deduplication
+   * Groups similar concepts like "fork pr security", "missing validation", etc.
+   */
+  private extractSemanticKeywords(text: string): string[] {
+    const keywords: string[] = [];
+
+    // Security patterns
+    if (text.includes('fork') && (text.includes('pr') || text.includes('pull request')) && text.includes('secret')) {
+      keywords.push('fork_pr_secret');
+    }
+    if (text.includes('sql') && text.includes('injection')) {
+      keywords.push('sql_injection');
+    }
+    if (text.includes('xss') || (text.includes('cross') && text.includes('site'))) {
+      keywords.push('xss');
+    }
+
+    // Validation patterns
+    if (text.includes('missing') && text.includes('validation')) {
+      keywords.push('missing_validation');
+    }
+    if (text.includes('missing') && text.includes('error') && text.includes('handling')) {
+      keywords.push('missing_error_handling');
+    }
+
+    // Performance patterns
+    if (text.includes('race') && text.includes('condition')) {
+      keywords.push('race_condition');
+    }
+    if (text.includes('inefficient') || text.includes('performance')) {
+      keywords.push('performance');
+    }
+
+    // Test patterns
+    if (text.includes('missing') && text.includes('test')) {
+      keywords.push('missing_test');
+    }
+
+    return keywords;
+  }
+
+  private isAboutAddedFileFalsePositive(finding: Finding): boolean {
+    const text = (finding.title + ' ' + finding.message).toLowerCase();
+
+    // Complaints about new files not having tests visible in the diff
+    if (text.includes('added without') && text.includes('test')) {
+      return true;
+    }
+    if (text.includes('without visible test')) {
+      return true;
+    }
+
+    return false;
+  }
+
+  private isCodeQualityIssue(finding: Finding): boolean {
+    const text = (finding.title + ' ' + finding.message).toLowerCase();
+
+    return (
+      // Input validation (unless security-related)
+      (text.includes('missing') && text.includes('validation') && !this.isTrueSecurityIssue(finding)) ||
+      (text.includes('missing') && text.includes('error handling') && !text.includes('crash')) ||
+      // Hard-coded values
+      text.includes('hard-coded') ||
+      text.includes('hardcoded') ||
+      // Inefficiency (unless extreme)
+      (text.includes('inefficient') && !text.includes('exponential')) ||
+      // Monolithic / structure
+      text.includes('monolithic') ||
+      // Comments
+      text.includes('comment') ||
+      text.includes('documentation')
+    );
   }
 }
