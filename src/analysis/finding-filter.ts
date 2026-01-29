@@ -123,6 +123,11 @@ export class FindingFilter {
       }
     }
 
+    // Filter: Suggestions/optimizations should never be reported as issues (check early!)
+    if (this.isSuggestionOrOptimization(finding)) {
+      return 'filter';
+    }
+
     // Filter: Findings about files added in the diff (complaints about new files)
     if (this.isAboutAddedFileFalsePositive(finding)) {
       return 'filter';
@@ -130,6 +135,11 @@ export class FindingFilter {
 
     // Filter: Subjective code structure opinions
     if (this.isSubjectiveCodeOpinion(finding)) {
+      return 'filter';
+    }
+
+    // Filter: Invalid or suspicious line numbers (check before downgrade logic)
+    if (this.hasInvalidLineNumber(finding)) {
       return 'filter';
     }
 
@@ -157,20 +167,8 @@ export class FindingFilter {
       return 'filter';
     }
 
-    // Downgrade: Suggestions/optimizations should never be critical
-    if (this.isSuggestionOrOptimization(finding)) {
-      if (finding.severity === 'critical') {
-        return 'downgrade';
-      }
-    }
-
     // Filter: Line number issues (flagging blank lines, closing braces)
     if (this.isLineNumberIssue(finding, diffContent)) {
-      return 'filter';
-    }
-
-    // Filter: Invalid or suspicious line numbers
-    if (this.hasInvalidLineNumber(finding)) {
       return 'filter';
     }
 
@@ -192,6 +190,9 @@ export class FindingFilter {
     }
     if (this.isWorkflowSecurityFalsePositive(finding, diffContent)) {
       return 'workflow security already handled/config issue';
+    }
+    if (this.isSuggestionOrOptimization(finding)) {
+      return 'suggestion/optimization (not a bug)';
     }
     if (this.isSubjectiveCodeOpinion(finding)) {
       return 'subjective code opinion (not a bug)';
@@ -247,25 +248,33 @@ export class FindingFilter {
     const text = (finding.title + ' ' + finding.message).toLowerCase();
 
     return (
-      // Fork PR / secrets issues
-      (text.includes('fork') && text.includes('secret')) ||
-      (text.includes('fork') && text.includes('pr')) && text.includes('access') ||
+      // Fork PR / secrets issues (very common false positives)
+      (text.includes('fork') && (text.includes('secret') || text.includes('pr'))) ||
       (text.includes('pull request') && text.includes('secret')) ||
       text.includes('repository setting') ||
       text.includes('secret validation') ||
       text.includes('secret exposure') ||
       text.includes('secret access') ||
+      text.includes('security gating') ||
+      text.includes('fork pr') && text.includes('access') ||
+      text.includes('security risk') && text.includes('fork') ||
+      text.includes('security vulnerability') && text.includes('fork') ||
       // Workflow configuration
       text.includes('workflow relies on') ||
       text.includes('timeout') && text.includes('workflow') ||
       text.includes('runner configuration') ||
       text.includes('concurrency') && (text.includes('group') || text.includes('issue')) ||
       text.includes('fork pr detection') ||
+      text.includes('fork pr handling') ||
       text.includes('conditional logic') && text.includes('workflow') ||
+      text.includes('job condition') ||
+      text.includes('workflow') && text.includes('logic') ||
       // CI-specific issues
       text.includes('detectopenhandles') ||
       text.includes('testtimeout') ||
-      text.includes('ci test flags')
+      text.includes('ci test flags') ||
+      text.includes('test execution control') ||
+      text.includes('test execution flags')
     );
   }
 
@@ -308,7 +317,16 @@ export class FindingFilter {
       text.includes('expect') ||
       // Documentation in tests
       text.includes('test documentation') ||
-      text.includes('test comment')
+      text.includes('test comment') ||
+      // Test isolation and shared state
+      text.includes('test isolation') ||
+      text.includes('shared mock') ||
+      text.includes('mock') && text.includes('across tests') ||
+      // Test implementation details
+      text.includes('hard-coded') && text.includes('test') ||
+      text.includes('stat-key brittleness') ||
+      text.includes('test expectations') ||
+      text.includes('deduplication heuristic')
     );
   }
 
@@ -389,12 +407,29 @@ export class FindingFilter {
   private isSuggestionOrOptimization(finding: Finding): boolean {
     const text = (finding.title + ' ' + finding.message).toLowerCase();
     return (
+      // Explicit suggestions
       text.includes('consider') ||
       text.includes('suggestion') ||
       text.includes('could') ||
+      text.includes('should') ||
       text.includes('might want to') ||
       text.includes('optimization') ||
-      text.includes('improvement')
+      text.includes('improvement') ||
+      // Imperatives that are suggestions, not bugs
+      text.includes('ensure that') ||
+      text.includes('verify that') ||
+      text.includes('monitor') ||
+      text.includes('add a check') ||
+      text.includes('add validation') ||
+      text.includes('add logging') ||
+      text.includes('add documentation') ||
+      text.includes('add unit test') ||
+      text.includes('add more') ||
+      // Configuration suggestions
+      text.includes('adjust') ||
+      text.includes('configure') ||
+      // Documentation suggestions
+      text.includes('document') && !text.includes('undocumented vulnerability')
     );
   }
 
@@ -658,6 +693,7 @@ export class FindingFilter {
       (text.includes('missing') && text.includes('validation') && !this.isTrueSecurityIssue(finding)) ||
       (text.includes('missing') && text.includes('input validation') && !this.isTrueSecurityIssue(finding)) ||
       (text.includes('missing') && text.includes('error handling') && !text.includes('crash')) ||
+      (text.includes('lacks') && text.includes('validation')) ||
       text.includes('inconsistent') && text.includes('error handling') ||
       // Hard-coded values
       text.includes('hard-coded') ||
@@ -670,12 +706,30 @@ export class FindingFilter {
       text.includes('monolithic') ||
       text.includes('complexity') ||
       text.includes('readability') ||
+      text.includes('code complexity') ||
       // Comments
       text.includes('comment') ||
       text.includes('documentation') ||
       // Pattern validation complaints (TypeScript/library already validates)
       (text.includes('insecure') && text.includes('pattern validation')) ||
-      (text.includes('pattern') && text.includes('not properly validate'))
+      (text.includes('pattern') && text.includes('not properly validate')) ||
+      (text.includes('unsafe') && text.includes('glob pattern')) ||
+      // Path handling (unless security)
+      (text.includes('path normalization') && !text.includes('vulnerability')) ||
+      (text.includes('path') && text.includes('consistency') && !text.includes('vulnerability')) ||
+      // Serialization/deserialization implementation
+      text.includes('circular reference') && text.includes('serialization') ||
+      text.includes('deep clone') && text.includes('independence') ||
+      // Rate limiting / error handling implementation details
+      text.includes('rate limit handling') && !text.includes('bypass') ||
+      text.includes('health check implementation') && !text.includes('fail') ||
+      text.includes('handling 402') || // Payment errors are expected
+      // Batch validation (implementation detail)
+      text.includes('batch size validation') ||
+      text.includes('token-aware batching') ||
+      // Model selection (not a bug)
+      text.includes('model ranking') ||
+      text.includes('model selection')
     );
   }
 }

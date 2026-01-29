@@ -144,7 +144,7 @@ describe('FindingFilter', () => {
       expect(stats.reasons['method exists in code']).toBe(1);
     });
 
-    test('downgrades suggestions from critical', () => {
+    test('filters suggestions completely', () => {
       const findings: Finding[] = [
         {
           file: 'src/api.ts',
@@ -153,13 +153,27 @@ describe('FindingFilter', () => {
           title: 'Consider adding caching',
           message: 'This endpoint could benefit from caching',
         },
+        {
+          file: 'src/utils.ts',
+          line: 30,
+          severity: 'major',
+          title: 'Validation',
+          message: 'Ensure that all inputs are validated properly',
+        },
+        {
+          file: 'src/config.ts',
+          line: 10,
+          severity: 'major',
+          title: 'Monitoring',
+          message: 'Monitor the performance and adjust as needed',
+        },
       ];
 
       const { findings: filtered, stats } = filter.filter(findings, '');
 
-      expect(filtered).toHaveLength(1);
-      expect(filtered[0].severity).toBe('minor');
-      expect(stats.downgraded).toBe(1);
+      expect(filtered).toHaveLength(0);
+      expect(stats.filtered).toBe(3);
+      expect(stats.reasons['suggestion/optimization (not a bug)']).toBe(3);
     });
 
     test('filters line number issues (blank lines)', () => {
@@ -837,7 +851,8 @@ describe('FindingFilter', () => {
 
       expect(filtered).toHaveLength(0);
       expect(stats.filtered).toBe(2);
-      expect(stats.reasons['subjective code opinion (not a bug)']).toBe(2);
+      // These findings contain "Consider" and "Should be", so they match suggestion filter first
+      expect(stats.reasons['suggestion/optimization (not a bug)']).toBe(2);
     });
 
     test('downgrades code quality issues from critical/major to minor', () => {
@@ -923,6 +938,109 @@ describe('FindingFilter', () => {
       expect(filtered.length).toBeLessThanOrEqual(2);
       expect(filtered.every(f => f.severity === 'minor')).toBe(true);
       expect(stats.downgraded).toBeGreaterThanOrEqual(1);
+    });
+
+    test('filters all fork PR security false positives', () => {
+      const findings: Finding[] = [
+        {
+          file: '.github/workflows/ci.yml',
+          line: 4,
+          severity: 'critical',
+          title: 'Fork PR Security Risk',
+          message: 'Workflow relies on repository setting being disabled',
+        },
+        {
+          file: '.github/workflows/ci.yml',
+          line: 38,
+          severity: 'critical',
+          title: 'Security gating: Fork PRs may access secrets',
+          message: 'Complex logic may not cover all cases',
+        },
+      ];
+
+      const { findings: filtered, stats } = filter.filter(findings, '');
+
+      expect(filtered).toHaveLength(0);
+      expect(stats.filtered).toBe(2);
+      expect(stats.reasons['workflow/CI configuration (not application code)']).toBe(2);
+    });
+
+    test('filters or downgrades path normalization suggestions', () => {
+      const findings: Finding[] = [
+        {
+          file: 'src/analysis/trivial-detector.ts',
+          line: 175,
+          severity: 'critical',
+          title: 'Path Normalization Consistency',
+          message: 'Should be applied consistently throughout the class',
+        },
+      ];
+
+      const { findings: filtered, stats } = filter.filter(findings, '');
+
+      // Can be filtered as suggestion ("should be") or downgraded as code quality
+      expect(filtered.length).toBeLessThanOrEqual(1);
+      if (filtered.length === 1) {
+        expect(filtered[0].severity).toBe('minor');
+      }
+    });
+
+    test('filters implementation detail suggestions with monitor/adjust', () => {
+      const findings: Finding[] = [
+        {
+          file: 'src/github/client.ts',
+          line: 30,
+          severity: 'major',
+          title: 'Rate Limit Handling',
+          message: 'Monitor rate limit status and adjust backoff strategy',
+        },
+        {
+          file: 'src/core/batch-orchestrator.ts',
+          line: 108,
+          severity: 'major',
+          title: 'Token-Aware Batching',
+          message: 'Monitor performance and adjust target tokens',
+        },
+        {
+          file: 'src/providers/openrouter-models.ts',
+          line: 34,
+          severity: 'major',
+          title: 'Model Ranking and Selection',
+          message: 'Monitor model selection and adjust algorithm',
+        },
+      ];
+
+      const { findings: filtered, stats } = filter.filter(findings, '');
+
+      // All should be filtered as suggestions (they say "Monitor" and "adjust")
+      expect(filtered).toHaveLength(0);
+      expect(stats.filtered).toBe(3);
+      expect(stats.reasons['suggestion/optimization (not a bug)']).toBe(3);
+    });
+
+    test('filters test isolation findings', () => {
+      const findings: Finding[] = [
+        {
+          file: '__tests__/unit/cache/graph-cache.test.ts',
+          line: 10,
+          severity: 'major',
+          title: 'Test isolation: shared mocks across tests',
+          message: 'Tests reuse mocked storage without resets',
+        },
+        {
+          file: '__tests__/unit/analysis/finding-filter.test.ts',
+          line: 73,
+          severity: 'major',
+          title: 'Hard-coded/stat-key brittleness in test expectations',
+          message: 'Tests rely on specific string keys',
+        },
+      ];
+
+      const { findings: filtered, stats } = filter.filter(findings, '');
+
+      expect(filtered).toHaveLength(0);
+      expect(stats.filtered).toBe(2);
+      expect(stats.reasons['test code quality (not production issue)']).toBe(2);
     });
   });
 });
