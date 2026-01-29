@@ -466,7 +466,9 @@ export class CodeGraph {
    */
   copyFrom(other: CodeGraph): void {
     // Deep copy definitions (value is Definition object, not array)
-    this.definitions = new Map(other.definitions);
+    this.definitions = new Map(
+      Array.from(other.definitions.entries()).map(([k, v]) => [k, { ...v }])
+    );
 
     // Deep copy array values in all maps to prevent shared mutable state
     this.imports = new Map(
