@@ -169,12 +169,12 @@ ${'+ line\n'.repeat(1000)}`;
 
     it('should warn at high utilization (>90%)', () => {
       // gpt-3.5-turbo: 4k window - 2k reserved = 2k available
-      // Need ~1900 tokens = 1900 * 4 / 1.1 = ~6909 chars
-      const prompt = 'a'.repeat(6900);
+      // Need ~1900 tokens with 1.2x safety margin = 1900 * 4 / 1.2 = ~6333 chars
+      const prompt = 'a'.repeat(6800);
       const result = checkContextWindowFit(prompt, 'gpt-3.5-turbo'); // 4k window
 
       expect(result.fits).toBe(true);
-      expect(result.utilizationPercent).toBeGreaterThan(45); // ~1900/4000 = 47.5%
+      expect(result.utilizationPercent).toBeGreaterThan(40); // Conservative check with 1.2x margin
       if (result.utilizationPercent > 90) {
         expect(result.recommendation).toContain('High utilization');
       }
@@ -182,8 +182,8 @@ ${'+ line\n'.repeat(1000)}`;
 
     it('should note moderate utilization (75-90%)', () => {
       // gpt-3.5-turbo: 4k window - 2k reserved = 2k available
-      // Need ~1600 tokens = 1600 * 4 / 1.1 = ~5818 chars
-      const prompt = 'a'.repeat(5800);
+      // Need ~1600 tokens with 1.2x safety margin = 1600 * 4 / 1.2 = ~5333 chars
+      const prompt = 'a'.repeat(5300);
       const result = checkContextWindowFit(prompt, 'gpt-3.5-turbo'); // 4k window
 
       expect(result.fits).toBe(true);

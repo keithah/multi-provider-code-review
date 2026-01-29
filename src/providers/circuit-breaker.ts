@@ -71,6 +71,11 @@ export class CircuitBreaker {
   // Memory leak prevention: locks are removed after LOCK_CLEANUP_MS or immediately after completion
   private readonly locks = new Map<string, Promise<void>>();
 
+  // In-memory fallback for when storage is unavailable
+  // Ensures circuit breaker continues working even if filesystem/cache fails
+  private readonly inMemoryState = new Map<string, CircuitData>();
+  private storageAvailable = true; // Track storage health
+
   constructor(
     private readonly storage = new CacheStorage(),
     options: CircuitBreakerOptions = {}
@@ -206,35 +211,67 @@ export class CircuitBreaker {
   }
 
   private async load(providerId: string): Promise<CircuitData> {
+    const key = this.key(providerId);
+
+    // Try in-memory first if storage is known to be unavailable
+    if (!this.storageAvailable && this.inMemoryState.has(key)) {
+      logger.debug(`Using in-memory state for ${providerId} (storage unavailable)`);
+      return this.inMemoryState.get(key)!;
+    }
+
     try {
-      const raw = await this.storage.read(this.key(providerId));
+      const raw = await this.storage.read(key);
       if (!raw) {
+        // Check in-memory fallback
+        if (this.inMemoryState.has(key)) {
+          return this.inMemoryState.get(key)!;
+        }
         return { state: 'closed', failures: 0, probeInFlight: false };
       }
 
       try {
         const parsed = JSON.parse(raw) as CircuitData;
-        // Return parsed state as-is during normal operation
-        // Note: probeInFlight flag is reset by recordSuccess/recordFailure
+        // Sync to in-memory cache on successful read
+        this.inMemoryState.set(key, parsed);
+        this.storageAvailable = true; // Storage is healthy
         return parsed;
       } catch (parseError) {
         logger.warn(`Failed to parse circuit state for ${providerId}`, parseError as Error);
+        // Try in-memory fallback
+        if (this.inMemoryState.has(key)) {
+          return this.inMemoryState.get(key)!;
+        }
         return { state: 'closed', failures: 0, probeInFlight: false };
       }
     } catch (storageError) {
-      // Storage read failure - return default closed state to allow requests
-      logger.warn(`Storage read failed for circuit ${providerId}, defaulting to closed`, storageError as Error);
+      // Storage read failure - mark as unavailable and use in-memory fallback
+      this.storageAvailable = false;
+      logger.warn(`Storage read failed for circuit ${providerId}, using in-memory fallback`, storageError as Error);
+
+      if (this.inMemoryState.has(key)) {
+        return this.inMemoryState.get(key)!;
+      }
       return { state: 'closed', failures: 0, probeInFlight: false };
     }
   }
 
   private async setState(providerId: string, state: CircuitData): Promise<void> {
-    try {
-      await this.storage.write(this.key(providerId), JSON.stringify(state));
-    } catch (error) {
-      // Log but don't throw - circuit breaker should degrade gracefully
-      // The in-memory state will still be managed by the caller
-      logger.error(`Storage write failed for circuit ${providerId}`, error as Error);
+    const key = this.key(providerId);
+
+    // Always update in-memory state first (ensures immediate consistency)
+    this.inMemoryState.set(key, state);
+
+    // Try to persist to storage (best effort)
+    if (this.storageAvailable) {
+      try {
+        await this.storage.write(key, JSON.stringify(state));
+      } catch (error) {
+        this.storageAvailable = false;
+        logger.error(
+          `Storage write failed for circuit ${providerId}, continuing with in-memory state only`,
+          error as Error
+        );
+      }
     }
   }
 
