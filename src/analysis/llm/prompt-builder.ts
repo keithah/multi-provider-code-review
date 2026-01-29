@@ -106,15 +106,19 @@ export class PromptBuilder {
     );
 
     // Auto-detect and inject defensive programming context
-    try {
-      const defensiveContext = this.validationDetector.analyzeDefensivePatterns(diff);
-      const contextText = this.validationDetector.generatePromptContext(defensiveContext);
-      if (contextText) {
-        instructions.push(contextText, '');
+    // Skip for very large diffs to avoid performance impact (>50KB)
+    const MAX_DIFF_SIZE_FOR_ANALYSIS = 50000;
+    if (diff.length < MAX_DIFF_SIZE_FOR_ANALYSIS) {
+      try {
+        const defensiveContext = this.validationDetector.analyzeDefensivePatterns(diff);
+        const contextText = this.validationDetector.generatePromptContext(defensiveContext);
+        if (contextText) {
+          instructions.push(contextText, '');
+        }
+      } catch (error) {
+        // If analysis fails, continue without context (fail open, not closed)
+        logger.debug('Failed to analyze defensive patterns:', error as Error);
       }
-    } catch (error) {
-      // If analysis fails, continue without context (fail open, not closed)
-      logger.debug('Failed to analyze defensive patterns:', error as Error);
     }
 
     instructions.push(
