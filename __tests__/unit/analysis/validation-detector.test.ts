@@ -158,6 +158,57 @@ describe('ValidationDetector', () => {
         v.type === 'intentionally_unused' && v.variable === '_timeoutMs'
       )).toBe(true);
     });
+
+    test('detects sanitization functions', () => {
+      const code = `
+        const encoded = encodeURIComponent(value);
+        const safe = sanitizeInput(data);
+        const normalized = str.replace(/[^a-z]/g, '_');
+      `;
+
+      const result = detector.analyzeDefensivePatterns(code, 1);
+
+      expect(result.validations.filter(v => v.type === 'sanitization_function').length).toBeGreaterThanOrEqual(2);
+    });
+
+    test('detects regex with try-catch protection', () => {
+      const code = `
+        try {
+          const regex = new RegExp(pattern);
+          return regex.test(filename);
+        } catch (error) {
+          return false;
+        }
+      `;
+
+      const result = detector.analyzeDefensivePatterns(code, 1);
+
+      expect(result.validations.some(v => v.type === 'regex_try_catch')).toBe(true);
+    });
+
+    test('detects test file patterns', () => {
+      const code = `
+        it('should handle invalid input', () => {
+          const review = { findings: [], metrics: { critical: 1 } }; // Intentional mismatch for testing
+          expect(formatter.process(review)).toBeDefined();
+        });
+      `;
+
+      const result = detector.analyzeDefensivePatterns(code, 1);
+
+      expect(result.validations.some(v => v.type === 'test_intentional_inconsistency')).toBe(true);
+    });
+
+    test('detects lint disable comments', () => {
+      const code = `
+        // eslint-disable-next-line no-unused-vars
+        const unused = someLegacyApi();
+      `;
+
+      const result = detector.analyzeDefensivePatterns(code, 1);
+
+      expect(result.validations.some(v => v.type === 'lint_auto_fixable')).toBe(true);
+    });
   });
 
   describe('generatePromptContext', () => {

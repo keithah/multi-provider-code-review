@@ -21,7 +21,11 @@ export interface ValidationPattern {
     | 'locking'
     | 'timeout_enforcement'
     | 'param_validation'
-    | 'intentionally_unused';
+    | 'intentionally_unused'
+    | 'sanitization_function'
+    | 'regex_try_catch'
+    | 'test_intentional_inconsistency'
+    | 'lint_auto_fixable';
   line: number;
   variable?: string;
   description: string;
@@ -195,6 +199,54 @@ export class ValidationDetector {
           line: lineNum,
           variable: `_${unusedParamMatch[1]}`,
           description: `Parameter _${unusedParamMatch[1]} is intentionally unused (indicated by _ prefix)`,
+        });
+      }
+
+      // Detect sanitization/encoding functions
+      if (
+        /encodeURI|encodeURIComponent|escape|sanitize|normalize/.test(trimmed) ||
+        /\.replace\(\/.*\/g,/.test(trimmed) // String replacement for sanitization
+      ) {
+        validations.push({
+          type: 'sanitization_function',
+          line: lineNum,
+          description: 'Uses sanitization/encoding function for safe output',
+        });
+      }
+
+      // Detect regex with try-catch protection (ReDoS protection)
+      if (/new\s+RegExp\(/.test(trimmed)) {
+        // Check if this is inside a try-catch block
+        const surroundingLines = lines.slice(Math.max(0, i - 5), Math.min(lines.length, i + 5)).join('\n');
+        if (/try\s*{/.test(surroundingLines) && /catch/.test(surroundingLines)) {
+          validations.push({
+            type: 'regex_try_catch',
+            line: lineNum,
+            description: 'RegExp construction protected by try-catch block',
+          });
+        }
+      }
+
+      // Detect test file patterns (intentional inconsistencies for testing)
+      if (
+        trimmed.includes('it(') ||
+        trimmed.includes('test(') ||
+        trimmed.includes('describe(') ||
+        trimmed.includes('expect(')
+      ) {
+        validations.push({
+          type: 'test_intentional_inconsistency',
+          line: lineNum,
+          description: 'Test file: may intentionally use inconsistent data to test error paths',
+        });
+      }
+
+      // Detect lint auto-fixable issues (like unused variables that follow conventions)
+      if (/^\/\/\s*eslint-disable/.test(trimmed) || /^\/\/\s*@ts-ignore/.test(trimmed)) {
+        validations.push({
+          type: 'lint_auto_fixable',
+          line: lineNum,
+          description: 'Lint issue acknowledged with disable comment',
         });
       }
 
