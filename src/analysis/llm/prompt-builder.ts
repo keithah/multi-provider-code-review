@@ -2,8 +2,11 @@ import { PRContext, ReviewConfig, ReviewIntensity } from '../../types';
 import { trimDiff } from '../../utils/diff';
 import { checkContextWindowFit, ContextFitCheck, estimateTokensConservative } from '../../utils/token-estimation';
 import { logger } from '../../utils/logger';
+import { ValidationDetector } from '../context/validation-detector';
 
 export class PromptBuilder {
+  private readonly validationDetector: ValidationDetector;
+
   constructor(
     private readonly config: ReviewConfig,
     private readonly intensity: ReviewIntensity = 'standard'
@@ -13,6 +16,7 @@ export class PromptBuilder {
     if (!validIntensities.includes(intensity)) {
       throw new Error(`Invalid intensity: ${intensity}. Must be one of: ${validIntensities.join(', ')}`);
     }
+    this.validationDetector = new ValidationDetector();
   }
 
   build(pr: PRContext): string {
@@ -90,12 +94,30 @@ export class PromptBuilder {
       '- DO NOT report "missing file" issues - all files listed are intentionally included',
       '- DO NOT report issues about files being "referenced but not in diff"',
       '- Focus on actual code quality, security, and correctness issues in the provided diffs',
+      '- BEFORE flagging an issue, check if defensive programming patterns already address it',
+      '- typeof checks, null checks, try-catch, and error returns indicate proper validation',
+      '- Check line numbers carefully - ensure the flagged line actually contains the issue',
       '',
       `PR #${pr.number}: ${pr.title}`,
       `Author: ${pr.author}`,
       'Files changed:',
       ...fileList,
-      '',
+      ''
+    );
+
+    // Auto-detect and inject defensive programming context
+    try {
+      const defensiveContext = this.validationDetector.analyzeDefensivePatterns(diff);
+      const contextText = this.validationDetector.generatePromptContext(defensiveContext);
+      if (contextText) {
+        instructions.push(contextText, '');
+      }
+    } catch (error) {
+      // If analysis fails, continue without context (fail open, not closed)
+      logger.debug('Failed to analyze defensive patterns:', error as Error);
+    }
+
+    instructions.push(
       'Diff:',
       diff
     );
