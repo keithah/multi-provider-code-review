@@ -141,8 +141,8 @@ export class PathMatcher {
    *
    * SECURITY CONTEXT:
    * These patterns are ONLY used with the minimatch library (pure JavaScript),
-   * NEVER passed to shell commands or eval(). Therefore, shell metacharacters
-   * like $ and ~ are safe in this context.
+   * NEVER passed to shell commands or eval(). While minimatch is safe, we still
+   * block potentially dangerous characters for defense in depth.
    *
    * ALLOWED CHARACTERS:
    * - Alphanumeric: A-Z, a-z, 0-9
@@ -178,12 +178,13 @@ export class PathMatcher {
   private checkAllowedCharacters(pattern: string): void {
     // First pass: Explicit block list for dangerous characters
     // This catches obvious security issues before allowlist check
-    const dangerousChars = /[\\`|;&<>'"$\x00-\x1F\x7F]/;
+    // Note: Control chars 0x00-0x1F are checked separately in checkControlCharacters()
+    const dangerousChars = /[\\`|;&<>'"$\x7F]/;
     if (dangerousChars.test(pattern)) {
       const found = pattern.match(dangerousChars);
       throw new Error(
-        `Pattern contains dangerous character: ${found?.[0] ? JSON.stringify(found[0]) : 'control char'}. ` +
-        `Backslashes, backticks, pipes, semicolons, quotes, and control characters are not allowed.`
+        `Pattern contains dangerous character: ${found?.[0] ? JSON.stringify(found[0]) : 'DEL'}. ` +
+        `Backslashes, backticks, pipes, semicolons, quotes, and $ are not allowed.`
       );
     }
 
@@ -205,7 +206,7 @@ export class PathMatcher {
       throw new Error(
         `Pattern contains unsupported characters: ${pattern}. ` +
         `Only alphanumerics (A-Z, a-z, 0-9), glob wildcards (*, ?, {}, []), ` +
-        `path separators (/), and safe punctuation (.@+^!_-,()~=%# space) are allowed.`
+        `path separators (/), and safe punctuation (.@+^!_-,()~# space) are allowed.`
       );
     }
 

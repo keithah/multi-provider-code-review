@@ -77,8 +77,22 @@ describe('ProviderRegistry Reliability-Based Selection', () => {
       // Verify getReliabilityScore was called (may be called multiple times due to sorting)
       expect(mockReliabilityTracker.getReliabilityScore).toHaveBeenCalled();
 
-      // Providers should exist
+      // Providers should exist and be sorted by reliability
       expect(providers.length).toBeGreaterThan(0);
+
+      // Verify provider order matches expected reliability scores (highest first)
+      const providerNames = providers.map(p => p.name);
+
+      // The first provider should be the one with highest reliability
+      expect(providerNames[0]).toBe('opencode/high-reliability');
+
+      // If we have multiple providers, verify descending order
+      if (providerNames.length >= 2) {
+        expect(providerNames[1]).toBe('opencode/very-good-reliability');
+      }
+      if (providerNames.length >= 3) {
+        expect(providerNames[2]).toBe('opencode/medium-reliability');
+      }
     });
 
     it('should handle equal reliability scores with stable ordering', async () => {

@@ -239,11 +239,11 @@ describe('Incremental Graph Updates', () => {
     it('should handle circular references in graph serialization', () => {
       const graph = new CodeGraph(['file1.ts', 'file2.ts'], 100);
 
-      // Create circular imports
+      // Create actual circular imports (mutual dependency)
       graph.addImport('file1.ts', './file2');
       graph.addImport('file2.ts', './file1');
 
-      // Create circular call references
+      // Create actual circular call references (mutual calls)
       graph.addDefinition({ name: 'foo', file: 'file1.ts', line: 1, type: 'function', exported: true });
       graph.addDefinition({ name: 'bar', file: 'file2.ts', line: 1, type: 'function', exported: true });
       graph.addCall('file1.ts', 'foo', 'bar');
@@ -257,11 +257,46 @@ describe('Incremental Graph Updates', () => {
       // Should be able to JSON.stringify without errors
       expect(() => JSON.stringify(serialized)).not.toThrow();
 
-      // Should be able to deserialize back
+      // Should be able to deserialize back and preserve circular references
       const deserialized = CodeGraph.deserialize(serialized);
       expect(deserialized.files).toEqual(['file1.ts', 'file2.ts']);
       expect(deserialized.getDependencies('file1.ts')).toContain('./file2');
       expect(deserialized.getDependencies('file2.ts')).toContain('./file1');
+
+      // Verify definitions are preserved (getDefinition searches by name only)
+      const fooDef = deserialized.getDefinition('foo');
+      const barDef = deserialized.getDefinition('bar');
+      expect(fooDef).toBeDefined();
+      expect(barDef).toBeDefined();
+      expect(fooDef?.name).toBe('foo');
+      expect(fooDef?.file).toBe('file1.ts');
+      expect(barDef?.name).toBe('bar');
+      expect(barDef?.file).toBe('file2.ts');
+    });
+
+    it('should produce independent copies when cloning', () => {
+      const graph = new CodeGraph(['file.ts'], 100);
+      graph.addDefinition({ name: 'fn', file: 'file.ts', line: 1, type: 'function', exported: true });
+      graph.addImport('file.ts', './other');
+
+      // Clone the graph
+      const cloned = graph.clone();
+
+      // Verify clone has same data
+      expect(cloned.files).toEqual(graph.files);
+      expect(cloned.getDependencies('file.ts')).toEqual(graph.getDependencies('file.ts'));
+
+      // Mutate the clone by adding new data
+      cloned.addImport('file.ts', './newFile');
+      cloned.addDefinition({ name: 'newFn', file: 'file.ts', line: 2, type: 'function', exported: false });
+
+      // Original should be unaffected
+      expect(graph.getDependencies('file.ts')).not.toContain('./newFile');
+      expect(graph.getFileSymbols('file.ts')).toHaveLength(1);
+
+      // Clone should have new data
+      expect(cloned.getDependencies('file.ts')).toContain('./newFile');
+      expect(cloned.getFileSymbols('file.ts')).toHaveLength(2);
     });
   });
 

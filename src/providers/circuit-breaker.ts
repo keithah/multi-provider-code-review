@@ -206,24 +206,36 @@ export class CircuitBreaker {
   }
 
   private async load(providerId: string): Promise<CircuitData> {
-    const raw = await this.storage.read(this.key(providerId));
-    if (!raw) {
-      return { state: 'closed', failures: 0, probeInFlight: false };
-    }
-
     try {
-      const parsed = JSON.parse(raw) as CircuitData;
-      // Return parsed state as-is during normal operation
-      // Note: probeInFlight flag is reset by recordSuccess/recordFailure
-      return parsed;
-    } catch (error) {
-      logger.warn(`Failed to parse circuit state for ${providerId}`, error as Error);
+      const raw = await this.storage.read(this.key(providerId));
+      if (!raw) {
+        return { state: 'closed', failures: 0, probeInFlight: false };
+      }
+
+      try {
+        const parsed = JSON.parse(raw) as CircuitData;
+        // Return parsed state as-is during normal operation
+        // Note: probeInFlight flag is reset by recordSuccess/recordFailure
+        return parsed;
+      } catch (parseError) {
+        logger.warn(`Failed to parse circuit state for ${providerId}`, parseError as Error);
+        return { state: 'closed', failures: 0, probeInFlight: false };
+      }
+    } catch (storageError) {
+      // Storage read failure - return default closed state to allow requests
+      logger.warn(`Storage read failed for circuit ${providerId}, defaulting to closed`, storageError as Error);
       return { state: 'closed', failures: 0, probeInFlight: false };
     }
   }
 
   private async setState(providerId: string, state: CircuitData): Promise<void> {
-    await this.storage.write(this.key(providerId), JSON.stringify(state));
+    try {
+      await this.storage.write(this.key(providerId), JSON.stringify(state));
+    } catch (error) {
+      // Log but don't throw - circuit breaker should degrade gracefully
+      // The in-memory state will still be managed by the caller
+      logger.error(`Storage write failed for circuit ${providerId}`, error as Error);
+    }
   }
 
   private key(providerId: string): string {

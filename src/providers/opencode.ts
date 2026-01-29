@@ -28,13 +28,12 @@ export class OpenCodeProvider extends Provider {
     });
 
     try {
-      const result = await Promise.race([
-        this.resolveBinary().then(result => {
+      await Promise.race([
+        this.resolveBinary().then(() => {
           // If timeout already fired, we still succeeded - log for debugging
           if (isTimedOut) {
             logger.debug(`OpenCode binary resolved after timeout (${this.name})`);
           }
-          return result;
         }),
         timeoutPromise
       ]);

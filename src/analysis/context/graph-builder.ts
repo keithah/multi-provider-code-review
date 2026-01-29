@@ -547,8 +547,8 @@ export class CodeGraph {
       if (typeof def.file !== 'string' || !def.file) {
         throw new Error(`Invalid definition for key ${key}: file must be a non-empty string`);
       }
-      if (typeof def.line !== 'number' || def.line < 0) {
-        throw new Error(`Invalid definition for key ${key}: line must be a non-negative number`);
+      if (typeof def.line !== 'number' || def.line < 1) {
+        throw new Error(`Invalid definition for key ${key}: line must be a positive number (>= 1)`);
       }
       const validTypes = ['function', 'class', 'variable', 'type', 'interface'];
       if (!validTypes.includes(def.type)) {

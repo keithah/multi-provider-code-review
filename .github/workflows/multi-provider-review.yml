@@ -14,8 +14,8 @@ on:
     # See: Settings → Actions → General → Fork pull request workflows
     #
     # Additional security layers in this workflow:
-    # - Explicit fork detection and secret validation (line 87-94)
-    # - Conditional job execution that skips fork PRs (line 113)
+    # - Explicit fork detection and secret validation (line 97-110)
+    # - Conditional job execution that skips fork PRs (line 132)
     # - Provider allowlist validation for user-supplied model names
   # Note: pull_request_review trigger removed to prevent duplicate runs
   # when the bot posts its own review comment
@@ -38,7 +38,11 @@ on:
 # - For workflow_dispatch: group by input PR number and current SHA
 # This ensures proper isolation and prevents race conditions between different PRs
 concurrency:
-  group: review-${{ github.event.pull_request.number || inputs.pr_number || 'push' }}-${{ github.event.pull_request.head.sha || github.sha }}
+  # Use distinct prefixes for different event types to prevent cross-event cancellation
+  # - pull_request: pr-{number}-{head_sha}
+  # - push: push-{sha}
+  # - workflow_dispatch: dispatch-{pr_number}-{sha}
+  group: ${{ github.event_name == 'pull_request' && format('pr-{0}-{1}', github.event.pull_request.number, github.event.pull_request.head.sha) || github.event_name == 'workflow_dispatch' && format('dispatch-{0}-{1}', inputs.pr_number, github.sha) || format('push-{0}', github.sha) }}
   cancel-in-progress: true
 
 # Permissions: Principle of least privilege
@@ -94,13 +98,19 @@ jobs:
         run: node scripts/validate-providers.js "${{ inputs.review_providers }}"
       - name: Validate Secrets and Configuration
         run: |
-          # Check for fork PRs attempting to access secrets
+          # SECURITY: Check for fork PRs with unexpected secret access
+          # If a fork PR has OPENROUTER_API_KEY, the repository setting
+          # "Send secrets to workflows from pull requests" is likely enabled (security risk)
           if [ "${{ github.event.pull_request.head.repo.fork }}" = "true" ] && [ "${{ github.event_name }}" = "pull_request" ]; then
             if [ -z "$OPENROUTER_API_KEY" ]; then
-              echo "⚠️  Fork PR detected without OPENROUTER_API_KEY. This is expected - fork PRs cannot access secrets."
-              echo "    Review will use only free OpenCode providers (no OpenRouter)."
+              echo "✅ Fork PR detected without OPENROUTER_API_KEY (expected behavior)."
+              echo "   Review will use only free OpenCode providers (no OpenRouter)."
             else
-              echo "⚠️  Warning: Fork PR has OPENROUTER_API_KEY. This should only happen if repository settings allow fork PR secret access."
+              echo "🔴 SECURITY ALERT: Fork PR has access to OPENROUTER_API_KEY!"
+              echo "   This indicates 'Send secrets to workflows from pull requests' is enabled."
+              echo "   This is a security risk. Failing workflow to prevent secret exposure."
+              echo "   To fix: Settings → Actions → General → Disable 'Send secrets to workflows from pull requests'"
+              exit 1
             fi
           fi
 
