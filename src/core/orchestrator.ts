@@ -14,6 +14,7 @@ import { MarkdownFormatter } from '../output/formatter';
 import { MarkdownFormatterV2 } from '../output/formatter-v2';
 import { MermaidGenerator } from '../output/mermaid';
 import { FeedbackFilter } from '../github/feedback';
+import { FindingFilter } from '../analysis/finding-filter';
 import { buildJson } from '../output/json';
 import { buildSarif } from '../output/sarif';
 import { CacheManager } from '../cache/manager';
@@ -573,10 +574,24 @@ export class ReviewOrchestrator {
         this.enrichFinding(f, pr.files, staticAnalysis.context, providerCount, codeGraph)
       );
       const quietFiltered = await this.applyQuietMode(enriched, config);
+
+      // Apply post-processing filter to reduce false positives
+      const findingFilter = new FindingFilter();
+      const { findings: finalFiltered, stats: filterStats } = findingFilter.filter(quietFiltered, pr.diff);
+
+      if (filterStats.filtered > 0 || filterStats.downgraded > 0) {
+        logger.info(
+          `Post-processing filter: ${filterStats.filtered} filtered, ${filterStats.downgraded} downgraded, ${filterStats.kept} kept (from ${filterStats.total} total)`
+        );
+        if (Object.keys(filterStats.reasons).length > 0) {
+          logger.debug('Filter breakdown:', filterStats.reasons);
+        }
+      }
+
       await progressTracker?.updateProgress('static', 'completed', 'AST, security, and rules processed');
 
       const testHints = config.enableTestHints ? this.components.testCoverage.analyze(pr.files) : undefined;
-      const impactAnalysis = this.components.impactAnalyzer.analyze(pr.files, staticAnalysis.context, quietFiltered.length > 0);
+      const impactAnalysis = this.components.impactAnalyzer.analyze(pr.files, staticAnalysis.context, finalFiltered.length > 0);
       const mermaidDiagram = this.components.mermaidGenerator.generateImpactDiagram(pr.files, staticAnalysis.context);
       const costSummary = this.components.costTracker.summary();
       const runDetails: RunDetails = {
@@ -597,7 +612,7 @@ export class ReviewOrchestrator {
       };
 
       review = this.components.synthesis.synthesize(
-        quietFiltered,
+        finalFiltered,
         reviewPR,
         testHints,
         aiAnalysis,

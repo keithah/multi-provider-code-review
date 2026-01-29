@@ -48,6 +48,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Records health check successes for reliability tracking
   - Implementation: `src/providers/registry.ts`
 
+#### Code Review Quality
+
+- **Defensive Programming Auto-Detection** - Intelligent false positive reduction:
+  - Auto-detects 14+ defensive programming patterns in code diffs
+  - Automatically injects context into LLM prompts (no configuration needed)
+  - Detects type checks, null checks, try-catch blocks, validation patterns
+  - Detects sanitization functions, timeout enforcement, locking mechanisms
+  - Identifies test file patterns and intentionally unused parameters
+  - Expected 60% reduction in false positives (from ~50% to <20%)
+  - Performance: <1ms overhead for typical PRs, skips analysis for diffs >50KB
+  - Implementation: `src/analysis/context/validation-detector.ts`
+  - Documentation: `docs/AUTO_DETECTION_IMPROVEMENTS.md`, `docs/FALSE_POSITIVE_PATTERNS.md`
+
+- **Finding Post-Processing Filter** - Safety net for LLM output:
+  - Filters documentation formatting issues in .md/.txt/.rst files
+  - Filters test intentional inconsistencies in .test.ts/.spec.ts files
+  - Downgrades lint/style issues from critical/major to minor
+  - Filters "missing method" false positives when method exists in diff
+  - Filters line number issues (blank lines, closing braces, comments)
+  - Logs filter statistics for transparency
+  - Implementation: `src/analysis/finding-filter.ts`
+
+- **Enhanced LLM Prompt Instructions** - Clearer review guidelines:
+  - File type awareness (.md, .yml, .test.ts have different standards)
+  - Conservative severity guidelines (critical reserved for real security/data issues)
+  - Confidence requirement (>80% confidence to report)
+  - Explicit "DO NOT FLAG" rules for lint/style/documentation issues
+  - Line number accuracy requirements
+  - Updated: `src/analysis/llm/prompt-builder.ts`
+
 #### Developer Experience
 
 - **Enhanced Test Coverage** - Comprehensive test improvements:
@@ -55,7 +85,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Circular reference handling tests
   - Provider sorting by reliability tests
   - Circuit breaker concurrency tests
-  - Total: 676 tests passing across 65 test suites
+  - Validation detector pattern tests (21 tests)
+  - Finding filter post-processing tests (19 tests)
+  - Total: 716 tests passing across 67 test suites
 
 - **Test Artifacts Management** - Clean git working tree:
   - `.gitignore` updated to exclude `.mpr-cache-test-*` directories
