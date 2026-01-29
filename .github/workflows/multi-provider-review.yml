@@ -19,8 +19,6 @@ on:
     # - Provider allowlist validation for user-supplied model names
   # Note: pull_request_review trigger removed to prevent duplicate runs
   # when the bot posts its own review comment
-  push:
-    branches: [main, ts-rewrite]
   workflow_dispatch:
     inputs:
       pr_number:

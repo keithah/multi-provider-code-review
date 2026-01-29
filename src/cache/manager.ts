@@ -24,7 +24,13 @@ export class CacheManager {
   async load(pr: PRContext): Promise<Finding[] | null> {
     const configHash = this.config ? hashConfig(this.config) : undefined;
     const key = buildCacheKey(pr, configHash);
-    const raw = await this.storage.read(key);
+    let raw: string | null;
+    try {
+      raw = await this.storage.read(key);
+    } catch (error) {
+      logger.warn(`Cache read failed for ${key}`, error as Error);
+      return null;
+    }
     if (!raw) return null;
 
     // Validate version and TTL

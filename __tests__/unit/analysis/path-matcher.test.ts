@@ -566,6 +566,7 @@ describe('PathMatcher', () => {
         new PathMatcher({
           enabled: true,
           defaultIntensity: 'standard',
+          allowSpaces: true,
           patterns: [{ pattern: patternWithSpace, intensity: 'thorough' }],
         });
       }).not.toThrow();
@@ -575,6 +576,7 @@ describe('PathMatcher', () => {
       const matcher = new PathMatcher({
         enabled: true,
         defaultIntensity: 'standard',
+        allowSpaces: true,
         patterns: [
           { pattern: '**/* (copy).ts', intensity: 'standard' },
           { pattern: 'docs/(draft)/*.md', intensity: 'light' },

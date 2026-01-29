@@ -39,6 +39,10 @@ export interface PathMatcherConfig {
   enabled: boolean;
   patterns: PathPattern[];
   defaultIntensity: ReviewIntensity;
+  /**
+   * Allow space characters in patterns. Defaults to false for safety.
+   */
+  allowSpaces?: boolean;
 }
 
 export interface IntensityResult {
@@ -98,6 +102,7 @@ export class PathMatcher {
     this.checkControlCharacters(pattern);
     this.checkAllowedCharacters(pattern);
     this.checkTraversal(pattern);
+    this.checkMinimatchSyntax(pattern);
   }
 
   /**
@@ -199,9 +204,15 @@ export class PathMatcher {
 
     // Third pass: Whitelist validation with explicit character ranges
     // This is the primary security control - only known-safe characters pass
-    // Allowed: A-Z a-z 0-9 . @ + ^ ! _ - / * ? { } [ ] , ( ) ~ #
+    // Allowed: A-Z a-z 0-9 . @ + ^ ! _ - / * ? { } [ ] , ( ) ~ # and optional space (config)
     // Note: $, =, % removed from allowlist as extra precaution (could be used in encoded payloads)
-    const allowed = /^[A-Za-z0-9.@+^!_\-/*?{}[\],()~# ]+$/;
+    const allowSpaces = Boolean(this.config.allowSpaces); // default: disallow spaces unless explicitly enabled
+    if (!allowSpaces && pattern.includes(' ')) {
+      throw new Error('Pattern contains spaces but allowSpaces=false');
+    }
+    const allowed = allowSpaces
+      ? /^[A-Za-z0-9.@+^!_\-/*?{}[\],()~# ]+$/
+      : /^[A-Za-z0-9.@+^!_\-/*?{}[\],()~#]+$/;
     if (!allowed.test(pattern)) {
       throw new Error(
         `Pattern contains unsupported characters: ${pattern}. ` +
@@ -238,6 +249,21 @@ export class PathMatcher {
     const traversalSegment = /(^|[\\/])\.\.(?:[\\/]|$)/;
     if (traversalSegment.test(pattern)) {
       throw new Error(`Pattern contains path traversal ('..') which is not allowed: ${pattern}`);
+    }
+  }
+
+  /**
+   * Validate that minimatch can compile the pattern. This catches malformed
+   * bracket/brace expressions beyond our simple balance checks.
+   */
+  private checkMinimatchSyntax(pattern: string): void {
+    try {
+      const re = minimatch.makeRe(pattern, { nonegate: true, nocomment: true, allowWindowsEscape: false });
+      if (!re) {
+        throw new Error('Pattern did not compile');
+      }
+    } catch (err) {
+      throw new Error(`Invalid glob syntax for pattern "${pattern}": ${(err as Error).message}`);
     }
   }
 

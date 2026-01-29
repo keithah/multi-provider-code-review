@@ -1,8 +1,14 @@
+import { createHash } from 'crypto';
+
 /**
  * Encode a string for safe filesystem/storage keys.
  * Uses encodeURIComponent, normalizes reserved characters, and appends a hash to avoid collisions.
  */
 export function encodeURIComponentSafe(value: string): string {
+  if (typeof value !== 'string') {
+    return 'invalid';
+  }
+
   const encoded = encodeURIComponent(value);
   // Replace characters that are unsafe or reserved in typical filesystems
   const normalized = encoded
@@ -11,12 +17,8 @@ export function encodeURIComponentSafe(value: string): string {
     .replace(/[<>:"|?*]/g, '_');
   const MAX_PREFIX = 120;
   const prefix = normalized.length > MAX_PREFIX ? normalized.slice(0, MAX_PREFIX) : normalized;
-  // Small, dependency-free hash (FNV-1a) to reduce collision risk without requiring node:crypto
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < value.length; i += 1) {
-    hash ^= value.charCodeAt(i);
-    hash = (hash * 0x01000193) >>> 0; // 32-bit overflow
-  }
-  const hashSuffix = hash.toString(16).padStart(8, '0');
+
+  // Collision-resistant hash (SHA-256) over the original value
+  const hashSuffix = createHash('sha256').update(value).digest('hex').slice(0, 16);
   return `${prefix}-${hashSuffix}`;
 }
