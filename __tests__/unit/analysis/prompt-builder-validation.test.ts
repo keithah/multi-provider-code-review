@@ -88,10 +88,10 @@ describe('PromptBuilder Context Window Validation', () => {
 
     it('should detect high utilization', () => {
       // Create PR that uses significant portion of a small context window
-      // Reduced diff size to account for enhanced prompt instructions (now more verbose)
+      // Simplified prompt is shorter, so need more diff content for high utilization
       const mediumPR: PRContext = {
         ...mockPR,
-        diff: 'a'.repeat(2000), // ~600 tokens for gpt-3.5-turbo (4k total window - 2k reserved = 2k available)
+        diff: 'a'.repeat(5000), // ~1500 tokens for gpt-3.5-turbo (4k total window - 2k reserved = 2k available)
       };
 
       const builder = new PromptBuilder(DEFAULT_CONFIG, 'standard');
@@ -146,7 +146,7 @@ describe('PromptBuilder Context Window Validation', () => {
       expect(optimizedPrompt).toContain('PR #');
       expect(optimizedPrompt).toContain('Files changed:');
       expect(optimizedPrompt).toContain('Diff:');
-      expect(optimizedPrompt).toContain('IMPORTANT RULES:');
+      expect(optimizedPrompt).toContain('CRITICAL RULES');
     });
 
     it('should work with different intensity levels', () => {
@@ -163,7 +163,8 @@ describe('PromptBuilder Context Window Validation', () => {
 
         expect(optimizedPrompt).toBeTruthy();
         expect(optimizedPrompt.length).toBeGreaterThan(0);
-        expect(optimizedPrompt).toContain(`${intensity} code review`);
+        // Simplified prompt is the same for all intensities
+        expect(optimizedPrompt).toContain('ONLY report actual bugs');
       }
     });
 
@@ -295,7 +296,8 @@ describe('PromptBuilder Context Window Validation', () => {
         const builder = new PromptBuilder(DEFAULT_CONFIG, intensity);
         const { prompt, fitCheck } = builder.buildWithValidation(mockPR, 'gpt-4-turbo');
 
-        expect(prompt).toContain(`${intensity} code review`);
+        // Simplified prompt no longer varies by intensity
+        expect(prompt).toContain('ONLY report actual bugs');
         expect(fitCheck.fits).toBe(true);
       }
     });
@@ -313,8 +315,8 @@ describe('PromptBuilder Context Window Validation', () => {
       const thoroughPrompt = thoroughBuilder.build(smallPR);
       const lightPrompt = lightBuilder.build(smallPR);
 
-      // Thorough prompts are longer due to detailed instructions
-      expect(thoroughPrompt.length).toBeGreaterThan(lightPrompt.length);
+      // Simplified prompt is now the same length for all intensities
+      expect(thoroughPrompt.length).toBe(lightPrompt.length);
 
       const thoroughEstimate = thoroughBuilder.estimateTokens(smallPR);
       const lightEstimate = lightBuilder.estimateTokens(smallPR);

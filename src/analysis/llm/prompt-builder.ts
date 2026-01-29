@@ -56,118 +56,36 @@ export class PromptBuilder {
     const depth = this.config.intensityPromptDepth?.[this.intensity] ?? 'standard';
 
     const instructions = [
-      `You are a senior engineer performing a ${this.intensity} code review.`,
-    ];
-
-    // Add depth-specific instructions
-    if (depth === 'detailed') {
-      instructions.push(
-        'Provide extremely thorough analysis including:',
-        '- Security implications and vulnerability patterns',
-        '- Performance considerations and optimization opportunities',
-        '- Edge cases and error handling completeness',
-        '- Architectural impact and design patterns',
-        '- Testing requirements and coverage gaps',
-        '- Documentation completeness and clarity',
-        ''
-      );
-    } else if (depth === 'brief') {
-      instructions.push(
-        'Focus on high-priority issues:',
-        '- Critical bugs and security vulnerabilities',
-        '- Major logic errors that affect correctness',
-        '- Clear code quality problems',
-        ''
-      );
-    } else {
-      instructions.push(
-        'Identify critical, major, and minor issues. Include actionable suggestions when possible.',
-        ''
-      );
-    }
-
-    instructions.push(
-      'Return JSON with findings: [{file, line, severity, title, message, suggestion?}] and optional ai_likelihood/ai_reasoning.',
+      `You are a code reviewer. ONLY report actual bugs - code that will crash, lose data, or have security vulnerabilities.`,
       '',
-      'IMPORTANT RULES:',
-      '- ONLY review files that have diffs shown below',
-      '- DO NOT report "missing file" issues - all files listed are intentionally included',
-      '- DO NOT report issues about files being "referenced but not in diff"',
-      '- Focus on actual code quality, security, and correctness issues in the provided diffs',
-      '- BEFORE flagging an issue, check if defensive programming patterns already address it',
-      '- typeof checks, null checks, try-catch, and error returns indicate proper validation',
-      '- Check line numbers carefully - ensure the flagged line actually contains the issue',
+      'CRITICAL RULES (READ CAREFULLY):',
       '',
-      'FILE TYPE AWARENESS (CRITICAL - READ CAREFULLY):',
+      '1. SKIP these file types entirely - DO NOT review them:',
+      '   • Test files: *.test.ts, *.spec.ts, __tests__/*, *test*, *spec*',
+      '   • Workflow/CI: .github/workflows/*, .github/actions/*, *.yml in .github/',
+      '   • Config: *.json, *.yaml, *.yml (except for syntax errors)',
+      '   • Docs: *.md, README*, CHANGELOG*',
       '',
-      '⛔ CRITICAL RULES - YOU MUST FOLLOW THESE:',
+      '2. NEVER report these (they are NOT bugs):',
+      '   • Suggestions ("Consider", "Add", "Should", "Could", "Ensure that", "Validate")',
+      '   • Code style ("complex", "magic strings", "readability")',
+      '   • Missing validation (TypeScript types handle this)',
+      '   • Incomplete/potential issues (unless code WILL crash)',
+      '   • Performance opinions (unless exponential complexity)',
       '',
-      '1. ONLY REPORT ACTUAL BUGS AND SECURITY VULNERABILITIES',
-      '   - Report: Crashes, data loss, SQL injection, XSS, memory leaks, race conditions',
-      '   - DO NOT report: Suggestions, best practices, code style, documentation',
-      '   - If it starts with "Consider", "Ensure that", "Monitor", "Verify", "Add", "Validate" → NOT a bug',
-      '   - If it contains "potential", "could", "should", "incomplete", "brittleness" → NOT a bug',
+      '3. ONLY report if code WILL:',
+      '   • Crash at runtime',
+      '   • Lose or corrupt data',
+      '   • Have SQL injection, XSS, command injection, or RCE vulnerability',
       '',
-      '2. DO NOT REVIEW TEST FILES:',
-      '   - Files: *.test.ts, *.spec.ts, __tests__/*, jest.setup.*, test-utils/*',
-      '   - ONLY flag: SQL injection, XSS, command injection in tests',
-      '   - NEVER flag: test implementation, mocks, coverage, structure, test quality',
-      '   - NEVER flag: "tightly coupled", "brittleness", "add tests", "parameterized tests"',
-      '',
-      '3. DO NOT REVIEW WORKFLOW/CI FILES:',
-      '   - Files: .github/workflows/*.yml, .github/actions/*, CI config',
-      '   - DO NOT flag: fork PR security, secrets, event conditions, workflow logic',
-      '   - DO NOT flag: "security risk in fork", "condition doesn\'t account", "guardrails"',
-      '   - These are infrastructure, not application bugs',
-      '',
-      '4. DO NOT FLAG SUGGESTIONS AS ISSUES:',
-      '   - "Add X", "Consider Y", "Ensure that", "Monitor", "Verify", "Validate" → NOT issues',
-      '   - "Could be improved", "Should be", "Might want to", "Introduce" → NOT issues',
-      '   - "Incomplete", "Missing", "Not handled", "Refactor" → NOT issues (unless crashes)',
-      '   - Only report if code WILL FAIL or HAS A SECURITY HOLE',
-      '',
-      'Other file types:',
-      '- .md files: ONLY flag broken links or security disclosures, NOT formatting/style',
-      '- .yml/.yaml files: ONLY flag syntax errors or security issues, NOT style',
-      '- .json files: ONLY flag syntax errors, NOT missing fields (could be intentional)',
-      '',
-      'SEVERITY GUIDELINES (be VERY conservative):',
-      '- 🔴 CRITICAL: Data loss, crashes, remote code execution, SQL injection, XSS',
-      '- 🟡 MAJOR: Logic errors affecting correctness, race conditions, memory leaks',
-      '- 🟢 MINOR: Code style, lint warnings, optimizations, suggestions, test quality',
-      '',
-      'ABSOLUTELY DO NOT FLAG AS CRITICAL OR MAJOR:',
-      '- Anything in test files (*.test.ts, *.spec.ts, __tests__/*)',
-      '- Anything in workflow/CI files (.github/workflows/*.yml, .github/actions/*)',
-      '- Lint warnings (unused variables, unnecessary escapes, etc.)',
-      '- Style preferences (const vs let, spacing, naming)',
-      '- Documentation formatting (markdown, typos, formatting)',
-      '- Test data inconsistencies, missing test cases, test structure, test brittleness',
-      '- Commented-out code or TODO comments',
-      '- Suggestions starting with "Consider", "Could", "Might want to", "Add", "Validate"',
-      '- "Missing input validation" (TypeScript types already enforce this)',
-      '- "Timeout validation missing" (TypeScript types already enforce this)',
-      '- "Inconsistent error handling" (unless there are actual unhandled errors)',
-      '- "Incomplete handling" (unless code will crash)',
-      '- "Performance issues" (unless exponential complexity or proven bottleneck)',
-      '- "Complexity and readability" (subjective code style)',
-      '- "Insecure pattern validation" (libraries already validate)',
-      '- "Path quoting" (unless proven vulnerability)',
-      '- "Promise leak" with "potential" or "doesn\'t clean up properly"',
-      '- "Circuit breaker" implementation details (unless proven bug)',
-      '- Code structure suggestions (monolithic, should be split, refactor, substantial diff)',
-      '',
-      'CONFIDENCE REQUIREMENT:',
-      '- If you\'re not >80% confident the issue exists, DO NOT report it',
-      '- Better to miss a minor issue than create false positive noise',
-      '- When uncertain, check if validation/handling exists elsewhere in the code',
+      'Return JSON: [{file, line, severity, title, message}]',
       '',
       `PR #${pr.number}: ${pr.title}`,
       `Author: ${pr.author}`,
       'Files changed:',
       ...fileList,
       ''
-    );
+    ];
 
     // Auto-detect and inject defensive programming context
     // Skip for very large diffs to avoid performance impact (>50KB)
