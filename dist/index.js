@@ -26873,8 +26873,18 @@ var DEFAULT_CONFIG = {
   fallbackProviders: [],
   providerAllowlist: [],
   providerBlocklist: [],
+  // COST CONTROLS:
+  // - openrouterAllowPaid: false = Only free models (blocks models with $/token pricing)
+  // - providerDiscoveryLimit: 8 = Health-check up to 8 providers for reliability
+  // - providerLimit: 6 = Actually use only 6 providers to control API usage
+  // - budgetMaxUsd: 0 = No budget allocated for paid APIs
+  // Combined these settings ensure zero cost when using default configuration
   openrouterAllowPaid: false,
-  providerLimit: 8,
+  // IMPORTANT: Set to true only if you have OpenRouter credits
+  providerDiscoveryLimit: 8,
+  // Health-check pool size (higher = better reliability)
+  providerLimit: 6,
+  // Actual execution pool size (lower = lower costs)
   providerRetries: 2,
   providerMaxParallel: 3,
   quietModeEnabled: false,
@@ -31076,6 +31086,7 @@ var ReviewConfigSchema = external_exports.object({
   provider_allowlist: external_exports.array(external_exports.string()).optional(),
   provider_blocklist: external_exports.array(external_exports.string()).optional(),
   openrouter_allow_paid: external_exports.boolean().optional(),
+  provider_discovery_limit: external_exports.number().int().min(1).optional(),
   provider_limit: external_exports.number().int().min(0).optional(),
   provider_retries: external_exports.number().int().min(1).optional(),
   provider_max_parallel: external_exports.number().int().min(1).optional(),
@@ -31105,6 +31116,8 @@ var ReviewConfigSchema = external_exports.object({
   incremental_cache_ttl_days: external_exports.number().int().min(1).max(30).optional(),
   batch_max_files: external_exports.number().int().min(1).max(200).optional(),
   provider_batch_overrides: external_exports.record(external_exports.coerce.number().int().min(1).max(200)).optional(),
+  enable_token_aware_batching: external_exports.boolean().optional(),
+  target_tokens_per_batch: external_exports.number().int().min(1e3).optional(),
   graph_enabled: external_exports.boolean().optional(),
   graph_cache_enabled: external_exports.boolean().optional(),
   graph_max_depth: external_exports.number().int().min(1).max(10).optional(),
@@ -31133,6 +31146,23 @@ var ReviewConfigSchema = external_exports.object({
   path_based_intensity: external_exports.boolean().optional(),
   path_intensity_patterns: external_exports.string().optional(),
   path_default_intensity: external_exports.enum(["thorough", "standard", "light"]).optional(),
+  provider_selection_strategy: external_exports.enum(["reliability", "random", "round-robin"]).optional(),
+  provider_exploration_rate: external_exports.number().min(0).max(1).optional(),
+  intensity_provider_counts: external_exports.object({
+    thorough: external_exports.number().int().min(1),
+    standard: external_exports.number().int().min(1),
+    light: external_exports.number().int().min(1)
+  }).optional(),
+  intensity_timeouts: external_exports.object({
+    thorough: external_exports.number().int().min(1e3),
+    standard: external_exports.number().int().min(1e3),
+    light: external_exports.number().int().min(1e3)
+  }).optional(),
+  intensity_prompt_depth: external_exports.object({
+    thorough: external_exports.enum(["detailed", "standard", "brief"]),
+    standard: external_exports.enum(["detailed", "standard", "brief"]),
+    light: external_exports.enum(["detailed", "standard", "brief"])
+  }).optional(),
   dry_run: external_exports.boolean().optional()
 });
 
@@ -31432,11 +31462,16 @@ var ConfigLoader = class {
       providerAllowlist: this.parseArray(env.PROVIDER_ALLOWLIST),
       providerBlocklist: this.parseArray(env.PROVIDER_BLOCKLIST),
       openrouterAllowPaid: this.parseBoolean(env.OPENROUTER_ALLOW_PAID),
+      providerDiscoveryLimit: this.parseNumber(env.PROVIDER_DISCOVERY_LIMIT),
       providerLimit: this.parseNumber(env.PROVIDER_LIMIT),
       providerRetries: this.parseNumber(env.PROVIDER_RETRIES),
       providerMaxParallel: this.parseNumber(env.PROVIDER_MAX_PARALLEL),
       quietModeEnabled: this.parseBoolean(env.QUIET_MODE_ENABLED),
       quietMinConfidence: this.parseFloat(env.QUIET_MIN_CONFIDENCE),
+      quietUseLearning: this.parseBoolean(env.QUIET_USE_LEARNING),
+      learningEnabled: this.parseBoolean(env.LEARNING_ENABLED),
+      learningMinFeedbackCount: this.parseNumber(env.LEARNING_MIN_FEEDBACK_COUNT),
+      learningLookbackDays: this.parseNumber(env.LEARNING_LOOKBACK_DAYS),
       inlineMaxComments: this.parseNumber(env.INLINE_MAX_COMMENTS),
       inlineMinSeverity: this.parseSeverity(env.INLINE_MIN_SEVERITY),
       inlineMinAgreement: this.parseNumber(env.INLINE_MIN_AGREEMENT),
@@ -31479,11 +31514,16 @@ var ConfigLoader = class {
       providerAllowlist: config.provider_allowlist,
       providerBlocklist: config.provider_blocklist,
       openrouterAllowPaid: config.openrouter_allow_paid,
+      providerDiscoveryLimit: config.provider_discovery_limit,
       providerLimit: config.provider_limit,
       providerRetries: config.provider_retries,
       providerMaxParallel: config.provider_max_parallel,
       quietModeEnabled: config.quiet_mode_enabled,
       quietMinConfidence: config.quiet_min_confidence,
+      quietUseLearning: config.quiet_use_learning,
+      learningEnabled: config.learning_enabled,
+      learningMinFeedbackCount: config.learning_min_feedback_count,
+      learningLookbackDays: config.learning_lookback_days,
       inlineMaxComments: config.inline_max_comments,
       inlineMinSeverity: config.inline_min_severity,
       inlineMinAgreement: config.inline_min_agreement,
@@ -31504,6 +31544,22 @@ var ConfigLoader = class {
       incrementalCacheTtlDays: config.incremental_cache_ttl_days,
       batchMaxFiles: config.batch_max_files,
       providerBatchOverrides: config.provider_batch_overrides,
+      enableTokenAwareBatching: config.enable_token_aware_batching,
+      targetTokensPerBatch: config.target_tokens_per_batch,
+      graphEnabled: config.graph_enabled,
+      graphCacheEnabled: config.graph_cache_enabled,
+      graphMaxDepth: config.graph_max_depth,
+      graphTimeoutSeconds: config.graph_timeout_seconds,
+      generateFixPrompts: config.generate_fix_prompts,
+      fixPromptFormat: config.fix_prompt_format,
+      analyticsEnabled: config.analytics_enabled,
+      analyticsMaxReviews: config.analytics_max_reviews,
+      analyticsDeveloperRate: config.analytics_developer_rate,
+      analyticsManualReviewTime: config.analytics_manual_review_time,
+      pluginsEnabled: config.plugins_enabled,
+      pluginDir: config.plugin_dir,
+      pluginAllowlist: config.plugin_allowlist,
+      pluginBlocklist: config.plugin_blocklist,
       skipTrivialChanges: config.skip_trivial_changes,
       skipDependencyUpdates: config.skip_dependency_updates,
       skipDocumentationOnly: config.skip_documentation_only,
@@ -31515,6 +31571,11 @@ var ConfigLoader = class {
       pathBasedIntensity: config.path_based_intensity,
       pathIntensityPatterns: config.path_intensity_patterns,
       pathDefaultIntensity: config.path_default_intensity,
+      providerSelectionStrategy: config.provider_selection_strategy,
+      providerExplorationRate: config.provider_exploration_rate,
+      intensityProviderCounts: config.intensity_provider_counts,
+      intensityTimeouts: config.intensity_timeouts,
+      intensityPromptDepth: config.intensity_prompt_depth,
       dryRun: config.dry_run
     };
   }
@@ -31842,8 +31903,10 @@ var OpenRouterProvider = class _OpenRouterProvider extends Provider {
         const retryAfter = response.headers.get("retry-after");
         let seconds = NaN;
         if (retryAfter) {
-          seconds = parseInt(retryAfter, 10);
-          if (isNaN(seconds)) {
+          const parsedSeconds = parseInt(retryAfter, 10);
+          if (!isNaN(parsedSeconds) && parsedSeconds >= 0) {
+            seconds = parsedSeconds;
+          } else {
             const parsedDate = Date.parse(retryAfter);
             if (!isNaN(parsedDate) && parsedDate > Date.now()) {
               seconds = Math.ceil((parsedDate - Date.now()) / 1e3);
@@ -31857,6 +31920,9 @@ var OpenRouterProvider = class _OpenRouterProvider extends Provider {
         }
         if (response.status === 402) {
           const blockMinutes = Math.max(minutes || 0, 60 * 24);
+          logger.warn(
+            `Model ${this.name} returned 402 Payment Required. Blocking for ${blockMinutes} minutes to avoid repeated failures. This usually means the model requires credits or a paid plan.`
+          );
           await this.rateLimiter.markRateLimited(this.name, blockMinutes, "HTTP 402 Payment Required from OpenRouter");
           throw new RateLimitError(`Payment required: ${this.name}`, blockMinutes * 60);
         }
@@ -31929,13 +31995,29 @@ var OpenCodeProvider = class extends Provider {
   // Lightweight health check: verify CLI is available; skip full review run
   async healthCheck(_timeoutMs = 5e3) {
     const timeoutMs = Math.max(500, _timeoutMs ?? 5e3);
-    const timeoutPromise = new Promise(
-      (_, reject) => setTimeout(() => reject(new Error(`OpenCode health check timed out after ${timeoutMs}ms`)), timeoutMs)
-    );
+    let timeoutId;
+    let isTimedOut = false;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = setTimeout(() => {
+        isTimedOut = true;
+        reject(new Error(`OpenCode health check timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+    });
     try {
-      await Promise.race([this.resolveBinary(), timeoutPromise]);
+      await Promise.race([
+        this.resolveBinary().then(() => {
+          if (isTimedOut) {
+            logger.debug(`OpenCode binary resolved after timeout (${this.name})`);
+          }
+        }),
+        timeoutPromise
+      ]);
+      clearTimeout(timeoutId);
       return true;
     } catch (error2) {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       logger.warn(`OpenCode health check failed for ${this.name}: ${error2.message}`);
       return false;
     }
@@ -32457,9 +32539,12 @@ var ProviderRegistry = class {
     } else if (strategy === "random") {
       providers = this.shuffle(providers);
     }
-    const selectionLimit = config.providerLimit > 0 ? config.providerLimit : 8;
-    const minSelection = Math.min(4, selectionLimit);
-    logger.info(`Selection limit: ${selectionLimit} (configured: ${config.providerLimit}), min: ${minSelection}, fallback count: ${config.fallbackProviders.length}`);
+    let discoveryLimit = (config.providerDiscoveryLimit ?? 0) > 0 ? config.providerDiscoveryLimit : config.providerLimit > 0 ? config.providerLimit : 8;
+    if (config.providerLimit > 0) {
+      discoveryLimit = Math.min(discoveryLimit, config.providerLimit);
+    }
+    const minSelection = Math.min(4, discoveryLimit);
+    logger.info(`Discovery limit: ${discoveryLimit} (for health checks), execution limit: ${config.providerLimit} (for actual review), min: ${minSelection}, fallback count: ${config.fallbackProviders.length}`);
     const MIN_OPENROUTER = 4;
     const MIN_OPENCODE = 2;
     const openrouterProviders = this.filterUniqueFamilies(
@@ -32472,35 +32557,50 @@ var ProviderRegistry = class {
       (p) => !p.name.startsWith("openrouter/") && !p.name.startsWith("opencode/")
     );
     const explorationRate = config.providerExplorationRate ?? 0.3;
-    const allProviders = [...openrouterProviders, ...opencodeProviders, ...otherProviders];
+    const concatenated = [...openrouterProviders, ...opencodeProviders, ...otherProviders];
+    let allProviders;
+    if (strategy === "reliability") {
+      allProviders = await this.sortByReliability(concatenated);
+    } else {
+      allProviders = concatenated;
+    }
     let selected;
     if (strategy === "reliability") {
-      selected = this.selectWithDiversity(allProviders, selectionLimit, minSelection, explorationRate);
+      selected = this.selectWithDiversity(allProviders, discoveryLimit, minSelection, explorationRate);
     } else if (strategy === "random") {
       selected = [];
       selected.push(...this.shuffle(openrouterProviders).slice(0, MIN_OPENROUTER));
       selected.push(...this.shuffle(opencodeProviders).slice(0, MIN_OPENCODE));
       const selectedNames = new Set(selected.map((s) => s.name));
       const remainingPool = this.shuffle(allProviders).filter((p) => !selectedNames.has(p.name));
-      while (selected.length < selectionLimit && remainingPool.length > 0) {
+      while (selected.length < discoveryLimit && remainingPool.length > 0) {
         const next = remainingPool.shift();
         selected.push(next);
       }
     } else {
-      selected = this.applyRotation(allProviders, selectionLimit);
+      if (allProviders.length > 0 && discoveryLimit > 0) {
+        selected = this.applyRotation(allProviders, discoveryLimit);
+      } else {
+        logger.warn(`Cannot apply rotation: allProviders.length=${allProviders.length}, discoveryLimit=${discoveryLimit}`);
+        selected = [];
+      }
     }
     providers = selected.length > 0 ? selected : providers;
-    if (providers.length < selectionLimit && config.fallbackProviders.length > 0) {
-      logger.info(`Adding ${config.fallbackProviders.length} fallback providers to reach target of ${selectionLimit}`);
+    if (providers.length < discoveryLimit && config.fallbackProviders.length > 0) {
+      const remainingSlots = discoveryLimit - providers.length;
+      logger.info(`Adding fallback providers to fill ${remainingSlots} remaining slots (target: ${discoveryLimit})`);
       const fallbacks = this.instantiate(config.fallbackProviders, config);
       const filteredFallbacks = await this.filterRateLimited(fallbacks);
-      providers = this.dedupeProviders([...providers, ...filteredFallbacks]);
-      logger.info(`After adding fallbacks: ${providers.length} providers`);
+      const dedupedFallbacks = this.dedupeProviders([...providers, ...filteredFallbacks]).filter((p) => !providers.some((existing) => existing.name === p.name));
+      const fallbacksToAdd = dedupedFallbacks.slice(0, remainingSlots);
+      providers = [...providers, ...fallbacksToAdd];
+      logger.info(`Added ${fallbacksToAdd.length} fallback providers (filtered ${dedupedFallbacks.length} candidates, total now: ${providers.length})`);
     } else {
-      logger.info(`Skipping fallback providers: providers.length=${providers.length}, selectionLimit=${selectionLimit}, fallbackProviders.length=${config.fallbackProviders.length}`);
+      logger.info(`Skipping fallback providers: providers.length=${providers.length}, discoveryLimit=${discoveryLimit}, fallbackProviders.length=${config.fallbackProviders.length}`);
     }
-    if (providers.length > selectionLimit) {
-      providers = this.randomSelect(providers, selectionLimit, minSelection);
+    if (providers.length > discoveryLimit) {
+      logger.warn(`Provider count ${providers.length} exceeds discovery limit ${discoveryLimit}, trimming`);
+      providers = this.randomSelect(providers, discoveryLimit, minSelection);
     }
     if (providers.length === 0 && config.fallbackProviders.length > 0) {
       logger.warn("Primary providers unavailable, using fallbacks");
@@ -32691,23 +32791,23 @@ var ProviderRegistry = class {
    * 2. Randomly select remaining slots from pool (exploration)
    * 3. Ensure minimum diversity (OpenRouter/OpenCode mix)
    */
-  selectWithDiversity(providers, selectionLimit, minSelection, explorationRate = 0.3) {
-    if (providers.length <= selectionLimit) {
+  selectWithDiversity(providers, discoveryLimit, minSelection, explorationRate = 0.3) {
+    if (providers.length <= discoveryLimit) {
       return providers;
     }
     const selected = [];
-    const deterministicCount = Math.floor(selectionLimit * (1 - explorationRate));
+    const deterministicCount = Math.floor(discoveryLimit * (1 - explorationRate));
     selected.push(...providers.slice(0, deterministicCount));
-    const explorationCount = selectionLimit - deterministicCount;
+    const explorationCount = discoveryLimit - deterministicCount;
     const explorationPool = providers.slice(deterministicCount);
     const shuffled = this.shuffle(explorationPool);
     selected.push(...shuffled.slice(0, explorationCount));
     const openrouterCount = selected.filter((p) => p.name.startsWith("openrouter/")).length;
     const opencodeCount = selected.filter((p) => p.name.startsWith("opencode/")).length;
-    const MIN_OPENROUTER = Math.min(2, selectionLimit);
-    const MIN_OPENCODE = Math.min(1, selectionLimit);
+    const MIN_OPENROUTER = Math.min(2, discoveryLimit);
+    const MIN_OPENCODE = Math.min(1, discoveryLimit);
     if (openrouterCount < MIN_OPENROUTER || opencodeCount < MIN_OPENCODE) {
-      return this.adjustForDiversity(providers, selectionLimit, MIN_OPENROUTER, MIN_OPENCODE);
+      return this.adjustForDiversity(providers, discoveryLimit, MIN_OPENROUTER, MIN_OPENCODE);
     }
     logger.info(
       `Selected ${selected.length} providers: ${deterministicCount} by reliability + ${explorationCount} exploration`
@@ -32914,10 +33014,10 @@ function estimateTokensSimple(text) {
 }
 function estimateTokensConservative(text) {
   const simple = estimateTokensSimple(text);
+  const SAFETY_MARGIN = 1.1;
   return {
     ...simple,
-    tokens: Math.ceil(simple.tokens * 1.1)
-    // Add 10% safety margin
+    tokens: Math.ceil(simple.tokens * SAFETY_MARGIN)
   };
 }
 function estimateTokensForDiff(diff) {
@@ -33067,6 +33167,15 @@ var PromptBuilder = class {
     }
   }
   build(pr) {
+    if (!pr || typeof pr !== "object") {
+      throw new Error("Invalid PR context: must be a valid PRContext object");
+    }
+    if (pr.diff === void 0 || pr.diff === null || typeof pr.diff !== "string") {
+      throw new Error("Invalid PR context: diff must be a string (can be empty)");
+    }
+    if (!Array.isArray(pr.files)) {
+      throw new Error("Invalid PR context: files must be an array");
+    }
     const diff = trimDiff(pr.diff, this.config.diffMaxBytes);
     const filesInDiff = /* @__PURE__ */ new Set();
     const diffGitPattern = /^diff --git a\/(.+?) b\/(.+?)$/gm;
@@ -34309,6 +34418,41 @@ var CacheStorage = class {
       this.releaseLock(key);
     }
   }
+  /**
+   * Delete all cache entries matching a given prefix
+   * Useful for clearing PR-specific or feature-specific caches
+   */
+  async deleteByPrefix(prefix) {
+    try {
+      await fs5.mkdir(this.baseDir, { recursive: true });
+    } catch (error2) {
+      logger.error(`Failed to create cache directory ${this.baseDir}`, error2);
+      return 0;
+    }
+    try {
+      const files = await fs5.readdir(this.baseDir);
+      const matchingFiles = files.filter((file) => {
+        const key = file.replace(/\.json$/, "");
+        return key.startsWith(prefix);
+      });
+      let deletedCount = 0;
+      for (const file of matchingFiles) {
+        try {
+          await fs5.unlink(path5.join(this.baseDir, file));
+          deletedCount++;
+        } catch (error2) {
+          logger.warn(`Failed to delete cache file ${file}`, error2);
+        }
+      }
+      if (deletedCount > 0) {
+        logger.info(`Deleted ${deletedCount} cache entries with prefix: ${prefix}`);
+      }
+      return deletedCount;
+    } catch (error2) {
+      logger.warn(`Failed to delete cache entries by prefix ${prefix}`, error2);
+      return 0;
+    }
+  }
   async acquireLock(key) {
     const existingLock = this.locks.get(key);
     if (existingLock) {
@@ -34365,7 +34509,7 @@ function hashConfig(config) {
 }
 
 // src/cache/version.ts
-var CACHE_VERSION = 3;
+var CACHE_VERSION = 4;
 function versionCache(data) {
   return {
     version: CACHE_VERSION,
@@ -34376,6 +34520,15 @@ function versionCache(data) {
 function unversionCache(cached, maxAge) {
   try {
     const parsed = JSON.parse(cached);
+    if (typeof parsed !== "object" || parsed === null) {
+      return null;
+    }
+    if (typeof parsed.version !== "number" || typeof parsed.timestamp !== "number") {
+      return null;
+    }
+    if (!("data" in parsed) || parsed.data === void 0) {
+      return null;
+    }
     if (parsed.version !== CACHE_VERSION) {
       return null;
     }
@@ -35151,15 +35304,19 @@ var GitHubRateLimitTracker = class {
     const remaining = headers["x-ratelimit-remaining"];
     const reset = headers["x-ratelimit-reset"];
     const used = headers["x-ratelimit-used"];
+    const resetTime = headers["x-github-ratelimit-resettime"];
+    const tokenExpiration = headers["github-authentication-token-expiration"];
     if (limit && remaining && reset) {
       this.status = {
         limit: parseInt(limit, 10),
         remaining: parseInt(remaining, 10),
         reset: parseInt(reset, 10),
-        used: used ? parseInt(used, 10) : 0
+        used: used ? parseInt(used, 10) : 0,
+        resetTime,
+        tokenExpiration
       };
       logger.debug(
-        `GitHub rate limit: ${this.status.remaining}/${this.status.limit} remaining (resets at ${new Date(this.status.reset * 1e3).toISOString()})`
+        `GitHub rate limit: ${this.status.remaining}/${this.status.limit} remaining (resets at ${this.status.resetTime || new Date(this.status.reset * 1e3).toISOString()})` + (this.status.tokenExpiration ? ` [token expires: ${this.status.tokenExpiration}]` : "")
       );
       if (this.status.remaining < 100) {
         logger.warn(
@@ -35167,10 +35324,10 @@ var GitHubRateLimitTracker = class {
         );
       }
       if (this.status.remaining === 0) {
-        const resetTime = new Date(this.status.reset * 1e3);
+        const resetTime2 = new Date(this.status.reset * 1e3);
         const waitSeconds = Math.ceil((this.status.reset * 1e3 - Date.now()) / 1e3);
         logger.error(
-          `GitHub API rate limit exceeded. Resets at ${resetTime.toISOString()} (in ${waitSeconds} seconds)`
+          `GitHub API rate limit exceeded. Resets at ${resetTime2.toISOString()} (in ${waitSeconds} seconds)`
         );
       }
     }
@@ -35256,6 +35413,40 @@ var GitHubClient = class {
     }
   }
   /**
+   * Implement exponential backoff when approaching rate limit
+   * Returns delay in milliseconds to wait before making next API call
+   */
+  calculateBackoffDelay() {
+    const status = this.rateLimitTracker.getStatus();
+    if (!status) return 0;
+    const percentRemaining = status.remaining / status.limit * 100;
+    if (percentRemaining > 25) {
+      return 0;
+    }
+    if (percentRemaining > 10) {
+      return 100;
+    } else if (percentRemaining > 5) {
+      return 500;
+    } else if (percentRemaining > 1) {
+      return 1e3;
+    } else {
+      return 2e3;
+    }
+  }
+  /**
+   * Throttle requests when approaching rate limit
+   */
+  async throttleIfNeeded() {
+    const delay = this.calculateBackoffDelay();
+    if (delay > 0) {
+      const status = this.rateLimitTracker.getStatus();
+      core2.debug(
+        `Throttling GitHub API request (${delay}ms delay, ${status?.remaining} requests remaining)`
+      );
+      await new Promise((resolve2) => setTimeout(resolve2, delay));
+    }
+  }
+  /**
    * Wait for rate limit to reset if exceeded
    */
   async handleRateLimit() {
@@ -35271,6 +35462,7 @@ var GitHubClient = class {
    */
   async getFileContent(filePath, ref) {
     await this.handleRateLimit();
+    await this.throttleIfNeeded();
     try {
       const response = await this.octokit.rest.repos.getContent({
         owner: this.owner,
@@ -35278,8 +35470,12 @@ var GitHubClient = class {
         path: filePath,
         ref
       });
-      if (response.headers) {
-        this.rateLimitTracker.updateFromHeaders(response.headers);
+      if (response.headers && typeof response.headers === "object" && !Array.isArray(response.headers)) {
+        const headers = {};
+        for (const [key, value] of Object.entries(response.headers)) {
+          headers[key] = value !== void 0 ? String(value) : void 0;
+        }
+        this.rateLimitTracker.updateFromHeaders(headers);
       }
       if ("content" in response.data && !Array.isArray(response.data)) {
         if (!response.data.content || response.data.content === "" || response.data.encoding === "none") {
@@ -36121,22 +36317,48 @@ var CodeGraph = class _CodeGraph {
    * Remove all data for a file from the graph
    * Used when re-analyzing a file to avoid stale data
    */
+  /**
+   * Remove a file and all its relationships from the graph
+   *
+   * PERFORMANCE: Optimized to O(E) where E is the number of edges,
+   * using Sets for O(1) lookups instead of O(n) array filtering.
+   *
+   * CORRECTNESS: Ensures complete cleanup of:
+   * - Definitions (from fileSymbols and definitions map)
+   * - Imports and exports
+   * - Call edges (both directions: calls and callers)
+   * - Non-definition symbols (e.g., <top>, anonymous functions)
+   */
   removeFile(file) {
     const symbolNames = this.fileSymbols.get(file) || [];
+    const filePrefix = `${file}:`;
+    const symbolsToRemove = /* @__PURE__ */ new Set();
     for (const name of symbolNames) {
-      this.definitions.delete(`${file}:${name}`);
+      symbolsToRemove.add(`${file}:${name}`);
+    }
+    for (const [caller] of this.calls) {
+      if (caller.startsWith(filePrefix)) {
+        symbolsToRemove.add(caller);
+      }
+    }
+    for (const [callee] of this.callers) {
+      if (callee.startsWith(filePrefix)) {
+        symbolsToRemove.add(callee);
+      }
     }
     this.fileSymbols.delete(file);
     this.imports.delete(file);
     this.exports.delete(file);
-    for (const symbolName of symbolNames) {
-      const qualifiedSymbol = `${file}:${symbolName}`;
-      const callees = this.calls.get(qualifiedSymbol);
+    for (const symbol of symbolsToRemove) {
+      this.definitions.delete(symbol);
+    }
+    for (const symbol of symbolsToRemove) {
+      const callees = this.calls.get(symbol);
       if (callees) {
         for (const callee of callees) {
           const callerList = this.callers.get(callee);
           if (callerList) {
-            const filtered = callerList.filter((c) => c !== qualifiedSymbol);
+            const filtered = callerList.filter((c) => !symbolsToRemove.has(c));
             if (filtered.length > 0) {
               this.callers.set(callee, filtered);
             } else {
@@ -36144,14 +36366,13 @@ var CodeGraph = class _CodeGraph {
             }
           }
         }
-        this.calls.delete(qualifiedSymbol);
       }
-      const callersToThis = this.callers.get(qualifiedSymbol);
+      const callersToThis = this.callers.get(symbol);
       if (callersToThis) {
         for (const caller of callersToThis) {
           const calleeList = this.calls.get(caller);
           if (calleeList) {
-            const filtered = calleeList.filter((c) => c !== qualifiedSymbol);
+            const filtered = calleeList.filter((c) => !symbolsToRemove.has(c));
             if (filtered.length > 0) {
               this.calls.set(caller, filtered);
             } else {
@@ -36159,8 +36380,9 @@ var CodeGraph = class _CodeGraph {
             }
           }
         }
-        this.callers.delete(qualifiedSymbol);
       }
+      this.calls.delete(symbol);
+      this.callers.delete(symbol);
     }
   }
   /**
@@ -36378,49 +36600,104 @@ var CodeGraph = class _CodeGraph {
   /**
    * Copy graph data from another CodeGraph instance
    * Type-safe alternative to direct private field assignment
+   * Deep copies all arrays to prevent shared mutable state
    */
   copyFrom(other) {
     this.definitions = new Map(other.definitions);
-    this.imports = new Map(other.imports.entries());
-    this.exports = new Map(other.exports.entries());
-    this.calls = new Map(other.calls.entries());
-    this.callers = new Map(other.callers.entries());
-    this.fileSymbols = new Map(other.fileSymbols.entries());
+    this.imports = new Map(
+      Array.from(other.imports.entries()).map(([k, v]) => [k, [...v]])
+    );
+    this.exports = new Map(
+      Array.from(other.exports.entries()).map(([k, v]) => [k, [...v]])
+    );
+    this.calls = new Map(
+      Array.from(other.calls.entries()).map(([k, v]) => [k, [...v]])
+    );
+    this.callers = new Map(
+      Array.from(other.callers.entries()).map(([k, v]) => [k, [...v]])
+    );
+    this.fileSymbols = new Map(
+      Array.from(other.fileSymbols.entries()).map(([k, v]) => [k, [...v]])
+    );
   }
   /**
-   * Create a shallow clone of the graph for incremental updates
+   * Create a deep clone of the graph for incremental updates
+   * All arrays are deep copied to prevent shared mutable state
    */
   clone() {
-    const cloned = new _CodeGraph(this.files, this.buildTime);
+    const cloned = new _CodeGraph([...this.files], this.buildTime);
     cloned.copyFrom(this);
     return cloned;
   }
   /**
    * Serialize graph to JSON for caching
+   * Deep copies all arrays to prevent mutations from affecting the graph
    */
   serialize() {
     return {
-      files: this.files,
+      files: [...this.files],
+      // Copy files array
       buildTime: this.buildTime,
       definitions: Array.from(this.definitions.entries()),
-      imports: Array.from(this.imports.entries()),
-      exports: Array.from(this.exports.entries()),
-      calls: Array.from(this.calls.entries()),
-      callers: Array.from(this.callers.entries()),
-      fileSymbols: Array.from(this.fileSymbols.entries())
+      // Deep copy array values to prevent shared mutable references
+      imports: Array.from(this.imports.entries()).map(([k, v]) => [k, [...v]]),
+      exports: Array.from(this.exports.entries()).map(([k, v]) => [k, [...v]]),
+      calls: Array.from(this.calls.entries()).map(([k, v]) => [k, [...v]]),
+      callers: Array.from(this.callers.entries()).map(([k, v]) => [k, [...v]]),
+      fileSymbols: Array.from(this.fileSymbols.entries()).map(([k, v]) => [k, [...v]])
     };
   }
   /**
    * Deserialize graph from JSON
+   * Deep copies all arrays to ensure the graph owns its own memory
    */
   static deserialize(data) {
-    const graph = new _CodeGraph(data.files, data.buildTime);
+    if (!data || typeof data !== "object") {
+      throw new Error("Invalid graph data: expected object");
+    }
+    if (!Array.isArray(data.files)) {
+      throw new Error("Invalid graph data: files must be an array");
+    }
+    if (typeof data.buildTime !== "number") {
+      throw new Error("Invalid graph data: buildTime must be a number");
+    }
+    const mapFields = ["definitions", "imports", "exports", "calls", "callers", "fileSymbols"];
+    for (const field of mapFields) {
+      if (!Array.isArray(data[field])) {
+        throw new Error(`Invalid graph data: ${field} must be an array`);
+      }
+    }
+    if (!Array.isArray(data.definitions)) {
+      throw new Error("Invalid graph data: definitions must be an array");
+    }
+    for (const [key, def] of data.definitions) {
+      if (!def || typeof def !== "object") {
+        throw new Error(`Invalid definition for key ${key}: must be an object`);
+      }
+      if (typeof def.name !== "string" || !def.name) {
+        throw new Error(`Invalid definition for key ${key}: name must be a non-empty string`);
+      }
+      if (typeof def.file !== "string" || !def.file) {
+        throw new Error(`Invalid definition for key ${key}: file must be a non-empty string`);
+      }
+      if (typeof def.line !== "number" || def.line < 1) {
+        throw new Error(`Invalid definition for key ${key}: line must be a positive number (>= 1)`);
+      }
+      const validTypes = ["function", "class", "variable", "type", "interface"];
+      if (!validTypes.includes(def.type)) {
+        throw new Error(`Invalid definition for key ${key}: type must be one of ${validTypes.join(", ")}`);
+      }
+      if (typeof def.exported !== "boolean") {
+        throw new Error(`Invalid definition for key ${key}: exported must be a boolean`);
+      }
+    }
+    const graph = new _CodeGraph([...data.files], data.buildTime);
     graph.definitions = new Map(data.definitions);
-    graph.imports = new Map(data.imports);
-    graph.exports = new Map(data.exports);
-    graph.calls = new Map(data.calls);
-    graph.callers = new Map(data.callers);
-    graph.fileSymbols = new Map(data.fileSymbols);
+    graph.imports = new Map(data.imports.map(([k, v]) => [k, [...v]]));
+    graph.exports = new Map(data.exports.map(([k, v]) => [k, [...v]]));
+    graph.calls = new Map(data.calls.map(([k, v]) => [k, [...v]]));
+    graph.callers = new Map(data.callers.map(([k, v]) => [k, [...v]]));
+    graph.fileSymbols = new Map(data.fileSymbols.map(([k, v]) => [k, [...v]]));
     return graph;
   }
 };
@@ -36921,6 +37198,7 @@ function encodeURIComponentSafe(value) {
 
 // src/providers/circuit-breaker.ts
 var CircuitBreaker = class _CircuitBreaker {
+  // Track storage health
   constructor(storage = new CacheStorage(), options = {}) {
     this.storage = storage;
     this.failureThreshold = options.failureThreshold ?? _CircuitBreaker.DEFAULT_FAILURE_THRESHOLD;
@@ -36934,7 +37212,32 @@ var CircuitBreaker = class _CircuitBreaker {
   // 10 seconds (reduced for faster recovery)
   failureThreshold;
   openDurationMs;
+  // Lock map for concurrency control - automatically cleaned up via timer + finally block
+  // Memory leak prevention: locks are removed after LOCK_CLEANUP_MS or immediately after completion
   locks = /* @__PURE__ */ new Map();
+  // In-memory fallback for when storage is unavailable
+  // Ensures circuit breaker continues working even if filesystem/cache fails
+  inMemoryState = /* @__PURE__ */ new Map();
+  storageAvailable = true;
+  /**
+   * Get the current number of active locks (for monitoring/debugging)
+   * Used to detect potential lock accumulation issues
+   */
+  getActiveLockCount() {
+    return this.locks.size;
+  }
+  /**
+   * Check if circuit is open (provider should be skipped)
+   * Also handles state transitions: OPEN → HALF_OPEN after cooldown
+   *
+   * Returns:
+   * - true: Circuit is OPEN or HALF_OPEN with probe in flight (block request)
+   * - false: Circuit is CLOSED or HALF_OPEN without probe (allow request)
+   *
+   * Side effects:
+   * - Transitions OPEN → HALF_OPEN if cooldown expired
+   * - Sets probeInFlight flag when allowing half-open probe
+   */
   async isOpen(providerId) {
     return this.withLock(providerId, async () => {
       let state = await this.load(providerId);
@@ -36943,19 +37246,31 @@ var CircuitBreaker = class _CircuitBreaker {
         if (expired) {
           state = { state: "half_open", failures: 0, probeInFlight: false };
           await this.setState(providerId, state);
+          logger.debug(`Circuit transitioned to half-open for ${providerId} after cooldown`);
         }
         if (state.state === "open") {
           return true;
         }
       }
       if (state.state === "half_open") {
-        if (state.probeInFlight) return true;
+        if (state.probeInFlight) {
+          return true;
+        }
         await this.setState(providerId, { ...state, probeInFlight: true });
         return false;
       }
       return false;
     });
   }
+  /**
+   * Record a successful operation
+   * Transitions any state → CLOSED and resets failure counter
+   *
+   * Call this after:
+   * - Successful health check
+   * - Successful API request
+   * - Any operation indicating the provider is healthy
+   */
   async recordSuccess(providerId) {
     await this.withLock(providerId, async () => {
       const state = await this.load(providerId);
@@ -36966,10 +37281,23 @@ var CircuitBreaker = class _CircuitBreaker {
         probeInFlight: false
       });
       if (state.state !== "closed") {
-        logger.debug(`Circuit closed for ${providerId} after recovery`);
+        logger.info(`Circuit closed for ${providerId} after successful recovery (was ${state.state})`);
       }
     });
   }
+  /**
+   * Record a failed operation
+   * Increments failure counter and opens circuit if threshold reached
+   *
+   * State transitions:
+   * - CLOSED: failures++ → if >= threshold → OPEN
+   * - HALF_OPEN: failures++ → OPEN (probe failed, provider still unhealthy)
+   *
+   * Call this after:
+   * - Failed health check
+   * - API timeout or error
+   * - Any operation indicating the provider is unhealthy
+   */
   async recordFailure(providerId) {
     await this.withLock(providerId, async () => {
       const state = await this.load(providerId);
@@ -36981,32 +37309,69 @@ var CircuitBreaker = class _CircuitBreaker {
           openedAt: Date.now(),
           probeInFlight: false
         });
-        logger.warn(`Circuit re-opened for ${providerId} after half-open failure`);
+        logger.warn(`Circuit re-opened for ${providerId} after half-open probe failed (${failures} total failures)`);
         return;
       }
       if (failures >= this.failureThreshold) {
         await this.setState(providerId, { state: "open", failures, openedAt: Date.now(), probeInFlight: false });
-        logger.warn(`Circuit opened for ${providerId} after ${failures} failures`);
+        logger.warn(
+          `Circuit opened for ${providerId} after ${failures} consecutive failures (threshold: ${this.failureThreshold}, cooldown: ${this.openDurationMs}ms)`
+        );
       } else {
         await this.setState(providerId, { state: "closed", failures });
+        logger.debug(`Circuit failure recorded for ${providerId}: ${failures}/${this.failureThreshold}`);
       }
     });
   }
   async load(providerId) {
-    const raw = await this.storage.read(this.key(providerId));
-    if (!raw) {
-      return { state: "closed", failures: 0, probeInFlight: false };
+    const key = this.key(providerId);
+    if (!this.storageAvailable && this.inMemoryState.has(key)) {
+      logger.debug(`Using in-memory state for ${providerId} (storage unavailable)`);
+      return this.inMemoryState.get(key);
     }
     try {
-      const parsed = JSON.parse(raw);
-      return parsed;
-    } catch (error2) {
-      logger.warn(`Failed to parse circuit state for ${providerId}`, error2);
+      const raw = await this.storage.read(key);
+      if (!raw) {
+        if (this.inMemoryState.has(key)) {
+          return this.inMemoryState.get(key);
+        }
+        return { state: "closed", failures: 0, probeInFlight: false };
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        this.inMemoryState.set(key, parsed);
+        this.storageAvailable = true;
+        return parsed;
+      } catch (parseError) {
+        logger.warn(`Failed to parse circuit state for ${providerId}`, parseError);
+        if (this.inMemoryState.has(key)) {
+          return this.inMemoryState.get(key);
+        }
+        return { state: "closed", failures: 0, probeInFlight: false };
+      }
+    } catch (storageError) {
+      this.storageAvailable = false;
+      logger.warn(`Storage read failed for circuit ${providerId}, using in-memory fallback`, storageError);
+      if (this.inMemoryState.has(key)) {
+        return this.inMemoryState.get(key);
+      }
       return { state: "closed", failures: 0, probeInFlight: false };
     }
   }
   async setState(providerId, state) {
-    await this.storage.write(this.key(providerId), JSON.stringify(state));
+    const key = this.key(providerId);
+    this.inMemoryState.set(key, state);
+    if (this.storageAvailable) {
+      try {
+        await this.storage.write(key, JSON.stringify(state));
+      } catch (error2) {
+        this.storageAvailable = false;
+        logger.error(
+          `Storage write failed for circuit ${providerId}, continuing with in-memory state only`,
+          error2
+        );
+      }
+    }
   }
   key(providerId) {
     return `circuit-breaker-${encodeURIComponentSafe(providerId)}`;
@@ -37037,8 +37402,8 @@ var CircuitBreaker = class _CircuitBreaker {
         await previous;
         return await fn();
       } finally {
-        release();
         clearTimeout(cleanupTimer);
+        release();
         if (this.locks.get(lockKey) === tail) {
           this.locks.delete(lockKey);
         }
@@ -37236,13 +37601,20 @@ var ReliabilityTracker = class _ReliabilityTracker {
     const totalAttempts = results.length;
     const successRate = totalAttempts > 0 ? successCount / totalAttempts : 0;
     const durationsWithValues = results.filter((r) => Number.isFinite(r.durationMs));
-    const averageDurationMs = durationsWithValues.length > 0 ? durationsWithValues.reduce((sum, r) => sum + (r.durationMs || 0), 0) / durationsWithValues.length : 0;
+    const averageDurationMs = durationsWithValues.length > 0 ? durationsWithValues.reduce((sum, r) => sum + r.durationMs, 0) / durationsWithValues.length : 0;
     const falsePositiveCount = falsePositives.length;
     const falsePositiveRate = totalAttempts > 0 ? falsePositiveCount / totalAttempts : 0;
     const EXCELLENT_RESPONSE_MS = 500;
     const POOR_RESPONSE_MS = 5e3;
     const responseTimeRange = POOR_RESPONSE_MS - EXCELLENT_RESPONSE_MS;
-    const responseTimeScore = Math.max(0, Math.min(1, 1 - (averageDurationMs - EXCELLENT_RESPONSE_MS) / responseTimeRange));
+    let responseTimeScore;
+    if (averageDurationMs <= EXCELLENT_RESPONSE_MS) {
+      responseTimeScore = 1;
+    } else if (averageDurationMs >= POOR_RESPONSE_MS) {
+      responseTimeScore = 0;
+    } else {
+      responseTimeScore = 1 - (averageDurationMs - EXCELLENT_RESPONSE_MS) / responseTimeRange;
+    }
     const reliabilityScore = _ReliabilityTracker.WEIGHTS.successRate * successRate + _ReliabilityTracker.WEIGHTS.falsePositiveRate * (1 - falsePositiveRate) + _ReliabilityTracker.WEIGHTS.responseTime * responseTimeScore;
     return {
       providerId,
@@ -37834,6 +38206,13 @@ var BatchOrchestrator = class {
         smallestWindow = window;
       }
     }
+    const DEFAULT_CONTEXT_WINDOW = 1e5;
+    if (!isFinite(smallestWindow) || smallestWindow === 0) {
+      logger.warn(
+        `No valid context window data available for providers: ${providerNames.join(", ")}. Falling back to default ${DEFAULT_CONTEXT_WINDOW} tokens.`
+      );
+      smallestWindow = DEFAULT_CONTEXT_WINDOW;
+    }
     const targetTokens = this.options.targetTokensPerBatch ?? Math.floor(smallestWindow * 0.5);
     const maxFiles = this.options.maxBatchSize ?? 200;
     logger.debug(
@@ -38094,13 +38473,13 @@ var GraphCache = class _GraphCache {
     logger.debug(`Cached graph for PR #${prNumber} (${headSha.slice(0, 7)})`);
   }
   /**
-   * Clear cache for a PR
-   * Note: Currently only logs the intent. Full prefix-based deletion would require
-   * extending CacheStorage interface to support key iteration/scanning.
+   * Clear all cached graphs for a specific PR
+   * Deletes all cache entries matching the PR number prefix
    */
   async clear(prNumber) {
     const prefix = _GraphCache.CACHE_KEY_PREFIX + prNumber;
-    logger.info(`Cache clear requested for PR #${prNumber} (prefix: ${prefix}). Full implementation requires CacheStorage.deleteByPrefix() support.`);
+    const deletedCount = await this.storage.deleteByPrefix(prefix);
+    logger.info(`Cleared ${deletedCount} cached graph(s) for PR #${prNumber}`);
   }
   key(prNumber, headSha) {
     return `${_GraphCache.CACHE_KEY_PREFIX}${prNumber}-${headSha}`;
@@ -38180,16 +38559,17 @@ var TrivialDetector = class {
       return {
         isTrivial: false,
         trivialFiles: [],
-        nonTrivialFiles: files.map((f) => f.filename)
+        nonTrivialFiles: files.map((f) => this.normalizePath(f.filename))
       };
     }
     const trivialFiles = [];
     const nonTrivialFiles = [];
     for (const file of files) {
+      const normalizedPath = this.normalizePath(file.filename);
       if (this.isFileTrivial(file)) {
-        trivialFiles.push(file.filename);
+        trivialFiles.push(normalizedPath);
       } else {
-        nonTrivialFiles.push(file.filename);
+        nonTrivialFiles.push(normalizedPath);
       }
     }
     const isTrivial = nonTrivialFiles.length === 0 && trivialFiles.length > 0;
@@ -40102,13 +40482,76 @@ var PathMatcher = class {
     }
   }
   /**
-   * Restrict patterns to a safe character allowlist to avoid shell/meta injection.
-   * Allows typical glob tokens and path separators; disallows pipes, backticks, backslashes, and negation.
+   * Restrict patterns to a safe character allowlist for glob matching.
+   *
+   * SECURITY CONTEXT:
+   * These patterns are ONLY used with the minimatch library (pure JavaScript),
+   * NEVER passed to shell commands or eval(). While minimatch is safe, we still
+   * block potentially dangerous characters for defense in depth.
+   *
+   * ALLOWED CHARACTERS:
+   * - Alphanumeric: A-Z, a-z, 0-9
+   * - Path separators: / (forward slash only)
+   * - Glob wildcards: * (asterisk), ? (question mark)
+   * - Glob braces: { } (brace expansion)
+   * - Character classes: [ ] (bracket expressions)
+   * - Special chars: . - _ @ + ^ ! ( ) ~ # , (space)
+   *
+   * BLOCKED CHARACTERS (explicit):
+   * - Backslash (\) - Prevents path traversal and escape sequences
+   * - Pipe (|) - No shell piping (not needed for globs)
+   * - Backtick (`) - No command substitution (not needed for globs)
+   * - Semicolon (;) - No command chaining (not needed for globs)
+   * - Ampersand (&) - No backgrounding (not needed for globs)
+   * - Angle brackets (< >) - No redirection (not needed for globs)
+   *
+   * MINIMATCH SAFETY:
+   * - nonegate: true (blocks ! negation at start of pattern)
+   * - nocomment: true (blocks # comments)
+   * - These options prevent pattern injection attacks
+   *
+   * DEFENSE IN DEPTH:
+   * Even though minimatch is safe, we enforce a strict allowlist to:
+   * 1. Catch accidental misuse (e.g., copy-paste errors)
+   * 2. Prevent future regressions if code changes
+   * 3. Make security properties explicit and auditable
+   */
+  /**
+   * Comprehensive character validation with explicit security checks
+   * Uses defense-in-depth: check for dangerous characters AND validate allowlist
    */
   checkAllowedCharacters(pattern) {
-    const allowed = new RegExp("^[A-Za-z0-9.@+^ !_\\-/*?{}\\[\\],()~=]+$");
+    const dangerousChars = /[\\`|;&<>'"$\x7F]/;
+    if (dangerousChars.test(pattern)) {
+      const found = pattern.match(dangerousChars);
+      throw new Error(
+        `Pattern contains dangerous character: ${found?.[0] ? JSON.stringify(found[0]) : "DEL"}. Backslashes, backticks, pipes, semicolons, quotes, and $ are not allowed.`
+      );
+    }
+    if (!/^[\x20-\x7E]+$/.test(pattern)) {
+      throw new Error(
+        `Pattern contains non-ASCII characters. Only printable ASCII characters (0x20-0x7E) are allowed for cross-platform compatibility.`
+      );
+    }
+    const allowed = /^[A-Za-z0-9.@+^!_\-/*?{}\[\],()~# ]+$/;
     if (!allowed.test(pattern)) {
-      throw new Error(`Pattern contains unsupported characters: ${pattern}`);
+      throw new Error(
+        `Pattern contains unsupported characters: ${pattern}. Only alphanumerics (A-Z, a-z, 0-9), glob wildcards (*, ?, {}, []), path separators (/), and safe punctuation (.@+^!_-,()~# space) are allowed.`
+      );
+    }
+    const openBraces = (pattern.match(/\{/g) || []).length;
+    const closeBraces = (pattern.match(/\}/g) || []).length;
+    if (openBraces !== closeBraces) {
+      throw new Error(
+        `Pattern has unbalanced braces: ${openBraces} open, ${closeBraces} close. Each '{' must have a matching '}'.`
+      );
+    }
+    const openBrackets = (pattern.match(/\[/g) || []).length;
+    const closeBrackets = (pattern.match(/\]/g) || []).length;
+    if (openBrackets !== closeBrackets) {
+      throw new Error(
+        `Pattern has unbalanced brackets: ${openBrackets} open, ${closeBrackets} close. Each '[' must have a matching ']'.`
+      );
     }
   }
   /**
@@ -40815,6 +41258,13 @@ var ReviewOrchestrator = class {
             )}, opencode=${countOpenCode(healthy)})`
           );
         } else {
+          const executionLimit = intensityProviderLimit || config.providerLimit;
+          if (healthy.length > executionLimit) {
+            logger.info(
+              `Limiting execution to ${executionLimit} providers (checked ${healthy.length} for health). Using top providers by reliability.`
+            );
+            healthy = healthy.slice(0, executionLimit);
+          }
           let batches;
           const providerNames = healthy.map((p) => p.name);
           if (config.enableTokenAwareBatching) {

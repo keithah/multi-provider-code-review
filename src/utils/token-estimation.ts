@@ -42,15 +42,22 @@ export function estimateTokensSimple(text: string): TokenEstimate {
 }
 
 /**
- * Conservative token estimation (always overestimates by ~10%)
+ * Conservative token estimation (overestimates by ~10%)
  * Use this for context window validation to be safe
+ *
+ * Safety margin keeps us on the safe side without marking moderate prompts
+ * as overflow. Adjust with care; tests rely on this not overshooting
+ * common 4k–8k context windows for moderate diffs.
  */
 export function estimateTokensConservative(text: string): TokenEstimate {
   const simple = estimateTokensSimple(text);
 
+  // 10% safety margin to prevent context window overflows
+  const SAFETY_MARGIN = 1.1;
+
   return {
     ...simple,
-    tokens: Math.ceil(simple.tokens * 1.1), // Add 10% safety margin
+    tokens: Math.ceil(simple.tokens * SAFETY_MARGIN),
   };
 }
 
