@@ -184,7 +184,7 @@ describe('FindingFilter', () => {
 
       expect(filtered).toHaveLength(0);
       expect(stats.filtered).toBe(1);
-      expect(stats.reasons['invalid line number']).toBe(1);
+      expect(stats.reasons['line number points to blank/brace/comment']).toBe(1);
     });
 
     test('filters line number issues (closing braces)', () => {
@@ -208,6 +208,7 @@ describe('FindingFilter', () => {
 
       expect(filtered).toHaveLength(0);
       expect(stats.filtered).toBe(1);
+      expect(stats.reasons['line number points to blank/brace/comment']).toBe(1);
     });
 
     test('handles multiple findings with mixed actions', () => {
@@ -710,6 +711,108 @@ describe('FindingFilter', () => {
       expect(filtered).toHaveLength(0);
       expect(stats.filtered).toBe(1);
       expect(stats.reasons['complaint about file added in diff']).toBe(1);
+    });
+
+    test('filters findings with line 0 or negative line numbers', () => {
+      const findings: Finding[] = [
+        {
+          file: 'src/app.ts',
+          line: 0,
+          severity: 'critical',
+          title: 'Invalid finding',
+          message: 'Finding with line 0',
+        },
+        {
+          file: 'src/utils.ts',
+          line: -1,
+          severity: 'major',
+          title: 'Invalid finding',
+          message: 'Finding with negative line',
+        },
+      ];
+
+      const { findings: filtered, stats } = filter.filter(findings, '');
+
+      expect(filtered).toHaveLength(0);
+      expect(stats.filtered).toBe(2);
+      expect(stats.reasons['invalid/suspicious line number']).toBe(2);
+    });
+
+    test('filters or downgrades suspicious line:1 findings on config/workflow/test files', () => {
+      const findings: Finding[] = [
+        {
+          file: '.github/workflows/ci.yml',
+          line: 1,
+          severity: 'critical',
+          title: 'Security issue',
+          message: 'Workflow has security problem',
+        },
+        {
+          file: 'package.json',
+          line: 1,
+          severity: 'major',
+          title: 'Missing field',
+          message: 'JSON file lacks field',
+        },
+        {
+          file: 'src/app.test.ts',
+          line: 1,
+          severity: 'critical',
+          title: 'Test issue',
+          message: 'Test file has problem',
+        },
+      ];
+
+      const { findings: filtered, stats } = filter.filter(findings, '');
+
+      // Workflow and test files will be downgraded to minor (not filtered by line:1 alone)
+      // JSON file should be filtered by line:1
+      expect(filtered.length).toBeLessThanOrEqual(2);
+      expect(stats.filtered).toBeGreaterThanOrEqual(1);
+      // All remaining should be minor severity
+      expect(filtered.every(f => f.severity === 'minor')).toBe(true);
+    });
+
+    test('keeps valid line:1 findings on source files', () => {
+      const diff = `diff --git a/src/index.ts b/src/index.ts
+@@ -1,3 +1,4 @@
++const query = "SELECT * FROM users WHERE id = " + userId; // SQL injection here
+ import { foo } from './foo';
+ import { bar } from './bar';`;
+
+      const findings: Finding[] = [
+        {
+          file: 'src/index.ts',
+          line: 1,
+          severity: 'critical',
+          title: 'SQL Injection',
+          message: 'Direct SQL concatenation on first import line',
+        },
+      ];
+
+      const { findings: filtered, stats } = filter.filter(findings, diff);
+
+      // Should keep security issue on source file line 1
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].line).toBe(1);
+    });
+
+    test('filters generic findings with line:1 that mention "entire file" or "class lacks"', () => {
+      const findings: Finding[] = [
+        {
+          file: 'src/utils.ts',
+          line: 1,
+          severity: 'major',
+          title: 'Class lacks validation',
+          message: 'The entire file needs error handling',
+        },
+      ];
+
+      const { findings: filtered, stats } = filter.filter(findings, '');
+
+      expect(filtered).toHaveLength(0);
+      expect(stats.filtered).toBe(1);
+      expect(stats.reasons['invalid/suspicious line number']).toBe(1);
     });
   });
 });

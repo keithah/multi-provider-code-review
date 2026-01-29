@@ -164,6 +164,11 @@ export class FindingFilter {
       return 'filter';
     }
 
+    // Filter: Invalid or suspicious line numbers
+    if (this.hasInvalidLineNumber(finding)) {
+      return 'filter';
+    }
+
     return 'keep';
   }
 
@@ -189,8 +194,11 @@ export class FindingFilter {
     if (this.isMissingMethodFalsePositive(finding, diffContent)) {
       return 'method exists in code';
     }
+    if (this.hasInvalidLineNumber(finding)) {
+      return 'invalid/suspicious line number';
+    }
     if (this.isLineNumberIssue(finding, diffContent)) {
-      return 'invalid line number';
+      return 'line number points to blank/brace/comment';
     }
     return 'other';
   }
@@ -452,6 +460,52 @@ export class FindingFilter {
     ) {
       logger.debug(`Line ${finding.line} is blank/brace/comment, likely incorrect line number`);
       return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Check for invalid or suspicious line numbers that will cause GitHub API errors
+   */
+  private hasInvalidLineNumber(finding: Finding): boolean {
+    // No line number is OK (general file-level finding)
+    if (finding.line === undefined || finding.line === null) {
+      return false;
+    }
+
+    // Line 0 or negative is always invalid
+    if (finding.line <= 0) {
+      logger.debug(`Invalid line number ${finding.line} for ${finding.file}, filtering`);
+      return true;
+    }
+
+    // Line 1 is suspicious when combined with very generic finding messages
+    // These often indicate the LLM couldn't determine the actual line
+    if (finding.line === 1) {
+      const text = (finding.title + ' ' + finding.message).toLowerCase();
+      const isVeryGenericFinding = (
+        text.includes('entire file') ||
+        text.includes('file lacks') ||
+        (text.includes('class lacks') && !this.isTrueSecurityIssue(finding))
+      );
+
+      if (isVeryGenericFinding) {
+        logger.debug(`Very generic line:1 finding for ${finding.file}, likely invalid, filtering`);
+        return true;
+      }
+
+      // Line 1 on generated/built files is suspicious
+      const isGeneratedFile = (
+        finding.file.includes('dist/') ||
+        finding.file.includes('build/') ||
+        finding.file.includes('.min.')
+      );
+
+      if (isGeneratedFile) {
+        logger.debug(`Line:1 on generated file ${finding.file}, likely invalid, filtering`);
+        return true;
+      }
     }
 
     return false;
