@@ -814,5 +814,115 @@ describe('FindingFilter', () => {
       expect(stats.filtered).toBe(1);
       expect(stats.reasons['invalid/suspicious line number']).toBe(1);
     });
+
+    test('filters subjective code structure opinions', () => {
+      const findings: Finding[] = [
+        {
+          file: 'src/utils.ts',
+          line: 10,
+          severity: 'major',
+          title: 'Complexity and Readability',
+          message: 'The method is complex and difficult to read. Consider breaking it down.',
+        },
+        {
+          file: 'src/app.ts',
+          line: 20,
+          severity: 'major',
+          title: 'Code structure',
+          message: 'Should be split into smaller functions and use constants for magic strings',
+        },
+      ];
+
+      const { findings: filtered, stats } = filter.filter(findings, '');
+
+      expect(filtered).toHaveLength(0);
+      expect(stats.filtered).toBe(2);
+      expect(stats.reasons['subjective code opinion (not a bug)']).toBe(2);
+    });
+
+    test('downgrades code quality issues from critical/major to minor', () => {
+      const findings: Finding[] = [
+        {
+          file: 'src/filter.ts',
+          line: 1,
+          severity: 'critical',
+          title: 'Missing input validation for finding properties',
+          message: 'Class assumes all findings have required properties',
+        },
+        {
+          file: 'src/filter.ts',
+          line: 123,
+          severity: 'critical',
+          title: 'Inconsistent Error Handling',
+          message: 'Error handling is inconsistent throughout the class',
+        },
+        {
+          file: 'src/graph.ts',
+          line: 56,
+          severity: 'major',
+          title: 'Performance Issue',
+          message: 'Potential performance issue due to array filtering',
+        },
+      ];
+
+      const { findings: filtered, stats } = filter.filter(findings, '');
+
+      // All should be downgraded to minor
+      expect(filtered).toHaveLength(3);
+      expect(filtered.every(f => f.severity === 'minor')).toBe(true);
+      expect(stats.downgraded).toBe(3);
+    });
+
+    test('filters additional workflow configuration issues', () => {
+      const findings: Finding[] = [
+        {
+          file: '.github/workflows/ci.yml',
+          line: 15,
+          severity: 'major',
+          title: 'Concurrency Issue',
+          message: 'The concurrency group name is not properly formatted',
+        },
+        {
+          file: '.github/workflows/deploy.yml',
+          line: 132,
+          severity: 'major',
+          title: 'Incorrect fork PR detection logic',
+          message: 'Conditional logic will fail for push events',
+        },
+      ];
+
+      const { findings: filtered, stats } = filter.filter(findings, '');
+
+      expect(filtered).toHaveLength(0);
+      expect(stats.filtered).toBe(2);
+      expect(stats.reasons['workflow/CI configuration (not application code)']).toBe(2);
+    });
+
+    test('filters or downgrades insecure pattern validation complaints', () => {
+      const findings: Finding[] = [
+        {
+          file: 'src/analysis/path-matcher.ts',
+          line: 1,
+          severity: 'major',
+          title: 'Insecure pattern validation',
+          message: 'PathMatcher class does not properly validate patterns',
+        },
+        {
+          file: '__tests__/unit/analysis/path-matcher.test.ts',
+          line: 1,
+          severity: 'major',
+          title: 'Insecure pattern validation',
+          message: 'PathMatcher class does not properly validate patterns',
+        },
+      ];
+
+      const { findings: filtered, stats } = filter.filter(findings, '');
+
+      // Test file should be downgraded to minor
+      // Source file should be downgraded as code quality issue
+      expect(filtered.length).toBeLessThanOrEqual(2);
+      expect(filtered.every(f => f.severity === 'minor')).toBe(true);
+      expect(stats.downgraded).toBeGreaterThanOrEqual(1);
+    });
   });
 });

@@ -128,9 +128,14 @@ export class FindingFilter {
       return 'filter';
     }
 
+    // Filter: Subjective code structure opinions
+    if (this.isSubjectiveCodeOpinion(finding)) {
+      return 'filter';
+    }
+
     // Downgrade: Code quality issues should never be critical
     if (this.isCodeQualityIssue(finding)) {
-      if (finding.severity === 'critical') {
+      if (finding.severity === 'critical' || finding.severity === 'major') {
         return 'downgrade';
       }
     }
@@ -188,6 +193,9 @@ export class FindingFilter {
     if (this.isWorkflowSecurityFalsePositive(finding, diffContent)) {
       return 'workflow security already handled/config issue';
     }
+    if (this.isSubjectiveCodeOpinion(finding)) {
+      return 'subjective code opinion (not a bug)';
+    }
     if (this.isAboutAddedFileFalsePositive(finding)) {
       return 'complaint about file added in diff';
     }
@@ -241,12 +249,19 @@ export class FindingFilter {
     return (
       // Fork PR / secrets issues
       (text.includes('fork') && text.includes('secret')) ||
+      (text.includes('fork') && text.includes('pr')) && text.includes('access') ||
       (text.includes('pull request') && text.includes('secret')) ||
       text.includes('repository setting') ||
+      text.includes('secret validation') ||
+      text.includes('secret exposure') ||
+      text.includes('secret access') ||
       // Workflow configuration
       text.includes('workflow relies on') ||
       text.includes('timeout') && text.includes('workflow') ||
       text.includes('runner configuration') ||
+      text.includes('concurrency') && (text.includes('group') || text.includes('issue')) ||
+      text.includes('fork pr detection') ||
+      text.includes('conditional logic') && text.includes('workflow') ||
       // CI-specific issues
       text.includes('detectopenhandles') ||
       text.includes('testtimeout') ||
@@ -610,23 +625,57 @@ export class FindingFilter {
     return false;
   }
 
+  private isSubjectiveCodeOpinion(finding: Finding): boolean {
+    const text = (finding.title + ' ' + finding.message).toLowerCase();
+
+    return (
+      // Complexity/readability complaints (subjective)
+      (text.includes('complex') && text.includes('difficult to read')) ||
+      (text.includes('complexity') && !text.includes('exponential') && !text.includes('o(n')) ||
+      text.includes('readability') ||
+      // Code structure opinions
+      text.includes('should be broken down') ||
+      text.includes('should be split') ||
+      text.includes('consider using an enum') ||
+      text.includes('consider using constants') ||
+      text.includes('magic strings') ||
+      // Path normalization suggestions (not bugs)
+      (text.includes('path normalization') && !text.includes('security')) ||
+      (text.includes('inconsistent') && text.includes('path') && !text.includes('vulnerability')) ||
+      // Documentation/commenting suggestions
+      (text.includes('add tests') && !text.includes('untested')) ||
+      text.includes('add unit test') ||
+      text.includes('add regression test') ||
+      text.includes('document') && text.includes('policy')
+    );
+  }
+
   private isCodeQualityIssue(finding: Finding): boolean {
     const text = (finding.title + ' ' + finding.message).toLowerCase();
 
     return (
       // Input validation (unless security-related)
       (text.includes('missing') && text.includes('validation') && !this.isTrueSecurityIssue(finding)) ||
+      (text.includes('missing') && text.includes('input validation') && !this.isTrueSecurityIssue(finding)) ||
       (text.includes('missing') && text.includes('error handling') && !text.includes('crash')) ||
+      text.includes('inconsistent') && text.includes('error handling') ||
       // Hard-coded values
       text.includes('hard-coded') ||
       text.includes('hardcoded') ||
       // Inefficiency (unless extreme)
       (text.includes('inefficient') && !text.includes('exponential')) ||
+      text.includes('performance issue') ||
+      text.includes('potential performance') ||
       // Monolithic / structure
       text.includes('monolithic') ||
+      text.includes('complexity') ||
+      text.includes('readability') ||
       // Comments
       text.includes('comment') ||
-      text.includes('documentation')
+      text.includes('documentation') ||
+      // Pattern validation complaints (TypeScript/library already validates)
+      (text.includes('insecure') && text.includes('pattern validation')) ||
+      (text.includes('pattern') && text.includes('not properly validate'))
     );
   }
 }
