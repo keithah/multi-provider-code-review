@@ -790,7 +790,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats } = filter.filter(findings, diff);
+      const { findings: filtered } = filter.filter(findings, diff);
 
       // Should keep security issue on source file line 1
       expect(filtered).toHaveLength(1);

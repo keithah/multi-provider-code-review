@@ -353,15 +353,15 @@ export class FindingFilter {
       return false;
     }
 
-    // Extract method/function name from the finding
-    const methodMatch = text.match(/\b(serialize|deserialize|clone|copyFrom|remove|add|get|set)\w*\b/);
+    // Extract method/function name from the finding (text is already lowercased)
+    const methodMatch = text.match(/\b(serialize|deserialize|clone|copyfrom|remove|add|get|set)\w*\b/);
     if (!methodMatch) {
       return false;
     }
 
     const methodName = methodMatch[0];
 
-    // Check if the method actually exists in the diff
+    // Check if the method actually exists in the diff (case-insensitive search)
     const methodRegex = new RegExp(`(function\\s+${methodName}|${methodName}\\s*\\(|${methodName}:\\s*function)`, 'i');
     if (methodRegex.test(diffContent)) {
       logger.debug(`Method ${methodName} exists in diff, filtering "missing ${methodName}" finding`);
