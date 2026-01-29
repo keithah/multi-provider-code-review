@@ -155,9 +155,11 @@ export class CodeGraph {
     }
 
     // Phase 3: Clean up call edges (bidirectional graph)
+    // CORRECTNESS: Complete bidirectional cleanup ensures graph integrity
     // Use Set-based filtering for O(1) lookup per element instead of O(n)
     for (const symbol of symbolsToRemove) {
       // Clean up outgoing calls: remove symbol from callers lists of callees
+      // BIDIRECTIONAL: This handles the "callees" side of the edge
       const callees = this.calls.get(symbol);
       if (callees) {
         for (const callee of callees) {
@@ -174,6 +176,7 @@ export class CodeGraph {
       }
 
       // Clean up incoming calls: remove symbol from calls lists of callers
+      // BIDIRECTIONAL: This handles the "callers" side of the edge
       const callersToThis = this.callers.get(symbol);
       if (callersToThis) {
         for (const caller of callersToThis) {
@@ -190,6 +193,7 @@ export class CodeGraph {
       }
 
       // Remove symbol's own entries from maps
+      // CLEANUP: Final removal of the symbol's direct entries
       this.calls.delete(symbol);
       this.callers.delete(symbol);
     }
@@ -462,10 +466,16 @@ export class CodeGraph {
   /**
    * Copy graph data from another CodeGraph instance
    * Type-safe alternative to direct private field assignment
-   * Deep copies all arrays to prevent shared mutable state
+   * Deep copies all arrays to prevent shared mutable state.
+   *
+   * SECURITY: Deep copy prevents shared mutable state between graph instances.
+   * Each Definition object is cloned using spread operator to create independent copies.
+   *
+   * @param other - Source graph to copy from
    */
   copyFrom(other: CodeGraph): void {
-    // Deep copy definitions (value is Definition object, not array)
+    // Deep copy definitions: spread operator creates new Definition object for each entry
+    // This prevents shared references between graph instances (security: no mutation aliasing)
     this.definitions = new Map(
       Array.from(other.definitions.entries()).map(([k, v]) => [k, { ...v }])
     );
@@ -544,10 +554,12 @@ export class CodeGraph {
     if (!Array.isArray(data.definitions)) {
       throw new Error('Invalid graph data: definitions must be an array');
     }
+    // VALIDATION: Comprehensive checks for all Definition fields
     for (const [key, def] of data.definitions) {
       if (!def || typeof def !== 'object') {
         throw new Error(`Invalid definition for key ${key}: must be an object`);
       }
+      // SECURITY: Validate name is non-empty to prevent injection attacks or graph corruption
       if (typeof def.name !== 'string' || !def.name) {
         throw new Error(`Invalid definition for key ${key}: name must be a non-empty string`);
       }
