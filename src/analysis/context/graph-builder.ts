@@ -57,6 +57,20 @@ export interface GraphCodeSnippet {
 }
 
 /**
+ * Type for serialized graph data (must match CodeGraph.serialize() return type)
+ */
+export interface SerializedGraph {
+  files: string[];
+  buildTime: number;
+  definitions: Array<[string, Definition]>;
+  imports: Array<[string, string[]]>;
+  exports: Array<[string, string[]]>;
+  calls: Array<[string, string[]]>;
+  callers: Array<[string, string[]]>;
+  fileSymbols: Array<[string, string[]]>;
+}
+
+/**
  * AST-based code graph that tracks:
  * - Symbol definitions (functions, classes, variables)
  * - Import/export relationships
@@ -486,16 +500,7 @@ export class CodeGraph {
    * Serialize graph to JSON for caching
    * Deep copies all arrays to prevent mutations from affecting the graph
    */
-  serialize(): {
-    files: string[];
-    buildTime: number;
-    definitions: Array<[string, Definition]>;
-    imports: Array<[string, string[]]>;
-    exports: Array<[string, string[]]>;
-    calls: Array<[string, string[]]>;
-    callers: Array<[string, string[]]>;
-    fileSymbols: Array<[string, string[]]>;
-  } {
+  serialize(): SerializedGraph {
     return {
       files: [...this.files], // Copy files array
       buildTime: this.buildTime,
@@ -526,9 +531,9 @@ export class CodeGraph {
     }
 
     // Validate all map fields are arrays
-    const mapFields = ['definitions', 'imports', 'exports', 'calls', 'callers', 'fileSymbols'];
+    const mapFields: Array<keyof SerializedGraph> = ['definitions', 'imports', 'exports', 'calls', 'callers', 'fileSymbols'];
     for (const field of mapFields) {
-      if (!Array.isArray((data as any)[field])) {
+      if (!Array.isArray(data[field])) {
         throw new Error(`Invalid graph data: ${field} must be an array`);
       }
     }

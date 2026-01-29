@@ -201,7 +201,7 @@ export class PathMatcher {
     // This is the primary security control - only known-safe characters pass
     // Allowed: A-Z a-z 0-9 . @ + ^ ! _ - / * ? { } [ ] , ( ) ~ #
     // Note: $, =, % removed from allowlist as extra precaution (could be used in encoded payloads)
-    const allowed = /^[A-Za-z0-9.@+^!_\-/*?{}\[\],()~# ]+$/;
+    const allowed = /^[A-Za-z0-9.@+^!_\-/*?{}[\],()~# ]+$/;
     if (!allowed.test(pattern)) {
       throw new Error(
         `Pattern contains unsupported characters: ${pattern}. ` +

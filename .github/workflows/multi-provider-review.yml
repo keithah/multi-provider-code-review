@@ -104,7 +104,7 @@ jobs:
           if [ "${{ github.event.pull_request.head.repo.fork }}" = "true" ] && [ "${{ github.event_name }}" = "pull_request" ]; then
             if [ -z "$OPENROUTER_API_KEY" ]; then
               echo "✅ Fork PR detected without OPENROUTER_API_KEY (expected behavior)."
-              echo "   Review will use only free OpenCode providers (no OpenRouter)."
+              echo "   Fork PR review steps will be skipped for security (see job condition at line 142)."
             else
               echo "🔴 SECURITY ALERT: Fork PR has access to OPENROUTER_API_KEY!"
               echo "   This indicates 'Send secrets to workflows from pull requests' is enabled."
