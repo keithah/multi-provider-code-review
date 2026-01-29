@@ -249,17 +249,19 @@ export class FindingFilter {
 
     return (
       // Fork PR / secrets issues (very common false positives)
-      (text.includes('fork') && (text.includes('secret') || text.includes('pr'))) ||
+      (text.includes('fork') && (text.includes('secret') || text.includes('pr') || text.includes('pull request'))) ||
       (text.includes('pull request') && text.includes('secret')) ||
       text.includes('repository setting') ||
       text.includes('secret validation') ||
       text.includes('secret exposure') ||
+      text.includes('secrets exposure') ||
       text.includes('secret access') ||
       text.includes('security gating') ||
-      text.includes('fork pr') && text.includes('access') ||
+      text.includes('security guardrails') ||
+      text.includes('fork pr') && (text.includes('access') || text.includes('gating') || text.includes('condition') || text.includes('handling')) ||
       text.includes('security risk') && text.includes('fork') ||
       text.includes('security vulnerability') && text.includes('fork') ||
-      // Workflow configuration
+      // Workflow event/condition configuration
       text.includes('workflow relies on') ||
       text.includes('timeout') && text.includes('workflow') ||
       text.includes('runner configuration') ||
@@ -269,6 +271,10 @@ export class FindingFilter {
       text.includes('conditional logic') && text.includes('workflow') ||
       text.includes('job condition') ||
       text.includes('workflow') && text.includes('logic') ||
+      text.includes('condition') && (text.includes('fork') || text.includes('event')) ||
+      text.includes('doesn\'t account for') && text.includes('event') ||
+      text.includes('modify condition to') ||
+      text.includes('event type') && text.includes('check') ||
       // CI-specific issues
       text.includes('detectopenhandles') ||
       text.includes('testtimeout') ||
@@ -301,6 +307,8 @@ export class FindingFilter {
       text.includes('missing test') ||
       text.includes('test coverage') ||
       text.includes('not tested') ||
+      text.includes('add tests') ||
+      text.includes('add targeted') && text.includes('test') ||
       // Test structure and organization
       text.includes('test structure') ||
       text.includes('test organization') ||
@@ -310,7 +318,7 @@ export class FindingFilter {
       text.includes('stub') ||
       text.includes('fixture') ||
       text.includes('test data') ||
-      text.includes('inconsistent') ||
+      text.includes('inconsistent') && text.includes('test') ||
       text.includes('mismatch') ||
       // Test assertions
       text.includes('assertion') ||
@@ -325,8 +333,19 @@ export class FindingFilter {
       // Test implementation details
       text.includes('hard-coded') && text.includes('test') ||
       text.includes('stat-key brittleness') ||
+      text.includes('brittleness') && text.includes('test') ||
+      text.includes('tightly coupled') && text.includes('test') ||
       text.includes('test expectations') ||
-      text.includes('deduplication heuristic')
+      text.includes('deduplication heuristic') ||
+      // Test refactoring suggestions
+      text.includes('parameterized tests') ||
+      text.includes('downgrade-path constants') ||
+      text.includes('reduce brittleness') ||
+      // Test validation suggestions
+      text.includes('validate mocks') ||
+      text.includes('validate') && text.includes('test') && text.includes('reflect') ||
+      text.includes('concurrency scenarios') && text.includes('test') ||
+      text.includes('comprehensive') && text.includes('test')
     );
   }
 
@@ -418,16 +437,37 @@ export class FindingFilter {
       // Imperatives that are suggestions, not bugs
       text.includes('ensure that') ||
       text.includes('verify that') ||
+      text.includes('validate') && !text.includes('unvalidated') ||
       text.includes('monitor') ||
-      text.includes('add a check') ||
-      text.includes('add validation') ||
-      text.includes('add logging') ||
-      text.includes('add documentation') ||
-      text.includes('add unit test') ||
-      text.includes('add more') ||
+      text.includes('add') && (
+        text.includes('check') ||
+        text.includes('validation') ||
+        text.includes('logging') ||
+        text.includes('documentation') ||
+        text.includes('test') ||
+        text.includes('explicit') ||
+        text.includes('specific') ||
+        text.includes('handling') ||
+        text.includes('support') ||
+        text.includes('targeted')
+      ) ||
       // Configuration suggestions
       text.includes('adjust') ||
       text.includes('configure') ||
+      // Refactoring suggestions
+      text.includes('refactor') ||
+      text.includes('introduce') && (text.includes('enum') || text.includes('constant')) ||
+      // Completeness/quality suggestions (not bugs)
+      text.includes('incomplete') ||
+      text.includes('missing') && text.includes('validation') && !this.isTrueSecurityIssue(finding) ||
+      // Potential issues (not actual bugs)
+      text.includes('potential') && !text.includes('sql injection') ||
+      text.includes('brittleness') ||
+      text.includes('tightly coupled') ||
+      // Review/analysis suggestions
+      text.includes('review') && !text.includes('code review tool') ||
+      text.includes('substantial diff') ||
+      text.includes('comprehensive') && text.includes('test') ||
       // Documentation suggestions
       text.includes('document') && !text.includes('undocumented vulnerability')
     );
@@ -674,6 +714,11 @@ export class FindingFilter {
       text.includes('consider using an enum') ||
       text.includes('consider using constants') ||
       text.includes('magic strings') ||
+      text.includes('refactor') && !text.includes('refactor to fix') ||
+      text.includes('substantial diff') ||
+      text.includes('significant logic changes') ||
+      text.includes('review') && text.includes('algorithm changes') ||
+      text.includes('review') && text.includes('implications') ||
       // Path normalization suggestions (not bugs)
       (text.includes('path normalization') && !text.includes('security')) ||
       (text.includes('inconsistent') && text.includes('path') && !text.includes('vulnerability')) ||
@@ -695,6 +740,7 @@ export class FindingFilter {
       (text.includes('missing') && text.includes('error handling') && !text.includes('crash')) ||
       (text.includes('lacks') && text.includes('validation')) ||
       text.includes('inconsistent') && text.includes('error handling') ||
+      text.includes('inconsistency') && !this.isTrueSecurityIssue(finding) ||
       // Hard-coded values
       text.includes('hard-coded') ||
       text.includes('hardcoded') ||
@@ -717,6 +763,8 @@ export class FindingFilter {
       // Path handling (unless security)
       (text.includes('path normalization') && !text.includes('vulnerability')) ||
       (text.includes('path') && text.includes('consistency') && !text.includes('vulnerability')) ||
+      (text.includes('path quoting') && !text.includes('vulnerability')) ||
+      (text.includes('quoting') && text.includes('not fully handled')) ||
       // Serialization/deserialization implementation
       text.includes('circular reference') && text.includes('serialization') ||
       text.includes('deep clone') && text.includes('independence') ||
@@ -724,12 +772,20 @@ export class FindingFilter {
       text.includes('rate limit handling') && !text.includes('bypass') ||
       text.includes('health check implementation') && !text.includes('fail') ||
       text.includes('handling 402') || // Payment errors are expected
+      text.includes('payment required not handled') ||
+      // Timeout/cleanup implementation details
+      text.includes('timeout') && text.includes('validation') && text.includes('missing') ||
+      text.includes('promise') && text.includes('leak') && text.includes('potential') ||
+      text.includes('doesn\'t clean up properly') ||
       // Batch validation (implementation detail)
       text.includes('batch size validation') ||
       text.includes('token-aware batching') ||
       // Model selection (not a bug)
       text.includes('model ranking') ||
-      text.includes('model selection')
+      text.includes('model selection') ||
+      // Completeness suggestions (not bugs)
+      text.includes('incomplete') && !this.isTrueSecurityIssue(finding) ||
+      text.includes('not handled') && !this.isTrueSecurityIssue(finding)
     );
   }
 }
