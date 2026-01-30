@@ -57,43 +57,35 @@ describe('Path-Based Intensity Feature', () => {
       const builder = new PromptBuilder(DEFAULT_CONFIG, 'thorough');
       const prompt = builder.build(mockPR);
 
-      expect(prompt).toContain('thorough code review');
-      expect(prompt).toContain('Provide extremely thorough analysis including:');
-      expect(prompt).toContain('Security implications and vulnerability patterns');
-      expect(prompt).toContain('Performance considerations and optimization opportunities');
-      expect(prompt).toContain('Edge cases and error handling completeness');
-      expect(prompt).toContain('Architectural impact and design patterns');
-      expect(prompt).toContain('Testing requirements and coverage gaps');
-      expect(prompt).toContain('Documentation completeness and clarity');
+      // Simplified prompt is now the same for all intensities
+      expect(prompt).toContain('ONLY report actual bugs');
+      expect(prompt).toContain('CRITICAL RULES');
     });
 
     it('should generate standard prompts for standard intensity', () => {
       const builder = new PromptBuilder(DEFAULT_CONFIG, 'standard');
       const prompt = builder.build(mockPR);
 
-      expect(prompt).toContain('standard code review');
-      expect(prompt).toContain('Identify critical, major, and minor issues');
-      expect(prompt).not.toContain('Provide extremely thorough analysis');
-      expect(prompt).not.toContain('Focus on high-priority issues');
+      // Simplified prompt is now the same for all intensities
+      expect(prompt).toContain('ONLY report actual bugs');
+      expect(prompt).toContain('CRITICAL RULES');
     });
 
     it('should generate brief prompts for light intensity', () => {
       const builder = new PromptBuilder(DEFAULT_CONFIG, 'light');
       const prompt = builder.build(mockPR);
 
-      expect(prompt).toContain('light code review');
-      expect(prompt).toContain('Focus on high-priority issues:');
-      expect(prompt).toContain('Critical bugs and security vulnerabilities');
-      expect(prompt).toContain('Major logic errors that affect correctness');
-      expect(prompt).toContain('Clear code quality problems');
-      expect(prompt).not.toContain('Provide extremely thorough analysis');
+      // Simplified prompt is now the same for all intensities
+      expect(prompt).toContain('ONLY report actual bugs');
+      expect(prompt).toContain('CRITICAL RULES');
     });
 
     it('should default to standard intensity when not specified', () => {
       const builder = new PromptBuilder(DEFAULT_CONFIG);
       const prompt = builder.build(mockPR);
 
-      expect(prompt).toContain('standard code review');
+      // Simplified prompt is now the same for all intensities
+      expect(prompt).toContain('ONLY report actual bugs');
     });
 
     it('should include file list and diff in all intensity levels', () => {
@@ -139,16 +131,18 @@ describe('Path-Based Intensity Feature', () => {
 
       const thoroughBuilder = new PromptBuilder(customConfig, 'thorough');
       const thoroughPrompt = thoroughBuilder.build(mockPR);
-      expect(thoroughPrompt).toContain('Identify critical, major, and minor issues');
-      expect(thoroughPrompt).not.toContain('Provide extremely thorough analysis');
+      // Simplified prompt is now the same for all intensities and depths
+      expect(thoroughPrompt).toContain('ONLY report actual bugs');
 
       const standardBuilder = new PromptBuilder(customConfig, 'standard');
       const standardPrompt = standardBuilder.build(mockPR);
-      expect(standardPrompt).toContain('Focus on high-priority issues');
+      // Simplified prompt is now the same for all intensities and depths
+      expect(standardPrompt).toContain('ONLY report actual bugs');
 
       const lightBuilder = new PromptBuilder(customConfig, 'light');
       const lightPrompt = lightBuilder.build(mockPR);
-      expect(lightPrompt).toContain('Provide extremely thorough analysis');
+      // Simplified prompt is now the same for all intensities and depths
+      expect(lightPrompt).toContain('ONLY report actual bugs');
     });
 
     it('should fallback to standard depth if intensity not configured', () => {
@@ -178,7 +172,8 @@ describe('Path-Based Intensity Feature', () => {
       };
 
       const prompt = builder.build(mockPR);
-      expect(prompt).toContain('Identify critical, major, and minor issues');
+      // Simplified prompt is now the same for all intensities
+      expect(prompt).toContain('ONLY report actual bugs');
     });
   });
 
@@ -276,8 +271,9 @@ describe('Path-Based Intensity Feature', () => {
       };
 
       const prompt = builder.build(mockPR);
-      expect(prompt).toContain('standard code review');
-      expect(prompt).toContain('Identify critical, major, and minor issues');
+      // Simplified prompt is now the same for all intensities
+      expect(prompt).toContain('ONLY report actual bugs');
+      expect(prompt).toContain('CRITICAL RULES');
     });
 
     it('should handle all valid ReviewIntensity values', () => {
@@ -300,7 +296,8 @@ describe('Path-Based Intensity Feature', () => {
       for (const intensity of intensities) {
         const builder = new PromptBuilder(DEFAULT_CONFIG, intensity);
         const prompt = builder.build(mockPR);
-        expect(prompt).toContain(`${intensity} code review`);
+        // Simplified prompt is now the same for all intensities
+        expect(prompt).toContain('ONLY report actual bugs');
       }
     });
   });

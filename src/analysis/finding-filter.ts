@@ -92,35 +92,21 @@ export class FindingFilter {
       }
     }
 
-    // Aggressive filtering for test files - tests are not production code
+    // COMPLETELY filter test files - prompt explicitly says "DO NOT review test files"
     if (this.isTestFile(finding.file) || this.isTestInfrastructure(finding.file)) {
-      // Only keep security vulnerabilities in test files (SQL injection, XSS, etc.)
+      // Only keep true security vulnerabilities (SQL injection, XSS, RCE)
       if (this.isTrueSecurityIssue(finding)) {
         return 'keep';
       }
-
-      // Filter common false positives in tests
-      if (this.isTestCodeQualityIssue(finding)) {
-        return 'filter';
-      }
-
-      // Downgrade everything else in test files to minor
-      if (finding.severity === 'critical' || finding.severity === 'major') {
-        return 'downgrade';
-      }
+      // Everything else in test files is filtered - NO exceptions
+      return 'filter';
     }
 
-    // Aggressive filtering for workflow/CI files - infrastructure, not application code
+    // COMPLETELY filter workflow/CI files - prompt explicitly says "DO NOT review workflow/CI files"
     if (this.isWorkflowOrCIFile(finding.file)) {
-      // Filter common workflow false positives
-      if (this.isWorkflowConfigurationIssue(finding)) {
-        return 'filter';
-      }
-
-      // Downgrade everything else in workflow files to minor
-      if (finding.severity === 'critical' || finding.severity === 'major') {
-        return 'downgrade';
-      }
+      // Filter ALL workflow/CI findings - NO exceptions
+      // Workflow configuration is infrastructure, not application code
+      return 'filter';
     }
 
     // Filter: Suggestions/optimizations should never be reported as issues (check early!)
@@ -456,10 +442,11 @@ export class FindingFilter {
       text.includes('improvement') ||
       // Imperatives that are suggestions, not bugs
       text.includes('ensure that') ||
-      text.includes('ensure') && (text.includes('consistent') || text.includes('handle')) ||
+      text.includes('ensure') && (text.includes('consistent') || text.includes('handle') || text.includes('uniqueness')) ||
       text.includes('verify that') ||
       text.includes('validate') && !text.includes('unvalidated') ||
       text.includes('monitor') ||
+      text.includes('integrate') && (text.includes('into') || text.includes('the')) ||
       text.includes('add') && (
         text.includes('check') ||
         text.includes('validation') ||
@@ -474,7 +461,10 @@ export class FindingFilter {
         text.includes('regression') ||
         text.includes('metrics') ||
         text.includes('warning') ||
-        text.includes('prominent')
+        text.includes('prominent') ||
+        text.includes('additional') ||
+        text.includes('more tests') ||
+        text.includes('security')
       ) ||
       // Configuration suggestions
       text.includes('adjust') ||
@@ -487,7 +477,10 @@ export class FindingFilter {
       text.includes('incomplete') ||
       text.includes('lacks sufficient') ||
       text.includes('lacks') && text.includes('validation') ||
+      text.includes('does not adequately') ||
+      text.includes('not adequately') ||
       text.includes('missing') && text.includes('validation') && !this.isTrueSecurityIssue(finding) ||
+      text.includes('inconsistent') && !this.isTrueSecurityIssue(finding) ||
       // Potential issues (not actual bugs)
       text.includes('potential') && !text.includes('sql injection') ||
       text.includes('brittleness') ||
@@ -503,6 +496,14 @@ export class FindingFilter {
       text.includes('more efficient') ||
       text.includes('could be more') ||
       text.includes('more concise') ||
+      text.includes('inefficient') && !text.includes('exponential') ||
+      text.includes('potentially inefficient') ||
+      text.includes('time-consuming') && !text.includes('will hang') ||
+      // Implementation suggestions
+      text.includes('explore using') ||
+      text.includes('alternatively') ||
+      text.includes('using a different approach') ||
+      text.includes('using a more') ||
       // Documentation suggestions
       text.includes('document') && !text.includes('undocumented vulnerability')
     );

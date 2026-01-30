@@ -471,7 +471,7 @@ describe('FindingFilter', () => {
       expect(stats.reasons['test code quality (not production issue)']).toBe(2);
     });
 
-    test('downgrades remaining test file issues to minor', () => {
+    test('filters all test file issues', () => {
       const findings: Finding[] = [
         {
           file: 'src/app.test.ts',
@@ -484,9 +484,9 @@ describe('FindingFilter', () => {
 
       const { findings: filtered, stats } = filter.filter(findings, '');
 
-      expect(filtered).toHaveLength(1);
-      expect(filtered[0].severity).toBe('minor');
-      expect(stats.downgraded).toBe(1);
+      // ALL test files are now filtered, no exceptions (except true security issues)
+      expect(filtered).toHaveLength(0);
+      expect(stats.filtered).toBe(1);
     });
 
     test('keeps true security issues in test files', () => {
@@ -593,10 +593,9 @@ describe('FindingFilter', () => {
 
       const { findings: filtered, stats } = filter.filter(findings, '');
 
-      // Should downgrade to minor
-      expect(filtered).toHaveLength(1);
-      expect(filtered[0].severity).toBe('minor');
-      expect(stats.downgraded).toBe(1);
+      // jest.setup.ts is test infrastructure - should be completely filtered
+      expect(filtered).toHaveLength(0);
+      expect(stats.filtered).toBe(1);
     });
 
     test('filters workflow configuration issues', () => {
@@ -885,13 +884,12 @@ describe('FindingFilter', () => {
 
       const { findings: filtered, stats } = filter.filter(findings, '');
 
-      // "Missing validation" and "Potential performance" are filtered as suggestions
-      // Only "Inconsistent Error Handling" is downgraded to minor
-      expect(filtered).toHaveLength(1);
-      expect(filtered[0].title).toBe('Inconsistent Error Handling');
-      expect(filtered[0].severity).toBe('minor');
-      expect(stats.filtered).toBe(2);
-      expect(stats.downgraded).toBe(1);
+      // All three are now filtered as suggestions:
+      // - "Missing validation" - missing + validation
+      // - "Inconsistent Error Handling" - inconsistent
+      // - "Potential performance" - potential + performance
+      expect(filtered).toHaveLength(0);
+      expect(stats.filtered).toBe(3);
     });
 
     test('filters additional workflow configuration issues', () => {
@@ -939,11 +937,10 @@ describe('FindingFilter', () => {
 
       const { findings: filtered, stats } = filter.filter(findings, '');
 
-      // Test file should be downgraded to minor
-      // Source file should be downgraded as code quality issue
-      expect(filtered.length).toBeLessThanOrEqual(2);
-      expect(filtered.every(f => f.severity === 'minor')).toBe(true);
-      expect(stats.downgraded).toBeGreaterThanOrEqual(1);
+      // Test file is completely filtered (new behavior)
+      // Source file "does not properly validate" matches code quality patterns, also filtered
+      expect(filtered).toHaveLength(0);
+      expect(stats.filtered).toBe(2);
     });
 
     test('filters all fork PR security false positives', () => {
