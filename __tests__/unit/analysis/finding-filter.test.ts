@@ -82,7 +82,7 @@ describe('FindingFilter', () => {
       expect(stats.reasons['test code quality (not production issue)']).toBe(1);
     });
 
-    test('downgrades lint issues from critical to minor', () => {
+    test('filters lint issues completely', () => {
       const findings: Finding[] = [
         {
           file: 'src/app.ts',
@@ -95,12 +95,12 @@ describe('FindingFilter', () => {
 
       const { findings: filtered, stats } = filter.filter(findings, '');
 
-      expect(filtered).toHaveLength(1);
-      expect(filtered[0].severity).toBe('minor');
-      expect(stats.downgraded).toBe(1);
+      // Lint issues are now completely filtered
+      expect(filtered).toHaveLength(0);
+      expect(stats.filtered).toBe(1);
     });
 
-    test('downgrades style issues from major to minor', () => {
+    test('filters style issues completely', () => {
       const findings: Finding[] = [
         {
           file: 'src/utils.ts',
@@ -113,9 +113,9 @@ describe('FindingFilter', () => {
 
       const { findings: filtered, stats } = filter.filter(findings, '');
 
-      expect(filtered).toHaveLength(1);
-      expect(filtered[0].severity).toBe('minor');
-      expect(stats.downgraded).toBe(1);
+      // Style issues are now completely filtered
+      expect(filtered).toHaveLength(0);
+      expect(stats.filtered).toBe(1);
     });
 
     test('filters "missing method" false positives', () => {
@@ -268,12 +268,11 @@ describe('FindingFilter', () => {
 
       // Should keep SQL injection (real issue)
       // Should filter markdown formatting
-      // Should downgrade unused variable to minor
+      // Should filter unused variable (lint/style issue)
       // Should filter test inconsistency
-      expect(filtered).toHaveLength(2);
-      expect(stats.kept).toBe(2);
-      expect(stats.filtered).toBe(2);
-      expect(stats.downgraded).toBe(1);
+      expect(filtered).toHaveLength(1);
+      expect(stats.kept).toBe(1);
+      expect(stats.filtered).toBe(3);
     });
 
     test('logs filter statistics when changes are made', () => {
@@ -307,24 +306,24 @@ describe('FindingFilter', () => {
     test('preserves finding properties when downgrading', () => {
       const findings: Finding[] = [
         {
-          file: 'src/app.ts',
+          file: 'README.md',
           line: 10,
           severity: 'critical',
-          title: 'Lint: unused import',
-          message: 'Import React is unused',
-          suggestion: 'Remove the unused import',
+          title: 'Broken link',
+          message: 'Link to external resource is broken',
+          suggestion: 'Update the link',
         },
       ];
 
       const { findings: filtered } = filter.filter(findings, '');
 
       expect(filtered[0]).toMatchObject({
-        file: 'src/app.ts',
+        file: 'README.md',
         line: 10,
-        severity: 'minor', // Changed
-        title: 'Lint: unused import',
-        message: 'Import React is unused',
-        suggestion: 'Remove the unused import',
+        severity: 'minor', // Documentation issues get downgraded
+        title: 'Broken link',
+        message: 'Link to external resource is broken',
+        suggestion: 'Update the link',
       });
     });
   });
@@ -411,10 +410,9 @@ describe('FindingFilter', () => {
 
       const { findings: filtered, stats } = filter.filter(findings, diff);
 
-      // Should downgrade to minor (it's a lint issue)
-      expect(filtered).toHaveLength(1);
-      expect(filtered[0].severity).toBe('minor');
-      expect(stats.downgraded).toBe(1);
+      // Should filter completely (it's a lint issue)
+      expect(filtered).toHaveLength(0);
+      expect(stats.filtered).toBe(1);
     });
 
     test('handles test data inconsistency false positive', () => {
@@ -701,12 +699,11 @@ describe('FindingFilter', () => {
 
       const { findings: filtered, stats } = filter.filter(findings, '');
 
-      // "Missing input validation" is filtered as suggestion; "Hard-coded" is downgraded
-      expect(filtered).toHaveLength(1);
-      expect(filtered[0].title).toBe('Hard-coded configuration');
-      expect(filtered[0].severity).toBe('minor');
-      expect(stats.filtered).toBe(1);
-      expect(stats.downgraded).toBe(1);
+      // Both are filtered completely:
+      // "Missing input validation" - filtered as suggestion
+      // "Hard-coded configuration" - filtered as code quality issue
+      expect(filtered).toHaveLength(0);
+      expect(stats.filtered).toBe(2);
     });
 
     test('filters findings about files added without visible tests', () => {

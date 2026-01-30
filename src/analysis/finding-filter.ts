@@ -129,18 +129,14 @@ export class FindingFilter {
       return 'filter';
     }
 
-    // Downgrade: Code quality issues should never be critical
+    // COMPLETELY filter code quality issues - prompt explicitly says not to report these
     if (this.isCodeQualityIssue(finding)) {
-      if (finding.severity === 'critical' || finding.severity === 'major') {
-        return 'downgrade';
-      }
+      return 'filter';
     }
 
-    // Downgrade: Lint/style issues should never be critical
+    // COMPLETELY filter lint/style issues - prompt explicitly says not to report these
     if (this.isLintOrStyleIssue(finding)) {
-      if (finding.severity === 'critical' || finding.severity === 'major') {
-        return 'downgrade';
-      }
+      return 'filter';
     }
 
     // Filter: "Missing method" when method exists in diff
@@ -203,7 +199,16 @@ export class FindingFilter {
   }
 
   private isTestFile(file: string): boolean {
-    return /\.(test|spec)\.(ts|js|tsx|jsx)$/i.test(file) || file.includes('__tests__');
+    const normalized = file.toLowerCase();
+    return (
+      /\.(test|spec)\.(ts|js|tsx|jsx)$/i.test(file) ||
+      file.includes('__tests__/') ||
+      normalized.includes('/tests/') ||
+      normalized.includes('/test/') ||
+      normalized.startsWith('tests/') ||
+      normalized.startsWith('test/') ||
+      file.includes('__test__/')
+    );
   }
 
   private isTestInfrastructure(file: string): boolean {
@@ -442,9 +447,10 @@ export class FindingFilter {
       text.includes('improvement') ||
       // Imperatives that are suggestions, not bugs
       text.includes('ensure that') ||
-      text.includes('ensure') && (text.includes('consistent') || text.includes('handle') || text.includes('uniqueness')) ||
+      text.includes('ensure') && (text.includes('consistent') || text.includes('handle') || text.includes('uniqueness') || text.includes('comprehensive') || text.includes('proper') || text.includes('correct')) ||
       text.includes('verify that') ||
       text.includes('validate') && !text.includes('unvalidated') ||
+      text.includes('establish') ||
       text.includes('monitor') ||
       text.includes('integrate') && (text.includes('into') || text.includes('the')) ||
       text.includes('add') && (
@@ -490,8 +496,11 @@ export class FindingFilter {
       text.includes('review') && !text.includes('code review tool') ||
       text.includes('audit') ||
       text.includes('substantial diff') ||
-      text.includes('comprehensive') && text.includes('test') ||
+      text.includes('comprehensive') && (text.includes('test') || text.includes('testing')) ||
       text.includes('investigate') ||
+      text.includes('profile') ||
+      text.includes('thorough') ||
+      text.includes('write thorough') ||
       // Efficiency/performance suggestions (not bugs)
       text.includes('more efficient') ||
       text.includes('could be more') ||
