@@ -34,6 +34,7 @@
  * - v3: Extended Finding schema
  * - v4: Added graph serialization features (CodeGraph with deep copy support)
  * - v5: Aggressive false positive filtering - invalidate cache to apply new filter logic
+ * - v6: Exclude finding-filter from self-review (fix self-reference paradox)
  *
  * TESTING:
  * When bumping version, verify:
@@ -43,7 +44,7 @@
  * See: __tests__/unit/cache/version.test.ts
  */
 
-export const CACHE_VERSION = 5; // Current version - increment for breaking changes
+export const CACHE_VERSION = 6; // Current version - increment for breaking changes
 
 export interface VersionedCache<T> {
   version: number;
