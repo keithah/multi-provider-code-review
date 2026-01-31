@@ -109,6 +109,12 @@ export class FindingFilter {
       return 'filter';
     }
 
+    // COMPLETELY filter the finding-filter itself - avoid self-reference paradox
+    // The filter can't meaningfully review its own filtering logic
+    if (this.isFilterInfrastructure(finding.file)) {
+      return 'filter';
+    }
+
     // Filter: Suggestions/optimizations should never be reported as issues (check early!)
     if (this.isSuggestionOrOptimization(finding)) {
       return 'filter';
@@ -235,6 +241,15 @@ export class FindingFilter {
       normalized.includes('.yml') && normalized.includes('.github') ||
       normalized.includes('.yaml') && normalized.includes('.github') ||
       file === 'Jenkinsfile'
+    );
+  }
+
+  private isFilterInfrastructure(file: string): boolean {
+    // Don't review the finding-filter itself - creates self-reference paradox
+    // The filter can't meaningfully judge its own filtering logic
+    return (
+      file.includes('finding-filter.ts') ||
+      file.includes('finding-filter.test.ts')
     );
   }
 
