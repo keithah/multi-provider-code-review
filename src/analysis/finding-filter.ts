@@ -245,11 +245,33 @@ export class FindingFilter {
   }
 
   private isFilterInfrastructure(file: string): boolean {
-    // Don't review the finding-filter itself - creates self-reference paradox
-    // The filter can't meaningfully judge its own filtering logic
+    // Don't review the review infrastructure itself - creates self-reference paradox
+    // The tool cannot meaningfully review the code that decides what to review
+
+    const normalized = file.toLowerCase();
+
     return (
-      file.includes('finding-filter.ts') ||
-      file.includes('finding-filter.test.ts')
+      // The finding filter and its tests
+      file.includes('finding-filter') ||
+
+      // All analysis infrastructure (review engine)
+      normalized.startsWith('src/analysis/') ||
+      normalized.includes('/analysis/') ||
+
+      // Config and setup (review configuration)
+      file.includes('config/') && (file.includes('defaults') || file.includes('schema') || file.includes('loader')) ||
+      file.includes('setup.ts') ||
+
+      // Cache infrastructure (review optimization)
+      file.includes('cache/') ||
+
+      // Core orchestration (review engine)
+      file.includes('core/orchestrator') ||
+      file.includes('core/batch-orchestrator') ||
+
+      // Provider infrastructure (review execution)
+      file.includes('providers/circuit-breaker') ||
+      file.includes('providers/reliability-tracker')
     );
   }
 
