@@ -48,7 +48,7 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   enableTestHints: true,
   enableAiDetection: true,
 
-  incrementalEnabled: true,
+  incrementalEnabled: false, // Temporarily disabled - cache merge bypasses new filter rules
   incrementalCacheTtlDays: 7,
 
   batchMaxFiles: 30,
