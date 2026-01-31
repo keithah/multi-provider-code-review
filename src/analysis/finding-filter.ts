@@ -391,8 +391,16 @@ export class FindingFilter {
       text.includes('naming convention') ||
       text.includes('camelcase') ||
       text.includes('snake_case') ||
+      text.includes('magic string') ||
+      text.includes('magic number') ||
       text.includes('eslint') ||
-      text.includes('lint')
+      text.includes('lint') ||
+      text.includes('unsafe type assertion') ||
+      text.includes('unsafe non-null assertion') ||
+      text.includes('type assertion') && !this.isTrueSecurityIssue(finding) ||
+      text.includes('non-null assertion') && !this.isTrueSecurityIssue(finding) ||
+      text.includes('bypasses type checking') ||
+      text.includes('casting') && text.includes('any')
     );
   }
 
@@ -435,6 +443,13 @@ export class FindingFilter {
   }
 
   private isSuggestionOrOptimization(finding: Finding): boolean {
+    // CRITICAL: Never filter true security issues, even if they use suggestion language
+    // Example: "Missing validation could lead to SQL injection" contains "could lead to"
+    // but is a real security issue that must not be filtered
+    if (this.isTrueSecurityIssue(finding)) {
+      return false;
+    }
+
     const text = (finding.title + ' ' + finding.message).toLowerCase();
     return (
       // Explicit suggestions
@@ -491,6 +506,12 @@ export class FindingFilter {
       text.includes('using a more') ||
       text.includes('implement') && (text.includes('iterative') || text.includes('approach')) ||
       text.includes('recursive approach') && text.includes('performance') ||
+      // Opinion-based characterizations
+      text.includes('overly permissive') ||
+      text.includes('overly restrictive') ||
+      text.includes('overly aggressive') ||
+      text.includes('too generous') ||
+      text.includes('too strict') ||
       // Completeness/quality suggestions (not bugs)
       text.includes('incomplete') ||
       text.includes('lacks sufficient') ||
@@ -498,7 +519,10 @@ export class FindingFilter {
       text.includes('does not adequately') ||
       text.includes('not adequately') ||
       text.includes('missing') && text.includes('validation') && !this.isTrueSecurityIssue(finding) ||
+      text.includes('missing') && text.includes('timeout') && text.includes('validation') ||
       text.includes('inconsistent') && !this.isTrueSecurityIssue(finding) ||
+      text.includes('incorrect handling') && !text.includes('crash') ||
+      text.includes('incomplete validation') ||
       // Potential issues (not actual bugs)
       text.includes('potential') && !text.includes('sql injection') && !text.includes('rce') ||
       text.includes('brittleness') ||
@@ -816,6 +840,7 @@ export class FindingFilter {
       // Monolithic / structure
       text.includes('monolithic') ||
       text.includes('complexity') ||
+      text.includes('cyclomatic') ||
       text.includes('readability') ||
       text.includes('code complexity') ||
       text.includes('excessive') ||
@@ -823,6 +848,9 @@ export class FindingFilter {
       text.includes('duplicate') ||
       text.includes('conditional statements') ||
       text.includes('conditional logic') ||
+      text.includes('flaky test') ||
+      text.includes('race condition') && !text.includes('crash') && !this.isTrueSecurityIssue(finding) ||
+      text.includes('timing') && (text.includes('assumption') || text.includes('dependent')) ||
       // Comments
       text.includes('comment') ||
       text.includes('documentation') ||
