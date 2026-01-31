@@ -486,6 +486,11 @@ export class FindingFilter {
       // Refactoring suggestions
       text.includes('refactor') ||
       text.includes('introduce') && (text.includes('enum') || text.includes('constant')) ||
+      text.includes('extract') && (text.includes('method') || text.includes('class') || text.includes('separate')) ||
+      text.includes('use a more') ||
+      text.includes('using a more') ||
+      text.includes('implement') && (text.includes('iterative') || text.includes('approach')) ||
+      text.includes('recursive approach') && text.includes('performance') ||
       // Completeness/quality suggestions (not bugs)
       text.includes('incomplete') ||
       text.includes('lacks sufficient') ||
@@ -495,12 +500,16 @@ export class FindingFilter {
       text.includes('missing') && text.includes('validation') && !this.isTrueSecurityIssue(finding) ||
       text.includes('inconsistent') && !this.isTrueSecurityIssue(finding) ||
       // Potential issues (not actual bugs)
-      text.includes('potential') && !text.includes('sql injection') ||
+      text.includes('potential') && !text.includes('sql injection') && !text.includes('rce') ||
       text.includes('brittleness') ||
       text.includes('brittle') ||
       text.includes('tightly coupled') ||
       text.includes('genuine bugs') || // "can be genuine bugs" = uncertainty
       text.includes('genuine issues') ||
+      text.includes('may occur') ||
+      text.includes('could occur') ||
+      text.includes('may lead to') ||
+      text.includes('could lead to') ||
       // Review/analysis suggestions
       text.includes('review') && !text.includes('code review tool') ||
       text.includes('audit') ||
@@ -792,6 +801,8 @@ export class FindingFilter {
       (text.includes('missing') && text.includes('validation') && !this.isTrueSecurityIssue(finding)) ||
       (text.includes('missing') && text.includes('input validation') && !this.isTrueSecurityIssue(finding)) ||
       (text.includes('missing') && text.includes('error handling') && !text.includes('crash')) ||
+      (text.includes('missing') && text.includes('type safety') && !this.isTrueSecurityIssue(finding)) ||
+      (text.includes('missing') && text.includes('runtime') && !this.isTrueSecurityIssue(finding)) ||
       (text.includes('lacks') && text.includes('validation')) ||
       text.includes('inconsistent') && text.includes('error handling') ||
       text.includes('inconsistency') && !this.isTrueSecurityIssue(finding) ||
@@ -807,6 +818,11 @@ export class FindingFilter {
       text.includes('complexity') ||
       text.includes('readability') ||
       text.includes('code complexity') ||
+      text.includes('excessive') ||
+      text.includes('duplication') ||
+      text.includes('duplicate') ||
+      text.includes('conditional statements') ||
+      text.includes('conditional logic') ||
       // Comments
       text.includes('comment') ||
       text.includes('documentation') ||
@@ -829,6 +845,13 @@ export class FindingFilter {
       text.includes('payment required not handled') ||
       text.includes('lightweight healthcheck') ||
       text.includes('introduce lightweight') ||
+      // Concurrency/synchronization (unless actual crash)
+      text.includes('concurrency') && !text.includes('crash') ||
+      text.includes('synchronization') && !text.includes('crash') ||
+      text.includes('atomic operation') ||
+      text.includes('mutex') ||
+      text.includes('cleanup') && text.includes('timeout') && !text.includes('memory leak') ||
+      text.includes('cancellation') && !text.includes('crash') ||
       // Timeout/cleanup implementation details
       text.includes('timeout') && text.includes('validation') && text.includes('missing') ||
       text.includes('timeout') && text.includes('configurable') ||
