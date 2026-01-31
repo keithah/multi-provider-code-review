@@ -33,6 +33,7 @@
  * - v2: Added AI detection fields (aiLikelihood, aiReasoning)
  * - v3: Extended Finding schema
  * - v4: Added graph serialization features (CodeGraph with deep copy support)
+ * - v5: Aggressive false positive filtering - invalidate cache to apply new filter logic
  *
  * TESTING:
  * When bumping version, verify:
@@ -42,7 +43,7 @@
  * See: __tests__/unit/cache/version.test.ts
  */
 
-export const CACHE_VERSION = 4; // Current version - increment for breaking changes
+export const CACHE_VERSION = 5; // Current version - increment for breaking changes
 
 export interface VersionedCache<T> {
   version: number;
