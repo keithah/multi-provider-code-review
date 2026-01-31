@@ -443,8 +443,15 @@ export class FindingFilter {
       text.includes('could') ||
       text.includes('should') ||
       text.includes('might want to') ||
+      text.includes('might be') ||
+      text.includes('may be') ||
+      text.includes('can be') ||
       text.includes('optimization') ||
       text.includes('improvement') ||
+      // Opinion words (not factual bugs)
+      text.includes('overly') ||
+      text.includes('too aggressive') ||
+      text.includes('less aggressive') ||
       // Imperatives that are suggestions, not bugs
       text.includes('ensure that') ||
       text.includes('ensure') && (text.includes('consistent') || text.includes('handle') || text.includes('uniqueness') || text.includes('comprehensive') || text.includes('proper') || text.includes('correct')) ||
@@ -492,6 +499,8 @@ export class FindingFilter {
       text.includes('brittleness') ||
       text.includes('brittle') ||
       text.includes('tightly coupled') ||
+      text.includes('genuine bugs') || // "can be genuine bugs" = uncertainty
+      text.includes('genuine issues') ||
       // Review/analysis suggestions
       text.includes('review') && !text.includes('code review tool') ||
       text.includes('audit') ||
