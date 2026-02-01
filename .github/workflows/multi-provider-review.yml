@@ -124,11 +124,50 @@ jobs:
           else
             echo "🔍 Using dynamic provider discovery (see workflow comments for fallback chain)"
           fi
-      - name: Install OpenCode CLI
+      - name: Install CLI Tools
         # Version pinning strategy:
         # - Pin to latest published npm version known-good for CLI commands
         # - Update strategy: Test quarterly (Jan, Apr, Jul, Oct) with full suite + smoke tests
-        run: npm install -g opencode-ai@1.1.40
+        run: |
+          npm install -g opencode-ai@1.1.40
+          npm install -g @google/gemini-cli
+          npm install -g codex-cli
+
+      - name: Setup CLI OAuth Credentials
+        # Restore OAuth credentials for Claude Code, Codex, and Gemini CLIs
+        # Secrets are configured at repository level
+        run: |
+          # Setup Claude Code
+          if [ -n "${{ secrets.CLAUDE_CODE_OAUTH }}" ]; then
+            mkdir -p ~/.config/claude
+            echo '${{ secrets.CLAUDE_CODE_OAUTH }}' > ~/.config/claude/credentials.json
+            chmod 600 ~/.config/claude/credentials.json
+            echo "✅ Claude Code credentials configured"
+          else
+            echo "⚠️  CLAUDE_CODE_OAUTH not set, Claude providers will be skipped"
+          fi
+
+          # Setup Codex
+          if [ -n "${{ secrets.CODEX_AUTH_JSON }}" ]; then
+            mkdir -p ~/.codex
+            echo '${{ secrets.CODEX_AUTH_JSON }}' > ~/.codex/auth.json
+            echo '${{ secrets.CODEX_CONFIG_TOML }}' > ~/.codex/config.toml
+            chmod 600 ~/.codex/auth.json ~/.codex/config.toml
+            echo "✅ Codex credentials configured"
+          else
+            echo "⚠️  CODEX_AUTH_JSON not set, Codex providers will be skipped"
+          fi
+
+          # Setup Gemini
+          if [ -n "${{ secrets.GEMINI_OAUTH_CREDS }}" ]; then
+            mkdir -p ~/.gemini
+            echo '${{ secrets.GEMINI_OAUTH_CREDS }}' > ~/.gemini/oauth_creds.json
+            echo '${{ secrets.GEMINI_SETTINGS }}' > ~/.gemini/settings.json
+            chmod 600 ~/.gemini/oauth_creds.json ~/.gemini/settings.json
+            echo "✅ Gemini credentials configured"
+          else
+            echo "⚠️  GEMINI_OAUTH_CREDS not set, Gemini providers will be skipped"
+          fi
 
       - name: Multi-Provider Code Review
         # Run if PR number resolved AND (not a fork PR OR not a pull_request event)
@@ -142,7 +181,7 @@ jobs:
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.resolve-pr.outputs.pr }}
-          REVIEW_PROVIDERS: ${{ inputs.review_providers }}
+          REVIEW_PROVIDERS: ${{ inputs.review_providers || vars.REVIEW_PROVIDERS }}
           # Dynamic Model Discovery:
           # By default (when REVIEW_PROVIDERS is empty or not set), the system automatically
           # discovers and selects the best available free models through a multi-tier fallback:
@@ -150,9 +189,16 @@ jobs:
           # 2. OpenCode CLI free models (if opencode-ai is installed)
           # 3. Hardcoded fallback providers (see src/config/defaults.ts)
           #
+          # OAuth CLI Providers (when credentials are configured):
+          # If you have OAuth CLI credentials configured as secrets, you can use:
+          # - claude/sonnet, claude/opus, claude/haiku (Claude Code CLI)
+          # - codex/gpt-5.1-codex-max (Codex CLI)
+          # - gemini/gemini-2.0-flash, gemini/gemini-1.5-pro (Gemini CLI)
+          #
           # To use specific providers instead of auto-discovery:
           # - Set inputs.review_providers for workflow_dispatch
-          # - syncEnvFromInputs() in main.ts reads this input and sets process.env.REVIEW_PROVIDERS
-          # See documentation for provider string format and available models
+          # - Set REVIEW_PROVIDERS environment variable in your fork/config
+          # - Create .multi-provider-review.json in your repository
+          # See docs/CI_SETUP.md for provider configuration
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}

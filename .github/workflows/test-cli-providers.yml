@@ -1,0 +1,118 @@
+name: Test CLI Providers
+
+on:
+  workflow_dispatch:  # Manual trigger for testing
+  pull_request:
+    paths:
+      - '.github/workflows/test-cli-providers.yml'
+
+jobs:
+  test-cli-providers:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Install CLI tools
+      - name: Install Gemini CLI
+        run: npm install -g @google/gemini-cli
+
+      - name: Install Codex CLI
+        run: npm install -g codex-cli
+
+      - name: Install Claude Code CLI
+        run: |
+          # Note: Replace with official installation method when available
+          # For now, this is a placeholder
+          echo "Claude Code CLI installation would go here"
+
+      # Restore OAuth credentials from secrets
+      - name: Setup Claude Code credentials
+        if: ${{ secrets.CLAUDE_CODE_OAUTH != '' }}
+        run: |
+          mkdir -p ~/.config/claude
+          echo '${{ secrets.CLAUDE_CODE_OAUTH }}' > ~/.config/claude/credentials.json
+          chmod 600 ~/.config/claude/credentials.json
+          echo "✅ Claude Code credentials configured"
+
+      - name: Setup Codex credentials
+        if: ${{ secrets.CODEX_AUTH_JSON != '' }}
+        run: |
+          mkdir -p ~/.codex
+          echo '${{ secrets.CODEX_AUTH_JSON }}' > ~/.codex/auth.json
+          echo '${{ secrets.CODEX_CONFIG_TOML }}' > ~/.codex/config.toml
+          chmod 600 ~/.codex/auth.json ~/.codex/config.toml
+          echo "✅ Codex credentials configured"
+
+      - name: Setup Gemini credentials
+        if: ${{ secrets.GEMINI_OAUTH_CREDS != '' }}
+        run: |
+          mkdir -p ~/.gemini
+          echo '${{ secrets.GEMINI_OAUTH_CREDS }}' > ~/.gemini/oauth_creds.json
+          echo '${{ secrets.GEMINI_SETTINGS }}' > ~/.gemini/settings.json
+          chmod 600 ~/.gemini/oauth_creds.json ~/.gemini/settings.json
+          echo "✅ Gemini credentials configured"
+
+      # Verify CLIs can authenticate
+      - name: Verify Claude Code
+        if: ${{ secrets.CLAUDE_CODE_OAUTH != '' }}
+        continue-on-error: true
+        run: |
+          if command -v claude &> /dev/null; then
+            claude --version || echo "⚠️ Claude Code not fully installed"
+          else
+            echo "⚠️ Claude Code CLI not installed"
+          fi
+
+      - name: Verify Codex
+        if: ${{ secrets.CODEX_AUTH_JSON != '' }}
+        continue-on-error: true
+        run: |
+          if command -v codex &> /dev/null; then
+            codex --version || echo "⚠️ Codex authentication may need refresh"
+          else
+            echo "⚠️ Codex CLI not installed"
+          fi
+
+      - name: Verify Gemini
+        if: ${{ secrets.GEMINI_OAUTH_CREDS != '' }}
+        continue-on-error: true
+        run: |
+          if command -v gemini &> /dev/null; then
+            gemini --version || echo "⚠️ Gemini authentication may need refresh"
+          else
+            echo "⚠️ Gemini CLI not installed"
+          fi
+
+      # Test with multi-provider-code-review
+      - name: Install multi-provider-code-review
+        run: npm install -g multi-provider-code-review
+
+      - name: Test provider validation
+        run: |
+          echo "Testing provider name validation..."
+          # This will be handled by the multi-provider-code-review tool
+          # Just verify the installation
+          which mpr || echo "mpr command not found"
+
+      - name: Summary
+        run: |
+          echo "## CLI Provider Setup Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Secrets Configured:" >> $GITHUB_STEP_SUMMARY
+          echo "- CLAUDE_CODE_OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH != '' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON != '' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- CODEX_CONFIG_TOML: ${{ secrets.CODEX_CONFIG_TOML != '' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- GEMINI_OAUTH_CREDS: ${{ secrets.GEMINI_OAUTH_CREDS != '' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- GEMINI_SETTINGS: ${{ secrets.GEMINI_SETTINGS != '' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Update workflow to install CLI binaries properly" >> $GITHUB_STEP_SUMMARY
+          echo "2. Test actual review with: \`REVIEW_PROVIDERS='claude/sonnet,codex/gpt-5.1-codex-max,gemini/gemini-2.0-flash'\`" >> $GITHUB_STEP_SUMMARY
+          echo "3. See docs/CI_SETUP.md for complete setup instructions" >> $GITHUB_STEP_SUMMARY

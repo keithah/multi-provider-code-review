@@ -102,6 +102,83 @@ docker run -d \
 
 See [Self-Hosted Deployment Guide](docs/self-hosted.md) for details.
 
+## Supported Providers
+
+### API-Based Providers
+
+- **OpenRouter** (`openrouter/<model>`): 200+ models via single API
+  - Examples: `openrouter/google/gemini-2.0-flash-exp:free`, `openrouter/mistralai/devstral-2512:free`
+  - Requires: `OPENROUTER_API_KEY` environment variable
+  - Get free API key: [openrouter.ai](https://openrouter.ai)
+
+### OAuth CLI Providers
+
+The following providers require local CLI installation and OAuth authentication. These are ideal for development environments and can be configured for CI/CD.
+
+- **Claude Code CLI** (`claude/<model>`)
+  - Examples: `claude/sonnet`, `claude/opus`, `claude/haiku`
+  - Requires: `claude` CLI installed and authenticated
+  - Install: See [Claude Code documentation](https://docs.anthropic.com/claude-code)
+
+- **Codex CLI** (`codex/<model>`)
+  - Examples: `codex/gpt-5.1-codex-max`, `codex/gpt-5.1-codex`
+  - Requires: `codex` CLI installed and authenticated (ChatGPT Pro subscription)
+  - Install: `npm install -g codex-cli`
+
+- **Gemini CLI** (`gemini/<model>`)
+  - Examples: `gemini/gemini-2.0-flash`, `gemini/gemini-1.5-pro`
+  - Requires: `gemini` CLI installed and authenticated (Google Cloud account)
+  - Install: `npm install -g @google/gemini-cli`
+
+- **OpenCode CLI** (`opencode/<model>`)
+  - Examples: `opencode/minimax-m2.1-free`, `opencode/deepseek/deepseek-chat`
+  - Requires: `opencode` CLI installed
+  - Install: `npm install -g opencode-ai`
+
+### GitHub Actions Integration for OAuth CLIs
+
+OAuth-based CLIs (Claude Code, Codex, Gemini) require credential setup for CI/CD:
+
+1. **Extract credentials** from your local machine (where you're authenticated)
+2. **Store as GitHub Secrets** (encrypted storage)
+3. **Restore in CI workflow** before running reviews
+
+**See the [CI Setup Guide](docs/CI_SETUP.md) for detailed instructions** on:
+- Extracting OAuth credentials from macOS Keychain or config files
+- Creating GitHub Secrets for each CLI
+- Configuring workflows to restore credentials
+- Complete workflow examples
+- Troubleshooting and security best practices
+
+**Quick Example:**
+```yaml
+- name: Setup Claude Code
+  if: ${{ secrets.CLAUDE_CODE_OAUTH != '' }}
+  run: |
+    mkdir -p ~/.config/claude
+    echo '${{ secrets.CLAUDE_CODE_OAUTH }}' > ~/.config/claude/credentials.json
+    chmod 600 ~/.config/claude/credentials.json
+
+- name: Run Review with Claude Code
+  run: npx multi-provider-code-review
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    REVIEW_PROVIDERS: "claude/sonnet,claude/opus"
+```
+
+### Plugin System
+
+Add custom LLM providers without modifying core code:
+
+```bash
+# Enable plugins
+export PLUGINS_ENABLED=true
+export PLUGIN_DIR=./plugins
+
+# Create custom provider
+# See docs/plugins.md for details
+```
+
 ## Key Inputs
 
 ### Required
@@ -115,7 +192,7 @@ See [Self-Hosted Deployment Guide](docs/self-hosted.md) for details.
 - `DRY_RUN` (default: `false`): Preview mode without posting to GitHub
 
 ### Providers
-- `REVIEW_PROVIDERS`: Comma-separated providers (`openrouter/<model>`, `opencode/<model>`)
+- `REVIEW_PROVIDERS`: Comma-separated providers (examples: `openrouter/<model>`, `opencode/<model>`, `claude/<model>`, `codex/<model>`, `gemini/<model>`)
 - `FALLBACK_PROVIDERS`: Backup providers if primary providers fail
 - `PROVIDER_DISCOVERY_LIMIT` (default: `8`): Max providers to discover/health-check
 - `PROVIDER_LIMIT` (default: `6`): Max providers to use for actual review

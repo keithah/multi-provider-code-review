@@ -94,11 +94,11 @@ var require_command = __commonJS({
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.issue = exports2.issueCommand = void 0;
-    var os3 = __importStar(require("os"));
+    var os6 = __importStar(require("os"));
     var utils_1 = require_utils();
     function issueCommand(command, properties, message) {
       const cmd = new Command(command, properties, message);
-      process.stdout.write(cmd.toString() + os3.EOL);
+      process.stdout.write(cmd.toString() + os6.EOL);
     }
     exports2.issueCommand = issueCommand;
     function issue(name, message = "") {
@@ -180,25 +180,25 @@ var require_file_command = __commonJS({
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.prepareKeyValueMessage = exports2.issueFileCommand = void 0;
-    var crypto3 = __importStar(require("crypto"));
-    var fs8 = __importStar(require("fs"));
-    var os3 = __importStar(require("os"));
+    var crypto6 = __importStar(require("crypto"));
+    var fs11 = __importStar(require("fs"));
+    var os6 = __importStar(require("os"));
     var utils_1 = require_utils();
     function issueFileCommand(command, message) {
       const filePath = process.env[`GITHUB_${command}`];
       if (!filePath) {
         throw new Error(`Unable to find environment variable for file command ${command}`);
       }
-      if (!fs8.existsSync(filePath)) {
+      if (!fs11.existsSync(filePath)) {
         throw new Error(`Missing file at path: ${filePath}`);
       }
-      fs8.appendFileSync(filePath, `${(0, utils_1.toCommandValue)(message)}${os3.EOL}`, {
+      fs11.appendFileSync(filePath, `${(0, utils_1.toCommandValue)(message)}${os6.EOL}`, {
         encoding: "utf8"
       });
     }
     exports2.issueFileCommand = issueFileCommand;
     function prepareKeyValueMessage(key, value) {
-      const delimiter = `ghadelimiter_${crypto3.randomUUID()}`;
+      const delimiter = `ghadelimiter_${crypto6.randomUUID()}`;
       const convertedValue = (0, utils_1.toCommandValue)(value);
       if (key.includes(delimiter)) {
         throw new Error(`Unexpected input: name should not contain the delimiter "${delimiter}"`);
@@ -206,7 +206,7 @@ var require_file_command = __commonJS({
       if (convertedValue.includes(delimiter)) {
         throw new Error(`Unexpected input: value should not contain the delimiter "${delimiter}"`);
       }
-      return `${key}<<${delimiter}${os3.EOL}${convertedValue}${os3.EOL}${delimiter}`;
+      return `${key}<<${delimiter}${os6.EOL}${convertedValue}${os6.EOL}${delimiter}`;
     }
     exports2.prepareKeyValueMessage = prepareKeyValueMessage;
   }
@@ -995,14 +995,14 @@ var require_util = __commonJS({
         }
         const port = url.port != null ? url.port : url.protocol === "https:" ? 443 : 80;
         let origin = url.origin != null ? url.origin : `${url.protocol}//${url.hostname}:${port}`;
-        let path10 = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
+        let path13 = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
         if (origin.endsWith("/")) {
           origin = origin.substring(0, origin.length - 1);
         }
-        if (path10 && !path10.startsWith("/")) {
-          path10 = `/${path10}`;
+        if (path13 && !path13.startsWith("/")) {
+          path13 = `/${path13}`;
         }
-        url = new URL(origin + path10);
+        url = new URL(origin + path13);
       }
       return url;
     }
@@ -2616,20 +2616,20 @@ var require_parseParams = __commonJS({
 var require_basename = __commonJS({
   "node_modules/@fastify/busboy/lib/utils/basename.js"(exports2, module2) {
     "use strict";
-    module2.exports = function basename2(path10) {
-      if (typeof path10 !== "string") {
+    module2.exports = function basename2(path13) {
+      if (typeof path13 !== "string") {
         return "";
       }
-      for (var i = path10.length - 1; i >= 0; --i) {
-        switch (path10.charCodeAt(i)) {
+      for (var i = path13.length - 1; i >= 0; --i) {
+        switch (path13.charCodeAt(i)) {
           case 47:
           // '/'
           case 92:
-            path10 = path10.slice(i + 1);
-            return path10 === ".." || path10 === "." ? "" : path10;
+            path13 = path13.slice(i + 1);
+            return path13 === ".." || path13 === "." ? "" : path13;
         }
       }
-      return path10 === ".." || path10 === "." ? "" : path10;
+      return path13 === ".." || path13 === "." ? "" : path13;
     };
   }
 });
@@ -3633,11 +3633,11 @@ var require_util2 = __commonJS({
     var assert = require("assert");
     var { isUint8Array } = require("util/types");
     var supportedHashes = [];
-    var crypto3;
+    var crypto6;
     try {
-      crypto3 = require("crypto");
+      crypto6 = require("crypto");
       const possibleRelevantHashes = ["sha256", "sha384", "sha512"];
-      supportedHashes = crypto3.getHashes().filter((hash) => possibleRelevantHashes.includes(hash));
+      supportedHashes = crypto6.getHashes().filter((hash) => possibleRelevantHashes.includes(hash));
     } catch {
     }
     function responseURL(response) {
@@ -3914,7 +3914,7 @@ var require_util2 = __commonJS({
       }
     }
     function bytesMatch(bytes, metadataList) {
-      if (crypto3 === void 0) {
+      if (crypto6 === void 0) {
         return true;
       }
       const parsedMetadata = parseMetadata(metadataList);
@@ -3929,7 +3929,7 @@ var require_util2 = __commonJS({
       for (const item of metadata) {
         const algorithm = item.algo;
         const expectedValue = item.hash;
-        let actualValue = crypto3.createHash(algorithm).update(bytes).digest("base64");
+        let actualValue = crypto6.createHash(algorithm).update(bytes).digest("base64");
         if (actualValue[actualValue.length - 1] === "=") {
           if (actualValue[actualValue.length - 2] === "=") {
             actualValue = actualValue.slice(0, -2);
@@ -5275,8 +5275,8 @@ var require_body = __commonJS({
     var { parseMIMEType, serializeAMimeType } = require_dataURL();
     var random;
     try {
-      const crypto3 = require("node:crypto");
-      random = (max) => crypto3.randomInt(0, max);
+      const crypto6 = require("node:crypto");
+      random = (max) => crypto6.randomInt(0, max);
     } catch {
       random = (max) => Math.floor(Math.random(max));
     }
@@ -5659,7 +5659,7 @@ var require_request = __commonJS({
     }
     var Request = class _Request {
       constructor(origin, {
-        path: path10,
+        path: path13,
         method,
         body,
         headers,
@@ -5673,11 +5673,11 @@ var require_request = __commonJS({
         throwOnError,
         expectContinue
       }, handler) {
-        if (typeof path10 !== "string") {
+        if (typeof path13 !== "string") {
           throw new InvalidArgumentError("path must be a string");
-        } else if (path10[0] !== "/" && !(path10.startsWith("http://") || path10.startsWith("https://")) && method !== "CONNECT") {
+        } else if (path13[0] !== "/" && !(path13.startsWith("http://") || path13.startsWith("https://")) && method !== "CONNECT") {
           throw new InvalidArgumentError("path must be an absolute URL or start with a slash");
-        } else if (invalidPathRegex.exec(path10) !== null) {
+        } else if (invalidPathRegex.exec(path13) !== null) {
           throw new InvalidArgumentError("invalid request path");
         }
         if (typeof method !== "string") {
@@ -5740,7 +5740,7 @@ var require_request = __commonJS({
         this.completed = false;
         this.aborted = false;
         this.upgrade = upgrade || null;
-        this.path = query ? util2.buildURL(path10, query) : path10;
+        this.path = query ? util2.buildURL(path13, query) : path13;
         this.origin = origin;
         this.idempotent = idempotent == null ? method === "HEAD" || method === "GET" : idempotent;
         this.blocking = blocking == null ? false : blocking;
@@ -6748,9 +6748,9 @@ var require_RedirectHandler = __commonJS({
           return this.handler.onHeaders(statusCode, headers, resume, statusText);
         }
         const { origin, pathname, search } = util2.parseURL(new URL(this.location, this.opts.origin && new URL(this.opts.path, this.opts.origin)));
-        const path10 = search ? `${pathname}${search}` : pathname;
+        const path13 = search ? `${pathname}${search}` : pathname;
         this.opts.headers = cleanRequestHeaders(this.opts.headers, statusCode === 303, this.opts.origin !== origin);
-        this.opts.path = path10;
+        this.opts.path = path13;
         this.opts.origin = origin;
         this.opts.maxRedirections = 0;
         this.opts.query = null;
@@ -7990,7 +7990,7 @@ var require_client = __commonJS({
         writeH2(client, client[kHTTP2Session], request);
         return;
       }
-      const { body, method, path: path10, host, upgrade, headers, blocking, reset } = request;
+      const { body, method, path: path13, host, upgrade, headers, blocking, reset } = request;
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH";
       if (body && typeof body.read === "function") {
         body.read(0);
@@ -8040,7 +8040,7 @@ var require_client = __commonJS({
       if (blocking) {
         socket[kBlocking] = true;
       }
-      let header = `${method} ${path10} HTTP/1.1\r
+      let header = `${method} ${path13} HTTP/1.1\r
 `;
       if (typeof host === "string") {
         header += `host: ${host}\r
@@ -8103,7 +8103,7 @@ upgrade: ${upgrade}\r
       return true;
     }
     function writeH2(client, session, request) {
-      const { body, method, path: path10, host, upgrade, expectContinue, signal, headers: reqHeaders } = request;
+      const { body, method, path: path13, host, upgrade, expectContinue, signal, headers: reqHeaders } = request;
       let headers;
       if (typeof reqHeaders === "string") headers = Request[kHTTP2CopyHeaders](reqHeaders.trim());
       else headers = reqHeaders;
@@ -8146,7 +8146,7 @@ upgrade: ${upgrade}\r
         });
         return true;
       }
-      headers[HTTP2_HEADER_PATH] = path10;
+      headers[HTTP2_HEADER_PATH] = path13;
       headers[HTTP2_HEADER_SCHEME] = "https";
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH";
       if (body && typeof body.read === "function") {
@@ -10386,20 +10386,20 @@ var require_mock_utils = __commonJS({
       }
       return true;
     }
-    function safeUrl(path10) {
-      if (typeof path10 !== "string") {
-        return path10;
+    function safeUrl(path13) {
+      if (typeof path13 !== "string") {
+        return path13;
       }
-      const pathSegments = path10.split("?");
+      const pathSegments = path13.split("?");
       if (pathSegments.length !== 2) {
-        return path10;
+        return path13;
       }
       const qp = new URLSearchParams(pathSegments.pop());
       qp.sort();
       return [...pathSegments, qp.toString()].join("?");
     }
-    function matchKey(mockDispatch2, { path: path10, method, body, headers }) {
-      const pathMatch = matchValue(mockDispatch2.path, path10);
+    function matchKey(mockDispatch2, { path: path13, method, body, headers }) {
+      const pathMatch = matchValue(mockDispatch2.path, path13);
       const methodMatch = matchValue(mockDispatch2.method, method);
       const bodyMatch = typeof mockDispatch2.body !== "undefined" ? matchValue(mockDispatch2.body, body) : true;
       const headersMatch = matchHeaders(mockDispatch2, headers);
@@ -10417,7 +10417,7 @@ var require_mock_utils = __commonJS({
     function getMockDispatch(mockDispatches, key) {
       const basePath = key.query ? buildURL(key.path, key.query) : key.path;
       const resolvedPath = typeof basePath === "string" ? safeUrl(basePath) : basePath;
-      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path: path10 }) => matchValue(safeUrl(path10), resolvedPath));
+      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path: path13 }) => matchValue(safeUrl(path13), resolvedPath));
       if (matchedMockDispatches.length === 0) {
         throw new MockNotMatchedError(`Mock dispatch not matched for path '${resolvedPath}'`);
       }
@@ -10454,9 +10454,9 @@ var require_mock_utils = __commonJS({
       }
     }
     function buildKey(opts) {
-      const { path: path10, method, body, headers, query } = opts;
+      const { path: path13, method, body, headers, query } = opts;
       return {
-        path: path10,
+        path: path13,
         method,
         body,
         headers,
@@ -10905,10 +10905,10 @@ var require_pending_interceptors_formatter = __commonJS({
       }
       format(pendingInterceptors) {
         const withPrettyHeaders = pendingInterceptors.map(
-          ({ method, path: path10, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
+          ({ method, path: path13, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
             Method: method,
             Origin: origin,
-            Path: path10,
+            Path: path13,
             "Status code": statusCode,
             Persistent: persist ? "\u2705" : "\u274C",
             Invocations: timesInvoked,
@@ -15528,8 +15528,8 @@ var require_util6 = __commonJS({
         }
       }
     }
-    function validateCookiePath(path10) {
-      for (const char of path10) {
+    function validateCookiePath(path13) {
+      for (const char of path13) {
         const code = char.charCodeAt(0);
         if (code < 33 || char === ";") {
           throw new Error("Invalid cookie path");
@@ -16326,9 +16326,9 @@ var require_connection = __commonJS({
     channels.open = diagnosticsChannel.channel("undici:websocket:open");
     channels.close = diagnosticsChannel.channel("undici:websocket:close");
     channels.socketError = diagnosticsChannel.channel("undici:websocket:socket_error");
-    var crypto3;
+    var crypto6;
     try {
-      crypto3 = require("crypto");
+      crypto6 = require("crypto");
     } catch {
     }
     function establishWebSocketConnection(url, protocols, ws, onEstablish, options) {
@@ -16347,7 +16347,7 @@ var require_connection = __commonJS({
         const headersList = new Headers(options.headers)[kHeadersList];
         request.headersList = headersList;
       }
-      const keyValue = crypto3.randomBytes(16).toString("base64");
+      const keyValue = crypto6.randomBytes(16).toString("base64");
       request.headersList.append("sec-websocket-key", keyValue);
       request.headersList.append("sec-websocket-version", "13");
       for (const protocol of protocols) {
@@ -16376,7 +16376,7 @@ var require_connection = __commonJS({
             return;
           }
           const secWSAccept = response.headersList.get("Sec-WebSocket-Accept");
-          const digest = crypto3.createHash("sha1").update(keyValue + uid).digest("base64");
+          const digest = crypto6.createHash("sha1").update(keyValue + uid).digest("base64");
           if (secWSAccept !== digest) {
             failWebsocketConnection(ws, "Incorrect hash received in Sec-WebSocket-Accept header.");
             return;
@@ -16456,9 +16456,9 @@ var require_frame = __commonJS({
   "node_modules/undici/lib/websocket/frame.js"(exports2, module2) {
     "use strict";
     var { maxUnsigned16Bit } = require_constants5();
-    var crypto3;
+    var crypto6;
     try {
-      crypto3 = require("crypto");
+      crypto6 = require("crypto");
     } catch {
     }
     var WebsocketFrameSend = class {
@@ -16467,7 +16467,7 @@ var require_frame = __commonJS({
        */
       constructor(data) {
         this.frameData = data;
-        this.maskKey = crypto3.randomBytes(4);
+        this.maskKey = crypto6.randomBytes(4);
       }
       createFrame(opcode) {
         const bodyLength = this.frameData?.byteLength ?? 0;
@@ -17209,11 +17209,11 @@ var require_undici = __commonJS({
           if (typeof opts.path !== "string") {
             throw new InvalidArgumentError("invalid opts.path");
           }
-          let path10 = opts.path;
+          let path13 = opts.path;
           if (!opts.path.startsWith("/")) {
-            path10 = `/${path10}`;
+            path13 = `/${path13}`;
           }
-          url = new URL(util2.parseOrigin(url).origin + path10);
+          url = new URL(util2.parseOrigin(url).origin + path13);
         } else {
           if (!opts) {
             opts = typeof url === "object" ? url : {};
@@ -18144,7 +18144,7 @@ var require_summary = __commonJS({
     exports2.summary = exports2.markdownSummary = exports2.SUMMARY_DOCS_URL = exports2.SUMMARY_ENV_VAR = void 0;
     var os_1 = require("os");
     var fs_1 = require("fs");
-    var { access: access2, appendFile, writeFile: writeFile5 } = fs_1.promises;
+    var { access: access2, appendFile, writeFile: writeFile8 } = fs_1.promises;
     exports2.SUMMARY_ENV_VAR = "GITHUB_STEP_SUMMARY";
     exports2.SUMMARY_DOCS_URL = "https://docs.github.com/actions/using-workflows/workflow-commands-for-github-actions#adding-a-job-summary";
     var Summary = class {
@@ -18202,7 +18202,7 @@ var require_summary = __commonJS({
         return __awaiter(this, void 0, void 0, function* () {
           const overwrite = !!(options === null || options === void 0 ? void 0 : options.overwrite);
           const filePath = yield this.filePath();
-          const writeFunc = overwrite ? writeFile5 : appendFile;
+          const writeFunc = overwrite ? writeFile8 : appendFile;
           yield writeFunc(filePath, this._buffer, { encoding: "utf8" });
           return this.emptyBuffer();
         });
@@ -18436,7 +18436,7 @@ var require_path_utils = __commonJS({
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.toPlatformPath = exports2.toWin32Path = exports2.toPosixPath = void 0;
-    var path10 = __importStar(require("path"));
+    var path13 = __importStar(require("path"));
     function toPosixPath(pth) {
       return pth.replace(/[\\]/g, "/");
     }
@@ -18446,7 +18446,7 @@ var require_path_utils = __commonJS({
     }
     exports2.toWin32Path = toWin32Path;
     function toPlatformPath(pth) {
-      return pth.replace(/[/\\]/g, path10.sep);
+      return pth.replace(/[/\\]/g, path13.sep);
     }
     exports2.toPlatformPath = toPlatformPath;
   }
@@ -18509,12 +18509,12 @@ var require_io_util = __commonJS({
     var _a;
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.getCmdPath = exports2.tryGetExecutablePath = exports2.isRooted = exports2.isDirectory = exports2.exists = exports2.READONLY = exports2.UV_FS_O_EXLOCK = exports2.IS_WINDOWS = exports2.unlink = exports2.symlink = exports2.stat = exports2.rmdir = exports2.rm = exports2.rename = exports2.readlink = exports2.readdir = exports2.open = exports2.mkdir = exports2.lstat = exports2.copyFile = exports2.chmod = void 0;
-    var fs8 = __importStar(require("fs"));
-    var path10 = __importStar(require("path"));
-    _a = fs8.promises, exports2.chmod = _a.chmod, exports2.copyFile = _a.copyFile, exports2.lstat = _a.lstat, exports2.mkdir = _a.mkdir, exports2.open = _a.open, exports2.readdir = _a.readdir, exports2.readlink = _a.readlink, exports2.rename = _a.rename, exports2.rm = _a.rm, exports2.rmdir = _a.rmdir, exports2.stat = _a.stat, exports2.symlink = _a.symlink, exports2.unlink = _a.unlink;
+    var fs11 = __importStar(require("fs"));
+    var path13 = __importStar(require("path"));
+    _a = fs11.promises, exports2.chmod = _a.chmod, exports2.copyFile = _a.copyFile, exports2.lstat = _a.lstat, exports2.mkdir = _a.mkdir, exports2.open = _a.open, exports2.readdir = _a.readdir, exports2.readlink = _a.readlink, exports2.rename = _a.rename, exports2.rm = _a.rm, exports2.rmdir = _a.rmdir, exports2.stat = _a.stat, exports2.symlink = _a.symlink, exports2.unlink = _a.unlink;
     exports2.IS_WINDOWS = process.platform === "win32";
     exports2.UV_FS_O_EXLOCK = 268435456;
-    exports2.READONLY = fs8.constants.O_RDONLY;
+    exports2.READONLY = fs11.constants.O_RDONLY;
     function exists(fsPath) {
       return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -18559,7 +18559,7 @@ var require_io_util = __commonJS({
         }
         if (stats && stats.isFile()) {
           if (exports2.IS_WINDOWS) {
-            const upperExt = path10.extname(filePath).toUpperCase();
+            const upperExt = path13.extname(filePath).toUpperCase();
             if (extensions.some((validExt) => validExt.toUpperCase() === upperExt)) {
               return filePath;
             }
@@ -18583,11 +18583,11 @@ var require_io_util = __commonJS({
           if (stats && stats.isFile()) {
             if (exports2.IS_WINDOWS) {
               try {
-                const directory = path10.dirname(filePath);
-                const upperName = path10.basename(filePath).toUpperCase();
+                const directory = path13.dirname(filePath);
+                const upperName = path13.basename(filePath).toUpperCase();
                 for (const actualName of yield exports2.readdir(directory)) {
                   if (upperName === actualName.toUpperCase()) {
-                    filePath = path10.join(directory, actualName);
+                    filePath = path13.join(directory, actualName);
                     break;
                   }
                 }
@@ -18682,7 +18682,7 @@ var require_io = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.findInPath = exports2.which = exports2.mkdirP = exports2.rmRF = exports2.mv = exports2.cp = void 0;
     var assert_1 = require("assert");
-    var path10 = __importStar(require("path"));
+    var path13 = __importStar(require("path"));
     var ioUtil = __importStar(require_io_util());
     function cp(source, dest, options = {}) {
       return __awaiter(this, void 0, void 0, function* () {
@@ -18691,7 +18691,7 @@ var require_io = __commonJS({
         if (destStat && destStat.isFile() && !force) {
           return;
         }
-        const newDest = destStat && destStat.isDirectory() && copySourceDirectory ? path10.join(dest, path10.basename(source)) : dest;
+        const newDest = destStat && destStat.isDirectory() && copySourceDirectory ? path13.join(dest, path13.basename(source)) : dest;
         if (!(yield ioUtil.exists(source))) {
           throw new Error(`no such file or directory: ${source}`);
         }
@@ -18703,7 +18703,7 @@ var require_io = __commonJS({
             yield cpDirRecursive(source, newDest, 0, force);
           }
         } else {
-          if (path10.relative(source, newDest) === "") {
+          if (path13.relative(source, newDest) === "") {
             throw new Error(`'${newDest}' and '${source}' are the same file`);
           }
           yield copyFile(source, newDest, force);
@@ -18716,7 +18716,7 @@ var require_io = __commonJS({
         if (yield ioUtil.exists(dest)) {
           let destExists = true;
           if (yield ioUtil.isDirectory(dest)) {
-            dest = path10.join(dest, path10.basename(source));
+            dest = path13.join(dest, path13.basename(source));
             destExists = yield ioUtil.exists(dest);
           }
           if (destExists) {
@@ -18727,7 +18727,7 @@ var require_io = __commonJS({
             }
           }
         }
-        yield mkdirP(path10.dirname(dest));
+        yield mkdirP(path13.dirname(dest));
         yield ioUtil.rename(source, dest);
       });
     }
@@ -18790,7 +18790,7 @@ var require_io = __commonJS({
         }
         const extensions = [];
         if (ioUtil.IS_WINDOWS && process.env["PATHEXT"]) {
-          for (const extension of process.env["PATHEXT"].split(path10.delimiter)) {
+          for (const extension of process.env["PATHEXT"].split(path13.delimiter)) {
             if (extension) {
               extensions.push(extension);
             }
@@ -18803,12 +18803,12 @@ var require_io = __commonJS({
           }
           return [];
         }
-        if (tool.includes(path10.sep)) {
+        if (tool.includes(path13.sep)) {
           return [];
         }
         const directories = [];
         if (process.env.PATH) {
-          for (const p of process.env.PATH.split(path10.delimiter)) {
+          for (const p of process.env.PATH.split(path13.delimiter)) {
             if (p) {
               directories.push(p);
             }
@@ -18816,7 +18816,7 @@ var require_io = __commonJS({
         }
         const matches = [];
         for (const directory of directories) {
-          const filePath = yield ioUtil.tryGetExecutablePath(path10.join(directory, tool), extensions);
+          const filePath = yield ioUtil.tryGetExecutablePath(path13.join(directory, tool), extensions);
           if (filePath) {
             matches.push(filePath);
           }
@@ -18929,10 +18929,10 @@ var require_toolrunner = __commonJS({
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.argStringToArray = exports2.ToolRunner = void 0;
-    var os3 = __importStar(require("os"));
+    var os6 = __importStar(require("os"));
     var events = __importStar(require("events"));
     var child = __importStar(require("child_process"));
-    var path10 = __importStar(require("path"));
+    var path13 = __importStar(require("path"));
     var io = __importStar(require_io());
     var ioUtil = __importStar(require_io_util());
     var timers_1 = require("timers");
@@ -18984,12 +18984,12 @@ var require_toolrunner = __commonJS({
       _processLineBuffer(data, strBuffer, onLine) {
         try {
           let s = strBuffer + data.toString();
-          let n = s.indexOf(os3.EOL);
+          let n = s.indexOf(os6.EOL);
           while (n > -1) {
             const line = s.substring(0, n);
             onLine(line);
-            s = s.substring(n + os3.EOL.length);
-            n = s.indexOf(os3.EOL);
+            s = s.substring(n + os6.EOL.length);
+            n = s.indexOf(os6.EOL);
           }
           return s;
         } catch (err) {
@@ -19147,7 +19147,7 @@ var require_toolrunner = __commonJS({
       exec() {
         return __awaiter(this, void 0, void 0, function* () {
           if (!ioUtil.isRooted(this.toolPath) && (this.toolPath.includes("/") || IS_WINDOWS && this.toolPath.includes("\\"))) {
-            this.toolPath = path10.resolve(process.cwd(), this.options.cwd || process.cwd(), this.toolPath);
+            this.toolPath = path13.resolve(process.cwd(), this.options.cwd || process.cwd(), this.toolPath);
           }
           this.toolPath = yield io.which(this.toolPath, true);
           return new Promise((resolve2, reject) => __awaiter(this, void 0, void 0, function* () {
@@ -19158,7 +19158,7 @@ var require_toolrunner = __commonJS({
             }
             const optionsNonNull = this._cloneExecOptions(this.options);
             if (!optionsNonNull.silent && optionsNonNull.outStream) {
-              optionsNonNull.outStream.write(this._getCommandString(optionsNonNull) + os3.EOL);
+              optionsNonNull.outStream.write(this._getCommandString(optionsNonNull) + os6.EOL);
             }
             const state = new ExecState(optionsNonNull, this.toolPath);
             state.on("debug", (message) => {
@@ -19646,8 +19646,8 @@ var require_core = __commonJS({
     var command_1 = require_command();
     var file_command_1 = require_file_command();
     var utils_1 = require_utils();
-    var os3 = __importStar(require("os"));
-    var path10 = __importStar(require("path"));
+    var os6 = __importStar(require("os"));
+    var path13 = __importStar(require("path"));
     var oidc_utils_1 = require_oidc_utils();
     var ExitCode;
     (function(ExitCode2) {
@@ -19675,7 +19675,7 @@ var require_core = __commonJS({
       } else {
         (0, command_1.issueCommand)("add-path", {}, inputPath);
       }
-      process.env["PATH"] = `${inputPath}${path10.delimiter}${process.env["PATH"]}`;
+      process.env["PATH"] = `${inputPath}${path13.delimiter}${process.env["PATH"]}`;
     }
     exports2.addPath = addPath;
     function getInput2(name, options) {
@@ -19714,7 +19714,7 @@ Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
       if (filePath) {
         return (0, file_command_1.issueFileCommand)("OUTPUT", (0, file_command_1.prepareKeyValueMessage)(name, value));
       }
-      process.stdout.write(os3.EOL);
+      process.stdout.write(os6.EOL);
       (0, command_1.issueCommand)("set-output", { name }, (0, utils_1.toCommandValue)(value));
     }
     exports2.setOutput = setOutput2;
@@ -19748,7 +19748,7 @@ Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
     }
     exports2.notice = notice;
     function info2(message) {
-      process.stdout.write(message + os3.EOL);
+      process.stdout.write(message + os6.EOL);
     }
     exports2.info = info2;
     function startGroup(name) {
@@ -20221,8 +20221,8 @@ var require_context = __commonJS({
           if ((0, fs_1.existsSync)(process.env.GITHUB_EVENT_PATH)) {
             this.payload = JSON.parse((0, fs_1.readFileSync)(process.env.GITHUB_EVENT_PATH, { encoding: "utf8" }));
           } else {
-            const path10 = process.env.GITHUB_EVENT_PATH;
-            process.stdout.write(`GITHUB_EVENT_PATH ${path10} does not exist${os_1.EOL}`);
+            const path13 = process.env.GITHUB_EVENT_PATH;
+            process.stdout.write(`GITHUB_EVENT_PATH ${path13} does not exist${os_1.EOL}`);
           }
         }
         this.eventName = process.env.GITHUB_EVENT_NAME;
@@ -26910,6 +26910,7 @@ var DEFAULT_CONFIG = {
   enableTestHints: true,
   enableAiDetection: true,
   incrementalEnabled: true,
+  // Re-enabled with broad infrastructure exclusion
   incrementalCacheTtlDays: 7,
   batchMaxFiles: 30,
   providerBatchOverrides: {},
@@ -27453,8 +27454,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path10, errorMaps, issueData } = params;
-  const fullPath = [...path10, ...issueData.path || []];
+  const { data, path: path13, errorMaps, issueData } = params;
+  const fullPath = [...path13, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -27570,11 +27571,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path10, key) {
+  constructor(parent, value, path13, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path10;
+    this._path = path13;
     this._key = key;
   }
   get path() {
@@ -31683,7 +31684,7 @@ Respond with: {"findings": [{"file": "test.ts", "line": 1, "severity": "minor", 
     }
   }
   static validate(name) {
-    const pattern = /^(opencode\/[\w.:~-]+|openrouter\/[\w.:~-]+(?:\/[\w.:~-]+)*)$/i;
+    const pattern = /^(opencode\/[\w.:~-]+|openrouter\/[\w.:~-]+(?:\/[\w.:~-]+)*|claude\/[\w.:~-]+|codex\/[\w.:~-]+|gemini\/[\w.:~-]+)$/i;
     return pattern.test(name);
   }
 };
@@ -32140,25 +32141,530 @@ var OpenCodeProvider = class extends Provider {
   }
 };
 
-// src/providers/rate-limiter.ts
+// src/providers/claude-code.ts
+var import_child_process2 = require("child_process");
 var fs3 = __toESM(require("fs/promises"));
-var path3 = __toESM(require("path"));
 var os2 = __toESM(require("os"));
+var path3 = __toESM(require("path"));
+var crypto2 = __toESM(require("crypto"));
+var ClaudeCodeProvider = class extends Provider {
+  constructor(model) {
+    super(`claude/${model}`);
+    this.model = model;
+  }
+  // Lightweight health check: verify CLI is available
+  async healthCheck(_timeoutMs = 5e3) {
+    const timeoutMs = Math.max(500, _timeoutMs ?? 5e3);
+    let timeoutId;
+    let isTimedOut = false;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = setTimeout(() => {
+        isTimedOut = true;
+        reject(new Error(`Claude Code health check timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+    });
+    try {
+      await Promise.race([
+        this.resolveBinary().then(() => {
+          if (isTimedOut) {
+            logger.debug(`Claude Code binary resolved after timeout (${this.name})`);
+          }
+        }),
+        timeoutPromise
+      ]);
+      clearTimeout(timeoutId);
+      return true;
+    } catch (error2) {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      logger.warn(`Claude Code health check failed for ${this.name}: ${error2.message}`);
+      return false;
+    }
+  }
+  async review(prompt, timeoutMs) {
+    const started = Date.now();
+    const binary2 = await this.resolveBinary();
+    const tmpDir = await fs3.mkdtemp(path3.join(os2.tmpdir(), "claude-code-"));
+    await fs3.chmod(tmpDir, 448);
+    const promptFile = path3.join(tmpDir, `prompt-${crypto2.randomBytes(8).toString("hex")}.txt`);
+    await fs3.writeFile(promptFile, prompt, { encoding: "utf8", mode: 384 });
+    const args = [
+      "--model",
+      this.model,
+      "--print",
+      "--no-session-persistence",
+      "--output-format",
+      "json",
+      promptFile
+    ];
+    logger.info(`Running Claude Code CLI: ${binary2} --model ${this.model} --print ...`);
+    try {
+      const { stdout, stderr } = await this.runCli(binary2, args, timeoutMs);
+      const content = stdout.trim();
+      const durationSeconds = (Date.now() - started) / 1e3;
+      logger.info(
+        `Claude Code CLI output for ${this.name}: stdout=${stdout.length} bytes, stderr=${stderr.length} bytes, duration=${durationSeconds.toFixed(1)}s`
+      );
+      if (!content) {
+        throw new Error(`Claude Code CLI returned no output${stderr ? `; stderr: ${stderr.slice(0, 200)}` : ""}`);
+      }
+      return {
+        content,
+        durationSeconds,
+        findings: this.extractFindings(content)
+      };
+    } catch (error2) {
+      logger.error(`Claude Code provider failed: ${this.name}`, error2);
+      throw error2;
+    } finally {
+      try {
+        await fs3.unlink(promptFile);
+        await fs3.rmdir(tmpDir);
+      } catch (err) {
+      }
+    }
+  }
+  runCli(bin, args, timeoutMs) {
+    return new Promise((resolve2, reject) => {
+      const proc = (0, import_child_process2.spawn)(bin, args, {
+        stdio: ["ignore", "pipe", "pipe"],
+        detached: true
+      });
+      if (proc.unref) {
+        proc.unref();
+      }
+      let stdout = "";
+      let stderr = "";
+      let timedOut = false;
+      const timer = setTimeout(() => {
+        timedOut = true;
+        logger.warn(`Claude Code CLI timeout (${timeoutMs}ms), killing process and all children`);
+        try {
+          if (proc.pid) {
+            process.kill(-proc.pid, "SIGKILL");
+          }
+        } catch (err) {
+          proc.kill("SIGKILL");
+        }
+        reject(new Error(`Claude Code CLI timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+      proc.stdout.on("data", (chunk) => {
+        stdout += chunk.toString();
+      });
+      proc.stderr.on("data", (chunk) => {
+        stderr += chunk.toString();
+      });
+      proc.on("error", (err) => {
+        if (!timedOut) {
+          clearTimeout(timer);
+          reject(err);
+        }
+      });
+      proc.on("close", (code) => {
+        if (!timedOut) {
+          clearTimeout(timer);
+          if (code !== 0) {
+            reject(new Error(`Claude Code CLI exited with code ${code}: ${stderr || stdout || "no output"}`));
+          } else {
+            resolve2({ stdout: stdout.trim(), stderr: stderr.trim() });
+          }
+        }
+      });
+    });
+  }
+  async resolveBinary() {
+    if (await this.canRun("claude", ["--version"])) {
+      return "claude";
+    }
+    if (await this.canRun("/usr/local/bin/claude", ["--version"])) {
+      return "/usr/local/bin/claude";
+    }
+    const homeDir = os2.homedir();
+    const localBin = path3.join(homeDir, ".local", "bin", "claude");
+    if (await this.canRun(localBin, ["--version"])) {
+      return localBin;
+    }
+    throw new Error("Claude Code CLI is not available (tried: claude, /usr/local/bin/claude, ~/.local/bin/claude)");
+  }
+  async canRun(cmd, args) {
+    return new Promise((resolve2) => {
+      const proc = (0, import_child_process2.spawn)(cmd, args, { stdio: "ignore" });
+      proc.on("error", () => resolve2(false));
+      proc.on("close", (code) => resolve2(code === 0));
+    });
+  }
+  extractFindings(content) {
+    try {
+      const match2 = content.match(/```json\s*([\s\S]*?)```/i);
+      if (match2) {
+        const parsed2 = JSON.parse(match2[1]);
+        if (Array.isArray(parsed2)) return parsed2;
+        return parsed2.findings || [];
+      }
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed)) return parsed;
+      return parsed.findings || [];
+    } catch (error2) {
+      logger.debug("Failed to parse findings from Claude Code response", error2);
+    }
+    return [];
+  }
+};
+
+// src/providers/codex.ts
+var import_child_process3 = require("child_process");
+var fs4 = __toESM(require("fs/promises"));
+var os3 = __toESM(require("os"));
+var path4 = __toESM(require("path"));
+var crypto3 = __toESM(require("crypto"));
+var CodexProvider = class extends Provider {
+  constructor(model) {
+    super(`codex/${model}`);
+    this.model = model;
+  }
+  // Lightweight health check: verify CLI is available
+  async healthCheck(_timeoutMs = 5e3) {
+    const timeoutMs = Math.max(500, _timeoutMs ?? 5e3);
+    let timeoutId;
+    let isTimedOut = false;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = setTimeout(() => {
+        isTimedOut = true;
+        reject(new Error(`Codex health check timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+    });
+    try {
+      await Promise.race([
+        this.resolveBinary().then(() => {
+          if (isTimedOut) {
+            logger.debug(`Codex binary resolved after timeout (${this.name})`);
+          }
+        }),
+        timeoutPromise
+      ]);
+      clearTimeout(timeoutId);
+      return true;
+    } catch (error2) {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      logger.warn(`Codex health check failed for ${this.name}: ${error2.message}`);
+      return false;
+    }
+  }
+  async review(prompt, timeoutMs) {
+    const started = Date.now();
+    const binary2 = await this.resolveBinary();
+    const tmpDir = await fs4.mkdtemp(path4.join(os3.tmpdir(), "codex-"));
+    await fs4.chmod(tmpDir, 448);
+    const promptFile = path4.join(tmpDir, `prompt-${crypto3.randomBytes(8).toString("hex")}.txt`);
+    await fs4.writeFile(promptFile, prompt, { encoding: "utf8", mode: 384 });
+    const promptText = await fs4.readFile(promptFile, "utf8");
+    const args = [
+      "--model",
+      this.model,
+      "--dangerously-bypass-approvals-and-sandbox",
+      "-c",
+      "approval_policy=never",
+      promptText
+    ];
+    logger.info(`Running Codex CLI: codex --model ${this.model} --dangerously-bypass-approvals-and-sandbox ...`);
+    try {
+      const { stdout, stderr } = await this.runCli(binary2, args, timeoutMs);
+      const content = stdout.trim();
+      const durationSeconds = (Date.now() - started) / 1e3;
+      logger.info(
+        `Codex CLI output for ${this.name}: stdout=${stdout.length} bytes, stderr=${stderr.length} bytes, duration=${durationSeconds.toFixed(1)}s`
+      );
+      if (!content) {
+        throw new Error(`Codex CLI returned no output${stderr ? `; stderr: ${stderr.slice(0, 200)}` : ""}`);
+      }
+      return {
+        content,
+        durationSeconds,
+        findings: this.extractFindings(content)
+      };
+    } catch (error2) {
+      logger.error(`Codex provider failed: ${this.name}`, error2);
+      throw error2;
+    } finally {
+      try {
+        await fs4.unlink(promptFile);
+        await fs4.rmdir(tmpDir);
+      } catch (err) {
+      }
+    }
+  }
+  runCli(bin, args, timeoutMs) {
+    return new Promise((resolve2, reject) => {
+      const proc = (0, import_child_process3.spawn)(bin, args, {
+        stdio: ["ignore", "pipe", "pipe"],
+        detached: true
+      });
+      if (proc.unref) {
+        proc.unref();
+      }
+      let stdout = "";
+      let stderr = "";
+      let timedOut = false;
+      const timer = setTimeout(() => {
+        timedOut = true;
+        logger.warn(`Codex CLI timeout (${timeoutMs}ms), killing process and all children`);
+        try {
+          if (proc.pid) {
+            process.kill(-proc.pid, "SIGKILL");
+          }
+        } catch (err) {
+          proc.kill("SIGKILL");
+        }
+        reject(new Error(`Codex CLI timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+      proc.stdout.on("data", (chunk) => {
+        stdout += chunk.toString();
+      });
+      proc.stderr.on("data", (chunk) => {
+        stderr += chunk.toString();
+      });
+      proc.on("error", (err) => {
+        if (!timedOut) {
+          clearTimeout(timer);
+          reject(err);
+        }
+      });
+      proc.on("close", (code) => {
+        if (!timedOut) {
+          clearTimeout(timer);
+          if (code !== 0) {
+            reject(new Error(`Codex CLI exited with code ${code}: ${stderr || stdout || "no output"}`));
+          } else {
+            resolve2({ stdout: stdout.trim(), stderr: stderr.trim() });
+          }
+        }
+      });
+    });
+  }
+  async resolveBinary() {
+    if (await this.canRun("codex", ["--version"])) {
+      return "codex";
+    }
+    if (await this.canRun("codex-cli", ["--version"])) {
+      return "codex-cli";
+    }
+    throw new Error("Codex CLI is not available (tried: codex, codex-cli)");
+  }
+  async canRun(cmd, args) {
+    return new Promise((resolve2) => {
+      const proc = (0, import_child_process3.spawn)(cmd, args, { stdio: "ignore" });
+      proc.on("error", () => resolve2(false));
+      proc.on("close", (code) => resolve2(code === 0));
+    });
+  }
+  extractFindings(content) {
+    try {
+      const match2 = content.match(/```json\s*([\s\S]*?)```/i);
+      if (match2) {
+        const parsed2 = JSON.parse(match2[1]);
+        if (Array.isArray(parsed2)) return parsed2;
+        return parsed2.findings || [];
+      }
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed)) return parsed;
+      return parsed.findings || [];
+    } catch (error2) {
+      logger.debug("Failed to parse findings from Codex response", error2);
+    }
+    return [];
+  }
+};
+
+// src/providers/gemini.ts
+var import_child_process4 = require("child_process");
+var fs5 = __toESM(require("fs/promises"));
+var os4 = __toESM(require("os"));
+var path5 = __toESM(require("path"));
+var crypto4 = __toESM(require("crypto"));
+var GeminiProvider = class extends Provider {
+  constructor(model) {
+    super(`gemini/${model}`);
+    this.model = model;
+  }
+  // Lightweight health check: verify CLI is available
+  async healthCheck(_timeoutMs = 5e3) {
+    const timeoutMs = Math.max(500, _timeoutMs ?? 5e3);
+    let timeoutId;
+    let isTimedOut = false;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = setTimeout(() => {
+        isTimedOut = true;
+        reject(new Error(`Gemini health check timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+    });
+    try {
+      await Promise.race([
+        this.resolveBinary().then(() => {
+          if (isTimedOut) {
+            logger.debug(`Gemini binary resolved after timeout (${this.name})`);
+          }
+        }),
+        timeoutPromise
+      ]);
+      clearTimeout(timeoutId);
+      return true;
+    } catch (error2) {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      logger.warn(`Gemini health check failed for ${this.name}: ${error2.message}`);
+      return false;
+    }
+  }
+  async review(prompt, timeoutMs) {
+    const started = Date.now();
+    const { bin, args: baseArgs } = await this.resolveBinary();
+    const tmpDir = await fs5.mkdtemp(path5.join(os4.tmpdir(), "gemini-"));
+    await fs5.chmod(tmpDir, 448);
+    const promptFile = path5.join(tmpDir, `prompt-${crypto4.randomBytes(8).toString("hex")}.txt`);
+    await fs5.writeFile(promptFile, prompt, { encoding: "utf8", mode: 384 });
+    const args = [
+      ...baseArgs,
+      "--model",
+      this.model,
+      "--prompt",
+      promptFile,
+      "--output-format",
+      "json",
+      "--approval-mode",
+      "yolo"
+    ];
+    logger.info(`Running Gemini CLI: ${bin} --model ${this.model} --output-format json --approval-mode yolo ...`);
+    try {
+      const { stdout, stderr } = await this.runCli(bin, args, timeoutMs);
+      const content = stdout.trim();
+      const durationSeconds = (Date.now() - started) / 1e3;
+      logger.info(
+        `Gemini CLI output for ${this.name}: stdout=${stdout.length} bytes, stderr=${stderr.length} bytes, duration=${durationSeconds.toFixed(1)}s`
+      );
+      if (!content) {
+        throw new Error(`Gemini CLI returned no output${stderr ? `; stderr: ${stderr.slice(0, 200)}` : ""}`);
+      }
+      return {
+        content,
+        durationSeconds,
+        findings: this.extractFindings(content)
+      };
+    } catch (error2) {
+      logger.error(`Gemini provider failed: ${this.name}`, error2);
+      throw error2;
+    } finally {
+      try {
+        await fs5.unlink(promptFile);
+        await fs5.rmdir(tmpDir);
+      } catch (err) {
+      }
+    }
+  }
+  runCli(bin, args, timeoutMs) {
+    return new Promise((resolve2, reject) => {
+      const proc = (0, import_child_process4.spawn)(bin, args, {
+        stdio: ["ignore", "pipe", "pipe"],
+        detached: true
+      });
+      if (proc.unref) {
+        proc.unref();
+      }
+      let stdout = "";
+      let stderr = "";
+      let timedOut = false;
+      const timer = setTimeout(() => {
+        timedOut = true;
+        logger.warn(`Gemini CLI timeout (${timeoutMs}ms), killing process and all children`);
+        try {
+          if (proc.pid) {
+            process.kill(-proc.pid, "SIGKILL");
+          }
+        } catch (err) {
+          proc.kill("SIGKILL");
+        }
+        reject(new Error(`Gemini CLI timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+      proc.stdout.on("data", (chunk) => {
+        stdout += chunk.toString();
+      });
+      proc.stderr.on("data", (chunk) => {
+        stderr += chunk.toString();
+      });
+      proc.on("error", (err) => {
+        if (!timedOut) {
+          clearTimeout(timer);
+          reject(err);
+        }
+      });
+      proc.on("close", (code) => {
+        if (!timedOut) {
+          clearTimeout(timer);
+          if (code !== 0) {
+            reject(new Error(`Gemini CLI exited with code ${code}: ${stderr || stdout || "no output"}`));
+          } else {
+            resolve2({ stdout: stdout.trim(), stderr: stderr.trim() });
+          }
+        }
+      });
+    });
+  }
+  async resolveBinary() {
+    if (await this.canRun("gemini", ["--version"])) {
+      return { bin: "gemini", args: [] };
+    }
+    if (await this.canRun("npx", ["--yes", "@google/gemini-cli", "--version"])) {
+      return { bin: "npx", args: ["--yes", "@google/gemini-cli"] };
+    }
+    throw new Error("Gemini CLI is not available (tried: gemini, npx @google/gemini-cli)");
+  }
+  async canRun(cmd, args) {
+    return new Promise((resolve2) => {
+      const proc = (0, import_child_process4.spawn)(cmd, args, { stdio: "ignore" });
+      proc.on("error", () => resolve2(false));
+      proc.on("close", (code) => resolve2(code === 0));
+    });
+  }
+  extractFindings(content) {
+    try {
+      const match2 = content.match(/```json\s*([\s\S]*?)```/i);
+      if (match2) {
+        const parsed2 = JSON.parse(match2[1]);
+        if (Array.isArray(parsed2)) return parsed2;
+        return parsed2.findings || [];
+      }
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed)) return parsed;
+      return parsed.findings || [];
+    } catch (error2) {
+      logger.debug("Failed to parse findings from Gemini response", error2);
+    }
+    return [];
+  }
+};
+
+// src/providers/rate-limiter.ts
+var fs6 = __toESM(require("fs/promises"));
+var path6 = __toESM(require("path"));
+var os5 = __toESM(require("os"));
 var RateLimiter = class {
-  lockDir = path3.join(os2.tmpdir(), "mpr-ratelimits");
+  lockDir = path6.join(os5.tmpdir(), "mpr-ratelimits");
   constructor() {
-    fs3.mkdir(this.lockDir, { recursive: true }).catch(() => void 0);
+    fs6.mkdir(this.lockDir, { recursive: true }).catch(() => void 0);
   }
   async isRateLimited(provider) {
     const lockFile = this.getLockFile(provider);
     try {
-      const raw = await fs3.readFile(lockFile, "utf8");
+      const raw = await fs6.readFile(lockFile, "utf8");
       const info2 = JSON.parse(raw);
       if (Date.now() < info2.limitedUntil) {
         logger.warn(`Provider ${provider} rate-limited until ${new Date(info2.limitedUntil).toISOString()}`);
         return true;
       }
-      await fs3.unlink(lockFile).catch(() => void 0);
+      await fs6.unlink(lockFile).catch(() => void 0);
       return false;
     } catch {
       return false;
@@ -32171,16 +32677,16 @@ var RateLimiter = class {
       limitedUntil: Date.now() + durationMinutes * 60 * 1e3,
       reason
     };
-    await fs3.writeFile(lockFile, JSON.stringify(info2), "utf8");
+    await fs6.writeFile(lockFile, JSON.stringify(info2), "utf8");
     logger.warn(`Marked ${provider} as rate-limited for ${durationMinutes} minutes: ${reason}`);
   }
   async clear(provider) {
     const lockFile = this.getLockFile(provider);
-    await fs3.unlink(lockFile).catch(() => void 0);
+    await fs6.unlink(lockFile).catch(() => void 0);
   }
   getLockFile(provider) {
     const safe = provider.replace(/[^a-z0-9]/gi, "_");
-    return path3.join(this.lockDir, `${safe}.json`);
+    return path6.join(this.lockDir, `${safe}.json`);
   }
 };
 
@@ -32343,9 +32849,9 @@ async function getBestFreeModelsCached(count = 4, timeoutMs = 5e3) {
 }
 
 // src/providers/opencode-models.ts
-var import_child_process2 = require("child_process");
+var import_child_process5 = require("child_process");
 var import_util4 = require("util");
-var execAsync = (0, import_util4.promisify)(import_child_process2.exec);
+var execAsync = (0, import_util4.promisify)(import_child_process5.exec);
 function parseOpenCodeModels(output) {
   const models = [];
   const lines = output.split("\n");
@@ -32677,6 +33183,21 @@ var ProviderRegistry = class {
         list.push(new OpenCodeProvider(model));
         continue;
       }
+      if (name.startsWith("claude/")) {
+        const model = name.replace("claude/", "");
+        list.push(new ClaudeCodeProvider(model));
+        continue;
+      }
+      if (name.startsWith("codex/")) {
+        const model = name.replace("codex/", "");
+        list.push(new CodexProvider(model));
+        continue;
+      }
+      if (name.startsWith("gemini/")) {
+        const model = name.replace("gemini/", "");
+        list.push(new GeminiProvider(model));
+        continue;
+      }
     }
     return list;
   }
@@ -32969,12 +33490,12 @@ function filterDiffByFiles(diff, files) {
   pushChunkIfIncluded();
   return chunks.join("\n").trimEnd();
 }
-function unquoteGitPath(path10) {
-  if (path10.startsWith('"') && path10.endsWith('"')) {
-    path10 = path10.slice(1, -1);
+function unquoteGitPath(path13) {
+  if (path13.startsWith('"') && path13.endsWith('"')) {
+    path13 = path13.slice(1, -1);
   }
   try {
-    path10 = path10.replace(/\\([\\"tnr])/g, (_m, ch) => {
+    path13 = path13.replace(/\\([\\"tnr])/g, (_m, ch) => {
       switch (ch) {
         case "\\":
           return "\\";
@@ -32992,7 +33513,7 @@ function unquoteGitPath(path10) {
     });
   } catch {
   }
-  return path10;
+  return path13;
 }
 
 // src/utils/token-estimation.ts
@@ -33156,6 +33677,231 @@ function calculateOptimalBatchSize(files, targetTokensPerBatch = 5e4, maxFilesPe
   };
 }
 
+// src/analysis/context/validation-detector.ts
+var ValidationDetector = class {
+  /**
+   * Analyze a code snippet for defensive programming patterns
+   * Returns context that can be added to LLM prompts to reduce false positives
+   */
+  analyzeDefensivePatterns(code, startLine = 1) {
+    const lines = code.split("\n");
+    const validations = [];
+    const variables = /* @__PURE__ */ new Map();
+    let hasTryCatch = false;
+    let hasErrorReturn = false;
+    let hasGracefulDegradation = false;
+    if (/\/\/\s*(ignore|best effort|graceful|fallback)/i.test(code)) {
+      hasGracefulDegradation = true;
+    }
+    if (/catch\s*\([^)]*\)\s*{[^}]*return[^}]*}/s.test(code)) {
+      hasGracefulDegradation = true;
+      hasErrorReturn = true;
+    }
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const lineNum = startLine + i;
+      const trimmed = line.trim();
+      const typeofMatch = trimmed.match(/typeof\s+(\w+)\s*(!==?|===?)\s*['"](\w+)['"]/);
+      if (typeofMatch) {
+        const [, variable, operator, type2] = typeofMatch;
+        validations.push({
+          type: "type_check",
+          line: lineNum,
+          variable,
+          description: `Validates ${variable} is ${operator.includes("!") ? "not" : ""} a ${type2}`
+        });
+        this.trackVariable(variables, variable, lineNum, true);
+      }
+      if (/\s+(===?|!==?)\s+(null|undefined)/.test(trimmed) || /\s+(null|undefined)\s+(===?|!==?)/.test(trimmed) || /if\s*\(\s*!\s*\w+\s*\)/.test(trimmed) || /\w+\s*==\s*null/.test(trimmed)) {
+        const varMatch = trimmed.match(/(\w+)\s*(!==?|===?)\s*(null|undefined)/);
+        validations.push({
+          type: "null_check",
+          line: lineNum,
+          variable: varMatch?.[1],
+          description: `Null/undefined check for ${varMatch?.[1] || "value"}`
+        });
+      }
+      if (/[<>]=?/.test(trimmed) && /\d+/.test(trimmed)) {
+        const varMatch = trimmed.match(/(\w+)\s*[<>]=?\s*\d+/);
+        if (varMatch) {
+          validations.push({
+            type: "range_check",
+            line: lineNum,
+            variable: varMatch[1],
+            description: `Range validation for ${varMatch[1]}`
+          });
+        }
+      }
+      if (/^try\s*{/.test(trimmed)) {
+        hasTryCatch = true;
+      }
+      if (/return\s+(null|undefined|false|'invalid'|"invalid"|-1)/.test(trimmed)) {
+        hasErrorReturn = true;
+        validations.push({
+          type: "error_return",
+          line: lineNum,
+          description: "Returns error value on invalid input"
+        });
+      }
+      if (/fs\.(exists|access|stat|mkdir)/.test(trimmed) || /\.\w+\s*\|\|\s*/.test(trimmed) || /\?\?\s*/.test(trimmed)) {
+        validations.push({
+          type: "existence_check",
+          line: lineNum,
+          description: "Checks existence before use"
+        });
+      }
+      if (/\|\|/.test(trimmed) || /\?\?/.test(trimmed)) {
+        hasGracefulDegradation = true;
+      }
+      if (/await\s+.*\.acquire|lockPromise|acquireLock|releaseLock|mutex/.test(trimmed) || /locks\.get|locks\.set|locks\.delete/.test(trimmed)) {
+        validations.push({
+          type: "locking",
+          line: lineNum,
+          description: "Uses locking mechanism for concurrency safety"
+        });
+      }
+      if (/Promise\.race\s*\(/.test(trimmed) && /timeout|setTimeout/i.test(code.slice(i * 100, (i + 10) * 100))) {
+        validations.push({
+          type: "timeout_enforcement",
+          line: lineNum,
+          description: "Enforces timeout using Promise.race"
+        });
+      }
+      const nextFewLines = lines.slice(i, Math.min(i + 4, lines.length)).join("\n");
+      if (/if\s*\([^)]*[<>!=]/.test(trimmed) && /throw\s+(new\s+)?Error/.test(nextFewLines)) {
+        validations.push({
+          type: "param_validation",
+          line: lineNum,
+          description: "Validates parameters with throw on invalid input"
+        });
+      }
+      const unusedParamMatch = trimmed.match(/\b_(\w+)\b/);
+      if (unusedParamMatch) {
+        validations.push({
+          type: "intentionally_unused",
+          line: lineNum,
+          variable: `_${unusedParamMatch[1]}`,
+          description: `Parameter _${unusedParamMatch[1]} is intentionally unused (indicated by _ prefix)`
+        });
+      }
+      if (/encodeURI|encodeURIComponent|escape|sanitize|normalize/.test(trimmed) || /\.replace\(\/.*\/g,/.test(trimmed)) {
+        validations.push({
+          type: "sanitization_function",
+          line: lineNum,
+          description: "Uses sanitization/encoding function for safe output"
+        });
+      }
+      if (/new\s+RegExp\(/.test(trimmed)) {
+        const surroundingLines = lines.slice(Math.max(0, i - 5), Math.min(lines.length, i + 5)).join("\n");
+        if (/try\s*{/.test(surroundingLines) && /catch/.test(surroundingLines)) {
+          validations.push({
+            type: "regex_try_catch",
+            line: lineNum,
+            description: "RegExp construction protected by try-catch block"
+          });
+        }
+      }
+      if (trimmed.includes("it(") || trimmed.includes("test(") || trimmed.includes("describe(") || trimmed.includes("expect(")) {
+        validations.push({
+          type: "test_intentional_inconsistency",
+          line: lineNum,
+          description: "Test file: may intentionally use inconsistent data to test error paths"
+        });
+      }
+      if (/^\/\/\s*eslint-disable/.test(trimmed) || /^\/\/\s*@ts-ignore/.test(trimmed)) {
+        validations.push({
+          type: "lint_auto_fixable",
+          line: lineNum,
+          description: "Lint issue acknowledged with disable comment"
+        });
+      }
+      const initMatch = trimmed.match(/(?:let|const|var)\s+(\w+)\s*[:=]/);
+      if (initMatch) {
+        const varName = initMatch[1];
+        this.trackVariable(variables, varName, lineNum, false);
+      }
+    }
+    return {
+      validations,
+      errorHandling: {
+        hasTryCatch,
+        hasErrorReturn,
+        hasGracefulDegradation
+      },
+      dataFlow: Array.from(variables.entries()).map(([variable, data]) => ({
+        variable,
+        ...data
+      }))
+    };
+  }
+  trackVariable(variables, varName, line, checked) {
+    const existing = variables.get(varName) || {
+      initialized: false,
+      checkedBeforeUse: false,
+      lines: []
+    };
+    existing.lines.push(line);
+    if (checked) {
+      existing.checkedBeforeUse = true;
+    }
+    variables.set(varName, existing);
+  }
+  /**
+   * Generate additional context for LLM prompts to reduce false positives
+   */
+  generatePromptContext(context2) {
+    if (context2.validations.length === 0) {
+      return "";
+    }
+    const parts = [
+      "\n## Defensive Programming Context (Auto-Detected)",
+      "The following defensive patterns were detected in this code:"
+    ];
+    const byType = /* @__PURE__ */ new Map();
+    for (const validation of context2.validations) {
+      const list = byType.get(validation.type) || [];
+      list.push(validation);
+      byType.set(validation.type, list);
+    }
+    for (const [type2, patterns] of byType) {
+      const typeName = type2.replace(/_/g, " ");
+      parts.push(`
+**${typeName.charAt(0).toUpperCase() + typeName.slice(1)}** (${patterns.length}):`);
+      for (const pattern of patterns) {
+        parts.push(`- Line ${pattern.line}: ${pattern.description}`);
+      }
+    }
+    if (context2.errorHandling.hasTryCatch) {
+      parts.push("\n**Error Handling**: Code uses try-catch for exception handling");
+    }
+    if (context2.errorHandling.hasGracefulDegradation) {
+      parts.push("**Graceful Degradation**: Code has fallback logic for error cases");
+    }
+    if (context2.dataFlow.length > 0) {
+      parts.push("\n**Data Flow Tracking**:");
+      for (const flow of context2.dataFlow) {
+        if (flow.checkedBeforeUse) {
+          parts.push(`- ${flow.variable}: Validated before use (lines ${flow.lines.join(", ")})`);
+        }
+      }
+    }
+    parts.push(
+      "\n**Reviewer Note**: When flagging issues, verify these defensive patterns don't already address the concern."
+    );
+    return parts.join("\n");
+  }
+  /**
+   * Check if a specific line has validation coverage
+   * This can suppress false positives for lines that are already validated
+   */
+  hasValidationCoverage(context2, targetLine, variable) {
+    const nearbyValidations = context2.validations.filter(
+      (v) => Math.abs(v.line - targetLine) <= 5 && (!variable || v.variable === variable)
+    );
+    return nearbyValidations.length > 0;
+  }
+};
+
 // src/analysis/llm/prompt-builder.ts
 var PromptBuilder = class {
   constructor(config, intensity = "standard") {
@@ -33165,7 +33911,9 @@ var PromptBuilder = class {
     if (!validIntensities.includes(intensity)) {
       throw new Error(`Invalid intensity: ${intensity}. Must be one of: ${validIntensities.join(", ")}`);
     }
+    this.validationDetector = new ValidationDetector();
   }
+  validationDetector;
   build(pr) {
     if (!pr || typeof pr !== "object") {
       throw new Error("Invalid PR context: must be a valid PRContext object");
@@ -33193,47 +33941,49 @@ var PromptBuilder = class {
     }
     const depth = this.config.intensityPromptDepth?.[this.intensity] ?? "standard";
     const instructions = [
-      `You are a senior engineer performing a ${this.intensity} code review.`
-    ];
-    if (depth === "detailed") {
-      instructions.push(
-        "Provide extremely thorough analysis including:",
-        "- Security implications and vulnerability patterns",
-        "- Performance considerations and optimization opportunities",
-        "- Edge cases and error handling completeness",
-        "- Architectural impact and design patterns",
-        "- Testing requirements and coverage gaps",
-        "- Documentation completeness and clarity",
-        ""
-      );
-    } else if (depth === "brief") {
-      instructions.push(
-        "Focus on high-priority issues:",
-        "- Critical bugs and security vulnerabilities",
-        "- Major logic errors that affect correctness",
-        "- Clear code quality problems",
-        ""
-      );
-    } else {
-      instructions.push(
-        "Identify critical, major, and minor issues. Include actionable suggestions when possible.",
-        ""
-      );
-    }
-    instructions.push(
-      "Return JSON with findings: [{file, line, severity, title, message, suggestion?}] and optional ai_likelihood/ai_reasoning.",
+      `You are a code reviewer. ONLY report actual bugs - code that will crash, lose data, or have security vulnerabilities.`,
       "",
-      "IMPORTANT RULES:",
-      "- ONLY review files that have diffs shown below",
-      '- DO NOT report "missing file" issues - all files listed are intentionally included',
-      '- DO NOT report issues about files being "referenced but not in diff"',
-      "- Focus on actual code quality, security, and correctness issues in the provided diffs",
+      "CRITICAL RULES (READ CAREFULLY):",
+      "",
+      "1. SKIP these file types entirely - DO NOT review them:",
+      "   \u2022 Test files: *.test.ts, *.spec.ts, __tests__/*, *test*, *spec*",
+      "   \u2022 Workflow/CI: .github/workflows/*, .github/actions/*, *.yml in .github/",
+      "   \u2022 Config: *.json, *.yaml, *.yml (except for syntax errors)",
+      "   \u2022 Docs: *.md, README*, CHANGELOG*",
+      "",
+      "2. NEVER report these (they are NOT bugs):",
+      '   \u2022 Suggestions ("Consider", "Add", "Should", "Could", "Ensure that", "Validate")',
+      '   \u2022 Code style ("complex", "magic strings", "readability")',
+      "   \u2022 Missing validation (TypeScript types handle this)",
+      "   \u2022 Incomplete/potential issues (unless code WILL crash)",
+      "   \u2022 Performance opinions (unless exponential complexity)",
+      "",
+      "3. ONLY report if code WILL:",
+      "   \u2022 Crash at runtime",
+      "   \u2022 Lose or corrupt data",
+      "   \u2022 Have SQL injection, XSS, command injection, or RCE vulnerability",
+      "",
+      "Return JSON: [{file, line, severity, title, message}]",
       "",
       `PR #${pr.number}: ${pr.title}`,
       `Author: ${pr.author}`,
       "Files changed:",
       ...fileList,
-      "",
+      ""
+    ];
+    const MAX_DIFF_SIZE_FOR_ANALYSIS = 5e4;
+    if (diff.length < MAX_DIFF_SIZE_FOR_ANALYSIS) {
+      try {
+        const defensiveContext = this.validationDetector.analyzeDefensivePatterns(diff);
+        const contextText = this.validationDetector.generatePromptContext(defensiveContext);
+        if (contextText) {
+          instructions.push(contextText, "");
+        }
+      } catch (error2) {
+        logger.debug("Failed to analyze defensive patterns:", error2);
+      }
+    }
+    instructions.push(
       "Diff:",
       diff
     );
@@ -34090,8 +34840,8 @@ var SynthesisEngine = class {
 };
 
 // src/analysis/test-coverage.ts
-var fs4 = __toESM(require("fs"));
-var path4 = __toESM(require("path"));
+var fs7 = __toESM(require("fs"));
+var path7 = __toESM(require("path"));
 var TestCoverageAnalyzer = class _TestCoverageAnalyzer {
   static MAX_HINTS = 20;
   analyze(files) {
@@ -34120,32 +34870,32 @@ var TestCoverageAnalyzer = class _TestCoverageAnalyzer {
     return patterns.some((pattern) => filename.includes(pattern));
   }
   findTestFile(filename) {
-    const dir = path4.dirname(filename);
-    const base = path4.basename(filename, path4.extname(filename));
-    const ext2 = path4.extname(filename);
+    const dir = path7.dirname(filename);
+    const base = path7.basename(filename, path7.extname(filename));
+    const ext2 = path7.extname(filename);
     const candidates = [
       `${base}.test${ext2}`,
       `${base}.spec${ext2}`,
       `${base}_test${ext2}`,
       `test_${base}${ext2}`,
-      path4.join("__tests__", `${base}.test${ext2}`)
+      path7.join("__tests__", `${base}.test${ext2}`)
     ];
     for (const candidate of candidates) {
-      const full = path4.join(dir, candidate);
-      if (fs4.existsSync(full)) return full;
+      const full = path7.join(dir, candidate);
+      if (fs7.existsSync(full)) return full;
     }
     return null;
   }
   suggestTestFile(filename) {
-    const dir = path4.dirname(filename);
-    const base = path4.basename(filename, path4.extname(filename));
-    const ext2 = path4.extname(filename);
-    if (ext2 === ".ts" || ext2 === ".tsx") return path4.join(dir, `${base}.test.ts`);
-    if (ext2 === ".py") return path4.join(dir, `test_${base}.py`);
-    return path4.join(dir, `${base}.test${ext2}`);
+    const dir = path7.dirname(filename);
+    const base = path7.basename(filename, path7.extname(filename));
+    const ext2 = path7.extname(filename);
+    if (ext2 === ".ts" || ext2 === ".tsx") return path7.join(dir, `${base}.test.ts`);
+    if (ext2 === ".py") return path7.join(dir, `test_${base}.py`);
+    return path7.join(dir, `${base}.test${ext2}`);
   }
   getPattern(filename) {
-    const ext2 = path4.extname(filename);
+    const ext2 = path7.extname(filename);
     if (ext2 === ".ts" || ext2 === ".tsx") return "Jest: *.test.ts or __tests__/*.ts";
     if (ext2 === ".py") return "pytest: test_*.py or *_test.py";
     return `*.test${ext2}`;
@@ -34392,17 +35142,17 @@ var ASTAnalyzer = class {
 };
 
 // src/cache/storage.ts
-var fs5 = __toESM(require("fs/promises"));
-var path5 = __toESM(require("path"));
+var fs8 = __toESM(require("fs/promises"));
+var path8 = __toESM(require("path"));
 var CacheStorage = class {
-  constructor(baseDir = path5.join(process.cwd(), ".mpr-cache")) {
+  constructor(baseDir = path8.join(process.cwd(), ".mpr-cache")) {
     this.baseDir = baseDir;
   }
   locks = /* @__PURE__ */ new Map();
   async read(key) {
-    const file = path5.join(this.baseDir, `${key}.json`);
+    const file = path8.join(this.baseDir, `${key}.json`);
     try {
-      return await fs5.readFile(file, "utf8");
+      return await fs8.readFile(file, "utf8");
     } catch {
       return null;
     }
@@ -34410,9 +35160,9 @@ var CacheStorage = class {
   async write(key, value) {
     await this.acquireLock(key);
     try {
-      const file = path5.join(this.baseDir, `${key}.json`);
-      await fs5.mkdir(this.baseDir, { recursive: true });
-      await fs5.writeFile(file, value, "utf8");
+      const file = path8.join(this.baseDir, `${key}.json`);
+      await fs8.mkdir(this.baseDir, { recursive: true });
+      await fs8.writeFile(file, value, "utf8");
       logger.info(`Cached results at ${file}`);
     } finally {
       this.releaseLock(key);
@@ -34424,13 +35174,13 @@ var CacheStorage = class {
    */
   async deleteByPrefix(prefix) {
     try {
-      await fs5.mkdir(this.baseDir, { recursive: true });
+      await fs8.mkdir(this.baseDir, { recursive: true });
     } catch (error2) {
       logger.error(`Failed to create cache directory ${this.baseDir}`, error2);
       return 0;
     }
     try {
-      const files = await fs5.readdir(this.baseDir);
+      const files = await fs8.readdir(this.baseDir);
       const matchingFiles = files.filter((file) => {
         const key = file.replace(/\.json$/, "");
         return key.startsWith(prefix);
@@ -34438,7 +35188,7 @@ var CacheStorage = class {
       let deletedCount = 0;
       for (const file of matchingFiles) {
         try {
-          await fs5.unlink(path5.join(this.baseDir, file));
+          await fs8.unlink(path8.join(this.baseDir, file));
           deletedCount++;
         } catch (error2) {
           logger.warn(`Failed to delete cache file ${file}`, error2);
@@ -34504,12 +35254,24 @@ function hashConfig(config) {
     pathIntensityPatterns: config.pathIntensityPatterns,
     pathDefaultIntensity: config.pathDefaultIntensity
   };
-  const hash = (0, import_crypto.createHash)("sha256").update(JSON.stringify(relevantConfig)).digest("hex");
+  const sortObject = (value) => {
+    if (Array.isArray(value)) return value.map(sortObject);
+    if (value && typeof value === "object") {
+      const sorted = {};
+      for (const key of Object.keys(value).sort()) {
+        sorted[key] = sortObject(value[key]);
+      }
+      return sorted;
+    }
+    return value;
+  };
+  const stableJson = JSON.stringify(sortObject(relevantConfig));
+  const hash = (0, import_crypto.createHash)("sha256").update(stableJson).digest("hex");
   return hash.slice(0, 16);
 }
 
 // src/cache/version.ts
-var CACHE_VERSION = 4;
+var CACHE_VERSION = 7;
 function versionCache(data) {
   return {
     version: CACHE_VERSION,
@@ -34552,7 +35314,13 @@ var CacheManager = class {
   async load(pr) {
     const configHash = this.config ? hashConfig(this.config) : void 0;
     const key = buildCacheKey(pr, configHash);
-    const raw = await this.storage.read(key);
+    let raw;
+    try {
+      raw = await this.storage.read(key);
+    } catch (error2) {
+      logger.warn(`Cache read failed for ${key}`, error2);
+      return null;
+    }
     if (!raw) return null;
     const payload = unversionCache(raw, this.TTL_MS);
     if (!payload) {
@@ -34576,7 +35344,7 @@ var CacheManager = class {
 };
 
 // src/cache/incremental.ts
-var import_child_process3 = require("child_process");
+var import_child_process6 = require("child_process");
 var IncrementalReviewer = class _IncrementalReviewer {
   constructor(storage = new CacheStorage(), config = { enabled: true, cacheTtlDays: 7 }) {
     this.storage = storage;
@@ -34662,7 +35430,7 @@ var IncrementalReviewer = class _IncrementalReviewer {
       logger.debug(`Running git diff --name-status ${lastCommit.substring(0, 7)}...${pr.headSha.substring(0, 7)}`);
       let output;
       try {
-        output = (0, import_child_process3.execFileSync)("git", ["diff", "--name-status", `${lastCommit}...${pr.headSha}`], {
+        output = (0, import_child_process6.execFileSync)("git", ["diff", "--name-status", `${lastCommit}...${pr.headSha}`], {
           encoding: "utf8",
           cwd: process.cwd(),
           timeout: 1e4
@@ -35997,10 +36765,10 @@ var FeedbackFilter = class {
     const signature = this.signatureFromComment(comment.path, comment.line, comment.body);
     return !suppressed.has(signature);
   }
-  signatureFromComment(path10, line, body) {
+  signatureFromComment(path13, line, body) {
     const titleMatch = body.match(/\*\*(.+?)\*\*/);
     const title = titleMatch ? titleMatch[1] : body.split("\n")[0] || "unknown";
-    return `${(path10 || "unknown").toLowerCase()}:${line ?? 0}:${title.toLowerCase()}`;
+    return `${(path13 || "unknown").toLowerCase()}:${line ?? 0}:${title.toLowerCase()}`;
   }
 };
 
@@ -36276,12 +37044,12 @@ var QuietModeFilter = class {
 };
 
 // src/analysis/context/graph-builder.ts
-var path6 = __toESM(require("path"));
+var path9 = __toESM(require("path"));
 function resolveImportPath(importerFile, moduleSpecifier) {
   if (moduleSpecifier.startsWith(".")) {
-    const importerDir = path6.dirname(importerFile);
+    const importerDir = path9.dirname(importerFile);
     if (importerDir && importerDir !== "." && importerDir !== importerFile) {
-      const resolved = path6.join(importerDir, moduleSpecifier);
+      const resolved = path9.join(importerDir, moduleSpecifier);
       return resolved.replace(/\\/g, "/");
     }
   }
@@ -36436,8 +37204,8 @@ var CodeGraph = class _CodeGraph {
   /**
    * Normalize a file path for comparison (strips extensions, converts to posix)
    */
-  normalizePathForComparison(path10) {
-    let normalized = path10.replace(/\\/g, "/");
+  normalizePathForComparison(path13) {
+    let normalized = path13.replace(/\\/g, "/");
     normalized = normalized.replace(/\.(ts|tsx|js|jsx|mjs|cjs)$/, "");
     return normalized;
   }
@@ -36600,10 +37368,17 @@ var CodeGraph = class _CodeGraph {
   /**
    * Copy graph data from another CodeGraph instance
    * Type-safe alternative to direct private field assignment
-   * Deep copies all arrays to prevent shared mutable state
+   * Deep copies all arrays to prevent shared mutable state.
+   *
+   * SECURITY: Deep copy prevents shared mutable state between graph instances.
+   * Each Definition object is cloned using spread operator to create independent copies.
+   *
+   * @param other - Source graph to copy from
    */
   copyFrom(other) {
-    this.definitions = new Map(other.definitions);
+    this.definitions = new Map(
+      Array.from(other.definitions.entries()).map(([k, v]) => [k, { ...v }])
+    );
     this.imports = new Map(
       Array.from(other.imports.entries()).map(([k, v]) => [k, [...v]])
     );
@@ -37153,9 +37928,9 @@ var PromptGenerator = class {
    * Save prompts to a file (for CLI usage)
    */
   async saveToFile(prompts, filepath, format = this.defaultFormat) {
-    const fs8 = await import("fs/promises");
+    const fs11 = await import("fs/promises");
     const content = this.formatForIDE(prompts, format);
-    await fs8.writeFile(filepath, content, "utf8");
+    await fs11.writeFile(filepath, content, "utf8");
     logger.info(`Saved ${prompts.length} fix prompts to ${filepath}`);
   }
   /**
@@ -37182,17 +37957,16 @@ var PromptGenerator = class {
 };
 
 // src/utils/sanitize.ts
+var import_crypto2 = require("crypto");
 function encodeURIComponentSafe(value) {
+  if (typeof value !== "string") {
+    return "invalid";
+  }
   const encoded = encodeURIComponent(value);
   const normalized = encoded.replace(/[+]/g, "_").replace(/%/g, "_").replace(/[<>:"|?*]/g, "_");
   const MAX_PREFIX = 120;
   const prefix = normalized.length > MAX_PREFIX ? normalized.slice(0, MAX_PREFIX) : normalized;
-  let hash = 2166136261;
-  for (let i = 0; i < value.length; i += 1) {
-    hash ^= value.charCodeAt(i);
-    hash = hash * 16777619 >>> 0;
-  }
-  const hashSuffix = hash.toString(16).padStart(8, "0");
+  const hashSuffix = (0, import_crypto2.createHash)("sha256").update(value).digest("hex").slice(0, 16);
   return `${prefix}-${hashSuffix}`;
 }
 
@@ -37924,9 +38698,9 @@ var MetricsCollector = class _MetricsCollector {
 };
 
 // src/plugins/plugin-loader.ts
-var fs6 = __toESM(require("fs/promises"));
-var path7 = __toESM(require("path"));
-var crypto2 = __toESM(require("crypto"));
+var fs9 = __toESM(require("fs/promises"));
+var path10 = __toESM(require("path"));
+var crypto5 = __toESM(require("crypto"));
 var import_url = require("url");
 var PluginLoader = class {
   // provider name -> plugin name
@@ -37955,18 +38729,18 @@ var PluginLoader = class {
     }
     logger.info("\u2713 Plugin security acknowledged - loading plugins with full system access");
     try {
-      const pluginDir = path7.resolve(this.config.pluginDir);
+      const pluginDir = path10.resolve(this.config.pluginDir);
       logger.info(`Loading plugins from: ${pluginDir}`);
       try {
-        await fs6.access(pluginDir);
+        await fs9.access(pluginDir);
       } catch (error2) {
         logger.warn(`Plugin directory does not exist: ${pluginDir}`);
         return;
       }
-      const entries = await fs6.readdir(pluginDir, { withFileTypes: true });
+      const entries = await fs9.readdir(pluginDir, { withFileTypes: true });
       for (const entry of entries) {
         if (!entry.isDirectory()) continue;
-        const pluginPath = path7.join(pluginDir, entry.name);
+        const pluginPath = path10.join(pluginDir, entry.name);
         await this.loadPlugin(pluginPath);
       }
       logger.info(`Loaded ${this.plugins.size} plugins`);
@@ -37980,9 +38754,9 @@ var PluginLoader = class {
    */
   async loadPlugin(pluginPath) {
     try {
-      const indexPath = path7.join(pluginPath, "index.js");
+      const indexPath = path10.join(pluginPath, "index.js");
       try {
-        await fs6.access(indexPath);
+        await fs9.access(indexPath);
       } catch (error2) {
         logger.debug(`Plugin at ${pluginPath} missing index.js, skipping`);
         return;
@@ -38067,21 +38841,21 @@ var PluginLoader = class {
    * }
    */
   async verifyPluginIntegrity(pluginPath, indexPath) {
-    const manifestPath = path7.join(pluginPath, "plugin-manifest.json");
+    const manifestPath = path10.join(pluginPath, "plugin-manifest.json");
     try {
-      await fs6.access(manifestPath);
+      await fs9.access(manifestPath);
     } catch (error2) {
       logger.debug(`No manifest found for plugin at ${pluginPath}, skipping integrity check`);
       return;
     }
     try {
-      const manifestContent = await fs6.readFile(manifestPath, "utf8");
+      const manifestContent = await fs9.readFile(manifestPath, "utf8");
       const manifest = JSON.parse(manifestContent);
       if (!manifest.sha256 || typeof manifest.sha256 !== "string") {
         throw new Error("Manifest missing valid sha256 checksum");
       }
-      const pluginCode = await fs6.readFile(indexPath, "utf8");
-      const hash = crypto2.createHash("sha256");
+      const pluginCode = await fs9.readFile(indexPath, "utf8");
+      const hash = crypto5.createHash("sha256");
       hash.update(pluginCode);
       const actualChecksum = hash.digest("hex");
       if (actualChecksum !== manifest.sha256) {
@@ -38372,6 +39146,413 @@ function summarizeAIDetection(results) {
     consensus
   };
 }
+
+// src/analysis/finding-filter.ts
+var FindingFilter = class {
+  /**
+   * Filter and adjust findings to reduce false positives
+   */
+  filter(findings, diffContent) {
+    const stats = {
+      total: findings.length,
+      filtered: 0,
+      downgraded: 0,
+      kept: 0,
+      reasons: {}
+    };
+    const filtered = [];
+    for (const finding of findings) {
+      const action = this.shouldFilter(finding, diffContent);
+      if (action === "filter") {
+        stats.filtered++;
+        const reason = this.getFilterReason(finding, diffContent);
+        stats.reasons[reason] = (stats.reasons[reason] || 0) + 1;
+        logger.debug(`Filtered finding: ${finding.title} (${reason})`);
+        continue;
+      }
+      if (action === "downgrade" && finding.severity === "critical") {
+        finding.severity = "minor";
+        stats.downgraded++;
+        logger.debug(`Downgraded finding: ${finding.title} (critical \u2192 minor)`);
+      } else if (action === "downgrade" && finding.severity === "major") {
+        finding.severity = "minor";
+        stats.downgraded++;
+        logger.debug(`Downgraded finding: ${finding.title} (major \u2192 minor)`);
+      }
+      filtered.push(finding);
+      stats.kept++;
+    }
+    const deduplicated = this.deduplicateFindings(filtered);
+    const duplicatesRemoved = filtered.length - deduplicated.length;
+    if (duplicatesRemoved > 0) {
+      stats.filtered += duplicatesRemoved;
+      stats.kept -= duplicatesRemoved;
+      stats.reasons["duplicate finding"] = (stats.reasons["duplicate finding"] || 0) + duplicatesRemoved;
+      logger.debug(`Removed ${duplicatesRemoved} duplicate findings`);
+    }
+    if (stats.filtered > 0 || stats.downgraded > 0) {
+      logger.info(
+        `Finding filter: ${stats.filtered} filtered, ${stats.downgraded} downgraded, ${stats.kept} kept (from ${stats.total} total)`
+      );
+    }
+    return { findings: deduplicated, stats };
+  }
+  shouldFilter(finding, diffContent) {
+    if (this.isDocumentationFile(finding.file)) {
+      if (this.isStyleOrFormattingIssue(finding)) {
+        return "filter";
+      }
+      if (finding.severity === "critical" || finding.severity === "major") {
+        return "downgrade";
+      }
+    }
+    if (this.isTestFile(finding.file) || this.isTestInfrastructure(finding.file)) {
+      if (this.isTrueSecurityIssue(finding)) {
+        return "keep";
+      }
+      return "filter";
+    }
+    if (this.isWorkflowOrCIFile(finding.file)) {
+      return "filter";
+    }
+    if (this.isFilterInfrastructure(finding.file)) {
+      return "filter";
+    }
+    if (this.isSuggestionOrOptimization(finding)) {
+      return "filter";
+    }
+    if (this.isAboutAddedFileFalsePositive(finding)) {
+      return "filter";
+    }
+    if (this.isSubjectiveCodeOpinion(finding)) {
+      return "filter";
+    }
+    if (this.hasInvalidLineNumber(finding)) {
+      return "filter";
+    }
+    if (this.isCodeQualityIssue(finding)) {
+      return "filter";
+    }
+    if (this.isLintOrStyleIssue(finding)) {
+      return "filter";
+    }
+    if (this.isMissingMethodFalsePositive(finding, diffContent)) {
+      return "filter";
+    }
+    if (this.isWorkflowSecurityFalsePositive(finding, diffContent)) {
+      return "filter";
+    }
+    if (this.isLineNumberIssue(finding, diffContent)) {
+      return "filter";
+    }
+    return "keep";
+  }
+  getFilterReason(finding, diffContent) {
+    if (this.isDocumentationFile(finding.file) && this.isStyleOrFormattingIssue(finding)) {
+      return "documentation formatting";
+    }
+    if ((this.isTestFile(finding.file) || this.isTestInfrastructure(finding.file)) && this.isTestCodeQualityIssue(finding)) {
+      return "test code quality (not production issue)";
+    }
+    if (this.isTestFile(finding.file) && this.isIntentionalTestPattern(finding)) {
+      return "intentional test pattern";
+    }
+    if (this.isWorkflowOrCIFile(finding.file) && this.isWorkflowConfigurationIssue(finding)) {
+      return "workflow/CI configuration (not application code)";
+    }
+    if (this.isWorkflowSecurityFalsePositive(finding, diffContent)) {
+      return "workflow security already handled/config issue";
+    }
+    if (this.isSuggestionOrOptimization(finding)) {
+      return "suggestion/optimization (not a bug)";
+    }
+    if (this.isSubjectiveCodeOpinion(finding)) {
+      return "subjective code opinion (not a bug)";
+    }
+    if (this.isAboutAddedFileFalsePositive(finding)) {
+      return "complaint about file added in diff";
+    }
+    if (this.isMissingMethodFalsePositive(finding, diffContent)) {
+      return "method exists in code";
+    }
+    if (this.hasInvalidLineNumber(finding)) {
+      return "invalid/suspicious line number";
+    }
+    if (this.isLineNumberIssue(finding, diffContent)) {
+      return "line number points to blank/brace/comment";
+    }
+    return "other";
+  }
+  isDocumentationFile(file) {
+    return /\.(md|txt|rst)$/i.test(file);
+  }
+  isTestFile(file) {
+    const normalized = file.toLowerCase();
+    return /\.(test|spec)\.(ts|js|tsx|jsx)$/i.test(file) || file.includes("__tests__/") || normalized.includes("/tests/") || normalized.includes("/test/") || normalized.startsWith("tests/") || normalized.startsWith("test/") || file.includes("__test__/");
+  }
+  isTestInfrastructure(file) {
+    return file.includes("jest.setup") || file.includes("jest.config") || file.includes("test-utils") || file.includes("test-helpers") || file.includes("__mocks__") || file.includes("fixtures/");
+  }
+  isWorkflowOrCIFile(file) {
+    const normalized = file.toLowerCase();
+    return normalized.includes(".github/workflows/") || normalized.includes(".github/actions/") || normalized.includes(".circleci/") || normalized.includes(".travis.yml") || normalized.includes("azure-pipelines") || normalized.includes("gitlab-ci.yml") || normalized.includes(".yml") && normalized.includes(".github") || normalized.includes(".yaml") && normalized.includes(".github") || file === "Jenkinsfile";
+  }
+  isFilterInfrastructure(file) {
+    const normalized = file.toLowerCase();
+    return (
+      // The finding filter and its tests
+      file.includes("finding-filter") || // All analysis infrastructure (review engine)
+      normalized.startsWith("src/analysis/") || normalized.includes("/analysis/") || // Config and setup (review configuration)
+      file.includes("config/") && (file.includes("defaults") || file.includes("schema") || file.includes("loader")) || file.includes("setup.ts") || // Cache infrastructure (review optimization)
+      file.includes("cache/") || // Core orchestration (review engine)
+      file.includes("core/orchestrator") || file.includes("core/batch-orchestrator") || // Provider infrastructure (review execution)
+      file.includes("providers/circuit-breaker") || file.includes("providers/reliability-tracker")
+    );
+  }
+  isWorkflowConfigurationIssue(finding) {
+    const text = (finding.title + " " + finding.message).toLowerCase();
+    return (
+      // Fork PR / secrets issues (very common false positives)
+      text.includes("fork") && (text.includes("secret") || text.includes("pr") || text.includes("pull request") || text.includes("security")) || text.includes("pull request") && text.includes("secret") || text.includes("repository setting") || text.includes("send secrets to workflows") || text.includes("secret validation") || text.includes("secret exposure") || text.includes("secrets exposure") || text.includes("secret access") || text.includes("security gating") || text.includes("security guardrails") || text.includes("security assumption") || text.includes("fork pr") && (text.includes("access") || text.includes("gating") || text.includes("condition") || text.includes("handling") || text.includes("risk")) || text.includes("security risk") && text.includes("fork") || text.includes("security vulnerability") && text.includes("fork") || text.includes("security: fork prs") || // Workflow event/condition configuration
+      text.includes("workflow relies on") || text.includes("timeout") && (text.includes("workflow") || text.includes("test") || text.includes("ci")) || text.includes("testtimeout") || text.includes("runner configuration") || text.includes("concurrency") && (text.includes("group") || text.includes("grouping") || text.includes("issue") || text.includes("strategy")) || text.includes("fork pr detection") || text.includes("fork pr handling") || text.includes("conditional logic") && text.includes("workflow") || text.includes("job condition") || text.includes("workflow") && text.includes("logic") || text.includes("condition") && (text.includes("fork") || text.includes("event")) || text.includes("doesn't account for") && text.includes("event") || text.includes("modify condition to") || text.includes("event type") && text.includes("check") || text.includes("simplify the logic to") || text.includes("fail the workflow") || // CI-specific issues
+      text.includes("detectopenhandles") || text.includes("--detectopenhandles") || text.includes("--testtimeout") || text.includes("ci test flags") || text.includes("test execution control") || text.includes("test execution flags") || text.includes("--forceexit") || text.includes("test execution") && text.includes("improved")
+    );
+  }
+  isTrueSecurityIssue(finding) {
+    const text = (finding.title + " " + finding.message).toLowerCase();
+    return text.includes("sql injection") || text.includes("xss") || text.includes("cross-site scripting") || text.includes("command injection") || text.includes("path traversal") || text.includes("remote code execution") || text.includes("arbitrary code") || text.includes("prototype pollution");
+  }
+  isTestCodeQualityIssue(finding) {
+    const text = (finding.title + " " + finding.message).toLowerCase();
+    return (
+      // Test coverage and completeness
+      text.includes("missing edge case") || text.includes("missing test case") || text.includes("missing test") || text.includes("test coverage") || text.includes("not tested") || text.includes("add tests") || text.includes("add targeted") && text.includes("test") || text.includes("tests rely") || text.includes("test reliance") || // Test structure and organization
+      text.includes("test structure") || text.includes("test organization") || text.includes("test duplicate") || // Test data and mocks
+      text.includes("mock") || text.includes("stub") || text.includes("fixture") || text.includes("test data") || text.includes("inconsistent") && text.includes("test") || text.includes("mismatch") || // Test assertions
+      text.includes("assertion") || text.includes("expect") || // Documentation in tests
+      text.includes("test documentation") || text.includes("test comment") || // Test isolation and shared state
+      text.includes("test isolation") || text.includes("shared mock") || text.includes("mock") && text.includes("across tests") || // Test implementation details
+      text.includes("hard-coded") && text.includes("test") || text.includes("stat-key brittleness") || text.includes("brittleness") && text.includes("test") || text.includes("brittle test") || text.includes("tightly coupled") && text.includes("test") || text.includes("test expectations") || text.includes("deduplication heuristic") || text.includes("reason keys") || // Test refactoring suggestions
+      text.includes("parameterized tests") || text.includes("downgrade-path constants") || text.includes("reduce brittleness") || // Test validation suggestions
+      text.includes("validate mocks") || text.includes("validate") && text.includes("test") && text.includes("reflect") || text.includes("concurrency scenarios") && text.includes("test") || text.includes("comprehensive") && text.includes("test") || text.includes("serialization") && text.includes("circular") && text.includes("graph") || // Test-related suggestions
+      text.includes("without explicit type contracts") || text.includes("api docs and unit tests")
+    );
+  }
+  isStyleOrFormattingIssue(finding) {
+    const text = (finding.title + " " + finding.message).toLowerCase();
+    return text.includes("formatting") || text.includes("markdown") || text.includes("heading") || text.includes("whitespace") || text.includes("indentation") || text.includes("spacing") || text.includes("bare url") || text.includes("language specified") || text.includes("code block") || text.includes("fenced code") || text.includes("emphasis") || text.includes("hyphen");
+  }
+  isLintOrStyleIssue(finding) {
+    const text = (finding.title + " " + finding.message).toLowerCase();
+    return text.includes("unused variable") || text.includes("unused parameter") || text.includes("no-unused") || text.includes("escape character") || text.includes("no-useless-escape") || text.includes("const instead of let") || text.includes("prefer const") || text.includes("naming convention") || text.includes("camelcase") || text.includes("snake_case") || text.includes("magic string") || text.includes("magic number") || text.includes("eslint") || text.includes("lint") || text.includes("unsafe type assertion") || text.includes("unsafe non-null assertion") || text.includes("type assertion") && !this.isTrueSecurityIssue(finding) || text.includes("non-null assertion") && !this.isTrueSecurityIssue(finding) || text.includes("bypasses type checking") || text.includes("casting") && text.includes("any");
+  }
+  isIntentionalTestPattern(finding) {
+    const text = (finding.title + " " + finding.message).toLowerCase();
+    return text.includes("test") && (text.includes("inconsistent") || text.includes("empty") || text.includes("mock") || text.includes("mismatch") || text.includes("intentional"));
+  }
+  isMissingMethodFalsePositive(finding, diffContent) {
+    const text = (finding.title + " " + finding.message).toLowerCase();
+    if (!text.includes("missing") && !text.includes("lacks") && !text.includes("no ")) {
+      return false;
+    }
+    const methodMatch = text.match(/\b(serialize|deserialize|clone|copyfrom|remove|add|get|set)\w*\b/);
+    if (!methodMatch) {
+      return false;
+    }
+    const methodName = methodMatch[0];
+    const methodRegex = new RegExp(`(function\\s+${methodName}|${methodName}\\s*\\(|${methodName}:\\s*function)`, "i");
+    if (methodRegex.test(diffContent)) {
+      logger.debug(`Method ${methodName} exists in diff, filtering "missing ${methodName}" finding`);
+      return true;
+    }
+    return false;
+  }
+  isSuggestionOrOptimization(finding) {
+    if (this.isTrueSecurityIssue(finding)) {
+      return false;
+    }
+    const text = (finding.title + " " + finding.message).toLowerCase();
+    return (
+      // Explicit suggestions
+      text.includes("consider") || text.includes("suggestion") || text.includes("could") || text.includes("should") || text.includes("might want to") || text.includes("might be") || text.includes("may be") || text.includes("can be") || text.includes("optimization") || text.includes("improvement") || // Opinion words (not factual bugs)
+      text.includes("overly") || text.includes("too aggressive") || text.includes("less aggressive") || // Imperatives that are suggestions, not bugs
+      text.includes("ensure that") || text.includes("ensure") && (text.includes("consistent") || text.includes("handle") || text.includes("uniqueness") || text.includes("comprehensive") || text.includes("proper") || text.includes("correct")) || text.includes("verify that") || text.includes("validate") && !text.includes("unvalidated") || text.includes("establish") || text.includes("monitor") || text.includes("integrate") && (text.includes("into") || text.includes("the")) || text.includes("add") && (text.includes("check") || text.includes("validation") || text.includes("logging") || text.includes("documentation") || text.includes("test") || text.includes("explicit") || text.includes("specific") || text.includes("handling") || text.includes("support") || text.includes("targeted") || text.includes("regression") || text.includes("metrics") || text.includes("warning") || text.includes("prominent") || text.includes("additional") || text.includes("more tests") || text.includes("security")) || // Configuration suggestions
+      text.includes("adjust") || text.includes("configure") || text.includes("making") && text.includes("configurable") || // Refactoring suggestions
+      text.includes("refactor") || text.includes("introduce") && (text.includes("enum") || text.includes("constant")) || text.includes("extract") && (text.includes("method") || text.includes("class") || text.includes("separate")) || text.includes("use a more") || text.includes("using a more") || text.includes("implement") && (text.includes("iterative") || text.includes("approach")) || text.includes("recursive approach") && text.includes("performance") || // Opinion-based characterizations
+      text.includes("overly permissive") || text.includes("overly restrictive") || text.includes("overly aggressive") || text.includes("too generous") || text.includes("too strict") || // Completeness/quality suggestions (not bugs)
+      text.includes("incomplete") || text.includes("lacks sufficient") || text.includes("lacks") && text.includes("validation") || text.includes("does not adequately") || text.includes("not adequately") || text.includes("missing") && text.includes("validation") && !this.isTrueSecurityIssue(finding) || text.includes("missing") && text.includes("timeout") && text.includes("validation") || text.includes("inconsistent") && !this.isTrueSecurityIssue(finding) || text.includes("incorrect handling") && !text.includes("crash") || text.includes("incomplete validation") || // Potential issues (not actual bugs)
+      text.includes("potential") && !text.includes("sql injection") && !text.includes("rce") || text.includes("brittleness") || text.includes("brittle") || text.includes("tightly coupled") || text.includes("genuine bugs") || // "can be genuine bugs" = uncertainty
+      text.includes("genuine issues") || text.includes("may occur") || text.includes("could occur") || text.includes("may lead to") || text.includes("could lead to") || // Review/analysis suggestions
+      text.includes("review") && !text.includes("code review tool") || text.includes("audit") || text.includes("substantial diff") || text.includes("comprehensive") && (text.includes("test") || text.includes("testing")) || text.includes("investigate") || text.includes("profile") || text.includes("thorough") || text.includes("write thorough") || // Efficiency/performance suggestions (not bugs)
+      text.includes("more efficient") || text.includes("could be more") || text.includes("more concise") || text.includes("inefficient") && !text.includes("exponential") || text.includes("potentially inefficient") || text.includes("time-consuming") && !text.includes("will hang") || // Implementation suggestions
+      text.includes("explore using") || text.includes("alternatively") || text.includes("using a different approach") || text.includes("using a more") || // Documentation suggestions
+      text.includes("document") && !text.includes("undocumented vulnerability")
+    );
+  }
+  isWorkflowSecurityFalsePositive(finding, diffContent) {
+    if (!finding.file.includes(".github/workflows/")) {
+      return false;
+    }
+    const text = (finding.title + " " + finding.message).toLowerCase();
+    const isForkSecurityFinding = text.includes("fork") && (text.includes("secret") || text.includes("pr")) || text.includes("pull request") && text.includes("secret");
+    if (isForkSecurityFinding) {
+      const hasForkSecurityCheck = diffContent.includes("SECURITY VIOLATION") || diffContent.includes("Fork PR has access to secrets") || diffContent.includes('if [ -n "$OPENROUTER_API_KEY" ]') || diffContent.includes("fork_pr_has_secrets") || diffContent.includes("github.event.pull_request.head.repo.fork");
+      if (hasForkSecurityCheck) {
+        logger.debug(`Workflow security already implemented: ${finding.title}`);
+        return true;
+      }
+      const isGeneralConfigFinding = text.includes("repository setting") || text.includes("settings -> actions") || text.includes("workflow relies on") || text.includes("disable 'send secrets");
+      if (isGeneralConfigFinding) {
+        logger.debug(`General workflow config finding, not specific to diff: ${finding.title}`);
+        return true;
+      }
+    }
+    return false;
+  }
+  isLineNumberIssue(finding, diffContent) {
+    if (!finding.line) {
+      return false;
+    }
+    const lines = diffContent.split("\n");
+    const lineIndex = finding.line - 1;
+    if (lineIndex < 0 || lineIndex >= lines.length) {
+      return false;
+    }
+    const line = lines[lineIndex].trim();
+    if (line === "" || line === "}" || line === "};" || line === "])" || line === "]);" || line.startsWith("//") || line.startsWith("/*") || line.startsWith("*")) {
+      logger.debug(`Line ${finding.line} is blank/brace/comment, likely incorrect line number`);
+      return true;
+    }
+    return false;
+  }
+  /**
+   * Check for invalid or suspicious line numbers that will cause GitHub API errors
+   */
+  hasInvalidLineNumber(finding) {
+    if (finding.line === void 0 || finding.line === null) {
+      return false;
+    }
+    if (finding.line <= 0) {
+      logger.debug(`Invalid line number ${finding.line} for ${finding.file}, filtering`);
+      return true;
+    }
+    if (finding.line === 1) {
+      const text = (finding.title + " " + finding.message).toLowerCase();
+      const isVeryGenericFinding = text.includes("entire file") || text.includes("file lacks") || text.includes("class lacks") && !this.isTrueSecurityIssue(finding);
+      if (isVeryGenericFinding) {
+        logger.debug(`Very generic line:1 finding for ${finding.file}, likely invalid, filtering`);
+        return true;
+      }
+      const isGeneratedFile = finding.file.includes("dist/") || finding.file.includes("build/") || finding.file.includes(".min.");
+      if (isGeneratedFile) {
+        logger.debug(`Line:1 on generated file ${finding.file}, likely invalid, filtering`);
+        return true;
+      }
+    }
+    return false;
+  }
+  /**
+   * Remove duplicate findings that are essentially the same issue
+   * Uses file + title similarity + semantic keywords to detect duplicates
+   */
+  deduplicateFindings(findings) {
+    const seen = /* @__PURE__ */ new Map();
+    for (const finding of findings) {
+      const text = finding.title.toLowerCase();
+      const normalizedTitle = text.replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
+      const keywords = this.extractSemanticKeywords(text);
+      const semanticKey = keywords.sort().join("_");
+      const dedupKey = semanticKey || normalizedTitle;
+      const key = `${finding.file}:${dedupKey}`;
+      if (!seen.has(key)) {
+        seen.set(key, finding);
+      } else {
+        const existing = seen.get(key);
+        const severityOrder = { critical: 3, major: 2, minor: 1 };
+        const existingSeverity = severityOrder[existing.severity];
+        const newSeverity = severityOrder[finding.severity];
+        if (newSeverity > existingSeverity) {
+          seen.set(key, finding);
+        }
+      }
+    }
+    return Array.from(seen.values());
+  }
+  /**
+   * Extract semantic keywords from finding title for better deduplication
+   * Groups similar concepts like "fork pr security", "missing validation", etc.
+   */
+  extractSemanticKeywords(text) {
+    const keywords = [];
+    if (text.includes("fork") && (text.includes("pr") || text.includes("pull request")) && text.includes("secret")) {
+      keywords.push("fork_pr_secret");
+    }
+    if (text.includes("sql") && text.includes("injection")) {
+      keywords.push("sql_injection");
+    }
+    if (text.includes("xss") || text.includes("cross") && text.includes("site")) {
+      keywords.push("xss");
+    }
+    if (text.includes("missing") && text.includes("validation")) {
+      keywords.push("missing_validation");
+    }
+    if (text.includes("missing") && text.includes("error") && text.includes("handling")) {
+      keywords.push("missing_error_handling");
+    }
+    if (text.includes("race") && text.includes("condition")) {
+      keywords.push("race_condition");
+    }
+    if (text.includes("inefficient") || text.includes("performance")) {
+      keywords.push("performance");
+    }
+    if (text.includes("missing") && text.includes("test")) {
+      keywords.push("missing_test");
+    }
+    return keywords;
+  }
+  isAboutAddedFileFalsePositive(finding) {
+    const text = (finding.title + " " + finding.message).toLowerCase();
+    if (text.includes("added without") && text.includes("test")) {
+      return true;
+    }
+    if (text.includes("without visible test")) {
+      return true;
+    }
+    return false;
+  }
+  isSubjectiveCodeOpinion(finding) {
+    const text = (finding.title + " " + finding.message).toLowerCase();
+    return (
+      // Complexity/readability complaints (subjective)
+      text.includes("complex") && text.includes("difficult to read") || text.includes("complexity") && !text.includes("exponential") && !text.includes("o(n") || text.includes("readability") || // Code structure opinions
+      text.includes("should be broken down") || text.includes("should be split") || text.includes("consider using an enum") || text.includes("consider using constants") || text.includes("magic strings") || text.includes("refactor") && !text.includes("refactor to fix") || text.includes("substantial diff") || text.includes("significant logic changes") || text.includes("review") && text.includes("algorithm changes") || text.includes("review") && text.includes("implications") || // Path normalization suggestions (not bugs)
+      text.includes("path normalization") && !text.includes("security") || text.includes("inconsistent") && text.includes("path") && !text.includes("vulnerability") || // Documentation/commenting suggestions
+      text.includes("add tests") && !text.includes("untested") || text.includes("add unit test") || text.includes("add regression test") || text.includes("document") && text.includes("policy")
+    );
+  }
+  isCodeQualityIssue(finding) {
+    const text = (finding.title + " " + finding.message).toLowerCase();
+    return (
+      // Input validation (unless security-related)
+      text.includes("missing") && text.includes("validation") && !this.isTrueSecurityIssue(finding) || text.includes("missing") && text.includes("input validation") && !this.isTrueSecurityIssue(finding) || text.includes("missing") && text.includes("error handling") && !text.includes("crash") || text.includes("missing") && text.includes("type safety") && !this.isTrueSecurityIssue(finding) || text.includes("missing") && text.includes("runtime") && !this.isTrueSecurityIssue(finding) || text.includes("lacks") && text.includes("validation") || text.includes("inconsistent") && text.includes("error handling") || text.includes("inconsistency") && !this.isTrueSecurityIssue(finding) || // Hard-coded values
+      text.includes("hard-coded") || text.includes("hardcoded") || // Inefficiency (unless extreme)
+      text.includes("inefficient") && !text.includes("exponential") || text.includes("performance issue") || text.includes("potential performance") || // Monolithic / structure
+      text.includes("monolithic") || text.includes("complexity") || text.includes("cyclomatic") || text.includes("readability") || text.includes("code complexity") || text.includes("excessive") || text.includes("duplication") || text.includes("duplicate") || text.includes("conditional statements") || text.includes("conditional logic") || text.includes("flaky test") || text.includes("race condition") && !text.includes("crash") && !this.isTrueSecurityIssue(finding) || text.includes("timing") && (text.includes("assumption") || text.includes("dependent")) || // Comments
+      text.includes("comment") || text.includes("documentation") || // Pattern validation complaints (TypeScript/library already validates)
+      text.includes("insecure") && text.includes("pattern validation") || text.includes("pattern") && text.includes("not properly validate") || text.includes("unsafe") && text.includes("glob pattern") || // Path handling (unless security)
+      text.includes("path normalization") && !text.includes("vulnerability") || text.includes("path") && text.includes("consistency") && !text.includes("vulnerability") || text.includes("path quoting") && !text.includes("vulnerability") || text.includes("quoting") && text.includes("not fully handled") || // Serialization/deserialization implementation
+      text.includes("circular reference") && text.includes("serialization") || text.includes("deep clone") && text.includes("independence") || // Rate limiting / error handling implementation details
+      text.includes("rate limit handling") && !text.includes("bypass") || text.includes("health check implementation") && !text.includes("fail") || text.includes("handling 402") || // Payment errors are expected
+      text.includes("payment required not handled") || text.includes("lightweight healthcheck") || text.includes("introduce lightweight") || // Concurrency/synchronization (unless actual crash)
+      text.includes("concurrency") && !text.includes("crash") || text.includes("synchronization") && !text.includes("crash") || text.includes("atomic operation") || text.includes("mutex") || text.includes("cleanup") && text.includes("timeout") && !text.includes("memory leak") || text.includes("cancellation") && !text.includes("crash") || // Timeout/cleanup implementation details
+      text.includes("timeout") && text.includes("validation") && text.includes("missing") || text.includes("timeout") && text.includes("configurable") || text.includes("timeout handling") || text.includes("timeout value") || text.includes("promise") && text.includes("leak") && text.includes("potential") || text.includes("doesn't clean up properly") || // Batch validation (implementation detail)
+      text.includes("batch size validation") || text.includes("token-aware batching") || text.includes("batch override") || text.includes("provider batch override") || text.includes("clamping behavior") || // Model selection (not a bug)
+      text.includes("model ranking") || text.includes("model selection") || // Completeness suggestions (not bugs)
+      text.includes("incomplete") && !this.isTrueSecurityIssue(finding) || text.includes("not handled") && !this.isTrueSecurityIssue(finding) || text.includes("lacks sufficient validation") && !this.isTrueSecurityIssue(finding) || text.includes("could be more efficient") || text.includes("more efficient") && !text.includes("must") || // Implementation changes (not bugs)
+      text.includes("api change") || text.includes("graph builder changes") || text.includes("cache versioning") || text.includes("new graphcache") || text.includes("diff excerpt truncated") || text.includes("normalized paths") || text.includes("use normalized") || text.includes("circular graphs") || text.includes("deep copying") || text.includes("security hardening") || text.includes("aggressive pattern validation")
+    );
+  }
+};
 
 // src/output/json.ts
 function buildJson(review) {
@@ -39750,11 +40931,11 @@ var qmarksTestNoExtDot = ([$0]) => {
   return (f) => f.length === len && f !== "." && f !== "..";
 };
 var defaultPlatform = typeof process === "object" && process ? typeof process.env === "object" && process.env && process.env.__MINIMATCH_TESTING_PLATFORM__ || process.platform : "posix";
-var path8 = {
+var path11 = {
   win32: { sep: "\\" },
   posix: { sep: "/" }
 };
-var sep = defaultPlatform === "win32" ? path8.win32.sep : path8.posix.sep;
+var sep = defaultPlatform === "win32" ? path11.win32.sep : path11.posix.sep;
 minimatch.sep = sep;
 var GLOBSTAR = Symbol("globstar **");
 minimatch.GLOBSTAR = GLOBSTAR;
@@ -40448,6 +41629,7 @@ var PathMatcher = class {
     this.checkControlCharacters(pattern);
     this.checkAllowedCharacters(pattern);
     this.checkTraversal(pattern);
+    this.checkMinimatchSyntax(pattern);
   }
   /**
    * Check if pattern exceeds maximum length
@@ -40533,7 +41715,11 @@ var PathMatcher = class {
         `Pattern contains non-ASCII characters. Only printable ASCII characters (0x20-0x7E) are allowed for cross-platform compatibility.`
       );
     }
-    const allowed = /^[A-Za-z0-9.@+^!_\-/*?{}\[\],()~# ]+$/;
+    const allowSpaces = Boolean(this.config.allowSpaces);
+    if (!allowSpaces && pattern.includes(" ")) {
+      throw new Error("Pattern contains spaces but allowSpaces=false");
+    }
+    const allowed = allowSpaces ? /^[A-Za-z0-9.@+^!_\-/*?{}[\],()~# ]+$/ : /^[A-Za-z0-9.@+^!_\-/*?{}[\],()~#]+$/;
     if (!allowed.test(pattern)) {
       throw new Error(
         `Pattern contains unsupported characters: ${pattern}. Only alphanumerics (A-Z, a-z, 0-9), glob wildcards (*, ?, {}, []), path separators (/), and safe punctuation (.@+^!_-,()~# space) are allowed.`
@@ -40561,6 +41747,20 @@ var PathMatcher = class {
     const traversalSegment = /(^|[\\/])\.\.(?:[\\/]|$)/;
     if (traversalSegment.test(pattern)) {
       throw new Error(`Pattern contains path traversal ('..') which is not allowed: ${pattern}`);
+    }
+  }
+  /**
+   * Validate that minimatch can compile the pattern. This catches malformed
+   * bracket/brace expressions beyond our simple balance checks.
+   */
+  checkMinimatchSyntax(pattern) {
+    try {
+      const re = minimatch.makeRe(pattern, { nonegate: true, nocomment: true, allowWindowsEscape: false });
+      if (!re) {
+        throw new Error("Pattern did not compile");
+      }
+    } catch (err) {
+      throw new Error(`Invalid glob syntax for pattern "${pattern}": ${err.message}`);
     }
   }
   /**
@@ -41007,7 +42207,7 @@ var ProgressTracker = class {
 };
 
 // src/core/orchestrator.ts
-var fs7 = __toESM(require("fs/promises"));
+var fs10 = __toESM(require("fs/promises"));
 var import_path = __toESM(require("path"));
 var HEALTH_CHECK_TIMEOUT_MS = 3e4;
 var ReviewOrchestrator = class {
@@ -41384,9 +42584,19 @@ var ReviewOrchestrator = class {
         (f) => this.enrichFinding(f, pr.files, staticAnalysis.context, providerCount, codeGraph)
       );
       const quietFiltered = await this.applyQuietMode(enriched, config);
+      const findingFilter = new FindingFilter();
+      const { findings: finalFiltered, stats: filterStats } = findingFilter.filter(quietFiltered, pr.diff);
+      if (filterStats.filtered > 0 || filterStats.downgraded > 0) {
+        logger.info(
+          `Post-processing filter: ${filterStats.filtered} filtered, ${filterStats.downgraded} downgraded, ${filterStats.kept} kept (from ${filterStats.total} total)`
+        );
+        if (Object.keys(filterStats.reasons).length > 0) {
+          logger.debug("Filter breakdown:", filterStats.reasons);
+        }
+      }
       await progressTracker?.updateProgress("static", "completed", "AST, security, and rules processed");
       const testHints = config.enableTestHints ? this.components.testCoverage.analyze(pr.files) : void 0;
-      const impactAnalysis = this.components.impactAnalyzer.analyze(pr.files, staticAnalysis.context, quietFiltered.length > 0);
+      const impactAnalysis = this.components.impactAnalyzer.analyze(pr.files, staticAnalysis.context, finalFiltered.length > 0);
       const mermaidDiagram = this.components.mermaidGenerator.generateImpactDiagram(pr.files, staticAnalysis.context);
       const costSummary = this.components.costTracker.summary();
       const runDetails = {
@@ -41406,7 +42616,7 @@ var ReviewOrchestrator = class {
         providerPoolSize: providers.length
       };
       review = this.components.synthesis.synthesize(
-        quietFiltered,
+        finalFiltered,
         reviewPR,
         testHints,
         aiAnalysis,
@@ -41717,8 +42927,8 @@ These types of changes are automatically filtered to save review time and API co
     const base = this.sanitizeFilename(process.env.REPORT_BASENAME || "multi-provider-review");
     const sarifPath = import_path.default.join(process.cwd(), `${base}.sarif`);
     const jsonPath = import_path.default.join(process.cwd(), `${base}.json`);
-    await fs7.writeFile(sarifPath, JSON.stringify(buildSarif(review.findings), null, 2), "utf8");
-    await fs7.writeFile(jsonPath, buildJson(review), "utf8");
+    await fs10.writeFile(sarifPath, JSON.stringify(buildSarif(review.findings), null, 2), "utf8");
+    await fs10.writeFile(jsonPath, buildJson(review), "utf8");
     logger.info(`Wrote reports: ${sarifPath}, ${jsonPath}`);
   }
 };

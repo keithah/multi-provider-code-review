@@ -1,0 +1,12 @@
+{
+  "providers": [
+    "claude/sonnet",
+    "codex/gpt-5.1-codex-max",
+    "gemini/gemini-2.0-flash"
+  ],
+  "providerLimit": 3,
+  "timeout": 120000,
+  "incrementalEnabled": true,
+  "enableCaching": true,
+  "analyticsEnabled": true
+}

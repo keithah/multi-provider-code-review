@@ -1,6 +1,9 @@
 import { Provider } from './base';
 import { OpenRouterProvider } from './openrouter';
 import { OpenCodeProvider } from './opencode';
+import { ClaudeCodeProvider } from './claude-code';
+import { CodexProvider } from './codex';
+import { GeminiProvider } from './gemini';
 import { ReviewConfig } from '../types';
 import { RateLimiter } from './rate-limiter';
 import { ReliabilityTracker } from './reliability-tracker';
@@ -290,6 +293,24 @@ export class ProviderRegistry {
       if (name.startsWith('opencode/')) {
         const model = name.replace('opencode/', '');
         list.push(new OpenCodeProvider(model));
+        continue;
+      }
+
+      if (name.startsWith('claude/')) {
+        const model = name.replace('claude/', '');
+        list.push(new ClaudeCodeProvider(model));
+        continue;
+      }
+
+      if (name.startsWith('codex/')) {
+        const model = name.replace('codex/', '');
+        list.push(new CodexProvider(model));
+        continue;
+      }
+
+      if (name.startsWith('gemini/')) {
+        const model = name.replace('gemini/', '');
+        list.push(new GeminiProvider(model));
         continue;
       }
     }
