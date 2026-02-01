@@ -139,3 +139,82 @@ export function mapLinesToPositions(patch: string | undefined): Map<number, numb
 
   return map;
 }
+
+/**
+ * Filter a full diff to only include chunks for the given files.
+ * Uses lightweight line scanning with a minimal regex for headers.
+ */
+export function filterDiffByFiles(diff: string, files: { filename: string }[]): string {
+  if (files.length === 0) return '';
+  if (!diff || diff.trim().length === 0) return '';
+
+  const target = new Set(files.map(f => f.filename));
+  const lines = diff.split('\n');
+  const chunks: string[] = [];
+  let currentChunk: string[] = [];
+  let includeCurrent = false;
+
+  const pushChunkIfIncluded = () => {
+    if (includeCurrent && currentChunk.length > 0) {
+      chunks.push(currentChunk.join('\n'));
+    }
+    currentChunk = [];
+    includeCurrent = false;
+  };
+
+  for (const line of lines) {
+    const normalizedLine = line.replace(/\r$/, '');
+    const isHeader = normalizedLine.startsWith('diff --git ');
+    if (isHeader) {
+      pushChunkIfIncluded();
+      const match = normalizedLine.match(/^diff --git\s+a\/(.+?)\s+b\/(.+)$/);
+      if (!match) {
+        currentChunk.push(line);
+        continue;
+      }
+      const rawA = match[1].trim();
+      const rawB = match[2].trim();
+      const aPath = unquoteGitPath(rawA);
+      const bPath = unquoteGitPath(rawB);
+      // Check both paths to correctly handle renames/moves
+      includeCurrent = target.has(bPath) || target.has(aPath);
+      currentChunk.push(line);
+    } else {
+      currentChunk.push(line);
+    }
+  }
+
+  pushChunkIfIncluded();
+
+  // Remove possible trailing empty string from split/join differences
+  return chunks.join('\n').trimEnd();
+}
+
+function unquoteGitPath(path: string): string {
+  // Git may quote paths with spaces or special chars using C-style escapes
+  if (path.startsWith('"') && path.endsWith('"')) {
+    path = path.slice(1, -1);
+  }
+  // Unescape common sequences produced by git (\" and \\ and \t etc.)
+  try {
+    path = path.replace(/\\([\\"tnr])/g, (_m, ch) => {
+      switch (ch) {
+        case '\\':
+          return '\\';
+        case '"':
+          return '"';
+        case 't':
+          return '\t';
+        case 'n':
+          return '\n';
+        case 'r':
+          return '\r';
+        default:
+          return ch;
+      }
+    });
+  } catch {
+    // If anything goes wrong, fall back to raw path
+  }
+  return path;
+}

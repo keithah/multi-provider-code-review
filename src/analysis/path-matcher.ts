@@ -1,4 +1,4 @@
-import { FileChange } from '../types';
+import { FileChange, ReviewIntensity } from '../types';
 import { logger } from '../utils/logger';
 import { minimatch } from 'minimatch';
 
@@ -29,8 +29,6 @@ export const MAX_COMPLEXITY_SCORE = 50;
  * - 25+ wildcards → 50+ points ✗ (rejected)
  */
 
-export type ReviewIntensity = 'thorough' | 'standard' | 'light';
-
 export interface PathPattern {
   pattern: string;
   intensity: ReviewIntensity;
@@ -41,6 +39,10 @@ export interface PathMatcherConfig {
   enabled: boolean;
   patterns: PathPattern[];
   defaultIntensity: ReviewIntensity;
+  /**
+   * Allow space characters in patterns. Defaults to false for safety.
+   */
+  allowSpaces?: boolean;
 }
 
 export interface IntensityResult {
@@ -98,6 +100,9 @@ export class PathMatcher {
     this.checkPatternLength(pattern);
     this.checkPatternComplexity(pattern);
     this.checkControlCharacters(pattern);
+    this.checkAllowedCharacters(pattern);
+    this.checkTraversal(pattern);
+    this.checkMinimatchSyntax(pattern);
   }
 
   /**
@@ -133,6 +138,132 @@ export class PathMatcher {
       if (pattern.charCodeAt(i) <= 0x1F) {
         throw new Error(`Pattern contains control characters: ${pattern}`);
       }
+    }
+  }
+
+  /**
+   * Restrict patterns to a safe character allowlist for glob matching.
+   *
+   * SECURITY CONTEXT:
+   * These patterns are ONLY used with the minimatch library (pure JavaScript),
+   * NEVER passed to shell commands or eval(). While minimatch is safe, we still
+   * block potentially dangerous characters for defense in depth.
+   *
+   * ALLOWED CHARACTERS:
+   * - Alphanumeric: A-Z, a-z, 0-9
+   * - Path separators: / (forward slash only)
+   * - Glob wildcards: * (asterisk), ? (question mark)
+   * - Glob braces: { } (brace expansion)
+   * - Character classes: [ ] (bracket expressions)
+   * - Special chars: . - _ @ + ^ ! ( ) ~ # , (space)
+   *
+   * BLOCKED CHARACTERS (explicit):
+   * - Backslash (\) - Prevents path traversal and escape sequences
+   * - Pipe (|) - No shell piping (not needed for globs)
+   * - Backtick (`) - No command substitution (not needed for globs)
+   * - Semicolon (;) - No command chaining (not needed for globs)
+   * - Ampersand (&) - No backgrounding (not needed for globs)
+   * - Angle brackets (< >) - No redirection (not needed for globs)
+   *
+   * MINIMATCH SAFETY:
+   * - nonegate: true (blocks ! negation at start of pattern)
+   * - nocomment: true (blocks # comments)
+   * - These options prevent pattern injection attacks
+   *
+   * DEFENSE IN DEPTH:
+   * Even though minimatch is safe, we enforce a strict allowlist to:
+   * 1. Catch accidental misuse (e.g., copy-paste errors)
+   * 2. Prevent future regressions if code changes
+   * 3. Make security properties explicit and auditable
+   */
+  /**
+   * Comprehensive character validation with explicit security checks
+   * Uses defense-in-depth: check for dangerous characters AND validate allowlist
+   */
+  private checkAllowedCharacters(pattern: string): void {
+    // First pass: Explicit block list for dangerous characters
+    // This catches obvious security issues before allowlist check
+    // Note: Control chars 0x00-0x1F are checked separately in checkControlCharacters()
+    const dangerousChars = /[\\`|;&<>'"$\x7F]/;
+    if (dangerousChars.test(pattern)) {
+      const found = pattern.match(dangerousChars);
+      throw new Error(
+        `Pattern contains dangerous character: ${found?.[0] ? JSON.stringify(found[0]) : 'DEL'}. ` +
+        `Backslashes, backticks, pipes, semicolons, quotes, and $ are not allowed.`
+      );
+    }
+
+    // Second pass: Check for non-ASCII characters (Unicode)
+    // Glob patterns should only use ASCII for portability and security
+    if (!/^[\x20-\x7E]+$/.test(pattern)) {
+      throw new Error(
+        `Pattern contains non-ASCII characters. ` +
+        `Only printable ASCII characters (0x20-0x7E) are allowed for cross-platform compatibility.`
+      );
+    }
+
+    // Third pass: Whitelist validation with explicit character ranges
+    // This is the primary security control - only known-safe characters pass
+    // Allowed: A-Z a-z 0-9 . @ + ^ ! _ - / * ? { } [ ] , ( ) ~ # and optional space (config)
+    // Note: $, =, % removed from allowlist as extra precaution (could be used in encoded payloads)
+    const allowSpaces = Boolean(this.config.allowSpaces); // default: disallow spaces unless explicitly enabled
+    if (!allowSpaces && pattern.includes(' ')) {
+      throw new Error('Pattern contains spaces but allowSpaces=false');
+    }
+    const allowed = allowSpaces
+      ? /^[A-Za-z0-9.@+^!_\-/*?{}[\],()~# ]+$/
+      : /^[A-Za-z0-9.@+^!_\-/*?{}[\],()~#]+$/;
+    if (!allowed.test(pattern)) {
+      throw new Error(
+        `Pattern contains unsupported characters: ${pattern}. ` +
+        `Only alphanumerics (A-Z, a-z, 0-9), glob wildcards (*, ?, {}, []), ` +
+        `path separators (/), and safe punctuation (.@+^!_-,()~# space) are allowed.`
+      );
+    }
+
+    // Fourth pass: Validate glob-specific syntax isn't malformed
+    // Check for unbalanced braces and brackets that could cause issues
+    const openBraces = (pattern.match(/\{/g) || []).length;
+    const closeBraces = (pattern.match(/\}/g) || []).length;
+    if (openBraces !== closeBraces) {
+      throw new Error(
+        `Pattern has unbalanced braces: ${openBraces} open, ${closeBraces} close. ` +
+        `Each '{' must have a matching '}'.`
+      );
+    }
+
+    const openBrackets = (pattern.match(/\[/g) || []).length;
+    const closeBrackets = (pattern.match(/\]/g) || []).length;
+    if (openBrackets !== closeBrackets) {
+      throw new Error(
+        `Pattern has unbalanced brackets: ${openBrackets} open, ${closeBrackets} close. ` +
+        `Each '[' must have a matching ']'.`
+      );
+    }
+  }
+
+  /**
+   * Block path traversal segments ('..') inside patterns to avoid unintended matches.
+   */
+  private checkTraversal(pattern: string): void {
+    const traversalSegment = /(^|[\\/])\.\.(?:[\\/]|$)/;
+    if (traversalSegment.test(pattern)) {
+      throw new Error(`Pattern contains path traversal ('..') which is not allowed: ${pattern}`);
+    }
+  }
+
+  /**
+   * Validate that minimatch can compile the pattern. This catches malformed
+   * bracket/brace expressions beyond our simple balance checks.
+   */
+  private checkMinimatchSyntax(pattern: string): void {
+    try {
+      const re = minimatch.makeRe(pattern, { nonegate: true, nocomment: true, allowWindowsEscape: false });
+      if (!re) {
+        throw new Error('Pattern did not compile');
+      }
+    } catch (err) {
+      throw new Error(`Invalid glob syntax for pattern "${pattern}": ${(err as Error).message}`);
     }
   }
 

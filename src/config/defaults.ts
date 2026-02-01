@@ -8,7 +8,16 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   fallbackProviders: [],
   providerAllowlist: [],
   providerBlocklist: [],
-  providerLimit: 6,
+
+  // COST CONTROLS:
+  // - openrouterAllowPaid: false = Only free models (blocks models with $/token pricing)
+  // - providerDiscoveryLimit: 8 = Health-check up to 8 providers for reliability
+  // - providerLimit: 6 = Actually use only 6 providers to control API usage
+  // - budgetMaxUsd: 0 = No budget allocated for paid APIs
+  // Combined these settings ensure zero cost when using default configuration
+  openrouterAllowPaid: false,  // IMPORTANT: Set to true only if you have OpenRouter credits
+  providerDiscoveryLimit: 8,   // Health-check pool size (higher = better reliability)
+  providerLimit: 6,             // Actual execution pool size (lower = lower costs)
   providerRetries: 2,
   providerMaxParallel: 3,
   quietModeEnabled: false,
@@ -39,8 +48,13 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   enableTestHints: true,
   enableAiDetection: true,
 
-  incrementalEnabled: true,
+  incrementalEnabled: true, // Re-enabled with broad infrastructure exclusion
   incrementalCacheTtlDays: 7,
+
+  batchMaxFiles: 30,
+  providerBatchOverrides: {},
+  enableTokenAwareBatching: true,
+  targetTokensPerBatch: 50000, // ~50k tokens per batch
 
   graphEnabled: false,
   graphCacheEnabled: true,
@@ -72,6 +86,27 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   pathBasedIntensity: false, // Disabled by default, opt-in
   pathIntensityPatterns: undefined,
   pathDefaultIntensity: 'standard',
+
+  // Provider selection strategy
+  providerSelectionStrategy: 'reliability',
+  providerExplorationRate: 0.3,  // 70% exploit, 30% explore
+
+  // Intensity behavior mappings
+  intensityProviderCounts: {
+    thorough: 8,
+    standard: 5,
+    light: 3,
+  },
+  intensityTimeouts: {
+    thorough: 180000,  // 3 minutes
+    standard: 120000,  // 2 minutes
+    light: 60000,      // 1 minute
+  },
+  intensityPromptDepth: {
+    thorough: 'detailed',
+    standard: 'standard',
+    light: 'brief',
+  },
 
   dryRun: false,
 };

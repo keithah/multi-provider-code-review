@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * GitHub API mock helpers for testing
  * Provides consistent mocking of Octokit GitHub API

@@ -1,4 +1,4 @@
-import { PathMatcher, PathPattern, createDefaultPathMatcherConfig, MAX_PATTERN_LENGTH, MAX_COMPLEXITY_SCORE } from '../../../src/analysis/path-matcher';
+import { PathMatcher, PathPattern, createDefaultPathMatcherConfig, MAX_PATTERN_LENGTH } from '../../../src/analysis/path-matcher';
 import { FileChange } from '../../../src/types';
 
 /**
@@ -559,17 +559,85 @@ describe('PathMatcher', () => {
       }).toThrow(/control characters/i);
     });
 
-    it('should accept pattern with regular space (0x20, not control char)', () => {
-      // Space (0x20) is NOT a control character
+    it('allows patterns containing spaces when explicitly configured', () => {
       const patternWithSpace = 'my project/*.ts';
 
       expect(() => {
         new PathMatcher({
           enabled: true,
           defaultIntensity: 'standard',
+          allowSpaces: true,
           patterns: [{ pattern: patternWithSpace, intensity: 'thorough' }],
         });
       }).not.toThrow();
+    });
+
+    it('accepts common real-world globs with parentheses and tildes', () => {
+      const matcher = new PathMatcher({
+        enabled: true,
+        defaultIntensity: 'standard',
+        allowSpaces: true,
+        patterns: [
+          { pattern: '**/* (copy).ts', intensity: 'standard' },
+          { pattern: 'docs/(draft)/*.md', intensity: 'light' },
+          { pattern: '~/**/config?.json', intensity: 'standard' },
+        ],
+      });
+
+      const files = [
+        createFile('src/foo (copy).ts'),
+        createFile('docs/(draft)/intro.md'),
+        createFile('~/app/config1.json'),
+      ];
+
+      expect(() => matcher.determineIntensity(files)).not.toThrow();
+    });
+
+    it('should reject pattern with disallowed characters (e.g., pipe or backtick)', () => {
+      const badPatterns = ['src|app.ts', '`rm -rf`'];
+
+      for (const badPattern of badPatterns) {
+        expect(() => {
+          new PathMatcher({
+            enabled: true,
+            defaultIntensity: 'standard',
+            patterns: [{ pattern: badPattern, intensity: 'thorough' }],
+          });
+        }).toThrow(/(unsupported|dangerous) character/i);
+      }
+    });
+
+    it('should reject patterns containing path traversal', () => {
+      const traversalPattern = '../secrets/*';
+
+      expect(() => {
+        new PathMatcher({
+          enabled: true,
+          defaultIntensity: 'standard',
+          patterns: [{ pattern: traversalPattern, intensity: 'thorough' }],
+        });
+      }).toThrow(/path traversal/i);
+    });
+
+    it('allows brace and bracket glob tokens used by minimatch', () => {
+      const matcher = new PathMatcher({
+        enabled: true,
+        defaultIntensity: 'standard',
+        patterns: [
+          { pattern: 'src/{api,[a-z]*}/**/*.{ts,js}', intensity: 'thorough' },
+        ],
+      });
+
+      const files = [
+        createFile('src/api/user.ts'),
+        createFile('src/alpha/index.js'),
+      ];
+
+      const result = matcher.determineIntensity(files);
+      expect(result.intensity).toBe('thorough');
+      expect(result.matchedPaths).toEqual(
+        expect.arrayContaining(['src/api/user.ts', 'src/alpha/index.js'])
+      );
     });
   });
 });

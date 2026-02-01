@@ -4,9 +4,15 @@ dist/**
 !dist/index.js
 !dist/index.js.map
 .mpr-cache
+.mpr-cache-test-*
 npm-debug.log*
 .DS_Store
+
+# Test artifacts
+__tests__/**/*.bak*
+IMPLEMENTATION_PLANS.md
 
 # Generated review output files
 *.sarif
 multi-provider-review.json
+

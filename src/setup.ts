@@ -32,6 +32,7 @@ import { PromptGenerator } from './autofix/prompt-generator';
 import { ReliabilityTracker } from './providers/reliability-tracker';
 import { MetricsCollector } from './analytics/metrics-collector';
 import { PluginLoader } from './plugins';
+import { BatchOrchestrator } from './core/batch-orchestrator';
 
 export interface SetupOptions {
   cliMode?: boolean;
@@ -82,7 +83,6 @@ async function createComponentsForCLI(config: ReviewConfig): Promise<ReviewCompo
     await pluginLoader.loadPlugins();
   }
 
-  const providerRegistry = new ProviderRegistry(pluginLoader);
   const promptBuilder = new PromptBuilder(config);
   const llmExecutor = new LLMExecutor(config);
   const deduplicator = new Deduplicator();
@@ -94,7 +94,7 @@ async function createComponentsForCLI(config: ReviewConfig): Promise<ReviewCompo
   const synthesis = new SynthesisEngine(config);
   const testCoverage = new TestCoverageAnalyzer();
   const astAnalyzer = new ASTAnalyzer();
-  const cache = new CacheManager();
+  const cache = new CacheManager(undefined, config);
   const incrementalReviewer = new IncrementalReviewer(new CacheStorage(), {
     enabled: config.incrementalEnabled,
     cacheTtlDays: config.incrementalCacheTtlDays,
@@ -126,9 +126,17 @@ async function createComponentsForCLI(config: ReviewConfig): Promise<ReviewCompo
     : undefined;
   const promptGenerator = new PromptGenerator('plain');
   const reliabilityTracker = new ReliabilityTracker(cacheStorage);
+  const providerRegistry = new ProviderRegistry(pluginLoader, reliabilityTracker);
   const metricsCollector = config.analyticsEnabled
     ? new MetricsCollector(cacheStorage, config)
     : undefined;
+  const batchOrchestrator = new BatchOrchestrator({
+    defaultBatchSize: config.batchMaxFiles || 30,
+    providerOverrides: config.providerBatchOverrides,
+    enableTokenAwareBatching: config.enableTokenAwareBatching,
+    targetTokensPerBatch: config.targetTokensPerBatch,
+    maxBatchSize: config.batchMaxFiles,
+  });
 
   // Mock GitHub components for CLI mode
   const mockGitHubClient = {} as GitHubClient;
@@ -172,6 +180,7 @@ async function createComponentsForCLI(config: ReviewConfig): Promise<ReviewCompo
     promptGenerator,
     reliabilityTracker,
     metricsCollector,
+    batchOrchestrator,
   };
 }
 
@@ -190,7 +199,6 @@ export async function createComponents(config: ReviewConfig, githubToken: string
     await pluginLoader.loadPlugins();
   }
 
-  const providerRegistry = new ProviderRegistry(pluginLoader);
   const promptBuilder = new PromptBuilder(config);
   const llmExecutor = new LLMExecutor(config);
   const deduplicator = new Deduplicator();
@@ -202,7 +210,7 @@ export async function createComponents(config: ReviewConfig, githubToken: string
   const synthesis = new SynthesisEngine(config);
   const testCoverage = new TestCoverageAnalyzer();
   const astAnalyzer = new ASTAnalyzer();
-  const cache = new CacheManager();
+  const cache = new CacheManager(undefined, config);
   const incrementalReviewer = new IncrementalReviewer(new CacheStorage(), {
     enabled: config.incrementalEnabled,
     cacheTtlDays: config.incrementalCacheTtlDays,
@@ -239,9 +247,17 @@ export async function createComponents(config: ReviewConfig, githubToken: string
     : undefined;
   const promptGenerator = new PromptGenerator('plain');
   const reliabilityTracker = new ReliabilityTracker(cacheStorage);
+  const providerRegistry = new ProviderRegistry(pluginLoader, reliabilityTracker);
   const metricsCollector = config.analyticsEnabled
     ? new MetricsCollector(cacheStorage, config)
     : undefined;
+  const batchOrchestrator = new BatchOrchestrator({
+    defaultBatchSize: config.batchMaxFiles || 30,
+    providerOverrides: config.providerBatchOverrides,
+    enableTokenAwareBatching: config.enableTokenAwareBatching,
+    targetTokensPerBatch: config.targetTokensPerBatch,
+    maxBatchSize: config.batchMaxFiles,
+  });
 
   return {
     config,
@@ -272,5 +288,7 @@ export async function createComponents(config: ReviewConfig, githubToken: string
     promptGenerator,
     reliabilityTracker,
     metricsCollector,
+    batchOrchestrator,
+    githubClient,
   };
 }

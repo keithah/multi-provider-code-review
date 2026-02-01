@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ReviewOrchestrator, ReviewComponents } from '../../src/core/orchestrator';
 import { ReviewConfig, ProviderResult } from '../../src/types';
 import { PromptBuilder } from '../../src/analysis/llm/prompt-builder';
@@ -63,6 +64,7 @@ describe('GitHub integration mock (no network)', () => {
     fallbackProviders: [],
     providerAllowlist: [],
     providerBlocklist: [],
+    providerDiscoveryLimit: 8,
     providerLimit: 0,
     providerRetries: 1,
     providerMaxParallel: 1,

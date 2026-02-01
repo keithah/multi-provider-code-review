@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubicloud-standard-2
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -24,7 +24,7 @@ jobs:
       - run: npm run typecheck
       # Run tests with CI-optimized settings:
       # --maxWorkers=2: Limit parallelism to reduce resource contention
-      # --forceExit: Ensure clean exit despite lingering async operations
-      # Note: All 439 tests must pass; forceExit only prevents hanging on cleanup
-      - run: npm test -- --maxWorkers=2 --forceExit
+      # --detectOpenHandles surfaces lingering async resources
+      # Use per-test timeout and open-handle detection to avoid hangs
+      - run: npm run test -- --maxWorkers=2 --detectOpenHandles --testTimeout=20000
       - run: npm run build

@@ -4,15 +4,33 @@
 
 export type Severity = 'critical' | 'major' | 'minor';
 
+/**
+ * Configuration for multi-provider code review
+ *
+ * New fields added in recent versions:
+ * - providerDiscoveryLimit: Controls health check breadth (default: 8)
+ * - providerBatchOverrides: Provider-specific batch sizes
+ * - enableTokenAwareBatching: Dynamic batching based on token estimation
+ * - targetTokensPerBatch: Target tokens per batch (default: 50000)
+ * - providerSelectionStrategy: How to select providers (default: 'reliability')
+ * - providerExplorationRate: Exploration vs exploitation (default: 0.3)
+ * - intensityProviderCounts: Provider counts per intensity level
+ * - intensityTimeouts: Timeout mappings per intensity level
+ * - intensityPromptDepth: Prompt detail level per intensity
+ *
+ * All new fields are optional and have sensible defaults defined in src/config/defaults.ts
+ */
 export interface ReviewConfig {
   providers: string[];
   synthesisModel: string;
   fallbackProviders: string[];
   providerAllowlist: string[];
   providerBlocklist: string[];
-  providerLimit: number;
+  providerDiscoveryLimit?: number; // Max providers to discover/health-check (default: 8)
+  providerLimit: number;           // Max providers to use for actual review (default: 6)
   providerRetries: number;
   providerMaxParallel: number;
+  openrouterAllowPaid?: boolean;
   quietModeEnabled?: boolean;
   quietMinConfidence?: number;
   quietUseLearning?: boolean;
@@ -44,6 +62,11 @@ export interface ReviewConfig {
   incrementalEnabled: boolean;
   incrementalCacheTtlDays: number;
 
+  batchMaxFiles?: number;
+  providerBatchOverrides?: Record<string, number>;
+  enableTokenAwareBatching?: boolean;
+  targetTokensPerBatch?: number;
+
   graphEnabled?: boolean;
   graphCacheEnabled?: boolean;
   graphMaxDepth?: number;
@@ -74,6 +97,27 @@ export interface ReviewConfig {
   pathBasedIntensity?: boolean;
   pathIntensityPatterns?: string; // JSON string of PathPattern[]
   pathDefaultIntensity?: 'thorough' | 'standard' | 'light';
+
+  // Provider selection strategy
+  providerSelectionStrategy?: 'reliability' | 'random' | 'round-robin';
+  providerExplorationRate?: number;  // 0.0-1.0, default 0.3 (30% exploration)
+
+  // Intensity behavior mappings
+  intensityProviderCounts?: {
+    thorough: number;
+    standard: number;
+    light: number;
+  };
+  intensityTimeouts?: {
+    thorough: number;
+    standard: number;
+    light: number;
+  };
+  intensityPromptDepth?: {
+    thorough: 'detailed' | 'standard' | 'brief';
+    standard: 'detailed' | 'standard' | 'brief';
+    light: 'detailed' | 'standard' | 'brief';
+  };
 
   dryRun: boolean;
 }
@@ -323,3 +367,5 @@ export interface CodeGraph {
   findDependencies(file: string): CodeSnippet[];
   findImpactRadius(file: string): ImpactAnalysis;
 }
+
+export type ReviewIntensity = 'thorough' | 'standard' | 'light';

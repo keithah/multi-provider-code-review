@@ -71,11 +71,17 @@ export class ConfigLoader {
       fallbackProviders: this.parseArray(env.FALLBACK_PROVIDERS),
       providerAllowlist: this.parseArray(env.PROVIDER_ALLOWLIST),
       providerBlocklist: this.parseArray(env.PROVIDER_BLOCKLIST),
+      openrouterAllowPaid: this.parseBoolean(env.OPENROUTER_ALLOW_PAID),
+      providerDiscoveryLimit: this.parseNumber(env.PROVIDER_DISCOVERY_LIMIT),
       providerLimit: this.parseNumber(env.PROVIDER_LIMIT),
       providerRetries: this.parseNumber(env.PROVIDER_RETRIES),
       providerMaxParallel: this.parseNumber(env.PROVIDER_MAX_PARALLEL),
       quietModeEnabled: this.parseBoolean(env.QUIET_MODE_ENABLED),
       quietMinConfidence: this.parseFloat(env.QUIET_MIN_CONFIDENCE),
+      quietUseLearning: this.parseBoolean(env.QUIET_USE_LEARNING),
+      learningEnabled: this.parseBoolean(env.LEARNING_ENABLED),
+      learningMinFeedbackCount: this.parseNumber(env.LEARNING_MIN_FEEDBACK_COUNT),
+      learningLookbackDays: this.parseNumber(env.LEARNING_LOOKBACK_DAYS),
 
       inlineMaxComments: this.parseNumber(env.INLINE_MAX_COMMENTS),
       inlineMinSeverity: this.parseSeverity(env.INLINE_MIN_SEVERITY),
@@ -101,6 +107,9 @@ export class ConfigLoader {
       incrementalEnabled: this.parseBoolean(env.INCREMENTAL_ENABLED),
       incrementalCacheTtlDays: this.parseNumber(env.INCREMENTAL_CACHE_TTL_DAYS),
 
+      batchMaxFiles: this.parseNumber(env.BATCH_MAX_FILES),
+      providerBatchOverrides: this.parseOverrides(env.PROVIDER_BATCH_OVERRIDES),
+
       skipTrivialChanges: this.parseBoolean(env.SKIP_TRIVIAL_CHANGES),
       skipDependencyUpdates: this.parseBoolean(env.SKIP_DEPENDENCY_UPDATES),
       skipDocumentationOnly: this.parseBoolean(env.SKIP_DOCUMENTATION_ONLY),
@@ -125,11 +134,17 @@ export class ConfigLoader {
       fallbackProviders: config.fallback_providers,
       providerAllowlist: config.provider_allowlist,
       providerBlocklist: config.provider_blocklist,
+      openrouterAllowPaid: config.openrouter_allow_paid,
+      providerDiscoveryLimit: config.provider_discovery_limit,
       providerLimit: config.provider_limit,
       providerRetries: config.provider_retries,
       providerMaxParallel: config.provider_max_parallel,
       quietModeEnabled: config.quiet_mode_enabled,
       quietMinConfidence: config.quiet_min_confidence,
+      quietUseLearning: config.quiet_use_learning,
+      learningEnabled: config.learning_enabled,
+      learningMinFeedbackCount: config.learning_min_feedback_count,
+      learningLookbackDays: config.learning_lookback_days,
       inlineMaxComments: config.inline_max_comments,
       inlineMinSeverity: config.inline_min_severity,
       inlineMinAgreement: config.inline_min_agreement,
@@ -148,6 +163,24 @@ export class ConfigLoader {
       enableAiDetection: config.enable_ai_detection,
       incrementalEnabled: config.incremental_enabled,
       incrementalCacheTtlDays: config.incremental_cache_ttl_days,
+      batchMaxFiles: config.batch_max_files,
+      providerBatchOverrides: config.provider_batch_overrides,
+      enableTokenAwareBatching: config.enable_token_aware_batching,
+      targetTokensPerBatch: config.target_tokens_per_batch,
+      graphEnabled: config.graph_enabled,
+      graphCacheEnabled: config.graph_cache_enabled,
+      graphMaxDepth: config.graph_max_depth,
+      graphTimeoutSeconds: config.graph_timeout_seconds,
+      generateFixPrompts: config.generate_fix_prompts,
+      fixPromptFormat: config.fix_prompt_format,
+      analyticsEnabled: config.analytics_enabled,
+      analyticsMaxReviews: config.analytics_max_reviews,
+      analyticsDeveloperRate: config.analytics_developer_rate,
+      analyticsManualReviewTime: config.analytics_manual_review_time,
+      pluginsEnabled: config.plugins_enabled,
+      pluginDir: config.plugin_dir,
+      pluginAllowlist: config.plugin_allowlist,
+      pluginBlocklist: config.plugin_blocklist,
       skipTrivialChanges: config.skip_trivial_changes,
       skipDependencyUpdates: config.skip_dependency_updates,
       skipDocumentationOnly: config.skip_documentation_only,
@@ -159,6 +192,11 @@ export class ConfigLoader {
       pathBasedIntensity: config.path_based_intensity,
       pathIntensityPatterns: config.path_intensity_patterns,
       pathDefaultIntensity: config.path_default_intensity,
+      providerSelectionStrategy: config.provider_selection_strategy,
+      providerExplorationRate: config.provider_exploration_rate,
+      intensityProviderCounts: config.intensity_provider_counts,
+      intensityTimeouts: config.intensity_timeouts,
+      intensityPromptDepth: config.intensity_prompt_depth,
       dryRun: config.dry_run,
     };
   }
@@ -201,6 +239,38 @@ export class ConfigLoader {
     if (!value) return undefined;
     const num = Number.parseFloat(value);
     return Number.isFinite(num) ? num : undefined;
+  }
+
+  private static parseOverrides(value?: string): Record<string, number> | undefined {
+    if (!value) return undefined;
+    try {
+      const parsed = JSON.parse(value);
+      if (typeof parsed !== 'object' || Array.isArray(parsed) || parsed === null) {
+        throw new Error('Overrides must be a JSON object');
+      }
+      const result: Record<string, number> = {};
+      for (const [key, val] of Object.entries(parsed)) {
+        const num = Number(val);
+        if (!Number.isFinite(num)) continue;
+
+        // Enforce integer batch sizes between 1 and 200 (schema constraint)
+        const intVal = Math.trunc(num);
+        if (intVal < 1) {
+          logger.warn(`Ignoring PROVIDER_BATCH_OVERRIDES entry for "${key}": value ${intVal} is below minimum 1`);
+          continue;
+        }
+        const clamped = Math.min(intVal, 200);
+        if (clamped !== intVal) {
+          logger.warn(`Clamping PROVIDER_BATCH_OVERRIDES entry for "${key}" from ${intVal} to maximum 200`);
+        }
+        result[key] = clamped;
+      }
+      return result;
+    } catch (error) {
+      const message = `Failed to parse PROVIDER_BATCH_OVERRIDES: ${(error as Error).message}`;
+      logger.warn(message);
+      return undefined;
+    }
   }
 
   private static parseSeverity(value?: string): 'critical' | 'major' | 'minor' | undefined {

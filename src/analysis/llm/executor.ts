@@ -32,10 +32,16 @@ export class LLMExecutor {
         const started = Date.now();
         try {
           const isHealthy = await provider.healthCheck(healthCheckTimeoutMs);
+          // Duration is measured immediately after health check completes
           const duration = Date.now() - started;
 
           if (isHealthy) {
             healthyProviders.push(provider);
+            healthCheckResults.push({
+              name: provider.name,
+              status: 'success',
+              durationSeconds: duration / 1000,
+            });
             logger.info(`✓ Provider ${provider.name} health check passed (${duration}ms)`);
           } else {
             // Health check returned false - likely timed out
@@ -79,16 +85,16 @@ export class LLMExecutor {
     return { healthy: healthyProviders, healthCheckResults };
   }
 
-  async execute(providers: Provider[], prompt: string): Promise<ProviderResult[]> {
+  async execute(providers: Provider[], prompt: string, timeoutMs?: number): Promise<ProviderResult[]> {
     const queue = createQueue(this.config.providerMaxParallel);
     const results: ProviderResult[] = [];
 
     for (const provider of providers) {
       queue.add(async () => {
         const started = Date.now();
-        const timeoutMs = this.config.runTimeoutSeconds * 1000;
+        const actualTimeoutMs = timeoutMs ?? (this.config.runTimeoutSeconds * 1000);
 
-        const runner = async () => provider.review(prompt, timeoutMs);
+        const runner = async () => provider.review(prompt, actualTimeoutMs);
 
         try {
           const result = await withRetry(runner, {

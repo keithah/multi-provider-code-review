@@ -132,7 +132,7 @@ export class TrivialDetector {
       return {
         isTrivial: false,
         trivialFiles: [],
-        nonTrivialFiles: files.map(f => f.filename),
+        nonTrivialFiles: files.map(f => this.normalizePath(f.filename)),
       };
     }
 
@@ -141,10 +141,13 @@ export class TrivialDetector {
 
     // Categorize each file
     for (const file of files) {
+      // Always normalize paths for consistent cross-platform behavior
+      const normalizedPath = this.normalizePath(file.filename);
+
       if (this.isFileTrivial(file)) {
-        trivialFiles.push(file.filename);
+        trivialFiles.push(normalizedPath);
       } else {
-        nonTrivialFiles.push(file.filename);
+        nonTrivialFiles.push(normalizedPath);
       }
     }
 
@@ -172,8 +175,10 @@ export class TrivialDetector {
    * Check if a single file is trivial
    */
   private isFileTrivial(file: FileChange): boolean {
+    const normalized = this.normalizePath(file.filename);
+
     return (
-      this.isFileTrivialByType(file.filename) ||
+      this.isFileTrivialByType(normalized) ||
       this.isFileTrivialByContent(file)
     );
   }
@@ -451,6 +456,13 @@ export class TrivialDetector {
   private normalizeWhitespace(text: string): string {
     // Trim leading/trailing whitespace and collapse internal runs to single space
     return text.trim().replace(/\s+/g, ' ');
+  }
+
+  /**
+   * Normalize path separators for consistent matching across platforms.
+   */
+  private normalizePath(filename: string): string {
+    return filename.replace(/\\/g, '/');
   }
 
   /**
