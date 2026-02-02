@@ -32229,7 +32229,8 @@ var ClaudeCodeProvider = class extends Provider {
     return new Promise((resolve2, reject) => {
       const proc = (0, import_child_process2.spawn)(bin, args, {
         stdio: ["ignore", "pipe", "pipe"],
-        detached: true
+        detached: true,
+        env: process.env
       });
       if (proc.unref) {
         proc.unref();
@@ -32400,7 +32401,8 @@ var CodexProvider = class extends Provider {
     return new Promise((resolve2, reject) => {
       const proc = (0, import_child_process3.spawn)(bin, args, {
         stdio: ["ignore", "pipe", "pipe"],
-        detached: true
+        detached: true,
+        env: process.env
       });
       if (proc.unref) {
         proc.unref();
@@ -32568,7 +32570,8 @@ var GeminiProvider = class extends Provider {
     return new Promise((resolve2, reject) => {
       const proc = (0, import_child_process4.spawn)(bin, args, {
         stdio: ["ignore", "pipe", "pipe"],
-        detached: true
+        detached: true,
+        env: process.env
       });
       if (proc.unref) {
         proc.unref();
