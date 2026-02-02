@@ -105,6 +105,7 @@ export class ClaudeCodeProvider extends Provider {
       const proc = spawn(bin, args, {
         stdio: ['ignore', 'pipe', 'pipe'],
         detached: true,
+        env: process.env,
       });
 
       // Unref to avoid keeping parent alive (if available)
