@@ -133,38 +133,46 @@ jobs:
           npm install -g @google/gemini-cli
           npm install -g codex-cli
 
-      - name: Setup CLI OAuth Credentials
-        # Restore OAuth credentials for Claude Code, Codex, and Gemini CLIs
-        # Secrets are configured at repository level
+      - name: Setup CLI Environment Variables
+        # Extract OAuth tokens and set as environment variables
+        # This aligns with official GitHub actions authentication:
+        # - anthropics/claude-code-action uses ANTHROPIC_API_KEY
+        # - openai/codex-action uses OPENAI_API_KEY
+        # - google-github-actions/run-gemini-cli uses GEMINI_API_KEY
+        id: setup-env
         run: |
-          # Setup Claude Code
+          # Extract Claude Code OAuth token
           if [ -n "${{ secrets.CLAUDE_CODE_OAUTH }}" ]; then
-            mkdir -p ~/.config/claude
-            echo '${{ secrets.CLAUDE_CODE_OAUTH }}' > ~/.config/claude/credentials.json
-            chmod 600 ~/.config/claude/credentials.json
-            echo "✅ Claude Code credentials configured"
+            CLAUDE_TOKEN=$(echo '${{ secrets.CLAUDE_CODE_OAUTH }}' | jq -r '.claudeAiOauth.accessToken // empty')
+            if [ -n "$CLAUDE_TOKEN" ]; then
+              echo "ANTHROPIC_API_KEY=$CLAUDE_TOKEN" >> $GITHUB_ENV
+              echo "::add-mask::$CLAUDE_TOKEN"
+              echo "✅ Claude Code API key configured"
+            fi
           else
             echo "⚠️  CLAUDE_CODE_OAUTH not set, Claude providers will be skipped"
           fi
 
-          # Setup Codex
+          # Extract Codex OAuth token
           if [ -n "${{ secrets.CODEX_AUTH_JSON }}" ]; then
-            mkdir -p ~/.codex
-            echo '${{ secrets.CODEX_AUTH_JSON }}' > ~/.codex/auth.json
-            echo '${{ secrets.CODEX_CONFIG_TOML }}' > ~/.codex/config.toml
-            chmod 600 ~/.codex/auth.json ~/.codex/config.toml
-            echo "✅ Codex credentials configured"
+            CODEX_TOKEN=$(echo '${{ secrets.CODEX_AUTH_JSON }}' | jq -r '.tokens.access_token // empty')
+            if [ -n "$CODEX_TOKEN" ]; then
+              echo "OPENAI_API_KEY=$CODEX_TOKEN" >> $GITHUB_ENV
+              echo "::add-mask::$CODEX_TOKEN"
+              echo "✅ Codex API key configured"
+            fi
           else
             echo "⚠️  CODEX_AUTH_JSON not set, Codex providers will be skipped"
           fi
 
-          # Setup Gemini
+          # Extract Gemini OAuth token
           if [ -n "${{ secrets.GEMINI_OAUTH_CREDS }}" ]; then
-            mkdir -p ~/.gemini
-            echo '${{ secrets.GEMINI_OAUTH_CREDS }}' > ~/.gemini/oauth_creds.json
-            echo '${{ secrets.GEMINI_SETTINGS }}' > ~/.gemini/settings.json
-            chmod 600 ~/.gemini/oauth_creds.json ~/.gemini/settings.json
-            echo "✅ Gemini credentials configured"
+            GEMINI_TOKEN=$(echo '${{ secrets.GEMINI_OAUTH_CREDS }}' | jq -r '.access_token // empty')
+            if [ -n "$GEMINI_TOKEN" ]; then
+              echo "GEMINI_API_KEY=$GEMINI_TOKEN" >> $GITHUB_ENV
+              echo "::add-mask::$GEMINI_TOKEN"
+              echo "✅ Gemini API key configured"
+            fi
           else
             echo "⚠️  GEMINI_OAUTH_CREDS not set, Gemini providers will be skipped"
           fi
@@ -202,3 +210,6 @@ jobs:
           # See docs/CI_SETUP.md for provider configuration
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ env.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ env.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ env.GEMINI_API_KEY }}
