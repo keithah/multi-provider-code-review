@@ -85,9 +85,10 @@ export class CodexProvider extends Provider {
 
   private async runCliWithStdin(bin: string, args: string[], stdin: string, timeoutMs: number): Promise<{ stdout: string; stderr: string }> {
     // Write prompt to temporary file to avoid TTY check issues
+    // Use restrictive permissions (0600) since prompt may contain sensitive PR diffs
     const tmpFile = path.join(os.tmpdir(), `codex-prompt-${crypto.randomBytes(8).toString('hex')}.txt`);
     try {
-      await fs.writeFile(tmpFile, stdin, 'utf8');
+      await fs.writeFile(tmpFile, stdin, { encoding: 'utf8', mode: 0o600 });
 
       // Use stdin redirection via file descriptor instead of shell
       // This avoids both "stdin is not a terminal" error and shell injection

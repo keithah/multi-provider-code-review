@@ -153,8 +153,8 @@ If you have all CLIs authenticated locally and GitHub CLI (`gh`) installed:
 # Claude Code (macOS - uses Keychain)
 security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null | gh secret set CLAUDE_CODE_OAUTH
 
-# Claude Code (Linux - uses config file)
-# cat ~/.config/claude/credentials.json | gh secret set CLAUDE_CODE_OAUTH
+# Claude Code (Linux - uses config file instead)
+cat ~/.config/claude/credentials.json | gh secret set CLAUDE_CODE_OAUTH
 
 # Codex and Gemini (same on macOS/Linux)
 cat ~/.codex/auth.json | gh secret set CODEX_AUTH_JSON

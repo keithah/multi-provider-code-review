@@ -32388,7 +32388,7 @@ var CodexProvider = class extends Provider {
   async runCliWithStdin(bin, args, stdin, timeoutMs) {
     const tmpFile = path4.join(os3.tmpdir(), `codex-prompt-${crypto3.randomBytes(8).toString("hex")}.txt`);
     try {
-      await fs4.writeFile(tmpFile, stdin, "utf8");
+      await fs4.writeFile(tmpFile, stdin, { encoding: "utf8", mode: 384 });
       const fd2 = await fs4.open(tmpFile, "r");
       return await new Promise((resolve2, reject) => {
         const proc = (0, import_child_process3.spawn)(bin, args, {
