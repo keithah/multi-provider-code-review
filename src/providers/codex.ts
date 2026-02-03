@@ -83,72 +83,79 @@ export class CodexProvider extends Provider {
     }
   }
 
-  private runCliWithStdin(bin: string, args: string[], stdin: string, timeoutMs: number): Promise<{ stdout: string; stderr: string }> {
-    return new Promise((resolve, reject) => {
-      // Use detached: true to create a new process group
-      // This allows killing the entire process tree when needed
-      const proc = spawn(bin, args, {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        detached: true,
-        env: process.env,
-      });
+  private async runCliWithStdin(bin: string, args: string[], stdin: string, timeoutMs: number): Promise<{ stdout: string; stderr: string }> {
+    // Write prompt to temporary file to avoid TTY check issues
+    const tmpFile = path.join(os.tmpdir(), `codex-prompt-${crypto.randomBytes(8).toString('hex')}.txt`);
+    try {
+      await fs.writeFile(tmpFile, stdin, 'utf8');
 
-      // Unref to avoid keeping parent alive (if available)
-      if (proc.unref) {
-        proc.unref();
-      }
+      // Use shell to redirect file as stdin: codex ... < tmpFile
+      // This avoids the "stdin is not a terminal" error
+      const command = `${bin} ${args.map(a => a.includes(' ') ? `"${a}"` : a).join(' ')} < "${tmpFile}"`;
 
-      let stdout = '';
-      let stderr = '';
-      let timedOut = false;
+      return await new Promise((resolve, reject) => {
+        const proc = spawn(command, [], {
+          stdio: ['ignore', 'pipe', 'pipe'],
+          shell: true,
+          detached: true,
+          env: process.env,
+        });
 
-      const timer = setTimeout(() => {
-        timedOut = true;
-        logger.warn(`Codex CLI timeout (${timeoutMs}ms), killing process and all children`);
+        // Unref to avoid keeping parent alive
+        if (proc.unref) {
+          proc.unref();
+        }
 
-        // Kill the entire process group to ensure child processes are terminated
-        // On Unix: negative PID kills the process group
-        try {
-          if (proc.pid) {
-            process.kill(-proc.pid, 'SIGKILL');
+        let stdout = '';
+        let stderr = '';
+        let timedOut = false;
+
+        const timer = setTimeout(() => {
+          timedOut = true;
+          logger.warn(`Codex CLI timeout (${timeoutMs}ms), killing process and all children`);
+
+          try {
+            if (proc.pid) {
+              process.kill(-proc.pid, 'SIGKILL');
+            }
+          } catch (err) {
+            proc.kill('SIGKILL');
           }
-        } catch (err) {
-          // Fallback: kill just the main process
-          proc.kill('SIGKILL');
-        }
 
-        reject(new Error(`Codex CLI timed out after ${timeoutMs}ms`));
-      }, timeoutMs);
+          reject(new Error(`Codex CLI timed out after ${timeoutMs}ms`));
+        }, timeoutMs);
 
-      // Write prompt to stdin and close it
-      if (proc.stdin) {
-        proc.stdin.write(stdin);
-        proc.stdin.end();
-      }
-
-      proc.stdout.on('data', chunk => {
-        stdout += chunk.toString();
-      });
-      proc.stderr.on('data', chunk => {
-        stderr += chunk.toString();
-      });
-      proc.on('error', err => {
-        if (!timedOut) {
-          clearTimeout(timer);
-          reject(err);
-        }
-      });
-      proc.on('close', code => {
-        if (!timedOut) {
-          clearTimeout(timer);
-          if (code !== 0) {
-            reject(new Error(`Codex CLI exited with code ${code}: ${stderr || stdout || 'no output'}`));
-          } else {
-            resolve({ stdout: stdout.trim(), stderr: stderr.trim() });
+        proc.stdout?.on('data', chunk => {
+          stdout += chunk.toString();
+        });
+        proc.stderr?.on('data', chunk => {
+          stderr += chunk.toString();
+        });
+        proc.on('error', err => {
+          if (!timedOut) {
+            clearTimeout(timer);
+            reject(err);
           }
-        }
+        });
+        proc.on('close', code => {
+          if (!timedOut) {
+            clearTimeout(timer);
+            if (code !== 0) {
+              reject(new Error(`Codex CLI exited with code ${code}: ${stderr || stdout || 'no output'}`));
+            } else {
+              resolve({ stdout: stdout.trim(), stderr: stderr.trim() });
+            }
+          }
+        });
       });
-    });
+    } finally {
+      // Clean up temp file
+      try {
+        await fs.unlink(tmpFile);
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
   }
 
   private async resolveBinary(): Promise<string> {
