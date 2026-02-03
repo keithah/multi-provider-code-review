@@ -53,7 +53,7 @@ export class PromptBuilder {
       fileList.push(`  (${excludedCount} additional file(s) truncated)`);
     }
 
-    const depth = this.config.intensityPromptDepth?.[this.intensity] ?? 'standard';
+    const _depth = this.config.intensityPromptDepth?.[this.intensity] ?? 'standard';
 
     const instructions = [
       `You are a code reviewer. ONLY report actual bugs - code that will crash, lose data, or have security vulnerabilities.`,
