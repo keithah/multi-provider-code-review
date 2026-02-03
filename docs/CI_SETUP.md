@@ -20,6 +20,53 @@ The general approach for all three CLIs is:
 
 ---
 
+## Quick Start: Automated Setup
+
+If you have all three CLIs authenticated locally and `gh` installed, you can set up all secrets with these commands:
+
+### For Current Repository
+
+```bash
+# Claude Code (macOS Keychain)
+security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null | gh secret set CLAUDE_CODE_OAUTH
+
+# Codex CLI
+cat ~/.codex/auth.json | gh secret set CODEX_AUTH_JSON
+cat ~/.codex/config.toml | gh secret set CODEX_CONFIG_TOML
+
+# Gemini CLI
+cat ~/.gemini/oauth_creds.json | gh secret set GEMINI_OAUTH_CREDS
+cat ~/.gemini/settings.json | gh secret set GEMINI_SETTINGS
+
+# Verify secrets were created
+gh secret list
+```
+
+### For Another Repository
+
+Add `--repo owner/repo-name` to each command:
+
+```bash
+# Example for setting secrets in another repository
+security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null | \
+  gh secret set CLAUDE_CODE_OAUTH --repo keithah/my-repo
+
+cat ~/.codex/auth.json | gh secret set CODEX_AUTH_JSON --repo keithah/my-repo
+cat ~/.codex/config.toml | gh secret set CODEX_CONFIG_TOML --repo keithah/my-repo
+cat ~/.gemini/oauth_creds.json | gh secret set GEMINI_OAUTH_CREDS --repo keithah/my-repo
+cat ~/.gemini/settings.json | gh secret set GEMINI_SETTINGS --repo keithah/my-repo
+```
+
+**✅ That's it!** Your repository now has all the required secrets. Jump to the [Complete Workflow Example](#complete-github-actions-workflow-example) to set up your workflow.
+
+---
+
+## Detailed Setup (Manual Method)
+
+If you prefer to understand the process or need to set up secrets manually, follow the detailed instructions below for each CLI.
+
+---
+
 ## Claude Code CLI
 
 Claude Code stores credentials in the macOS Keychain on macOS systems, or in configuration files on Linux.
@@ -208,6 +255,8 @@ gh secret set GEMINI_SETTINGS --body "$(cat ~/.gemini/settings.json)"
 ---
 
 ## Complete GitHub Actions Workflow Example
+
+**⚠️ Important:** The workflow in this repository (`.github/workflows/multi-provider-review.yml`) has been updated to properly create CLI configuration files from secrets. If you're using an older version of this action, make sure to update to the latest version or copy the credential setup steps shown below.
 
 Here's a complete workflow that sets up all three CLIs and runs multi-provider code review:
 

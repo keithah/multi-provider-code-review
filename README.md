@@ -143,27 +143,59 @@ OAuth-based CLIs (Claude Code, Codex, Gemini) require credential setup for CI/CD
 2. **Store as GitHub Secrets** (encrypted storage)
 3. **Restore in CI workflow** before running reviews
 
-**See the [CI Setup Guide](docs/CI_SETUP.md) for detailed instructions** on:
-- Extracting OAuth credentials from macOS Keychain or config files
-- Creating GitHub Secrets for each CLI
-- Configuring workflows to restore credentials
-- Complete workflow examples
+#### Quick Setup (Automated)
+
+If you have all CLIs authenticated locally and GitHub CLI (`gh`) installed:
+
+```bash
+# Set secrets for current repository
+security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null | gh secret set CLAUDE_CODE_OAUTH
+cat ~/.codex/auth.json | gh secret set CODEX_AUTH_JSON
+cat ~/.codex/config.toml | gh secret set CODEX_CONFIG_TOML
+cat ~/.gemini/oauth_creds.json | gh secret set GEMINI_OAUTH_CREDS
+cat ~/.gemini/settings.json | gh secret set GEMINI_SETTINGS
+
+# For another repository, add: --repo owner/repo-name
+```
+
+**See the [CI Setup Guide](docs/CI_SETUP.md) for:**
+- Detailed step-by-step instructions
+- Manual secret creation via GitHub UI
+- Complete workflow examples with credential restoration
+- Platform-specific notes (Linux, macOS, Windows)
 - Troubleshooting and security best practices
 
-**Quick Example:**
+**Workflow Example:**
 ```yaml
-- name: Setup Claude Code
-  if: ${{ secrets.CLAUDE_CODE_OAUTH != '' }}
+- name: Setup CLI Configuration Files
   run: |
-    mkdir -p ~/.config/claude
-    echo '${{ secrets.CLAUDE_CODE_OAUTH }}' > ~/.config/claude/credentials.json
-    chmod 600 ~/.config/claude/credentials.json
+    # Claude Code
+    if [ -n "${{ secrets.CLAUDE_CODE_OAUTH }}" ]; then
+      mkdir -p ~/.config/claude
+      echo '${{ secrets.CLAUDE_CODE_OAUTH }}' > ~/.config/claude/credentials.json
+      chmod 600 ~/.config/claude/credentials.json
+    fi
+    # Codex
+    if [ -n "${{ secrets.CODEX_AUTH_JSON }}" ]; then
+      mkdir -p ~/.codex
+      echo '${{ secrets.CODEX_AUTH_JSON }}' > ~/.codex/auth.json
+      echo '${{ secrets.CODEX_CONFIG_TOML }}' > ~/.codex/config.toml
+      chmod 600 ~/.codex/auth.json ~/.codex/config.toml
+    fi
+    # Gemini
+    if [ -n "${{ secrets.GEMINI_OAUTH_CREDS }}" ]; then
+      mkdir -p ~/.gemini
+      echo '${{ secrets.GEMINI_OAUTH_CREDS }}' > ~/.gemini/oauth_creds.json
+      echo '${{ secrets.GEMINI_SETTINGS }}' > ~/.gemini/settings.json
+      chmod 600 ~/.gemini/oauth_creds.json ~/.gemini/settings.json
+    fi
 
-- name: Run Review with Claude Code
-  run: npx multi-provider-code-review
-  env:
+- name: Run Review
+  uses: keithah/multi-provider-code-review@main
+  with:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    REVIEW_PROVIDERS: "claude/sonnet,claude/opus"
+    PR_NUMBER: ${{ github.event.pull_request.number }}
+    REVIEW_PROVIDERS: "claude/sonnet,codex/gpt-5.1-codex-max,gemini/gemini-2.0-flash"
 ```
 
 ### Plugin System
