@@ -52,28 +52,18 @@ export class CodexProvider extends Provider {
     const binary = await this.resolveBinary();
 
     // Codex CLI command:
-    // codex --model <model> --dangerously-bypass-approvals-and-sandbox -c approval_policy="never" <prompt>
-    // Note: Using prompt directly as last argument (Codex may not support file input the same way)
-    // We'll still use a temp file to avoid shell injection and length limits
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'codex-'));
-    await fs.chmod(tmpDir, 0o700);
-    const promptFile = path.join(tmpDir, `prompt-${crypto.randomBytes(8).toString('hex')}.txt`);
-    await fs.writeFile(promptFile, prompt, { encoding: 'utf8', mode: 0o600 });
-
-    // Read the prompt back to pass as argument (safer than shell expansion)
-    const promptText = await fs.readFile(promptFile, 'utf8');
-
+    // echo <prompt> | codex --model <model> --dangerously-bypass-approvals-and-sandbox -c approval_policy="never"
+    // Pass prompt via stdin to avoid "stdin is not a terminal" error
     const args = [
       '--model', this.model,
       '--dangerously-bypass-approvals-and-sandbox',
-      '-c', 'approval_policy=never',
-      promptText
+      '-c', 'approval_policy=never'
     ];
 
     logger.info(`Running Codex CLI: codex --model ${this.model} --dangerously-bypass-approvals-and-sandbox ...`);
 
     try {
-      const { stdout, stderr } = await this.runCli(binary, args, timeoutMs);
+      const { stdout, stderr } = await this.runCliWithStdin(binary, args, prompt, timeoutMs);
       const content = stdout.trim();
       const durationSeconds = (Date.now() - started) / 1000;
       logger.info(
@@ -90,23 +80,15 @@ export class CodexProvider extends Provider {
     } catch (error) {
       logger.error(`Codex provider failed: ${this.name}`, error as Error);
       throw error;
-    } finally {
-      // Clean up temp file
-      try {
-        await fs.unlink(promptFile);
-        await fs.rmdir(tmpDir);
-      } catch (err) {
-        // Ignore cleanup errors
-      }
     }
   }
 
-  private runCli(bin: string, args: string[], timeoutMs: number): Promise<{ stdout: string; stderr: string }> {
+  private runCliWithStdin(bin: string, args: string[], stdin: string, timeoutMs: number): Promise<{ stdout: string; stderr: string }> {
     return new Promise((resolve, reject) => {
       // Use detached: true to create a new process group
       // This allows killing the entire process tree when needed
       const proc = spawn(bin, args, {
-        stdio: ['ignore', 'pipe', 'pipe'],
+        stdio: ['pipe', 'pipe', 'pipe'],
         detached: true,
         env: process.env,
       });
@@ -137,6 +119,12 @@ export class CodexProvider extends Provider {
 
         reject(new Error(`Codex CLI timed out after ${timeoutMs}ms`));
       }, timeoutMs);
+
+      // Write prompt to stdin and close it
+      if (proc.stdin) {
+        proc.stdin.write(stdin);
+        proc.stdin.end();
+      }
 
       proc.stdout.on('data', chunk => {
         stdout += chunk.toString();
