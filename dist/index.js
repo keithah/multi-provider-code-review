@@ -32389,17 +32389,13 @@ var CodexProvider = class extends Provider {
     const tmpFile = path4.join(os3.tmpdir(), `codex-prompt-${crypto3.randomBytes(8).toString("hex")}.txt`);
     try {
       await fs4.writeFile(tmpFile, stdin, "utf8");
-      const command = `${bin} ${args.map((a) => a.includes(" ") ? `"${a}"` : a).join(" ")} < "${tmpFile}"`;
+      const fd2 = await fs4.open(tmpFile, "r");
       return await new Promise((resolve2, reject) => {
-        const proc = (0, import_child_process3.spawn)(command, [], {
-          stdio: ["ignore", "pipe", "pipe"],
-          shell: true,
+        const proc = (0, import_child_process3.spawn)(bin, args, {
+          stdio: [fd2.fd, "pipe", "pipe"],
           detached: true,
           env: process.env
         });
-        if (proc.unref) {
-          proc.unref();
-        }
         let stdout = "";
         let stderr = "";
         let timedOut = false;
@@ -32433,13 +32429,14 @@ var CodexProvider = class extends Provider {
             if (code !== 0) {
               reject(new Error(`Codex CLI exited with code ${code}: ${stderr || stdout || "no output"}`));
             } else {
-              resolve2({ stdout: stdout.trim(), stderr: stderr.trim() });
+              resolve2({ stdout, stderr });
             }
           }
         });
       });
     } finally {
       try {
+        await fd.close();
         await fs4.unlink(tmpFile);
       } catch {
       }
@@ -41369,9 +41366,9 @@ var Minimatch = class {
       const fdi = fileUNC ? 3 : fileDrive ? 0 : void 0;
       const pdi = patternUNC ? 3 : patternDrive ? 0 : void 0;
       if (typeof fdi === "number" && typeof pdi === "number") {
-        const [fd, pd] = [file[fdi], pattern[pdi]];
-        if (fd.toLowerCase() === pd.toLowerCase()) {
-          pattern[pdi] = fd;
+        const [fd2, pd] = [file[fdi], pattern[pdi]];
+        if (fd2.toLowerCase() === pd.toLowerCase()) {
+          pattern[pdi] = fd2;
           if (pdi > fdi) {
             pattern = pattern.slice(pdi);
           } else if (fdi > pdi) {
@@ -41527,10 +41524,10 @@ var Minimatch = class {
       }
       return filtered.join("/");
     }).join("|");
-    const [open, close] = set2.length > 1 ? ["(?:", ")"] : ["", ""];
-    re = "^" + open + re + close + "$";
+    const [open2, close] = set2.length > 1 ? ["(?:", ")"] : ["", ""];
+    re = "^" + open2 + re + close + "$";
     if (this.partial) {
-      re = "^(?:\\/|" + open + re.slice(1, -1) + close + ")$";
+      re = "^(?:\\/|" + open2 + re.slice(1, -1) + close + ")$";
     }
     if (this.negate)
       re = "^(?!" + re + ").+$";
@@ -42764,8 +42761,8 @@ var ReviewOrchestrator = class {
     if (!tracker || providers.length === 0) return providers;
     const available = [];
     for (const provider of providers) {
-      const open = await tracker.isCircuitOpen(provider.name);
-      if (open) {
+      const open2 = await tracker.isCircuitOpen(provider.name);
+      if (open2) {
         logger.warn(`Skipping provider ${provider.name} (circuit open)`);
         continue;
       }

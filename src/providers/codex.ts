@@ -89,22 +89,16 @@ export class CodexProvider extends Provider {
     try {
       await fs.writeFile(tmpFile, stdin, 'utf8');
 
-      // Use shell to redirect file as stdin: codex ... < tmpFile
-      // This avoids the "stdin is not a terminal" error
-      const command = `${bin} ${args.map(a => a.includes(' ') ? `"${a}"` : a).join(' ')} < "${tmpFile}"`;
+      // Use stdin redirection via file descriptor instead of shell
+      // This avoids both "stdin is not a terminal" error and shell injection
+      const fd = await fs.open(tmpFile, 'r');
 
       return await new Promise((resolve, reject) => {
-        const proc = spawn(command, [], {
-          stdio: ['ignore', 'pipe', 'pipe'],
-          shell: true,
+        const proc = spawn(bin, args, {
+          stdio: [fd.fd, 'pipe', 'pipe'],
           detached: true,
           env: process.env,
         });
-
-        // Unref to avoid keeping parent alive
-        if (proc.unref) {
-          proc.unref();
-        }
 
         let stdout = '';
         let stderr = '';
@@ -143,14 +137,15 @@ export class CodexProvider extends Provider {
             if (code !== 0) {
               reject(new Error(`Codex CLI exited with code ${code}: ${stderr || stdout || 'no output'}`));
             } else {
-              resolve({ stdout: stdout.trim(), stderr: stderr.trim() });
+              resolve({ stdout, stderr });
             }
           }
         });
       });
     } finally {
-      // Clean up temp file
+      // Clean up temp file and file descriptor
       try {
+        await fd.close();
         await fs.unlink(tmpFile);
       } catch {
         // Ignore cleanup errors
