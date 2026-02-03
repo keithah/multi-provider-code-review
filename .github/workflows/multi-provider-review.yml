@@ -185,7 +185,7 @@ jobs:
               echo '${{ secrets.GEMINI_SETTINGS }}' > ~/.gemini/settings.json
             else
               # Create minimal settings.json pointing to oauth_creds.json
-              echo '{"oauth_credentials_path": "~/.gemini/oauth_creds.json"}' > ~/.gemini/settings.json
+              echo "{\"oauth_credentials_path\": \"$HOME/.gemini/oauth_creds.json\"}" > ~/.gemini/settings.json
             fi
             chmod 600 ~/.gemini/settings.json
             # Also set environment variable as fallback

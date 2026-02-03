@@ -17,7 +17,7 @@ jobs:
           fetch-depth: 0
 
       - name: Multi-Provider Code Review
-        uses: keithah/multi-provider-code-review@dev
+        uses: keithah/multi-provider-code-review@main
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}

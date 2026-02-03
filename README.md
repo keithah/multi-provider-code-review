@@ -149,7 +149,14 @@ If you have all CLIs authenticated locally and GitHub CLI (`gh`) installed:
 
 ```bash
 # Set secrets for current repository
+
+# Claude Code (macOS - uses Keychain)
 security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null | gh secret set CLAUDE_CODE_OAUTH
+
+# Claude Code (Linux - uses config file)
+# cat ~/.config/claude/credentials.json | gh secret set CLAUDE_CODE_OAUTH
+
+# Codex and Gemini (same on macOS/Linux)
 cat ~/.codex/auth.json | gh secret set CODEX_AUTH_JSON
 cat ~/.codex/config.toml | gh secret set CODEX_CONFIG_TOML
 cat ~/.gemini/oauth_creds.json | gh secret set GEMINI_OAUTH_CREDS
@@ -157,6 +164,8 @@ cat ~/.gemini/settings.json | gh secret set GEMINI_SETTINGS
 
 # For another repository, add: --repo owner/repo-name
 ```
+
+**Note:** See [CI Setup Guide](docs/CI_SETUP.md) for platform-specific instructions (Linux/macOS/Windows).
 
 **See the [CI Setup Guide](docs/CI_SETUP.md) for:**
 - Detailed step-by-step instructions
