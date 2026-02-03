@@ -20,7 +20,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       expect(filtered).toEqual(findings);
       expect(stats.kept).toBe(1);
@@ -39,7 +39,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       expect(filtered).toHaveLength(0);
       expect(stats.filtered).toBe(1);
@@ -57,7 +57,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       expect(filtered).toHaveLength(1);
       expect(filtered[0].severity).toBe('minor');
@@ -75,7 +75,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       expect(filtered).toHaveLength(0);
       expect(stats.filtered).toBe(1);
@@ -93,7 +93,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       // Lint issues are now completely filtered
       expect(filtered).toHaveLength(0);
@@ -111,7 +111,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       // Style issues are now completely filtered
       expect(filtered).toHaveLength(0);
@@ -169,7 +169,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       expect(filtered).toHaveLength(0);
       expect(stats.filtered).toBe(3);
@@ -462,7 +462,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       expect(filtered).toHaveLength(0);
       expect(stats.filtered).toBe(2);
@@ -480,7 +480,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       // ALL test files are now filtered, no exceptions (except true security issues)
       expect(filtered).toHaveLength(0);
@@ -498,7 +498,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       expect(filtered).toHaveLength(1);
       expect(filtered[0].severity).toBe('critical');
@@ -569,7 +569,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       // Should keep only one (the most severe)
       expect(filtered).toHaveLength(1);
@@ -589,7 +589,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       // jest.setup.ts is test infrastructure - should be completely filtered
       expect(filtered).toHaveLength(0);
@@ -614,7 +614,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       // Should filter both
       expect(filtered).toHaveLength(0);
@@ -640,7 +640,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       // Should filter both as general config warnings
       expect(filtered).toHaveLength(0);
@@ -672,7 +672,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       // All should be filtered as workflow config, and if any survive, deduped to 1
       expect(filtered.length).toBeLessThanOrEqual(1);
@@ -697,7 +697,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       // Both are filtered completely:
       // "Missing input validation" - filtered as suggestion
@@ -717,7 +717,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       expect(filtered).toHaveLength(0);
       expect(stats.filtered).toBe(1);
@@ -743,7 +743,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       expect(filtered).toHaveLength(0);
       expect(stats.filtered).toBe(2);
@@ -775,7 +775,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       // Workflow and test files will be downgraded to minor (not filtered by line:1 alone)
       // JSON file should be filtered by line:1
@@ -820,7 +820,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       expect(filtered).toHaveLength(0);
       expect(stats.filtered).toBe(1);
@@ -846,7 +846,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       expect(filtered).toHaveLength(0);
       expect(stats.filtered).toBe(2);
@@ -879,7 +879,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       // All three are now filtered as suggestions:
       // - "Missing validation" - missing + validation
@@ -907,7 +907,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       expect(filtered).toHaveLength(0);
       expect(stats.filtered).toBe(2);
@@ -932,7 +932,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       // Test file is completely filtered (new behavior)
       // Source file "does not properly validate" matches code quality patterns, also filtered
@@ -958,7 +958,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       expect(filtered).toHaveLength(0);
       expect(stats.filtered).toBe(2);
@@ -976,7 +976,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       // Can be filtered as suggestion ("should be") or downgraded as code quality
       expect(filtered.length).toBeLessThanOrEqual(1);
@@ -1010,7 +1010,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       // All should be filtered as suggestions (they say "Monitor" and "adjust")
       expect(filtered).toHaveLength(0);
@@ -1036,7 +1036,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
+      const { findings: filtered, stats } = filter.filter(findings, '');
 
       expect(filtered).toHaveLength(0);
       expect(stats.filtered).toBe(2);

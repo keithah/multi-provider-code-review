@@ -87,16 +87,18 @@ export class CodexProvider extends Provider {
     // Write prompt to temporary file to avoid TTY check issues
     // Use restrictive permissions (0600) since prompt may contain sensitive PR diffs
     const tmpFile = path.join(os.tmpdir(), `codex-prompt-${crypto.randomBytes(8).toString('hex')}.txt`);
+    let fd: fs.FileHandle | undefined;
     try {
       await fs.writeFile(tmpFile, stdin, { encoding: 'utf8', mode: 0o600 });
 
       // Use stdin redirection via file descriptor instead of shell
       // This avoids both "stdin is not a terminal" error and shell injection
-      const fd = await fs.open(tmpFile, 'r');
+      fd = await fs.open(tmpFile, 'r');
+      const fdNum = fd.fd;
 
       return await new Promise((resolve, reject) => {
         const proc = spawn(bin, args, {
-          stdio: [fd.fd, 'pipe', 'pipe'],
+          stdio: [fdNum, 'pipe', 'pipe'],
           detached: true,
           env: process.env,
         });
@@ -146,7 +148,9 @@ export class CodexProvider extends Provider {
     } finally {
       // Clean up temp file and file descriptor
       try {
-        await fd.close();
+        if (fd) {
+          await fd.close();
+        }
         await fs.unlink(tmpFile);
       } catch {
         // Ignore cleanup errors

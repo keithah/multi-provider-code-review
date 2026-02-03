@@ -32387,12 +32387,14 @@ var CodexProvider = class extends Provider {
   }
   async runCliWithStdin(bin, args, stdin, timeoutMs) {
     const tmpFile = path4.join(os3.tmpdir(), `codex-prompt-${crypto3.randomBytes(8).toString("hex")}.txt`);
+    let fd;
     try {
       await fs4.writeFile(tmpFile, stdin, { encoding: "utf8", mode: 384 });
-      const fd2 = await fs4.open(tmpFile, "r");
+      fd = await fs4.open(tmpFile, "r");
+      const fdNum = fd.fd;
       return await new Promise((resolve2, reject) => {
         const proc = (0, import_child_process3.spawn)(bin, args, {
-          stdio: [fd2.fd, "pipe", "pipe"],
+          stdio: [fdNum, "pipe", "pipe"],
           detached: true,
           env: process.env
         });
@@ -32436,7 +32438,9 @@ var CodexProvider = class extends Provider {
       });
     } finally {
       try {
-        await fd.close();
+        if (fd) {
+          await fd.close();
+        }
         await fs4.unlink(tmpFile);
       } catch {
       }
@@ -33938,7 +33942,7 @@ var PromptBuilder = class {
     if (excludedCount > 0) {
       fileList.push(`  (${excludedCount} additional file(s) truncated)`);
     }
-    const depth = this.config.intensityPromptDepth?.[this.intensity] ?? "standard";
+    const _depth = this.config.intensityPromptDepth?.[this.intensity] ?? "standard";
     const instructions = [
       `You are a code reviewer. ONLY report actual bugs - code that will crash, lose data, or have security vulnerabilities.`,
       "",
@@ -41366,9 +41370,9 @@ var Minimatch = class {
       const fdi = fileUNC ? 3 : fileDrive ? 0 : void 0;
       const pdi = patternUNC ? 3 : patternDrive ? 0 : void 0;
       if (typeof fdi === "number" && typeof pdi === "number") {
-        const [fd2, pd] = [file[fdi], pattern[pdi]];
-        if (fd2.toLowerCase() === pd.toLowerCase()) {
-          pattern[pdi] = fd2;
+        const [fd, pd] = [file[fdi], pattern[pdi]];
+        if (fd.toLowerCase() === pd.toLowerCase()) {
+          pattern[pdi] = fd;
           if (pdi > fdi) {
             pattern = pattern.slice(pdi);
           } else if (fdi > pdi) {
