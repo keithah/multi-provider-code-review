@@ -126,7 +126,7 @@ export class TestCoverageAnalyzer {
     return files;
   }
 
-  private extractSourceFileReferences(content: string, testFile: string, projectRoot: string): string[] {
+  private extractSourceFileReferences(content: string, testFile: string, _projectRoot: string): string[] {
     const sourceFiles: string[] = [];
 
     // Match import/require statements

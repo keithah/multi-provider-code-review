@@ -976,7 +976,7 @@ describe('FindingFilter', () => {
         },
       ];
 
-      const { findings: filtered, stats } = filter.filter(findings, '');
+      const { findings: filtered, stats: _stats } = filter.filter(findings, '');
 
       // Can be filtered as suggestion ("should be") or downgraded as code quality
       expect(filtered.length).toBeLessThanOrEqual(1);
