@@ -51,8 +51,8 @@ export async function getBestFreeModelsCached(
 ): Promise<string[]> {
   const now = Date.now();
 
-  // Check cache
-  if (modelCache && now - modelCache.timestamp < CACHE_TTL_MS) {
+  // Check cache - only use if it has enough models for the requested count
+  if (modelCache && now - modelCache.timestamp < CACHE_TTL_MS && modelCache.models.length >= count) {
     logger.debug('Using cached OpenRouter model list');
     return modelCache.models.slice(0, count);
   }
