@@ -282,7 +282,9 @@ export class ProviderRegistry {
           logger.warn(`OPENROUTER_API_KEY not set; skipping OpenRouter provider ${name}`);
           continue;
         }
-        if (!config.openrouterAllowPaid && !model.endsWith(':free')) {
+        // Allow openrouter/free (meta-model) and models ending with :free
+        const isFree = model === 'free' || model.endsWith(':free');
+        if (!config.openrouterAllowPaid && !isFree) {
           logger.warn(`Skipping paid OpenRouter model ${name} (set openrouterAllowPaid=true to enable)`);
           continue;
         }

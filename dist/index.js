@@ -32738,9 +32738,9 @@ var PricingService = class _PricingService {
 };
 
 // src/providers/openrouter-models.ts
-async function getBestFreeModels(count = 4, _timeoutMs = 5e3) {
+async function getBestFreeModels(_count = 4, _timeoutMs = 5e3) {
   logger.debug("Using OpenRouter free meta-model for automatic routing");
-  return Array(count).fill("openrouter/free");
+  return ["openrouter/free"];
 }
 var modelCache = null;
 var CACHE_TTL_MS = 60 * 60 * 1e3;
@@ -33081,7 +33081,8 @@ var ProviderRegistry = class {
           logger.warn(`OPENROUTER_API_KEY not set; skipping OpenRouter provider ${name}`);
           continue;
         }
-        if (!config.openrouterAllowPaid && !model.endsWith(":free")) {
+        const isFree = model === "free" || model.endsWith(":free");
+        if (!config.openrouterAllowPaid && !isFree) {
           logger.warn(`Skipping paid OpenRouter model ${name} (set openrouterAllowPaid=true to enable)`);
           continue;
         }
