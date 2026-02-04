@@ -14,7 +14,7 @@ services:
 
       # Provider configuration
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-      - REVIEW_PROVIDERS=${REVIEW_PROVIDERS:-openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free}
+      - REVIEW_PROVIDERS=${REVIEW_PROVIDERS:-openrouter/free}
 
       # Feature flags
       - ENABLE_AST_ANALYSIS=true

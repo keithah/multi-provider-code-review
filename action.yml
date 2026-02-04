@@ -39,7 +39,7 @@ inputs:
   SYNTHESIS_MODEL:
     description: "Model used for synthesis/prompts"
     required: false
-    default: "openrouter/google/gemini-2.0-flash-exp:free"
+    default: "openrouter/free"
   INLINE_MAX_COMMENTS:
     description: "Maximum inline comments"
     required: false
