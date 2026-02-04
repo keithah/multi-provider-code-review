@@ -7,20 +7,27 @@ import { logger } from '../utils/logger';
 
 /**
  * Get OpenRouter free models
- * Returns the special "openrouter/free" model which automatically routes to available free models
+ * Returns a mix of the openrouter/free meta-model and specific free models for diversity
  *
- * Note: Returns single model since OpenRouter's free meta-model is a routing endpoint,
- * not multiple distinct models. Downstream deduplication will handle any duplicates.
+ * Strategy: Lead with openrouter/free for automatic routing, then add specific
+ * free models as fallbacks to ensure we have multiple distinct reviewers
  */
 export async function getBestFreeModels(
-  _count = 4,
+  count = 4,
   _timeoutMs = 5000
 ): Promise<string[]> {
-  logger.debug('Using OpenRouter free meta-model for automatic routing');
+  logger.debug('Using OpenRouter free models for diversity');
 
-  // OpenRouter's special "free" model automatically routes to the best available free model
-  // Return single model since it's a routing endpoint, not multiple distinct models
-  return ['openrouter/free'];
+  // Mix of automatic routing and specific models for redundancy
+  const models = [
+    'openrouter/free',  // Primary: OpenRouter's automatic routing
+    'openrouter/google/gemini-2.0-flash-exp:free',
+    'openrouter/mistralai/devstral-2512:free',
+    'openrouter/microsoft/phi-4:free',
+    'openrouter/xiaomi/mimo-v2-flash:free',
+  ];
+
+  return models.slice(0, count);
 }
 
 /**

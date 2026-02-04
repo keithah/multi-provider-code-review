@@ -32738,9 +32738,17 @@ var PricingService = class _PricingService {
 };
 
 // src/providers/openrouter-models.ts
-async function getBestFreeModels(_count = 4, _timeoutMs = 5e3) {
-  logger.debug("Using OpenRouter free meta-model for automatic routing");
-  return ["openrouter/free"];
+async function getBestFreeModels(count = 4, _timeoutMs = 5e3) {
+  logger.debug("Using OpenRouter free models for diversity");
+  const models = [
+    "openrouter/free",
+    // Primary: OpenRouter's automatic routing
+    "openrouter/google/gemini-2.0-flash-exp:free",
+    "openrouter/mistralai/devstral-2512:free",
+    "openrouter/microsoft/phi-4:free",
+    "openrouter/xiaomi/mimo-v2-flash:free"
+  ];
+  return models.slice(0, count);
 }
 var modelCache = null;
 var CACHE_TTL_MS = 60 * 60 * 1e3;
