@@ -282,12 +282,18 @@ export class ProviderRegistry {
           logger.warn(`OPENROUTER_API_KEY not set; skipping OpenRouter provider ${name}`);
           continue;
         }
+
+        // Strip instance suffix (e.g., "free#1" -> "free") for validation
+        const baseModel = model.replace(/#\d+$/, '');
+
         // Allow openrouter/free (meta-model) and models ending with :free
-        const isFree = model === 'free' || model.endsWith(':free');
+        const isFree = baseModel === 'free' || baseModel.endsWith(':free');
         if (!config.openrouterAllowPaid && !isFree) {
           logger.warn(`Skipping paid OpenRouter model ${name} (set openrouterAllowPaid=true to enable)`);
           continue;
         }
+
+        // Pass full model (with suffix) - provider will strip it before API calls
         list.push(new OpenRouterProvider(model, apiKey, this.rateLimiter));
         continue;
       }

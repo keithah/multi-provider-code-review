@@ -31868,6 +31868,7 @@ var OpenRouterProvider = class _OpenRouterProvider extends Provider {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     const started = Date.now();
+    const apiModelId = this.modelId.replace(/#\d+$/, "");
     try {
       const response = await withRetry(
         () => fetch(`${_OpenRouterProvider.BASE_URL}/chat/completions`, {
@@ -31879,7 +31880,7 @@ var OpenRouterProvider = class _OpenRouterProvider extends Provider {
             "X-Title": "Multi-Provider Code Review"
           },
           body: JSON.stringify({
-            model: this.modelId,
+            model: apiModelId,
             messages: [{ role: "user", content: prompt }],
             temperature: 0.1,
             max_tokens: 2e3
@@ -32739,16 +32740,8 @@ var PricingService = class _PricingService {
 
 // src/providers/openrouter-models.ts
 async function getBestFreeModels(count = 4, _timeoutMs = 5e3) {
-  logger.debug("Using OpenRouter free models for diversity");
-  const models = [
-    "openrouter/free",
-    // Primary: OpenRouter's automatic routing
-    "openrouter/google/gemini-2.0-flash-exp:free",
-    "openrouter/mistralai/devstral-2512:free",
-    "openrouter/microsoft/phi-4:free",
-    "openrouter/xiaomi/mimo-v2-flash:free"
-  ];
-  return models.slice(0, count);
+  logger.debug(`Creating ${count} OpenRouter free routing instances`);
+  return Array.from({ length: count }, (_, i) => `openrouter/free#${i + 1}`);
 }
 var modelCache = null;
 var CACHE_TTL_MS = 60 * 60 * 1e3;
@@ -33089,7 +33082,8 @@ var ProviderRegistry = class {
           logger.warn(`OPENROUTER_API_KEY not set; skipping OpenRouter provider ${name}`);
           continue;
         }
-        const isFree = model === "free" || model.endsWith(":free");
+        const baseModel = model.replace(/#\d+$/, "");
+        const isFree = baseModel === "free" || baseModel.endsWith(":free");
         if (!config.openrouterAllowPaid && !isFree) {
           logger.warn(`Skipping paid OpenRouter model ${name} (set openrouterAllowPaid=true to enable)`);
           continue;

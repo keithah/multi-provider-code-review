@@ -32,6 +32,10 @@ export class OpenRouterProvider extends Provider {
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     const started = Date.now();
 
+    // Strip instance suffix (e.g., "free#1" -> "free") for API routing
+    // Multiple instances can route to the same endpoint for diversity
+    const apiModelId = this.modelId.replace(/#\d+$/, '');
+
     try {
       const response = await withRetry(
         () =>
@@ -44,7 +48,7 @@ export class OpenRouterProvider extends Provider {
               'X-Title': 'Multi-Provider Code Review',
             },
             body: JSON.stringify({
-              model: this.modelId,
+              model: apiModelId,
               messages: [{ role: 'user', content: prompt }],
               temperature: 0.1,
               max_tokens: 2000,
