@@ -36,6 +36,7 @@ import { BatchOrchestrator } from './core/batch-orchestrator';
 import { SuppressionTracker } from './learning/suppression-tracker';
 import { ProviderWeightTracker } from './learning/provider-weights';
 import { PromptEnricher } from './learning/prompt-enrichment';
+import { AcceptanceDetector } from './learning/acceptance-detector';
 
 export interface SetupOptions {
   cliMode?: boolean;
@@ -243,6 +244,7 @@ export async function createComponents(config: ReviewConfig, githubToken: string
   const repoKey = `${githubClient.owner}/${githubClient.repo}`;
   const suppressionTracker = new SuppressionTracker(cacheStorage, repoKey);
   const providerWeightTracker = new ProviderWeightTracker(cacheStorage);
+  const acceptanceDetector = new AcceptanceDetector();
   const feedbackTracker = config.learningEnabled ? new FeedbackTracker(cacheStorage, config.learningMinFeedbackCount) : undefined;
   const promptEnricher = new PromptEnricher(suppressionTracker, feedbackTracker);
   const promptBuilder = new PromptBuilder(config, 'standard', promptEnricher, undefined);
@@ -312,5 +314,6 @@ export async function createComponents(config: ReviewConfig, githubToken: string
     metricsCollector,
     batchOrchestrator,
     githubClient,
+    acceptanceDetector,
   };
 }
