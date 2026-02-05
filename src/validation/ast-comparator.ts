@@ -41,6 +41,20 @@ const VALUE_ONLY_TYPES = new Set([
 ]);
 
 /**
+ * Maximum recursion depth for AST comparison
+ * Prevents infinite loops on malformed ASTs or extremely deep nesting
+ */
+const MAX_COMPARISON_DEPTH = 1000;
+
+/**
+ * Check if a node is a value-only type (identifier or literal)
+ * Value-only types are compared by structure, not by actual content
+ */
+function isValueOnlyNode(node: Parser.SyntaxNode): boolean {
+  return VALUE_ONLY_TYPES.has(node.type);
+}
+
+/**
  * Check if a tree-sitter tree has parse errors
  */
 function hasParseErrors(tree: Parser.Tree): boolean {
@@ -106,12 +120,21 @@ function compareNodes(
 ): { equivalent: boolean; reason?: string; maxDepth: number } {
   const maxDepth = Math.max(depth, 0);
 
+  // Prevent infinite recursion on extremely deep or malformed ASTs
+  if (depth > MAX_COMPARISON_DEPTH) {
+    return {
+      equivalent: false,
+      reason: `Maximum comparison depth exceeded (${MAX_COMPARISON_DEPTH})`,
+      maxDepth
+    };
+  }
+
   // Different node types = not equivalent
   // Exception: value-only types match if both are value-only
   if (node1.type !== node2.type) {
     // Both are value-only types - check if they're in the same category
-    const node1IsValueOnly = VALUE_ONLY_TYPES.has(node1.type);
-    const node2IsValueOnly = VALUE_ONLY_TYPES.has(node2.type);
+    const node1IsValueOnly = isValueOnlyNode(node1);
+    const node2IsValueOnly = isValueOnlyNode(node2);
 
     if (!node1IsValueOnly || !node2IsValueOnly) {
       return {
@@ -134,7 +157,7 @@ function compareNodes(
 
   // If this is a value-only node (identifier or literal), structure matches
   // Don't compare actual text content
-  if (VALUE_ONLY_TYPES.has(node1.type) && VALUE_ONLY_TYPES.has(node2.type)) {
+  if (isValueOnlyNode(node1) && isValueOnlyNode(node2)) {
     return { equivalent: true, maxDepth: depth };
   }
 
