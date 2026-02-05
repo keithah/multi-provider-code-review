@@ -164,7 +164,7 @@ Plans:
 Plans:
 - [x] 05-01-PLAN.md — Runtime wiring: Add AcceptanceDetector to setup.ts and ReviewComponents
 - [x] 05-02-PLAN.md — Orchestration: Add acceptance detection to review execution flow
-- [ ] 05-03-PLAN.md — Gap closure: Wire FeedbackFilter to record negative feedback to ProviderWeightTracker
+- [x] 05-03-PLAN.md — Gap closure: Wire FeedbackFilter to record negative feedback to ProviderWeightTracker
 
 **Complexity**: MEDIUM
 - **Research flag**: Standard patterns (wiring follows existing setup.ts patterns from Phase 4)
@@ -192,7 +192,7 @@ Phases execute sequentially: 1 -> 2 -> 3 -> 4 -> 5
 | 2. LLM Integration | FR-2.1, FR-2.2, FR-2.3, FR-2.4 | 4/4 | Complete | 2026-02-05 |
 | 3. Multi-Line Support | FR-3.1, FR-3.2, FR-3.3 | 3/3 | Complete | 2026-02-05 |
 | 4. Validation & Quality | FR-4.1, FR-4.2, FR-4.3, FR-4.4 | 9/9 | Complete | 2026-02-05 |
-| 5. Complete Feedback Loop | FR-4.4 (acceptance tracking) | 2/3 | Gap Closure | - |
+| 5. Complete Feedback Loop | FR-4.4 (acceptance tracking) | 3/3 | Complete | 2026-02-05 |
 
 ## Coverage Validation
 
