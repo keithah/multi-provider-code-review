@@ -4,6 +4,7 @@ import { logger } from '../utils/logger';
 import { mapLinesToPositions } from '../utils/diff';
 import { withRetry } from '../utils/retry';
 import { extractCodeSnippet, createEnhancedCommentBody } from '../utils/code-snippet';
+import { isSuggestionLineValid } from '../utils/suggestion-validator';
 
 export class CommentPoster {
   private static readonly MAX_COMMENT_SIZE = 60_000;
@@ -166,6 +167,17 @@ export class CommentPoster {
           logger.warn(`Cannot find diff position for ${c.path}:${c.line}, skipping inline comment`);
           return null;
         }
+
+        // Validate suggestions can be applied at this line
+        if (c.body.includes('```suggestion')) {
+          const file = files.find(f => f.filename === c.path);
+          if (!file || !isSuggestionLineValid(c.line, file.patch)) {
+            // Line isn't in diff - strip suggestion block but keep the finding
+            logger.warn(`Suggestion line ${c.path}:${c.line} not valid in diff, posting without suggestion block`);
+            c.body = c.body.replace(/```suggestion[\s\S]*?```/g, '_Suggestion not available for this line_');
+          }
+        }
+
         return { path: c.path, position, body: c.body };
       })
       .filter((c): c is { path: string; position: number; body: string } => c !== null);
