@@ -1,10 +1,10 @@
-import { PRContext, ReviewConfig, ReviewIntensity, Definition } from '../../types';
+import { PRContext, ReviewConfig, ReviewIntensity } from '../../types';
 import { trimDiff } from '../../utils/diff';
 import { checkContextWindowFit, ContextFitCheck, estimateTokensConservative } from '../../utils/token-estimation';
 import { logger } from '../../utils/logger';
 import { ValidationDetector } from '../context/validation-detector';
 import { PromptEnricher } from '../../learning/prompt-enrichment';
-import { CodeGraph } from '../context/graph-builder';
+import { CodeGraph, Definition } from '../context/graph-builder';
 
 export class PromptBuilder {
   private readonly validationDetector: ValidationDetector;
@@ -21,6 +21,57 @@ export class PromptBuilder {
       throw new Error(`Invalid intensity: ${intensity}. Must be one of: ${validIntensities.join(', ')}`);
     }
     this.validationDetector = new ValidationDetector();
+  }
+
+  /**
+   * Get call context from code graph for better fix suggestions.
+   * Returns callers and callees for symbols near the target line.
+   */
+  private getCallContext(file: string, line: number): string | null {
+    if (!this.codeGraph) {
+      return null;
+    }
+
+    try {
+      // Find symbols defined in this file
+      const fileSymbols = this.codeGraph.getFileSymbols(file);
+      if (!fileSymbols || fileSymbols.length === 0) {
+        return null;
+      }
+
+      // Find symbol closest to the target line
+      const nearbySymbol = fileSymbols
+        .filter((def): def is Definition => Math.abs(def.line - line) <= 20)
+        .sort((a, b) => Math.abs(a.line - line) - Math.abs(b.line - line))[0];
+
+      if (!nearbySymbol) {
+        return null;
+      }
+
+      // Get callers and callees using qualified name
+      const qualifiedName = `${file}:${nearbySymbol.name}`;
+      const callers = this.codeGraph.getCallers(qualifiedName) || [];
+      const callees = this.codeGraph.getCalls(qualifiedName) || [];
+
+      if (callers.length === 0 && callees.length === 0) {
+        return null;
+      }
+
+      const context: string[] = [];
+      context.push(`CALL CONTEXT for ${nearbySymbol.name} (${nearbySymbol.type}):`);
+
+      if (callers.length > 0) {
+        context.push(`  Called by: ${callers.slice(0, 5).join(', ')}${callers.length > 5 ? ` (+${callers.length - 5} more)` : ''}`);
+      }
+      if (callees.length > 0) {
+        context.push(`  Calls: ${callees.slice(0, 5).join(', ')}${callees.length > 5 ? ` (+${callees.length - 5} more)` : ''}`);
+      }
+
+      return context.join('\n');
+    } catch (error) {
+      logger.debug('Failed to get call context:', error as Error);
+      return null;
+    }
   }
 
   async build(pr: PRContext, prNumber?: number): Promise<string> {
@@ -138,6 +189,30 @@ export class PromptBuilder {
         }
       } catch (error) {
         logger.debug('Failed to get prompt enrichment:', error as Error);
+      }
+    }
+
+    // Add call context from code graph if available (FR-4.3: context-aware fixes)
+    if (this.codeGraph && pr.files.length > 0) {
+      // Get context for files in the diff (limit to first 3 to avoid prompt bloat)
+      const contextFiles = pr.files.slice(0, 3);
+      const callContexts: string[] = [];
+
+      for (const file of contextFiles) {
+        // Get context for the middle of the file as a heuristic
+        const midLine = Math.floor((file.additions + file.deletions) / 2) || 1;
+        const context = this.getCallContext(file.filename, midLine);
+        if (context) {
+          callContexts.push(`${file.filename}:\n${context}`);
+        }
+      }
+
+      if (callContexts.length > 0) {
+        instructions.push(
+          'CODE GRAPH CONTEXT (use this to understand call relationships):',
+          ...callContexts,
+          ''
+        );
       }
     }
 
