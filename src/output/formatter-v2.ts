@@ -1,4 +1,5 @@
 import { Review, Finding } from '../types';
+import { formatSuggestionBlock } from '../utils/suggestion-formatter';
 
 /**
  * Enhanced Markdown Formatter
@@ -240,19 +241,13 @@ export class MarkdownFormatterV2 {
 
     // Suggestion (if present)
     if (finding.suggestion) {
-      lines.push('**Suggested Fix:**');
-      const trimmedSuggestion = finding.suggestion.trim();
-      // Check if suggestion is already fenced
-      if (trimmedSuggestion.startsWith('```')) {
-        // Already fenced, use as-is
-        lines.push(trimmedSuggestion);
-      } else {
-        // Not fenced, wrap it
-        lines.push('```');
-        lines.push(trimmedSuggestion);
-        lines.push('```');
+      const suggestionBlock = formatSuggestionBlock(finding.suggestion);
+      if (suggestionBlock) {
+        lines.push('**Suggested Fix:**');
+        lines.push('');
+        lines.push(suggestionBlock);
+        lines.push('');
       }
-      lines.push('');
     }
 
     // Evidence (if present) - put behind "View reasoning" collapsible

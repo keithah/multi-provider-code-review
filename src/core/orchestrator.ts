@@ -1,6 +1,8 @@
 import { Deduplicator } from '../analysis/deduplicator';
 import { ConsensusEngine } from '../analysis/consensus';
 import { LLMExecutor } from '../analysis/llm/executor';
+import { AcceptanceDetector } from '../learning/acceptance-detector';
+import { ProviderWeightTracker } from '../learning/provider-weights';
 import { extractFindings } from '../analysis/llm/parser';
 import { summarizeAIDetection } from '../analysis/ai-detector';
 import { PromptBuilder } from '../analysis/llm/prompt-builder';
@@ -81,6 +83,8 @@ export interface ReviewComponents {
   metricsCollector?: MetricsCollector;
   batchOrchestrator?: BatchOrchestrator;
   githubClient?: GitHubClient;
+  acceptanceDetector?: AcceptanceDetector;
+  providerWeightTracker?: ProviderWeightTracker;
 }
 
 export class ReviewOrchestrator {
@@ -467,7 +471,7 @@ export class ReviewOrchestrator {
               const batchDiff = filterDiffByFiles(reviewContext.diff, batch);
               const batchContext: PRContext = { ...reviewContext, files: batch, diff: batchDiff };
               const promptBuilder = new PromptBuilder(config, reviewIntensity);
-              const prompt = promptBuilder.build(batchContext);
+              const prompt = await promptBuilder.build(batchContext);
 
               try {
                 const results = await this.components.llmExecutor.execute(healthy, prompt, intensityTimeout);
@@ -694,6 +698,19 @@ export class ReviewOrchestrator {
 
       const markdown = this.components.formatter.format(review);
       const suppressed = await this.components.feedbackFilter.loadSuppressed(pr.number);
+
+      // Detect and record suggestion acceptances (positive feedback)
+      if (this.components.acceptanceDetector &&
+          this.components.providerWeightTracker &&
+          this.components.githubClient) {
+        try {
+          await this.detectAndRecordAcceptances(pr.number);
+        } catch (error) {
+          // Don't fail review if acceptance detection fails - it's supplementary
+          logger.debug('Failed to detect acceptances', error as Error);
+        }
+      }
+
       const inlineFiltered = review.inlineComments.filter(c => this.components.feedbackFilter.shouldPost(c, suppressed));
 
     // If a progress tracker exists, reuse the same comment for the final review body
@@ -735,6 +752,105 @@ export class ReviewOrchestrator {
     // For in-memory caches, would call cache.clear() here
 
     logger.debug('Orchestrator resources disposed');
+  }
+
+  /**
+   * Detect and record suggestion acceptances from PR activity.
+   *
+   * Checks for:
+   * 1. Committed suggestions (via GitHub's "Commit suggestion" button)
+   * 2. Thumbs-up reactions on suggestion comments
+   *
+   * Records acceptances as positive feedback to improve provider weights.
+   */
+  private async detectAndRecordAcceptances(prNumber: number): Promise<void> {
+    const { githubClient, acceptanceDetector, providerWeightTracker } = this.components;
+    if (!githubClient || !acceptanceDetector || !providerWeightTracker) return;
+
+    const { octokit, owner, repo } = githubClient;
+
+    // 1. Fetch PR commits
+    const commitsResponse = await octokit.rest.pulls.listCommits({
+      owner,
+      repo,
+      pull_number: prNumber,
+      per_page: 100,
+    });
+
+    const commits = commitsResponse.data.map(commit => ({
+      sha: commit.sha,
+      message: commit.commit.message,
+      files: (commit.files || []).map(f => f.filename),
+      timestamp: new Date(commit.commit.author?.date || Date.now()).getTime(),
+    }));
+
+    // 2. Fetch review comments
+    const comments = await octokit.paginate(octokit.rest.pulls.listReviewComments, {
+      owner,
+      repo,
+      pull_number: prNumber,
+      per_page: 100,
+    });
+
+    // 3. Build file/line/provider map and fetch reactions
+    const commentedFiles = new Map<string, Array<{ line: number; provider?: string }>>();
+    const commentReactions: Array<{
+      commentId: number;
+      file: string;
+      line: number;
+      provider?: string;
+      reactions: Array<{ user: string; content: string }>;
+    }> = [];
+
+    for (const comment of comments) {
+      const file = comment.path;
+      const line = comment.line || comment.original_line || 0;
+
+      // Extract provider from comment body (embedded by CommentPoster)
+      const providerMatch = comment.body?.match(/\*\*Provider:\*\* `([^`]+)`/);
+      const provider = providerMatch?.[1];
+
+      // Build file map for commit detection
+      if (!commentedFiles.has(file)) {
+        commentedFiles.set(file, []);
+      }
+      commentedFiles.get(file)!.push({ line, provider });
+
+      // Fetch reactions for this comment
+      const reactions = await octokit.rest.reactions.listForPullRequestReviewComment({
+        owner,
+        repo,
+        comment_id: comment.id,
+      });
+
+      commentReactions.push({
+        commentId: comment.id,
+        file,
+        line,
+        provider,
+        reactions: reactions.data.map(r => ({
+          user: r.user?.login || 'unknown',
+          content: r.content,
+        })),
+      });
+    }
+
+    // 4. Detect acceptances from both sources
+    const commitAcceptances = acceptanceDetector.detectFromCommits(commits, commentedFiles);
+    const reactionAcceptances = acceptanceDetector.detectFromReactions(commentReactions);
+
+    // 5. Record all acceptances to weight tracker
+    const allAcceptances = [...commitAcceptances, ...reactionAcceptances];
+    await acceptanceDetector.recordAcceptances(allAcceptances, providerWeightTracker);
+
+    if (allAcceptances.length > 0) {
+      logger.info(
+        `Acceptance detection: ${commitAcceptances.length} from commits, ` +
+        `${reactionAcceptances.length} from reactions, ${allAcceptances.length} total`
+      );
+    } else {
+      logger.debug('No suggestion acceptances detected');
+    }
   }
 
   /**

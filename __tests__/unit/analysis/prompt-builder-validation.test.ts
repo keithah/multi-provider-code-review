@@ -28,9 +28,9 @@ describe('PromptBuilder Context Window Validation', () => {
   };
 
   describe('buildWithValidation', () => {
-    it('should build prompt and check if it fits in context window', () => {
+    it('should build prompt and check if it fits in context window', async () => {
       const builder = new PromptBuilder(DEFAULT_CONFIG, 'standard');
-      const { prompt, fitCheck } = builder.buildWithValidation(mockPR, 'gpt-4-turbo');
+      const { prompt, fitCheck } = await builder.buildWithValidation(mockPR, 'gpt-4-turbo');
 
       expect(prompt).toBeTruthy();
       expect(prompt.length).toBeGreaterThan(0);
@@ -41,7 +41,7 @@ describe('PromptBuilder Context Window Validation', () => {
       expect(fitCheck.utilizationPercent).toBeGreaterThan(0);
     });
 
-    it('should indicate when prompt does not fit', () => {
+    it('should indicate when prompt does not fit', async () => {
       // Test context window overflow with reasonably-sized diff
       // Using 50k chars (~13k tokens) which is enough to exceed gpt-3.5-turbo (4k tokens)
       // without causing test performance issues
@@ -58,7 +58,7 @@ describe('PromptBuilder Context Window Validation', () => {
       };
 
       const builder = new PromptBuilder(DEFAULT_CONFIG, 'standard');
-      const { prompt, fitCheck } = builder.buildWithValidation(largePR, 'gpt-3.5-turbo');
+      const { prompt, fitCheck } = await builder.buildWithValidation(largePR, 'gpt-3.5-turbo');
 
       expect(prompt).toBeTruthy();
       expect(fitCheck.fits).toBe(false);
@@ -66,7 +66,7 @@ describe('PromptBuilder Context Window Validation', () => {
       expect(fitCheck.recommendation).toContain('exceeds context window');
     });
 
-    it('should work with different model types', () => {
+    it('should work with different model types', async () => {
       const builder = new PromptBuilder(DEFAULT_CONFIG, 'standard');
 
       const models = [
@@ -77,7 +77,7 @@ describe('PromptBuilder Context Window Validation', () => {
       ];
 
       for (const model of models) {
-        const { prompt, fitCheck } = builder.buildWithValidation(mockPR, model);
+        const { prompt, fitCheck } = await builder.buildWithValidation(mockPR, model);
 
         expect(prompt).toBeTruthy();
         expect(fitCheck).toBeDefined();
@@ -86,7 +86,7 @@ describe('PromptBuilder Context Window Validation', () => {
       }
     });
 
-    it('should detect high utilization', () => {
+    it('should detect high utilization', async () => {
       // Create PR that uses significant portion of a small context window
       // Simplified prompt is shorter, so need more diff content for high utilization
       const mediumPR: PRContext = {
@@ -95,7 +95,7 @@ describe('PromptBuilder Context Window Validation', () => {
       };
 
       const builder = new PromptBuilder(DEFAULT_CONFIG, 'standard');
-      const { fitCheck } = builder.buildWithValidation(mediumPR, 'gpt-3.5-turbo');
+      const { fitCheck } = await builder.buildWithValidation(mediumPR, 'gpt-3.5-turbo');
 
       expect(fitCheck.fits).toBe(true);
       expect(fitCheck.utilizationPercent).toBeGreaterThan(25);
@@ -103,15 +103,15 @@ describe('PromptBuilder Context Window Validation', () => {
   });
 
   describe('buildOptimized', () => {
-    it('should return original prompt if it fits', () => {
+    it('should return original prompt if it fits', async () => {
       const builder = new PromptBuilder(DEFAULT_CONFIG, 'standard');
-      const originalPrompt = builder.build(mockPR);
-      const optimizedPrompt = builder.buildOptimized(mockPR, 'gpt-4-turbo');
+      const originalPrompt = await builder.build(mockPR);
+      const optimizedPrompt = await builder.buildOptimized(mockPR, 'gpt-4-turbo');
 
       expect(optimizedPrompt).toBe(originalPrompt);
     });
 
-    it('should trim diff when prompt exceeds context window', () => {
+    it('should trim diff when prompt exceeds context window', async () => {
       // Create PR with diff that definitely exceeds small context window
       // gpt-3.5-turbo: 4k total window - 2k reserved = 2k available
       const largePR: PRContext = {
@@ -122,7 +122,7 @@ describe('PromptBuilder Context Window Validation', () => {
       const builder = new PromptBuilder(DEFAULT_CONFIG, 'standard');
 
       // buildOptimized should handle oversized prompts gracefully
-      const optimizedPrompt = builder.buildOptimized(largePR, 'gpt-3.5-turbo');
+      const optimizedPrompt = await builder.buildOptimized(largePR, 'gpt-3.5-turbo');
 
       // Should return a valid prompt
       expect(optimizedPrompt).toBeTruthy();
@@ -133,14 +133,14 @@ describe('PromptBuilder Context Window Validation', () => {
       expect(optimizedPrompt).toContain('Files changed:');
     });
 
-    it('should preserve prompt structure when trimming', () => {
+    it('should preserve prompt structure when trimming', async () => {
       const largePR: PRContext = {
         ...mockPR,
         diff: 'a'.repeat(20000),
       };
 
       const builder = new PromptBuilder(DEFAULT_CONFIG, 'standard');
-      const optimizedPrompt = builder.buildOptimized(largePR, 'gpt-3.5-turbo');
+      const optimizedPrompt = await builder.buildOptimized(largePR, 'gpt-3.5-turbo');
 
       // Should still contain key prompt components
       expect(optimizedPrompt).toContain('PR #');
@@ -149,7 +149,7 @@ describe('PromptBuilder Context Window Validation', () => {
       expect(optimizedPrompt).toContain('CRITICAL RULES');
     });
 
-    it('should work with different intensity levels', () => {
+    it('should work with different intensity levels', async () => {
       const largePR: PRContext = {
         ...mockPR,
         diff: 'a'.repeat(20000),
@@ -159,7 +159,7 @@ describe('PromptBuilder Context Window Validation', () => {
 
       for (const intensity of intensities) {
         const builder = new PromptBuilder(DEFAULT_CONFIG, intensity);
-        const optimizedPrompt = builder.buildOptimized(largePR, 'gpt-3.5-turbo');
+        const optimizedPrompt = await builder.buildOptimized(largePR, 'gpt-3.5-turbo');
 
         expect(optimizedPrompt).toBeTruthy();
         expect(optimizedPrompt.length).toBeGreaterThan(0);
@@ -168,7 +168,7 @@ describe('PromptBuilder Context Window Validation', () => {
       }
     });
 
-    it('should handle edge case where trimming is not enough', () => {
+    it('should handle edge case where trimming is not enough', async () => {
       // Stress test: create PR so large that even maximum trimming won't fit
       // Verifies graceful degradation without crashes
       const hugePR: PRContext = {
@@ -186,7 +186,7 @@ describe('PromptBuilder Context Window Validation', () => {
       };
 
       const builder = new PromptBuilder(DEFAULT_CONFIG, 'standard');
-      const optimizedPrompt = builder.buildOptimized(hugePR, 'gpt-3.5-turbo');
+      const optimizedPrompt = await builder.buildOptimized(hugePR, 'gpt-3.5-turbo');
 
       // Should still return a prompt (even if it doesn't fit)
       expect(optimizedPrompt).toBeTruthy();
@@ -195,7 +195,7 @@ describe('PromptBuilder Context Window Validation', () => {
   });
 
   describe('estimateTokens', () => {
-    it('should estimate token count for a PR', () => {
+    it('should estimate token count for a PR', async () => {
       const builder = new PromptBuilder(DEFAULT_CONFIG, 'standard');
       const estimate = builder.estimateTokens(mockPR);
 
@@ -203,7 +203,7 @@ describe('PromptBuilder Context Window Validation', () => {
       expect(estimate).toBeGreaterThan(500); // At least base overhead
     });
 
-    it('should scale with diff size', () => {
+    it('should scale with diff size', async () => {
       const builder = new PromptBuilder(DEFAULT_CONFIG, 'standard');
 
       const smallPR = { ...mockPR, diff: 'a'.repeat(1000) };
@@ -215,7 +215,7 @@ describe('PromptBuilder Context Window Validation', () => {
       expect(largeEstimate).toBeGreaterThan(smallEstimate);
     });
 
-    it('should scale with file count', () => {
+    it('should scale with file count', async () => {
       const builder = new PromptBuilder(DEFAULT_CONFIG, 'standard');
 
       const fewFiles: PRContext = {
@@ -240,7 +240,7 @@ describe('PromptBuilder Context Window Validation', () => {
       expect(manyEstimate).toBeGreaterThan(fewEstimate);
     });
 
-    it('should be faster than building full prompt', () => {
+    it('should be faster than building full prompt', async () => {
       const builder = new PromptBuilder(DEFAULT_CONFIG, 'standard');
 
       const largePR: PRContext = {
@@ -260,7 +260,7 @@ describe('PromptBuilder Context Window Validation', () => {
       const estimateTime = Date.now() - startEstimate;
 
       const startBuild = Date.now();
-      const _built = builder.build(largePR); // Intentionally unused - just measuring build time
+      const _built = await builder.build(largePR); // Intentionally unused - just measuring build time
       const buildTime = Date.now() - startBuild;
 
       // Verify estimation produces reasonable results
@@ -273,7 +273,7 @@ describe('PromptBuilder Context Window Validation', () => {
       expect(buildTime).toBeLessThan(1000);
     });
 
-    it('should handle empty PR', () => {
+    it('should handle empty PR', async () => {
       const emptyPR: PRContext = {
         ...mockPR,
         diff: '',
@@ -289,12 +289,12 @@ describe('PromptBuilder Context Window Validation', () => {
   });
 
   describe('Integration with Intensity Levels', () => {
-    it('should validate context windows for all intensity levels', () => {
+    it('should validate context windows for all intensity levels', async () => {
       const intensities = ['thorough', 'standard', 'light'] as const;
 
       for (const intensity of intensities) {
         const builder = new PromptBuilder(DEFAULT_CONFIG, intensity);
-        const { prompt, fitCheck } = builder.buildWithValidation(mockPR, 'gpt-4-turbo');
+        const { prompt, fitCheck } = await builder.buildWithValidation(mockPR, 'gpt-4-turbo');
 
         // Simplified prompt no longer varies by intensity
         expect(prompt).toContain('ONLY report actual bugs');
@@ -302,7 +302,7 @@ describe('PromptBuilder Context Window Validation', () => {
       }
     });
 
-    it('should account for different prompt sizes by intensity', () => {
+    it('should account for different prompt sizes by intensity', async () => {
       // Use a small diff so instruction differences are more noticeable
       const smallPR: PRContext = {
         ...mockPR,
@@ -312,8 +312,8 @@ describe('PromptBuilder Context Window Validation', () => {
       const thoroughBuilder = new PromptBuilder(DEFAULT_CONFIG, 'thorough');
       const lightBuilder = new PromptBuilder(DEFAULT_CONFIG, 'light');
 
-      const thoroughPrompt = thoroughBuilder.build(smallPR);
-      const lightPrompt = lightBuilder.build(smallPR);
+      const thoroughPrompt = await thoroughBuilder.build(smallPR);
+      const lightPrompt = await lightBuilder.build(smallPR);
 
       // Simplified prompt is now the same length for all intensities
       expect(thoroughPrompt.length).toBe(lightPrompt.length);

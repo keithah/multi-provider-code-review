@@ -101,6 +101,17 @@ export const ReviewConfigSchema = z.object({
     light: z.enum(['detailed', 'standard', 'brief']),
   }).optional(),
 
+  min_confidence: z.number().min(0).max(1).optional(),
+  confidence_threshold: z.object({
+    critical: z.number().min(0).max(1).optional(),
+    high: z.number().min(0).max(1).optional(),
+    medium: z.number().min(0).max(1).optional(),
+    low: z.number().min(0).max(1).optional(),
+  }).optional(),
+  consensus_required_for_critical: z.boolean().optional(),
+  consensus_min_agreement: z.number().int().min(2).optional(),
+  suggestion_syntax_validation: z.boolean().optional(),
+
   dry_run: z.boolean().optional(),
 });
 

@@ -3,13 +3,17 @@ import { trimDiff } from '../../utils/diff';
 import { checkContextWindowFit, ContextFitCheck, estimateTokensConservative } from '../../utils/token-estimation';
 import { logger } from '../../utils/logger';
 import { ValidationDetector } from '../context/validation-detector';
+import { PromptEnricher } from '../../learning/prompt-enrichment';
+import { CodeGraph, Definition } from '../context/graph-builder';
 
 export class PromptBuilder {
   private readonly validationDetector: ValidationDetector;
 
   constructor(
     private readonly config: ReviewConfig,
-    private readonly intensity: ReviewIntensity = 'standard'
+    private readonly intensity: ReviewIntensity = 'standard',
+    private readonly promptEnricher?: PromptEnricher,
+    private readonly codeGraph?: CodeGraph
   ) {
     // Validate intensity parameter
     const validIntensities: ReviewIntensity[] = ['light', 'standard', 'thorough'];
@@ -19,7 +23,58 @@ export class PromptBuilder {
     this.validationDetector = new ValidationDetector();
   }
 
-  build(pr: PRContext): string {
+  /**
+   * Get call context from code graph for better fix suggestions.
+   * Returns callers and callees for symbols near the target line.
+   */
+  private getCallContext(file: string, line: number): string | null {
+    if (!this.codeGraph) {
+      return null;
+    }
+
+    try {
+      // Find symbols defined in this file
+      const fileSymbols = this.codeGraph.getFileSymbols(file);
+      if (!fileSymbols || fileSymbols.length === 0) {
+        return null;
+      }
+
+      // Find symbol closest to the target line
+      const nearbySymbol = fileSymbols
+        .filter((def): def is Definition => Math.abs(def.line - line) <= 20)
+        .sort((a, b) => Math.abs(a.line - line) - Math.abs(b.line - line))[0];
+
+      if (!nearbySymbol) {
+        return null;
+      }
+
+      // Get callers and callees using qualified name
+      const qualifiedName = `${file}:${nearbySymbol.name}`;
+      const callers = this.codeGraph.getCallers(qualifiedName) || [];
+      const callees = this.codeGraph.getCalls(qualifiedName) || [];
+
+      if (callers.length === 0 && callees.length === 0) {
+        return null;
+      }
+
+      const context: string[] = [];
+      context.push(`CALL CONTEXT for ${nearbySymbol.name} (${nearbySymbol.type}):`);
+
+      if (callers.length > 0) {
+        context.push(`  Called by: ${callers.slice(0, 5).join(', ')}${callers.length > 5 ? ` (+${callers.length - 5} more)` : ''}`);
+      }
+      if (callees.length > 0) {
+        context.push(`  Calls: ${callees.slice(0, 5).join(', ')}${callees.length > 5 ? ` (+${callees.length - 5} more)` : ''}`);
+      }
+
+      return context.join('\n');
+    } catch (error) {
+      logger.debug('Failed to get call context:', error as Error);
+      return null;
+    }
+  }
+
+  async build(pr: PRContext, prNumber?: number): Promise<string> {
     // Validate PR context
     if (!pr || typeof pr !== 'object') {
       throw new Error('Invalid PR context: must be a valid PRContext object');
@@ -32,6 +87,7 @@ export class PromptBuilder {
     }
 
     const diff = trimDiff(pr.diff, this.config.diffMaxBytes);
+    const skipSuggestions = this.shouldSkipSuggestions(diff);
 
     // Extract which files are actually in the trimmed diff to avoid false positives
     const filesInDiff = new Set<string>();
@@ -78,14 +134,35 @@ export class PromptBuilder {
       '   • Lose or corrupt data',
       '   • Have SQL injection, XSS, command injection, or RCE vulnerability',
       '',
-      'Return JSON: [{file, line, severity, title, message}]',
-      '',
+    ];
+
+    // Conditionally include suggestion field based on context size
+    if (skipSuggestions) {
+      instructions.push('Return JSON: [{file, line, severity, title, message}]', '');
+    } else {
+      instructions.push(
+        'Return JSON: [{file, line, severity, title, message, suggestion}]',
+        '',
+        'SUGGESTION FIELD (optional):',
+        '  - Only include "suggestion" for FIXABLE issues (not all findings)',
+        '  - Fixable: null reference, type error, off-by-one, missing null check, resource leak',
+        '  - NOT fixable: architectural issues, design suggestions, unclear requirements',
+        '  - "suggestion" must be EXACT replacement code for the problematic line(s)',
+        '  - Include ONLY the fixed code, no explanations or comments',
+        '  - Example: {"file": "x.ts", "line": 10, "severity": "major",',
+        '             "title": "Null reference", "message": "...",',
+        '             "suggestion": "const user = users?.find(u => u.id === id) ?? null;"}',
+        ''
+      );
+    }
+
+    instructions.push(
       `PR #${pr.number}: ${pr.title}`,
       `Author: ${pr.author}`,
       'Files changed:',
       ...fileList,
       ''
-    ];
+    );
 
     // Auto-detect and inject defensive programming context
     // Skip for very large diffs to avoid performance impact (>50KB)
@@ -103,6 +180,42 @@ export class PromptBuilder {
       }
     }
 
+    // Get learned preferences if enricher available
+    if (this.promptEnricher && prNumber) {
+      try {
+        const learnedPreferences = await this.promptEnricher.getPromptText(prNumber);
+        if (learnedPreferences) {
+          instructions.push(learnedPreferences, '');
+        }
+      } catch (error) {
+        logger.debug('Failed to get prompt enrichment:', error as Error);
+      }
+    }
+
+    // Add call context from code graph if available (FR-4.3: context-aware fixes)
+    if (this.codeGraph && pr.files.length > 0) {
+      // Get context for files in the diff (limit to first 3 to avoid prompt bloat)
+      const contextFiles = pr.files.slice(0, 3);
+      const callContexts: string[] = [];
+
+      for (const file of contextFiles) {
+        // Get context for the middle of the file as a heuristic
+        const midLine = Math.floor((file.additions + file.deletions) / 2) || 1;
+        const context = this.getCallContext(file.filename, midLine);
+        if (context) {
+          callContexts.push(`${file.filename}:\n${context}`);
+        }
+      }
+
+      if (callContexts.length > 0) {
+        instructions.push(
+          'CODE GRAPH CONTEXT (use this to understand call relationships):',
+          ...callContexts,
+          ''
+        );
+      }
+    }
+
     instructions.push(
       'Diff:',
       diff
@@ -116,13 +229,15 @@ export class PromptBuilder {
    *
    * @param pr - Pull request context
    * @param modelId - Target model ID for context window sizing
+   * @param prNumber - Optional PR number for learned preferences
    * @returns Prompt string and fit check result
    */
-  buildWithValidation(
+  async buildWithValidation(
     pr: PRContext,
-    modelId: string
-  ): { prompt: string; fitCheck: ContextFitCheck } {
-    const prompt = this.build(pr);
+    modelId: string,
+    prNumber?: number
+  ): Promise<{ prompt: string; fitCheck: ContextFitCheck }> {
+    const prompt = await this.build(pr, prNumber);
     const fitCheck = checkContextWindowFit(prompt, modelId);
 
     if (!fitCheck.fits) {
@@ -141,10 +256,11 @@ export class PromptBuilder {
    *
    * @param pr - Pull request context
    * @param modelId - Target model ID
+   * @param prNumber - Optional PR number for learned preferences
    * @returns Optimized prompt that fits in context window
    */
-  buildOptimized(pr: PRContext, modelId: string): string {
-    let prompt = this.build(pr);
+  async buildOptimized(pr: PRContext, modelId: string, prNumber?: number): Promise<string> {
+    let prompt = await this.build(pr, prNumber);
     let fitCheck = checkContextWindowFit(prompt, modelId);
 
     if (fitCheck.fits) {
@@ -177,7 +293,7 @@ export class PromptBuilder {
     };
 
     // Build new prompt with trimmed diff
-    prompt = this.build(trimmedPR);
+    prompt = await this.build(trimmedPR, prNumber);
 
     // Verify it fits now
     fitCheck = checkContextWindowFit(prompt, modelId);
@@ -210,5 +326,33 @@ export class PromptBuilder {
     const diffEstimate = estimateTokensConservative(pr.diff);
 
     return baseOverhead + fileListTokens + diffEstimate.tokens;
+  }
+
+  /**
+   * Determine if suggestion instructions should be skipped due to large context
+   *
+   * Per FR-2.4: Skip suggestion generation when code snippet too large
+   * to prevent hallucinated fixes from truncated context.
+   *
+   * Uses tiered thresholds per CONTEXT.md:
+   * - small (4-16k window): skip if diff > 2000 tokens
+   * - medium (128-200k window): skip if diff > 80000 tokens
+   * - large (1M+ window): skip if diff > 400000 tokens
+   */
+  private shouldSkipSuggestions(diff: string): boolean {
+    const estimate = estimateTokensConservative(diff);
+
+    // Conservative thresholds: skip suggestions if diff alone uses >50% of typical window
+    // This leaves room for prompt overhead + response tokens
+    const SKIP_THRESHOLD = 50000; // 50k tokens - fits in medium windows, safe margin for small
+
+    if (estimate.tokens > SKIP_THRESHOLD) {
+      logger.debug(
+        `Skipping suggestion instructions: diff is ${estimate.tokens} tokens (threshold: ${SKIP_THRESHOLD})`
+      );
+      return true;
+    }
+
+    return false;
   }
 }

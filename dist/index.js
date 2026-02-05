@@ -31163,6 +31163,16 @@ var ReviewConfigSchema = external_exports.object({
     standard: external_exports.enum(["detailed", "standard", "brief"]),
     light: external_exports.enum(["detailed", "standard", "brief"])
   }).optional(),
+  min_confidence: external_exports.number().min(0).max(1).optional(),
+  confidence_threshold: external_exports.object({
+    critical: external_exports.number().min(0).max(1).optional(),
+    high: external_exports.number().min(0).max(1).optional(),
+    medium: external_exports.number().min(0).max(1).optional(),
+    low: external_exports.number().min(0).max(1).optional()
+  }).optional(),
+  consensus_required_for_critical: external_exports.boolean().optional(),
+  consensus_min_agreement: external_exports.number().int().min(2).optional(),
+  suggestion_syntax_validation: external_exports.boolean().optional(),
   dry_run: external_exports.boolean().optional()
 });
 
@@ -33371,6 +33381,38 @@ function mapLinesToPositions(patch) {
   }
   return map2;
 }
+function isRangeWithinSingleHunk(startLine, endLine, patch) {
+  if (!patch) return false;
+  const lines = patch.split("\n");
+  const hunkRegex = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/;
+  const noNewlineMarker = "\\ No newline at end of file";
+  let currentNew = 0;
+  let foundStart = false;
+  let inActiveHunk = false;
+  for (const raw of lines) {
+    if (raw === noNewlineMarker) continue;
+    const hunkMatch = raw.match(hunkRegex);
+    if (hunkMatch) {
+      if (foundStart) {
+        return false;
+      }
+      currentNew = parseInt(hunkMatch[2], 10);
+      inActiveHunk = true;
+      continue;
+    }
+    if (!inActiveHunk) continue;
+    if (raw.startsWith("+") || !raw.startsWith("-") && raw.length > 0) {
+      if (currentNew === startLine) {
+        foundStart = true;
+      }
+      if (currentNew === endLine) {
+        return foundStart;
+      }
+      currentNew += 1;
+    }
+  }
+  return false;
+}
 function filterDiffByFiles(diff, files) {
   if (files.length === 0) return "";
   if (!diff || diff.trim().length === 0) return "";
@@ -33825,9 +33867,11 @@ var ValidationDetector = class {
 
 // src/analysis/llm/prompt-builder.ts
 var PromptBuilder = class {
-  constructor(config, intensity = "standard") {
+  constructor(config, intensity = "standard", promptEnricher, codeGraph) {
     this.config = config;
     this.intensity = intensity;
+    this.promptEnricher = promptEnricher;
+    this.codeGraph = codeGraph;
     const validIntensities = ["light", "standard", "thorough"];
     if (!validIntensities.includes(intensity)) {
       throw new Error(`Invalid intensity: ${intensity}. Must be one of: ${validIntensities.join(", ")}`);
@@ -33835,7 +33879,44 @@ var PromptBuilder = class {
     this.validationDetector = new ValidationDetector();
   }
   validationDetector;
-  build(pr) {
+  /**
+   * Get call context from code graph for better fix suggestions.
+   * Returns callers and callees for symbols near the target line.
+   */
+  getCallContext(file, line) {
+    if (!this.codeGraph) {
+      return null;
+    }
+    try {
+      const fileSymbols = this.codeGraph.getFileSymbols(file);
+      if (!fileSymbols || fileSymbols.length === 0) {
+        return null;
+      }
+      const nearbySymbol = fileSymbols.filter((def) => Math.abs(def.line - line) <= 20).sort((a, b) => Math.abs(a.line - line) - Math.abs(b.line - line))[0];
+      if (!nearbySymbol) {
+        return null;
+      }
+      const qualifiedName = `${file}:${nearbySymbol.name}`;
+      const callers = this.codeGraph.getCallers(qualifiedName) || [];
+      const callees = this.codeGraph.getCalls(qualifiedName) || [];
+      if (callers.length === 0 && callees.length === 0) {
+        return null;
+      }
+      const context2 = [];
+      context2.push(`CALL CONTEXT for ${nearbySymbol.name} (${nearbySymbol.type}):`);
+      if (callers.length > 0) {
+        context2.push(`  Called by: ${callers.slice(0, 5).join(", ")}${callers.length > 5 ? ` (+${callers.length - 5} more)` : ""}`);
+      }
+      if (callees.length > 0) {
+        context2.push(`  Calls: ${callees.slice(0, 5).join(", ")}${callees.length > 5 ? ` (+${callees.length - 5} more)` : ""}`);
+      }
+      return context2.join("\n");
+    } catch (error2) {
+      logger.debug("Failed to get call context:", error2);
+      return null;
+    }
+  }
+  async build(pr, prNumber) {
     if (!pr || typeof pr !== "object") {
       throw new Error("Invalid PR context: must be a valid PRContext object");
     }
@@ -33846,6 +33927,7 @@ var PromptBuilder = class {
       throw new Error("Invalid PR context: files must be an array");
     }
     const diff = trimDiff(pr.diff, this.config.diffMaxBytes);
+    const skipSuggestions = this.shouldSkipSuggestions(diff);
     const filesInDiff = /* @__PURE__ */ new Set();
     const diffGitPattern = /^diff --git a\/(.+?) b\/(.+?)$/gm;
     let match2;
@@ -33883,15 +33965,33 @@ var PromptBuilder = class {
       "   \u2022 Crash at runtime",
       "   \u2022 Lose or corrupt data",
       "   \u2022 Have SQL injection, XSS, command injection, or RCE vulnerability",
-      "",
-      "Return JSON: [{file, line, severity, title, message}]",
-      "",
+      ""
+    ];
+    if (skipSuggestions) {
+      instructions.push("Return JSON: [{file, line, severity, title, message}]", "");
+    } else {
+      instructions.push(
+        "Return JSON: [{file, line, severity, title, message, suggestion}]",
+        "",
+        "SUGGESTION FIELD (optional):",
+        '  - Only include "suggestion" for FIXABLE issues (not all findings)',
+        "  - Fixable: null reference, type error, off-by-one, missing null check, resource leak",
+        "  - NOT fixable: architectural issues, design suggestions, unclear requirements",
+        '  - "suggestion" must be EXACT replacement code for the problematic line(s)',
+        "  - Include ONLY the fixed code, no explanations or comments",
+        '  - Example: {"file": "x.ts", "line": 10, "severity": "major",',
+        '             "title": "Null reference", "message": "...",',
+        '             "suggestion": "const user = users?.find(u => u.id === id) ?? null;"}',
+        ""
+      );
+    }
+    instructions.push(
       `PR #${pr.number}: ${pr.title}`,
       `Author: ${pr.author}`,
       "Files changed:",
       ...fileList,
       ""
-    ];
+    );
     const MAX_DIFF_SIZE_FOR_ANALYSIS = 5e4;
     if (diff.length < MAX_DIFF_SIZE_FOR_ANALYSIS) {
       try {
@@ -33902,6 +34002,35 @@ var PromptBuilder = class {
         }
       } catch (error2) {
         logger.debug("Failed to analyze defensive patterns:", error2);
+      }
+    }
+    if (this.promptEnricher && prNumber) {
+      try {
+        const learnedPreferences = await this.promptEnricher.getPromptText(prNumber);
+        if (learnedPreferences) {
+          instructions.push(learnedPreferences, "");
+        }
+      } catch (error2) {
+        logger.debug("Failed to get prompt enrichment:", error2);
+      }
+    }
+    if (this.codeGraph && pr.files.length > 0) {
+      const contextFiles = pr.files.slice(0, 3);
+      const callContexts = [];
+      for (const file of contextFiles) {
+        const midLine = Math.floor((file.additions + file.deletions) / 2) || 1;
+        const context2 = this.getCallContext(file.filename, midLine);
+        if (context2) {
+          callContexts.push(`${file.filename}:
+${context2}`);
+        }
+      }
+      if (callContexts.length > 0) {
+        instructions.push(
+          "CODE GRAPH CONTEXT (use this to understand call relationships):",
+          ...callContexts,
+          ""
+        );
       }
     }
     instructions.push(
@@ -33915,10 +34044,11 @@ var PromptBuilder = class {
    *
    * @param pr - Pull request context
    * @param modelId - Target model ID for context window sizing
+   * @param prNumber - Optional PR number for learned preferences
    * @returns Prompt string and fit check result
    */
-  buildWithValidation(pr, modelId) {
-    const prompt = this.build(pr);
+  async buildWithValidation(pr, modelId, prNumber) {
+    const prompt = await this.build(pr, prNumber);
     const fitCheck = checkContextWindowFit(prompt, modelId);
     if (!fitCheck.fits) {
       logger.warn(
@@ -33933,10 +34063,11 @@ var PromptBuilder = class {
    *
    * @param pr - Pull request context
    * @param modelId - Target model ID
+   * @param prNumber - Optional PR number for learned preferences
    * @returns Optimized prompt that fits in context window
    */
-  buildOptimized(pr, modelId) {
-    let prompt = this.build(pr);
+  async buildOptimized(pr, modelId, prNumber) {
+    let prompt = await this.build(pr, prNumber);
     let fitCheck = checkContextWindowFit(prompt, modelId);
     if (fitCheck.fits) {
       return prompt;
@@ -33955,7 +34086,7 @@ var PromptBuilder = class {
       ...pr,
       diff: trimDiff(pr.diff, targetDiffBytes)
     };
-    prompt = this.build(trimmedPR);
+    prompt = await this.build(trimmedPR, prNumber);
     fitCheck = checkContextWindowFit(prompt, modelId);
     if (!fitCheck.fits) {
       logger.warn(
@@ -33975,6 +34106,28 @@ var PromptBuilder = class {
     const fileListTokens = pr.files.length * 20;
     const diffEstimate = estimateTokensConservative(pr.diff);
     return baseOverhead + fileListTokens + diffEstimate.tokens;
+  }
+  /**
+   * Determine if suggestion instructions should be skipped due to large context
+   *
+   * Per FR-2.4: Skip suggestion generation when code snippet too large
+   * to prevent hallucinated fixes from truncated context.
+   *
+   * Uses tiered thresholds per CONTEXT.md:
+   * - small (4-16k window): skip if diff > 2000 tokens
+   * - medium (128-200k window): skip if diff > 80000 tokens
+   * - large (1M+ window): skip if diff > 400000 tokens
+   */
+  shouldSkipSuggestions(diff) {
+    const estimate = estimateTokensConservative(diff);
+    const SKIP_THRESHOLD = 5e4;
+    if (estimate.tokens > SKIP_THRESHOLD) {
+      logger.debug(
+        `Skipping suggestion instructions: diff is ${estimate.tokens} tokens (threshold: ${SKIP_THRESHOLD})`
+      );
+      return true;
+    }
+    return false;
   }
 };
 
@@ -34600,6 +34753,204 @@ var Deduplicator = class {
   }
 };
 
+// src/analysis/ast/parsers.ts
+function detectLanguage(filename) {
+  if (filename.endsWith(".ts") || filename.endsWith(".tsx")) return "typescript";
+  if (filename.endsWith(".js") || filename.endsWith(".jsx")) return "javascript";
+  if (filename.endsWith(".py")) return "python";
+  if (filename.endsWith(".go")) return "go";
+  if (filename.endsWith(".rs")) return "rust";
+  return "unknown";
+}
+function getParser(language) {
+  const Parser = loadModule("tree-sitter");
+  if (!Parser) return null;
+  const parser = new Parser();
+  try {
+    if (language === "typescript" || language === "javascript") {
+      const ts = loadModule("tree-sitter-typescript");
+      if (!ts?.typescript) return null;
+      parser.setLanguage(ts.typescript);
+      return parser;
+    }
+    if (language === "python") {
+      const py = loadModule("tree-sitter-python");
+      if (!py) return null;
+      parser.setLanguage(py);
+      return parser;
+    }
+    if (language === "go") {
+      const go = loadModule("tree-sitter-go");
+      if (!go) return null;
+      parser.setLanguage(go);
+      return parser;
+    }
+    if (language === "rust") {
+      const rust = loadModule("tree-sitter-rust");
+      if (!rust) return null;
+      parser.setLanguage(rust);
+      return parser;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+function loadModule(name) {
+  try {
+    return require(name);
+  } catch {
+    return null;
+  }
+}
+
+// src/validation/ast-comparator.ts
+var VALUE_ONLY_TYPES = /* @__PURE__ */ new Set([
+  // Identifiers
+  "identifier",
+  "property_identifier",
+  "type_identifier",
+  // Literals
+  "string",
+  "number",
+  "true",
+  "false",
+  "null",
+  "template_string",
+  "regex",
+  // Python-specific
+  "integer",
+  "float",
+  "string_content",
+  // JavaScript-specific
+  "number_literal",
+  "string_literal"
+]);
+var MAX_COMPARISON_DEPTH = 1e3;
+function isValueOnlyNode(node) {
+  return VALUE_ONLY_TYPES.has(node.type);
+}
+function hasParseErrors(tree) {
+  if (tree.rootNode.hasError) {
+    return true;
+  }
+  const cursor = tree.walk();
+  let reachedRoot = false;
+  while (!reachedRoot) {
+    const node = cursor.currentNode;
+    if (node.type === "ERROR") {
+      return true;
+    }
+    if (node.isMissing) {
+      return true;
+    }
+    if (cursor.gotoFirstChild()) {
+      continue;
+    }
+    if (cursor.gotoNextSibling()) {
+      continue;
+    }
+    let retracing = true;
+    while (retracing) {
+      if (!cursor.gotoParent()) {
+        reachedRoot = true;
+        retracing = false;
+      } else if (cursor.gotoNextSibling()) {
+        retracing = false;
+      }
+    }
+  }
+  return false;
+}
+function compareNodes(node1, node2, depth = 0) {
+  const maxDepth = Math.max(depth, 0);
+  if (depth > MAX_COMPARISON_DEPTH) {
+    return {
+      equivalent: false,
+      reason: `Maximum comparison depth exceeded (${MAX_COMPARISON_DEPTH})`,
+      maxDepth
+    };
+  }
+  if (node1.type !== node2.type) {
+    const node1IsValueOnly = isValueOnlyNode(node1);
+    const node2IsValueOnly = isValueOnlyNode(node2);
+    if (!node1IsValueOnly || !node2IsValueOnly) {
+      return {
+        equivalent: false,
+        reason: `Node type mismatch at depth ${depth}: ${node1.type} vs ${node2.type}`,
+        maxDepth
+      };
+    }
+  }
+  if (node1.childCount !== node2.childCount) {
+    return {
+      equivalent: false,
+      reason: `Child count mismatch at depth ${depth}: ${node1.childCount} vs ${node2.childCount} children (node type: ${node1.type})`,
+      maxDepth
+    };
+  }
+  if (isValueOnlyNode(node1) && isValueOnlyNode(node2)) {
+    return { equivalent: true, maxDepth: depth };
+  }
+  let deepestDepth = depth;
+  for (let i = 0; i < node1.childCount; i++) {
+    const child1 = node1.child(i);
+    const child2 = node2.child(i);
+    if (!child1 || !child2) {
+      return {
+        equivalent: false,
+        reason: `Missing child at index ${i}, depth ${depth}`,
+        maxDepth: deepestDepth
+      };
+    }
+    const childResult = compareNodes(child1, child2, depth + 1);
+    deepestDepth = Math.max(deepestDepth, childResult.maxDepth);
+    if (!childResult.equivalent) {
+      return {
+        equivalent: false,
+        reason: childResult.reason,
+        maxDepth: deepestDepth
+      };
+    }
+  }
+  return { equivalent: true, maxDepth: deepestDepth };
+}
+function areASTsEquivalent(code1, code2, language) {
+  if (language === "unknown") {
+    return {
+      equivalent: false,
+      reason: "Unsupported language: unknown"
+    };
+  }
+  const parser = getParser(language);
+  if (!parser) {
+    return {
+      equivalent: false,
+      reason: `Unsupported language: ${language}`
+    };
+  }
+  const tree1 = parser.parse(code1);
+  const tree2 = parser.parse(code2);
+  if (hasParseErrors(tree1)) {
+    return {
+      equivalent: false,
+      reason: "Parse error in code1"
+    };
+  }
+  if (hasParseErrors(tree2)) {
+    return {
+      equivalent: false,
+      reason: "Parse error in code2"
+    };
+  }
+  const result = compareNodes(tree1.rootNode, tree2.rootNode);
+  return {
+    equivalent: result.equivalent,
+    reason: result.reason,
+    comparisonDepth: result.maxDepth
+  };
+}
+
 // src/analysis/consensus.ts
 var SEVERITY_ORDER = {
   critical: 3,
@@ -34622,21 +34973,42 @@ var ConsensusEngine = class {
       if (finding.providers) finding.providers.forEach((p) => providers.add(p));
       if (finding.provider) providers.add(finding.provider);
       if (providers.size === 0) providers.add("static");
+      const currentSuggestions = [];
+      if (finding.suggestion && finding.provider) {
+        currentSuggestions.push({ provider: finding.provider, suggestion: finding.suggestion, file: finding.file });
+      }
       if (!existing) {
         grouped.set(key, {
           ...finding,
           providers: Array.from(providers),
-          confidence: (finding.confidence ?? 0) || 1
+          confidence: (finding.confidence ?? 0) || 1,
+          _suggestions: currentSuggestions
+          // Temporary for consensus checking
         });
         continue;
       }
+      const mergedSuggestions = [
+        ...existing._suggestions || [],
+        ...currentSuggestions
+      ];
       grouped.set(key, {
         ...existing,
         providers: Array.from(/* @__PURE__ */ new Set([...existing.providers || [], ...providers])),
-        confidence: Math.min(1, (existing.confidence ?? 0) + (finding.confidence ?? 0.5))
+        confidence: Math.min(1, (existing.confidence ?? 0) + (finding.confidence ?? 0.5)),
+        _suggestions: mergedSuggestions
       });
     }
-    const filtered = Array.from(grouped.values()).filter((f) => this.meetsAgreement(f.providers || []));
+    const filtered = Array.from(grouped.values()).filter((f) => this.meetsAgreement(f.providers || [])).map((f) => {
+      if (f._suggestions && f._suggestions.length >= 2) {
+        const consensus = this.checkSuggestionConsensus(f._suggestions, this.options.minAgreement);
+        f.hasConsensus = consensus.hasSuggestionConsensus;
+        if (consensus.hasSuggestionConsensus && consensus.suggestions.length > 0) {
+          f.suggestion = consensus.suggestions[0];
+        }
+      }
+      delete f._suggestions;
+      return f;
+    });
     filtered.sort((a, b) => SEVERITY_ORDER[b.severity] - SEVERITY_ORDER[a.severity]);
     return filtered;
   }
@@ -34648,6 +35020,55 @@ var ConsensusEngine = class {
     const count = providers.length;
     if (count >= this.options.minAgreement) return true;
     return count === 1;
+  }
+  /**
+   * Check if multiple providers' suggestions are AST-equivalent.
+   * Used for critical severity findings where consensus is required.
+   */
+  checkSuggestionConsensus(suggestions, minAgreement = 2) {
+    if (suggestions.length < minAgreement) {
+      return { hasSuggestionConsensus: false, agreementCount: 0, suggestions: [] };
+    }
+    const language = detectLanguage(suggestions[0].file);
+    if (language === "unknown") {
+      return this.checkStringConsensus(suggestions, minAgreement);
+    }
+    const groups = [];
+    for (const s of suggestions) {
+      let added = false;
+      for (const group of groups) {
+        const result = areASTsEquivalent(group[0], s.suggestion, language);
+        if (result.equivalent) {
+          group.push(s.suggestion);
+          added = true;
+          break;
+        }
+      }
+      if (!added) {
+        groups.push([s.suggestion]);
+      }
+    }
+    const largestGroup = groups.reduce((a, b) => a.length > b.length ? a : b, []);
+    return {
+      hasSuggestionConsensus: largestGroup.length >= minAgreement,
+      agreementCount: largestGroup.length,
+      suggestions: largestGroup
+    };
+  }
+  checkStringConsensus(suggestions, minAgreement) {
+    const normalized = suggestions.map((s) => ({ ...s, normalized: s.suggestion.trim().replace(/\s+/g, " ") }));
+    const counts = /* @__PURE__ */ new Map();
+    for (const s of normalized) {
+      const arr = counts.get(s.normalized) || [];
+      arr.push(s.suggestion);
+      counts.set(s.normalized, arr);
+    }
+    const largest = Array.from(counts.values()).reduce((a, b) => a.length > b.length ? a : b, []);
+    return {
+      hasSuggestionConsensus: largest.length >= minAgreement,
+      agreementCount: largest.length,
+      suggestions: largest
+    };
   }
 };
 
@@ -34863,57 +35284,6 @@ function detectPatternFindings(filename, addedLines) {
     }
   }
   return findings;
-}
-
-// src/analysis/ast/parsers.ts
-function detectLanguage(filename) {
-  if (filename.endsWith(".ts") || filename.endsWith(".tsx")) return "typescript";
-  if (filename.endsWith(".js") || filename.endsWith(".jsx")) return "javascript";
-  if (filename.endsWith(".py")) return "python";
-  if (filename.endsWith(".go")) return "go";
-  if (filename.endsWith(".rs")) return "rust";
-  return "unknown";
-}
-function getParser(language) {
-  const Parser = loadModule("tree-sitter");
-  if (!Parser) return null;
-  const parser = new Parser();
-  try {
-    if (language === "typescript" || language === "javascript") {
-      const ts = loadModule("tree-sitter-typescript");
-      if (!ts?.typescript) return null;
-      parser.setLanguage(ts.typescript);
-      return parser;
-    }
-    if (language === "python") {
-      const py = loadModule("tree-sitter-python");
-      if (!py) return null;
-      parser.setLanguage(py);
-      return parser;
-    }
-    if (language === "go") {
-      const go = loadModule("tree-sitter-go");
-      if (!go) return null;
-      parser.setLanguage(go);
-      return parser;
-    }
-    if (language === "rust") {
-      const rust = loadModule("tree-sitter-rust");
-      if (!rust) return null;
-      parser.setLanguage(rust);
-      return parser;
-    }
-  } catch {
-    return null;
-  }
-  return null;
-}
-function loadModule(name) {
-  try {
-    return require(name);
-  } catch {
-    return null;
-  }
 }
 
 // src/analysis/ast/analyzer.ts
@@ -35785,11 +36155,185 @@ function createEnhancedCommentBody(originalBody, snippet2, filePath) {
 ${formattedSnippet}`;
 }
 
+// src/utils/suggestion-validator.ts
+function validateSuggestionLine(lineNumber, patch) {
+  const lineMap = mapLinesToPositions(patch);
+  return lineMap.get(lineNumber) ?? null;
+}
+function isSuggestionLineValid(lineNumber, patch) {
+  return validateSuggestionLine(lineNumber, patch) !== null;
+}
+function isDeletionOnlyFile(file) {
+  return file.status === "removed" || (file.additions ?? 0) === 0;
+}
+function validateSuggestionRange(startLine, endLine, patch) {
+  if (!patch || patch.trim().length === 0) {
+    return { isValid: false, reason: "No patch available" };
+  }
+  if (startLine > endLine) {
+    return { isValid: false, reason: "Invalid range: start > end" };
+  }
+  const rangeLength = endLine - startLine + 1;
+  if (rangeLength > 50) {
+    return { isValid: false, reason: `Range too long: ${rangeLength} lines (max 50)` };
+  }
+  const lineMap = mapLinesToPositions(patch);
+  for (let line = startLine; line <= endLine; line++) {
+    if (!lineMap.has(line)) {
+      return { isValid: false, reason: `Line ${line} not found in diff` };
+    }
+  }
+  const positions = [];
+  for (let line = startLine; line <= endLine; line++) {
+    const pos = lineMap.get(line);
+    if (pos !== void 0) {
+      positions.push(pos);
+    }
+  }
+  for (let i = 1; i < positions.length; i++) {
+    if (positions[i] !== positions[i - 1] + 1) {
+      return { isValid: false, reason: "Range contains gaps (non-consecutive lines)" };
+    }
+  }
+  if (!isRangeWithinSingleHunk(startLine, endLine, patch)) {
+    return { isValid: false, reason: "Range crosses hunk boundary" };
+  }
+  const startPosition = lineMap.get(startLine);
+  const endPosition = lineMap.get(endLine);
+  return {
+    isValid: true,
+    startPosition,
+    endPosition
+  };
+}
+
+// src/validation/syntax-validator.ts
+function validateSyntax(code, language) {
+  if (language === "unknown" || language === "rust") {
+    return {
+      isValid: true,
+      skipped: true,
+      reason: "Unsupported language",
+      errors: []
+    };
+  }
+  const parser = getParser(language);
+  if (!parser) {
+    return {
+      isValid: true,
+      skipped: true,
+      reason: "Parser not available",
+      errors: []
+    };
+  }
+  const tree = parser.parse(code);
+  const errors = [];
+  const cursor = tree.walk();
+  const visitNode = (node) => {
+    if (node.type === "ERROR") {
+      errors.push({
+        type: "ERROR",
+        line: node.startPosition.row + 1,
+        // 1-indexed
+        column: node.startPosition.column + 1,
+        // 1-indexed
+        text: node.text || void 0
+      });
+    }
+    if (node.isMissing) {
+      errors.push({
+        type: "MISSING",
+        line: node.startPosition.row + 1,
+        column: node.startPosition.column + 1,
+        text: node.text || void 0
+      });
+    }
+    for (let i = 0; i < node.childCount; i++) {
+      const child = node.child(i);
+      if (child) {
+        visitNode(child);
+      }
+    }
+  };
+  visitNode(tree.rootNode);
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+}
+
+// src/validation/confidence-calculator.ts
+var CONFIDENCE_MULTIPLIERS = {
+  /** Boost factor when syntax is valid (10% increase) */
+  SYNTAX_BOOST: 1.1,
+  /** Penalty factor when syntax is invalid (10% decrease) */
+  SYNTAX_PENALTY: 0.9,
+  /** Boost factor when consensus achieved (20% increase) */
+  CONSENSUS_BOOST: 1.2
+};
+var FALLBACK_SCORING = {
+  /** Base confidence without any signals */
+  BASE: 0.5,
+  /** Bonus added for valid syntax */
+  SYNTAX_BONUS: 0.2,
+  /** Bonus added for consensus */
+  CONSENSUS_BONUS: 0.2
+};
+var DEFAULT_QUALITY_CONFIG = {
+  /** Default minimum confidence threshold (70%) */
+  MIN_CONFIDENCE: 0.7,
+  /** Default minimum providers for consensus */
+  MIN_AGREEMENT: 2
+};
+function calculateConfidence(signals) {
+  let confidence;
+  if (signals.llmConfidence !== void 0) {
+    confidence = signals.llmConfidence;
+    if (signals.syntaxValid) {
+      confidence *= CONFIDENCE_MULTIPLIERS.SYNTAX_BOOST;
+    } else {
+      confidence *= CONFIDENCE_MULTIPLIERS.SYNTAX_PENALTY;
+    }
+    if (signals.hasConsensus) {
+      confidence *= CONFIDENCE_MULTIPLIERS.CONSENSUS_BOOST;
+    }
+    confidence *= signals.providerReliability;
+  } else {
+    confidence = FALLBACK_SCORING.BASE;
+    if (signals.syntaxValid) {
+      confidence += FALLBACK_SCORING.SYNTAX_BONUS;
+    }
+    if (signals.hasConsensus) {
+      confidence += FALLBACK_SCORING.CONSENSUS_BONUS;
+    }
+    confidence *= signals.providerReliability;
+  }
+  return Math.min(1, confidence);
+}
+function shouldPostSuggestion(finding, confidence, config) {
+  const severityThreshold = config.confidence_threshold?.[finding.severity];
+  const threshold = severityThreshold ?? config.min_confidence ?? DEFAULT_QUALITY_CONFIG.MIN_CONFIDENCE;
+  if (confidence < threshold) {
+    return false;
+  }
+  if (finding.severity === "critical" && config.consensus?.required_for_critical) {
+    const providerCount = finding.providers?.length ?? 0;
+    const minAgreement = config.consensus.min_agreement ?? DEFAULT_QUALITY_CONFIG.MIN_AGREEMENT;
+    if (providerCount < minAgreement) {
+      return false;
+    }
+  }
+  return true;
+}
+
 // src/github/comment-poster.ts
 var CommentPoster = class _CommentPoster {
-  constructor(client, dryRun = false) {
+  constructor(client, dryRun = false, config, suppressionTracker, providerWeightTracker) {
     this.client = client;
     this.dryRun = dryRun;
+    this.config = config;
+    this.suppressionTracker = suppressionTracker;
+    this.providerWeightTracker = providerWeightTracker;
   }
   static MAX_COMMENT_SIZE = 6e4;
   static BOT_COMMENT_MARKER = "<!-- multi-provider-code-review-bot -->";
@@ -35885,15 +36429,97 @@ ${content.substring(0, 500)}...`);
       return [];
     }
   }
+  /**
+   * Validate and filter suggestions through quality pipeline.
+   * Reads pre-computed hasConsensus from Finding (set during aggregation).
+   */
+  async validateAndFilterSuggestion(comment, prNumber) {
+    if (!comment.suggestion) {
+      return { valid: true };
+    }
+    if (this.suppressionTracker) {
+      const suppressed = await this.suppressionTracker.shouldSuppress(
+        { category: comment.category || "unknown", file: comment.path, line: comment.line },
+        prNumber
+      );
+      if (suppressed) {
+        logger.debug(`Suggestion suppressed for ${comment.path}:${comment.line} (similar suggestion dismissed)`);
+        return { valid: false, reason: "Similar suggestion was dismissed" };
+      }
+    }
+    let syntaxValid = true;
+    if (this.config?.suggestionSyntaxValidation !== false) {
+      const language = detectLanguage(comment.path);
+      if (language !== "unknown") {
+        const syntaxResult = validateSyntax(comment.suggestion, language);
+        if (!syntaxResult.isValid && !syntaxResult.skipped) {
+          logger.debug(`Suggestion syntax invalid for ${comment.path}:${comment.line}: ${syntaxResult.errors.length} error(s)`);
+          syntaxValid = false;
+        }
+      }
+    }
+    const hasConsensus = comment.hasConsensus ?? false;
+    if (hasConsensus) {
+      logger.debug(`Consensus detected for ${comment.path}:${comment.line} (providers agreed during aggregation)`);
+    }
+    if (!syntaxValid && !hasConsensus) {
+      return { valid: false, reason: "Syntax validation failed", hasConsensus: false };
+    }
+    if (comment.severity && this.config) {
+      let providerReliability = 1;
+      if (this.providerWeightTracker && comment.provider) {
+        providerReliability = await this.providerWeightTracker.getWeight(comment.provider);
+      }
+      const signals = {
+        llmConfidence: comment.confidence,
+        syntaxValid,
+        hasConsensus,
+        providerReliability
+      };
+      const confidence = calculateConfidence(signals);
+      const minimalFinding = {
+        file: comment.path,
+        line: comment.line,
+        severity: comment.severity,
+        title: "",
+        message: "",
+        providers: comment.provider ? [comment.provider] : [],
+        hasConsensus
+      };
+      if (!shouldPostSuggestion(
+        minimalFinding,
+        confidence,
+        {
+          min_confidence: this.config.minConfidence,
+          confidence_threshold: this.config.confidenceThreshold,
+          consensus: {
+            required_for_critical: this.config.consensusRequiredForCritical ?? true,
+            min_agreement: this.config.consensusMinAgreement ?? 2
+          }
+        }
+      )) {
+        logger.debug(`Suggestion below confidence threshold for ${comment.path}:${comment.line} (confidence: ${confidence.toFixed(2)})`);
+        return { valid: false, reason: "Below confidence threshold", hasConsensus };
+      }
+    }
+    return { valid: true, hasConsensus };
+  }
   async postInline(prNumber, comments, files, headSha) {
     if (comments.length === 0) return;
+    const filesWithAdditions = files.filter((f) => !isDeletionOnlyFile(f));
+    const filesWithAdditionsSet = new Set(filesWithAdditions.map((f) => f.filename));
     const positionMaps = /* @__PURE__ */ new Map();
     for (const file of files) {
       positionMaps.set(file.filename, mapLinesToPositions(file.patch));
     }
+    const sortedComments = [...comments].sort((a, b) => {
+      const pathCompare = a.path.localeCompare(b.path);
+      if (pathCompare !== 0) return pathCompare;
+      return a.line - b.line;
+    });
     const fileContentCache = /* @__PURE__ */ new Map();
     const enhancedComments = await Promise.all(
-      comments.map(async (c) => {
+      sortedComments.map(async (c) => {
         let enhancedBody = c.body;
         if (headSha) {
           let fileContent = fileContentCache.get(c.path);
@@ -35911,15 +36537,66 @@ ${content.substring(0, 500)}...`);
         return { ...c, body: enhancedBody };
       })
     );
-    const apiComments = enhancedComments.map((c) => {
-      const posMap = positionMaps.get(c.path);
-      const position = posMap?.get(c.line);
-      if (!position) {
-        logger.warn(`Cannot find diff position for ${c.path}:${c.line}, skipping inline comment`);
-        return null;
-      }
-      return { path: c.path, position, body: c.body };
-    }).filter((c) => c !== null);
+    const apiComments = (await Promise.all(
+      enhancedComments.map(async (c) => {
+        const posMap = positionMaps.get(c.path);
+        const position = posMap?.get(c.line);
+        if (!position) {
+          logger.warn(`Cannot find diff position for ${c.path}:${c.line}, skipping inline comment`);
+          return null;
+        }
+        if (c.body.includes("```suggestion")) {
+          const file = files.find((f) => f.filename === c.path);
+          if (!filesWithAdditionsSet.has(c.path)) {
+            logger.debug(`Skipping suggestion for deletion-only file: ${c.path}`);
+            c.body = c.body.replace(/```suggestion[\s\S]*?```/g, "_Suggestion not available (file has no additions)_");
+          } else if (file?.patch) {
+            const startLine2 = c.start_line;
+            if (startLine2 !== void 0 && startLine2 !== c.line) {
+              const validation = validateSuggestionRange(startLine2, c.line, file.patch);
+              if (!validation.isValid) {
+                logger.debug(`Multi-line suggestion invalid at ${c.path}:${startLine2}-${c.line}: ${validation.reason}`);
+                c.body = c.body.replace(/```suggestion[\s\S]*?```/g, `_Suggestion not available: ${validation.reason}_`);
+              }
+            } else {
+              if (!isSuggestionLineValid(c.line, file.patch)) {
+                logger.debug(`Suggestion line ${c.path}:${c.line} not valid in diff, posting without suggestion block`);
+                c.body = c.body.replace(/```suggestion[\s\S]*?```/g, "_Suggestion not available for this line_");
+              }
+            }
+          }
+          const suggestionMatch = c.body.match(/```suggestion\n([\s\S]*?)```/);
+          if (suggestionMatch && !c.body.includes("_Suggestion not available")) {
+            const suggestionContent = suggestionMatch[1];
+            const qualityValidation = await this.validateAndFilterSuggestion(
+              {
+                ...c,
+                suggestion: suggestionContent,
+                category: c.category,
+                severity: c.severity,
+                provider: c.provider,
+                hasConsensus: c.hasConsensus,
+                confidence: c.confidence
+              },
+              prNumber
+            );
+            if (!qualityValidation.valid) {
+              c.body = c.body.replace(/```suggestion[\s\S]*?```/g, `_Suggestion not available: ${qualityValidation.reason}_`);
+            }
+          }
+        }
+        const apiComment = { path: c.path, position, body: c.body };
+        const startLine = c.start_line;
+        if (startLine !== void 0 && startLine !== c.line) {
+          apiComment.start_line = startLine;
+          apiComment.line = c.line;
+          apiComment.start_side = "RIGHT";
+          apiComment.side = "RIGHT";
+          delete apiComment.position;
+        }
+        return apiComment;
+      })
+    )).filter((c) => c !== null);
     if (apiComments.length === 0) {
       logger.info("No inline comments with valid diff positions to post");
       return;
@@ -36186,6 +36863,26 @@ var GitHubClient = class {
   }
 };
 
+// src/utils/suggestion-formatter.ts
+function countMaxConsecutiveBackticks(str2) {
+  const backtickSequences = str2.match(/`+/g);
+  if (!backtickSequences) {
+    return 0;
+  }
+  return Math.max(...backtickSequences.map((seq2) => seq2.length));
+}
+function formatSuggestionBlock(content) {
+  if (!content || content.trim() === "") {
+    return "";
+  }
+  const maxBackticks = countMaxConsecutiveBackticks(content);
+  const fenceCount = Math.max(3, maxBackticks + 1);
+  const fence = "`".repeat(fenceCount);
+  return `${fence}suggestion
+${content}
+${fence}`;
+}
+
 // src/output/formatter-v2.ts
 var MarkdownFormatterV2 = class {
   format(review) {
@@ -36334,16 +37031,13 @@ var MarkdownFormatterV2 = class {
     lines.push(finding.message);
     lines.push("");
     if (finding.suggestion) {
-      lines.push("**Suggested Fix:**");
-      const trimmedSuggestion = finding.suggestion.trim();
-      if (trimmedSuggestion.startsWith("```")) {
-        lines.push(trimmedSuggestion);
-      } else {
-        lines.push("```");
-        lines.push(trimmedSuggestion);
-        lines.push("```");
+      const suggestionBlock = formatSuggestionBlock(finding.suggestion);
+      if (suggestionBlock) {
+        lines.push("**Suggested Fix:**");
+        lines.push("");
+        lines.push(suggestionBlock);
+        lines.push("");
       }
-      lines.push("");
     }
     if (finding.evidence) {
       const confidence = Math.round(finding.evidence.confidence * 100);
@@ -37172,6 +37866,18 @@ var CodeGraph = class _CodeGraph {
       }
     }
     return void 0;
+  }
+  /**
+   * Get all symbols called by a given symbol
+   */
+  getCalls(symbol) {
+    return this.calls.get(symbol) || null;
+  }
+  /**
+   * Get all symbols that call a given symbol
+   */
+  getCallers(symbol) {
+    return this.callers.get(symbol) || null;
   }
   /**
    * Get all files that a file depends on (direct imports)
@@ -38433,6 +39139,53 @@ var MetricsCollector = class _MetricsCollector {
     logger.debug(`Recorded review metrics for PR #${prNumber}`);
   }
   /**
+   * Record suggestion quality metrics for analytics
+   */
+  async recordSuggestionQuality(metric) {
+    const data = await this.loadData();
+    data.suggestionQuality = data.suggestionQuality || [];
+    data.suggestionQuality.push({
+      ...metric,
+      timestamp: Date.now()
+    });
+    const maxSuggestions = (this.config?.analyticsMaxReviews || 1e3) * 10;
+    if (data.suggestionQuality.length > maxSuggestions) {
+      data.suggestionQuality = data.suggestionQuality.slice(-maxSuggestions);
+    }
+    await this.saveData(data);
+    logger.debug(`Recorded suggestion quality metric for ${metric.file}:${metric.line}`);
+  }
+  /**
+   * Get suggestion quality statistics
+   */
+  async getSuggestionQualityStats() {
+    const data = await this.loadData();
+    const suggestions = data.suggestionQuality || [];
+    if (suggestions.length === 0) {
+      return {
+        totalSuggestions: 0,
+        syntaxValidRate: 0,
+        suppressionRate: 0,
+        consensusRate: 0,
+        avgConfidence: 0,
+        postRate: 0
+      };
+    }
+    const syntaxValid = suggestions.filter((s) => s.syntaxValid).length;
+    const suppressed = suggestions.filter((s) => s.suppressed).length;
+    const hasConsensus = suggestions.filter((s) => s.hasConsensus).length;
+    const posted = suggestions.filter((s) => s.posted).length;
+    const totalConfidence = suggestions.reduce((sum, s) => sum + s.confidenceScore, 0);
+    return {
+      totalSuggestions: suggestions.length,
+      syntaxValidRate: syntaxValid / suggestions.length,
+      suppressionRate: suppressed / suggestions.length,
+      consensusRate: hasConsensus / suggestions.length,
+      avgConfidence: totalConfidence / suggestions.length,
+      postRate: posted / suggestions.length
+    };
+  }
+  /**
    * Get metrics for a specific time period
    */
   async getMetrics(fromTimestamp, toTimestamp) {
@@ -38551,6 +39304,7 @@ var MetricsCollector = class _MetricsCollector {
   async clear() {
     const emptyData = {
       reviews: [],
+      suggestionQuality: [],
       totalReviews: 0,
       totalCost: 0,
       totalFindings: 0,
@@ -38582,6 +39336,7 @@ var MetricsCollector = class _MetricsCollector {
     if (!raw) {
       return {
         reviews: [],
+        suggestionQuality: [],
         totalReviews: 0,
         totalCost: 0,
         totalFindings: 0,
@@ -38596,11 +39351,13 @@ var MetricsCollector = class _MetricsCollector {
         ...review,
         providers: review.providers || []
       }));
+      data.suggestionQuality = data.suggestionQuality || [];
       return data;
     } catch (error2) {
       logger.warn("Failed to parse metrics data, starting fresh", error2);
       return {
         reviews: [],
+        suggestionQuality: [],
         totalReviews: 0,
         totalCost: 0,
         totalFindings: 0,
@@ -38936,6 +39693,480 @@ var BatchOrchestrator = class {
   }
 };
 
+// src/learning/suppression-tracker.ts
+var import_crypto3 = require("crypto");
+var SuppressionTracker = class _SuppressionTracker {
+  constructor(storage, repoKey) {
+    this.storage = storage;
+    this.repoKey = repoKey;
+  }
+  static PR_TTL_MS = 7 * 24 * 60 * 60 * 1e3;
+  // 7 days
+  static REPO_TTL_MS = 30 * 24 * 60 * 60 * 1e3;
+  // 30 days
+  static LINE_PROXIMITY_THRESHOLD = 5;
+  /**
+   * Record a dismissal and create a suppression pattern
+   *
+   * @param finding - The finding to suppress (category, file, line)
+   * @param scope - 'pr' for PR-only suppression, 'repo' for repo-wide
+   * @param prNumber - Required if scope is 'pr'
+   */
+  async recordDismissal(finding, scope, prNumber) {
+    const data = await this.loadData();
+    const ttl = scope === "pr" ? _SuppressionTracker.PR_TTL_MS : _SuppressionTracker.REPO_TTL_MS;
+    const timestamp2 = Date.now();
+    const pattern = {
+      id: (0, import_crypto3.randomUUID)(),
+      category: finding.category,
+      file: finding.file,
+      line: finding.line,
+      scope,
+      prNumber: scope === "pr" ? prNumber : void 0,
+      timestamp: timestamp2,
+      expiresAt: timestamp2 + ttl
+    };
+    data.patterns.push(pattern);
+    await this.saveData(data);
+    logger.debug(
+      `Recorded ${scope}-scoped suppression: ${finding.category} at ${finding.file}:${finding.line}` + (scope === "pr" ? ` (PR #${prNumber})` : "")
+    );
+  }
+  /**
+   * Check if a finding should be suppressed based on recorded patterns
+   *
+   * Matches patterns if:
+   * - Same category and file
+   * - Line within 5 lines of pattern
+   * - Pattern not expired
+   * - Scope matches (PR scope requires same PR number)
+   *
+   * @param finding - The finding to check
+   * @param prNumber - Current PR number for scope matching
+   * @returns true if finding should be suppressed
+   */
+  async shouldSuppress(finding, prNumber) {
+    const data = await this.loadData();
+    const now = Date.now();
+    for (const pattern of data.patterns) {
+      if (pattern.expiresAt < now) {
+        continue;
+      }
+      if (pattern.category !== finding.category) {
+        continue;
+      }
+      if (pattern.file !== finding.file) {
+        continue;
+      }
+      const lineDiff = Math.abs(finding.line - pattern.line);
+      if (lineDiff > _SuppressionTracker.LINE_PROXIMITY_THRESHOLD) {
+        continue;
+      }
+      if (pattern.scope === "pr") {
+        if (pattern.prNumber !== prNumber) {
+          continue;
+        }
+      }
+      logger.debug(
+        `Suppressing finding: ${finding.category} at ${finding.file}:${finding.line} (matches pattern ${pattern.id})`
+      );
+      return true;
+    }
+    return false;
+  }
+  /**
+   * Get categories with active suppressions for a PR.
+   * Used by PromptEnricher to inform LLM about dismissed categories.
+   *
+   * @param prNumber - PR number to check (includes repo-wide suppressions)
+   * @returns Array of unique category names with active suppressions
+   */
+  async getActiveCategories(prNumber) {
+    const data = await this.loadData();
+    const now = Date.now();
+    const activePatterns = data.patterns.filter(
+      (p) => p.expiresAt > now && (p.scope === "repo" || p.scope === "pr" && p.prNumber === prNumber)
+    );
+    const categorySet = new Set(activePatterns.map((p) => p.category));
+    const categories = Array.from(categorySet);
+    return categories;
+  }
+  /**
+   * Remove expired suppression patterns
+   *
+   * @returns Number of patterns cleared
+   */
+  async clearExpired() {
+    const data = await this.loadData();
+    const now = Date.now();
+    const beforeCount = data.patterns.length;
+    data.patterns = data.patterns.filter((pattern) => pattern.expiresAt >= now);
+    const clearedCount = beforeCount - data.patterns.length;
+    if (clearedCount > 0) {
+      data.lastCleanup = now;
+      await this.saveData(data);
+      logger.info(`Cleared ${clearedCount} expired suppression patterns`);
+    }
+    return clearedCount;
+  }
+  /**
+   * Get cache key for this repository
+   */
+  getCacheKey() {
+    return `suppression-${this.repoKey}`;
+  }
+  /**
+   * Load suppression data from cache
+   */
+  async loadData() {
+    const raw = await this.storage.read(this.getCacheKey());
+    if (!raw) {
+      return {
+        patterns: [],
+        lastCleanup: Date.now()
+      };
+    }
+    try {
+      return JSON.parse(raw);
+    } catch (error2) {
+      logger.warn("Failed to parse suppression data, starting fresh", error2);
+      return {
+        patterns: [],
+        lastCleanup: Date.now()
+      };
+    }
+  }
+  /**
+   * Save suppression data to cache
+   */
+  async saveData(data) {
+    await this.storage.write(this.getCacheKey(), JSON.stringify(data));
+  }
+};
+
+// src/learning/provider-weights.ts
+var ProviderWeightTracker = class _ProviderWeightTracker {
+  constructor(storage = new CacheStorage()) {
+    this.storage = storage;
+  }
+  static CACHE_KEY = "provider-weights";
+  static MIN_WEIGHT = 0.3;
+  static VARIABLE_WEIGHT = 0.7;
+  static MIN_FEEDBACK_THRESHOLD = 5;
+  /**
+   * Record feedback for a provider and update its weight
+   *
+   * @param provider - Provider name (e.g., 'claude', 'gemini')
+   * @param reaction - User reaction: '👍' (good) or '👎' (bad)
+   */
+  async recordFeedback(provider, reaction) {
+    const data = await this.loadData();
+    let providerWeight = data.weights[provider];
+    if (!providerWeight) {
+      providerWeight = {
+        provider,
+        positiveCount: 0,
+        negativeCount: 0,
+        totalCount: 0,
+        positiveRate: 0,
+        weight: 1,
+        // Default weight
+        lastUpdated: Date.now()
+      };
+      data.weights[provider] = providerWeight;
+    }
+    if (reaction === "\u{1F44D}") {
+      providerWeight.positiveCount++;
+    } else {
+      providerWeight.negativeCount++;
+    }
+    providerWeight.totalCount = providerWeight.positiveCount + providerWeight.negativeCount;
+    providerWeight.positiveRate = providerWeight.positiveCount / providerWeight.totalCount;
+    providerWeight.lastUpdated = Date.now();
+    providerWeight.weight = this.calculateWeight(
+      providerWeight.positiveRate,
+      providerWeight.totalCount
+    );
+    await this.saveData(data);
+    logger.debug(
+      `Recorded ${reaction} feedback for ${provider} (${providerWeight.positiveCount}\u{1F44D} ${providerWeight.negativeCount}\u{1F44E}, weight: ${providerWeight.weight.toFixed(2)})`
+    );
+  }
+  /**
+   * Get the current weight for a provider
+   *
+   * @param provider - Provider name
+   * @returns Weight value (0.3-1.0), or 1.0 for new providers
+   */
+  async getWeight(provider) {
+    const data = await this.loadData();
+    const providerWeight = data.weights[provider];
+    if (!providerWeight) {
+      return 1;
+    }
+    return providerWeight.weight;
+  }
+  /**
+   * Get all provider weights
+   *
+   * @returns Map of provider name to ProviderWeight record
+   */
+  async getAllWeights() {
+    const data = await this.loadData();
+    return data.weights;
+  }
+  /**
+   * Recalculate weights for all providers
+   */
+  async recalculateWeights() {
+    const data = await this.loadData();
+    for (const provider in data.weights) {
+      const providerWeight = data.weights[provider];
+      providerWeight.weight = this.calculateWeight(
+        providerWeight.positiveRate,
+        providerWeight.totalCount
+      );
+      providerWeight.lastUpdated = Date.now();
+    }
+    data.lastAggregation = Date.now();
+    await this.saveData(data);
+    logger.info("Recalculated weights for all providers");
+  }
+  /**
+   * Calculate weight based on positive rate
+   *
+   * Formula: weight = MIN_WEIGHT + (VARIABLE_WEIGHT * positiveRate)
+   * - MIN_WEIGHT = 0.3 (floor, never fully exclude provider)
+   * - VARIABLE_WEIGHT = 0.7
+   * - Result range: 0.3 (0% positive) to 1.0 (100% positive)
+   *
+   * @param positiveRate - Ratio of positive feedback (0.0-1.0)
+   * @param totalCount - Total feedback count
+   * @returns Weight value (0.3-1.0), or 1.0 if below threshold
+   */
+  calculateWeight(positiveRate, totalCount) {
+    if (totalCount < _ProviderWeightTracker.MIN_FEEDBACK_THRESHOLD) {
+      return 1;
+    }
+    return _ProviderWeightTracker.MIN_WEIGHT + _ProviderWeightTracker.VARIABLE_WEIGHT * positiveRate;
+  }
+  /**
+   * Load provider weight data from cache
+   */
+  async loadData() {
+    const raw = await this.storage.read(_ProviderWeightTracker.CACHE_KEY);
+    if (!raw) {
+      return {
+        weights: {},
+        lastAggregation: Date.now()
+      };
+    }
+    try {
+      return JSON.parse(raw);
+    } catch (error2) {
+      logger.warn("Failed to parse provider weight data, starting fresh", error2);
+      return {
+        weights: {},
+        lastAggregation: Date.now()
+      };
+    }
+  }
+  /**
+   * Save provider weight data to cache
+   */
+  async saveData(data) {
+    await this.storage.write(_ProviderWeightTracker.CACHE_KEY, JSON.stringify(data));
+  }
+};
+
+// src/learning/prompt-enrichment.ts
+var DEFAULT_CONFIG2 = {
+  minFeedbackForLowQuality: 5,
+  lowQualityThreshold: 0.5,
+  maxSuppressionCategories: 5
+};
+var PromptEnricher = class {
+  constructor(suppressionTracker, feedbackTracker, config) {
+    this.suppressionTracker = suppressionTracker;
+    this.feedbackTracker = feedbackTracker;
+    this.config = { ...DEFAULT_CONFIG2, ...config };
+  }
+  config;
+  /**
+   * Get enrichment context for a specific PR.
+   * Aggregates suppression patterns and feedback stats.
+   */
+  async getEnrichmentContext(prNumber) {
+    const context2 = {
+      suppressedCategories: [],
+      lowQualityCategories: [],
+      repoPreferences: [],
+      promptAdditions: []
+    };
+    if (this.suppressionTracker) {
+      const suppressions = await this.getSuppressedCategories(prNumber);
+      context2.suppressedCategories = suppressions.slice(0, this.config.maxSuppressionCategories);
+    }
+    if (this.feedbackTracker) {
+      const categoryStats = await this.feedbackTracker.getCategoryStats();
+      context2.lowQualityCategories = this.identifyLowQualityCategories(categoryStats);
+    }
+    context2.repoPreferences = this.generatePreferences(context2);
+    context2.promptAdditions = this.generatePromptAdditions(context2);
+    return context2;
+  }
+  /**
+   * Get prompt text to inject into LLM prompt.
+   * Returns empty string if no enrichment available.
+   */
+  async getPromptText(prNumber) {
+    const context2 = await this.getEnrichmentContext(prNumber);
+    if (context2.promptAdditions.length === 0) {
+      return "";
+    }
+    return [
+      "LEARNED PREFERENCES (from user feedback in this repository):",
+      ...context2.promptAdditions,
+      ""
+    ].join("\n");
+  }
+  async getSuppressedCategories(prNumber) {
+    try {
+      const categories = await this.suppressionTracker.getActiveCategories?.(prNumber);
+      return categories || [];
+    } catch {
+      return [];
+    }
+  }
+  identifyLowQualityCategories(stats) {
+    return Object.values(stats).filter(
+      (s) => s.totalFeedback >= this.config.minFeedbackForLowQuality && s.positiveRate < this.config.lowQualityThreshold
+    ).map((s) => s.category).slice(0, this.config.maxSuppressionCategories);
+  }
+  generatePreferences(context2) {
+    const prefs = [];
+    if (context2.suppressedCategories.length > 0) {
+      prefs.push(`User has dismissed suggestions in these categories: ${context2.suppressedCategories.join(", ")}`);
+    }
+    if (context2.lowQualityCategories.length > 0) {
+      prefs.push(`These categories have high false-positive rates: ${context2.lowQualityCategories.join(", ")}`);
+    }
+    return prefs;
+  }
+  generatePromptAdditions(context2) {
+    const additions = [];
+    if (context2.suppressedCategories.length > 0) {
+      additions.push(
+        `- AVOID suggesting fixes in these categories (recently dismissed): ${context2.suppressedCategories.join(", ")}`
+      );
+    }
+    if (context2.lowQualityCategories.length > 0) {
+      additions.push(
+        `- BE EXTRA CAREFUL with these categories (high false-positive history): ${context2.lowQualityCategories.join(", ")}`
+      );
+    }
+    return additions;
+  }
+};
+
+// src/learning/acceptance-detector.ts
+var AcceptanceDetector = class {
+  /**
+   * Patterns matching GitHub's "Commit suggestion" feature.
+   *
+   * GitHub creates commits with these patterns when users click
+   * "Commit suggestion" on review comments.
+   */
+  SUGGESTION_COMMIT_PATTERNS = [
+    /Apply suggestions? from code review/i,
+    /Apply suggestions? from @[\w-]+/i,
+    /Apply \d+ suggestions?/i
+  ];
+  /**
+   * Detect acceptances from PR commits.
+   *
+   * GitHub's "Commit suggestion" feature creates commits with specific
+   * message patterns. This method matches those patterns against PR commits
+   * to detect when suggestions were accepted.
+   *
+   * @param commits - List of commits in the PR
+   * @param commentedFiles - Map of file paths to comment metadata
+   * @returns List of detected acceptances
+   */
+  detectFromCommits(commits, commentedFiles) {
+    const acceptances = [];
+    for (const commit of commits) {
+      if (!this.isSuggestionCommit(commit.message)) {
+        continue;
+      }
+      for (const file of commit.files) {
+        const comments = commentedFiles.get(file);
+        if (!comments) continue;
+        for (const comment of comments) {
+          acceptances.push({
+            file,
+            line: comment.line,
+            provider: comment.provider || "unknown",
+            commitSha: commit.sha,
+            timestamp: commit.timestamp
+          });
+        }
+      }
+    }
+    return acceptances;
+  }
+  /**
+   * Detect acceptances from thumbs-up reactions on suggestion comments.
+   *
+   * When users react with thumbs-up (👍) to a suggestion comment,
+   * it's considered an acceptance event.
+   *
+   * @param commentReactions - List of comments with their reactions
+   * @returns List of detected acceptances
+   */
+  detectFromReactions(commentReactions) {
+    const acceptances = [];
+    for (const comment of commentReactions) {
+      const hasThumbsUp = comment.reactions.some((r) => r.content === "+1");
+      if (!hasThumbsUp) continue;
+      acceptances.push({
+        file: comment.file,
+        line: comment.line,
+        provider: comment.provider || "unknown",
+        commentId: comment.commentId,
+        timestamp: Date.now()
+      });
+    }
+    return acceptances;
+  }
+  /**
+   * Record acceptances as positive feedback to weight tracker.
+   *
+   * Each acceptance triggers a positive feedback event (👍) for the
+   * associated provider, improving their weight in future confidence
+   * calculations.
+   *
+   * @param acceptances - List of detected acceptances
+   * @param weightTracker - Provider weight tracker instance
+   */
+  async recordAcceptances(acceptances, weightTracker) {
+    for (const acceptance of acceptances) {
+      if (acceptance.provider && acceptance.provider !== "unknown") {
+        await weightTracker.recordFeedback(acceptance.provider, "\u{1F44D}");
+      }
+    }
+  }
+  /**
+   * Check if a commit message matches GitHub's suggestion commit patterns.
+   *
+   * @param message - Commit message to check
+   * @returns True if message matches a suggestion pattern
+   */
+  isSuggestionCommit(message) {
+    return this.SUGGESTION_COMMIT_PATTERNS.some((pattern) => pattern.test(message));
+  }
+};
+
 // src/setup.ts
 async function createComponents(config, githubToken) {
   const pluginLoader = config.pluginsEnabled ? new PluginLoader({
@@ -38947,7 +40178,6 @@ async function createComponents(config, githubToken) {
   if (pluginLoader) {
     await pluginLoader.loadPlugins();
   }
-  const promptBuilder = new PromptBuilder(config);
   const llmExecutor = new LLMExecutor(config);
   const deduplicator = new Deduplicator();
   const consensus = new ConsensusEngine({
@@ -38969,15 +40199,27 @@ async function createComponents(config, githubToken) {
   const rules = RuleLoader.load();
   const githubClient = new GitHubClient(githubToken);
   const prLoader = new PullRequestLoader(githubClient);
-  const commentPoster = new CommentPoster(githubClient, config.dryRun);
-  const formatter = new MarkdownFormatterV2();
   const contextRetriever = new ContextRetriever();
   const impactAnalyzer = new ImpactAnalyzer();
   const evidenceScorer = new EvidenceScorer();
   const mermaidGenerator = new MermaidGenerator();
   const feedbackFilter = new FeedbackFilter(githubClient);
   const cacheStorage = new CacheStorage();
+  const repoKey = `${githubClient.owner}/${githubClient.repo}`;
+  const suppressionTracker = new SuppressionTracker(cacheStorage, repoKey);
+  const providerWeightTracker = new ProviderWeightTracker(cacheStorage);
+  const acceptanceDetector = new AcceptanceDetector();
   const feedbackTracker = config.learningEnabled ? new FeedbackTracker(cacheStorage, config.learningMinFeedbackCount) : void 0;
+  const promptEnricher = new PromptEnricher(suppressionTracker, feedbackTracker);
+  const promptBuilder = new PromptBuilder(config, "standard", promptEnricher, void 0);
+  const commentPoster = new CommentPoster(
+    githubClient,
+    config.dryRun,
+    config,
+    suppressionTracker,
+    providerWeightTracker
+  );
+  const formatter = new MarkdownFormatterV2();
   const quietModeFilter = config.quietModeEnabled ? new QuietModeFilter(
     {
       enabled: config.quietModeEnabled,
@@ -39028,7 +40270,44 @@ async function createComponents(config, githubToken) {
     reliabilityTracker,
     metricsCollector,
     batchOrchestrator,
-    githubClient
+    githubClient,
+    acceptanceDetector,
+    providerWeightTracker
+  };
+}
+
+// src/utils/suggestion-sanity.ts
+function validateSuggestionSanity(suggestion) {
+  if (suggestion === void 0 || suggestion === null) {
+    return {
+      isValid: false,
+      reason: "No suggestion provided"
+    };
+  }
+  const trimmed = suggestion.trim();
+  if (trimmed === "") {
+    return {
+      isValid: false,
+      reason: "Empty suggestion"
+    };
+  }
+  const lineCount = trimmed.split("\n").length;
+  if (lineCount > 50) {
+    return {
+      isValid: false,
+      reason: "Suggestion too long (>50 lines)"
+    };
+  }
+  const hasCodeSyntax = /[{}()\[\];=<>:]/.test(trimmed);
+  if (!hasCodeSyntax) {
+    return {
+      isValid: false,
+      reason: "Suggestion lacks code syntax"
+    };
+  }
+  return {
+    isValid: true,
+    suggestion: trimmed
   };
 }
 
@@ -39038,8 +40317,21 @@ function extractFindings(results) {
   for (const result of results) {
     if (result.status !== "success" || !result.result?.findings) continue;
     for (const finding of result.result.findings) {
+      let suggestion = void 0;
+      if (finding.suggestion !== void 0 && finding.suggestion !== null) {
+        const validation = validateSuggestionSanity(finding.suggestion);
+        if (validation.isValid) {
+          suggestion = validation.suggestion;
+        } else {
+          logger.debug(
+            `Skipping invalid suggestion for ${finding.file}:${finding.line}: ${validation.reason}`
+          );
+        }
+      }
       findings.push({
         ...finding,
+        suggestion,
+        // Use validated suggestion (or undefined)
         provider: result.name,
         providers: finding.providers || [result.name]
       });
@@ -42418,7 +43710,7 @@ var ReviewOrchestrator = class {
               const batchDiff = filterDiffByFiles(reviewContext.diff, batch);
               const batchContext = { ...reviewContext, files: batch, diff: batchDiff };
               const promptBuilder = new PromptBuilder(config, reviewIntensity);
-              const prompt = promptBuilder.build(batchContext);
+              const prompt = await promptBuilder.build(batchContext);
               try {
                 const results = await this.components.llmExecutor.execute(healthy, prompt, intensityTimeout);
                 for (const result of results) {
@@ -42601,6 +43893,13 @@ var ReviewOrchestrator = class {
       }
       const markdown = this.components.formatter.format(review);
       const suppressed = await this.components.feedbackFilter.loadSuppressed(pr.number);
+      if (this.components.acceptanceDetector && this.components.providerWeightTracker && this.components.githubClient) {
+        try {
+          await this.detectAndRecordAcceptances(pr.number);
+        } catch (error2) {
+          logger.debug("Failed to detect acceptances", error2);
+        }
+      }
       const inlineFiltered = review.inlineComments.filter((c) => this.components.feedbackFilter.shouldPost(c, suppressed));
       if (progressTracker) {
         await progressTracker.replaceWith(markdown);
@@ -42632,6 +43931,76 @@ var ReviewOrchestrator = class {
   async dispose() {
     this.components.costTracker.reset();
     logger.debug("Orchestrator resources disposed");
+  }
+  /**
+   * Detect and record suggestion acceptances from PR activity.
+   *
+   * Checks for:
+   * 1. Committed suggestions (via GitHub's "Commit suggestion" button)
+   * 2. Thumbs-up reactions on suggestion comments
+   *
+   * Records acceptances as positive feedback to improve provider weights.
+   */
+  async detectAndRecordAcceptances(prNumber) {
+    const { githubClient, acceptanceDetector, providerWeightTracker } = this.components;
+    if (!githubClient || !acceptanceDetector || !providerWeightTracker) return;
+    const { octokit, owner, repo } = githubClient;
+    const commitsResponse = await octokit.rest.pulls.listCommits({
+      owner,
+      repo,
+      pull_number: prNumber,
+      per_page: 100
+    });
+    const commits = commitsResponse.data.map((commit) => ({
+      sha: commit.sha,
+      message: commit.commit.message,
+      files: (commit.files || []).map((f) => f.filename),
+      timestamp: new Date(commit.commit.author?.date || Date.now()).getTime()
+    }));
+    const comments = await octokit.paginate(octokit.rest.pulls.listReviewComments, {
+      owner,
+      repo,
+      pull_number: prNumber,
+      per_page: 100
+    });
+    const commentedFiles = /* @__PURE__ */ new Map();
+    const commentReactions = [];
+    for (const comment of comments) {
+      const file = comment.path;
+      const line = comment.line || comment.original_line || 0;
+      const providerMatch = comment.body?.match(/\*\*Provider:\*\* `([^`]+)`/);
+      const provider = providerMatch?.[1];
+      if (!commentedFiles.has(file)) {
+        commentedFiles.set(file, []);
+      }
+      commentedFiles.get(file).push({ line, provider });
+      const reactions = await octokit.rest.reactions.listForPullRequestReviewComment({
+        owner,
+        repo,
+        comment_id: comment.id
+      });
+      commentReactions.push({
+        commentId: comment.id,
+        file,
+        line,
+        provider,
+        reactions: reactions.data.map((r) => ({
+          user: r.user?.login || "unknown",
+          content: r.content
+        }))
+      });
+    }
+    const commitAcceptances = acceptanceDetector.detectFromCommits(commits, commentedFiles);
+    const reactionAcceptances = acceptanceDetector.detectFromReactions(commentReactions);
+    const allAcceptances = [...commitAcceptances, ...reactionAcceptances];
+    await acceptanceDetector.recordAcceptances(allAcceptances, providerWeightTracker);
+    if (allAcceptances.length > 0) {
+      logger.info(
+        `Acceptance detection: ${commitAcceptances.length} from commits, ${reactionAcceptances.length} from reactions, ${allAcceptances.length} total`
+      );
+    } else {
+      logger.debug("No suggestion acceptances detected");
+    }
   }
   /**
    * Run all static analysis operations in parallel

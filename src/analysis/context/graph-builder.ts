@@ -332,6 +332,20 @@ export class CodeGraph {
   }
 
   /**
+   * Get all symbols called by a given symbol
+   */
+  getCalls(symbol: string): string[] | null {
+    return this.calls.get(symbol) || null;
+  }
+
+  /**
+   * Get all symbols that call a given symbol
+   */
+  getCallers(symbol: string): string[] | null {
+    return this.callers.get(symbol) || null;
+  }
+
+  /**
    * Get all files that a file depends on (direct imports)
    */
   getDependencies(file: string): string[] {

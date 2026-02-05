@@ -1,9 +1,14 @@
-import { InlineComment, FileChange } from '../types';
+import { InlineComment, FileChange, Severity, ReviewConfig } from '../types';
 import { GitHubClient } from './client';
 import { logger } from '../utils/logger';
 import { mapLinesToPositions } from '../utils/diff';
 import { withRetry } from '../utils/retry';
 import { extractCodeSnippet, createEnhancedCommentBody } from '../utils/code-snippet';
+import { isSuggestionLineValid, validateSuggestionRange, isDeletionOnlyFile } from '../utils/suggestion-validator';
+import { validateSyntax, shouldPostSuggestion, calculateConfidence, ConfidenceSignals } from '../validation';
+import { SuppressionTracker } from '../learning/suppression-tracker';
+import { ProviderWeightTracker } from '../learning/provider-weights';
+import { detectLanguage } from '../analysis/ast/parsers';
 
 export class CommentPoster {
   private static readonly MAX_COMMENT_SIZE = 60_000;
@@ -11,7 +16,10 @@ export class CommentPoster {
 
   constructor(
     private readonly client: GitHubClient,
-    private readonly dryRun: boolean = false
+    private readonly dryRun: boolean = false,
+    private readonly config?: Partial<ReviewConfig>,
+    private readonly suppressionTracker?: SuppressionTracker,
+    private readonly providerWeightTracker?: ProviderWeightTracker
   ) {}
 
   async postSummary(prNumber: number, body: string, updateExisting = true): Promise<void> {
@@ -118,8 +126,116 @@ export class CommentPoster {
     }
   }
 
+  /**
+   * Validate and filter suggestions through quality pipeline.
+   * Reads pre-computed hasConsensus from Finding (set during aggregation).
+   */
+  private async validateAndFilterSuggestion(
+    comment: InlineComment & {
+      suggestion?: string;
+      category?: string;
+      severity?: Severity;
+      provider?: string;
+      hasConsensus?: boolean;  // Pre-computed during aggregation
+      confidence?: number;
+    },
+    prNumber: number
+  ): Promise<{ valid: boolean; reason?: string; hasConsensus?: boolean }> {
+    if (!comment.suggestion) {
+      return { valid: true }; // No suggestion to validate
+    }
+
+    // Check suppression first (fast path)
+    if (this.suppressionTracker) {
+      const suppressed = await this.suppressionTracker.shouldSuppress(
+        { category: comment.category || 'unknown', file: comment.path, line: comment.line },
+        prNumber
+      );
+      if (suppressed) {
+        logger.debug(`Suggestion suppressed for ${comment.path}:${comment.line} (similar suggestion dismissed)`);
+        return { valid: false, reason: 'Similar suggestion was dismissed' };
+      }
+    }
+
+    // Syntax validation (if enabled)
+    let syntaxValid = true;
+    if (this.config?.suggestionSyntaxValidation !== false) {
+      const language = detectLanguage(comment.path);
+      if (language !== 'unknown') {
+        const syntaxResult = validateSyntax(comment.suggestion, language);
+        if (!syntaxResult.isValid && !syntaxResult.skipped) {
+          logger.debug(`Suggestion syntax invalid for ${comment.path}:${comment.line}: ${syntaxResult.errors.length} error(s)`);
+          syntaxValid = false;
+          // Don't return early - check consensus which might override
+        }
+      }
+    }
+
+    // Read consensus from Finding (set during aggregation, NOT computed here)
+    // Consensus checking requires per-provider suggestions which aren't available at comment-posting time
+    const hasConsensus = comment.hasConsensus ?? false;
+    if (hasConsensus) {
+      logger.debug(`Consensus detected for ${comment.path}:${comment.line} (providers agreed during aggregation)`);
+    }
+
+    // If syntax invalid and no consensus to override, reject
+    if (!syntaxValid && !hasConsensus) {
+      return { valid: false, reason: 'Syntax validation failed', hasConsensus: false };
+    }
+
+    // Confidence threshold check
+    if (comment.severity && this.config) {
+      // Get provider weight for reliability signal
+      let providerReliability = 1.0;
+      if (this.providerWeightTracker && comment.provider) {
+        providerReliability = await this.providerWeightTracker.getWeight(comment.provider);
+      }
+
+      const signals: ConfidenceSignals = {
+        llmConfidence: comment.confidence,
+        syntaxValid,
+        hasConsensus,
+        providerReliability
+      };
+      const confidence = calculateConfidence(signals);
+
+      // Create minimal Finding object for shouldPostSuggestion
+      const minimalFinding = {
+        file: comment.path,
+        line: comment.line,
+        severity: comment.severity,
+        title: '',
+        message: '',
+        providers: comment.provider ? [comment.provider] : [],
+        hasConsensus
+      };
+
+      if (!shouldPostSuggestion(
+        minimalFinding,
+        confidence,
+        {
+          min_confidence: this.config.minConfidence,
+          confidence_threshold: this.config.confidenceThreshold,
+          consensus: {
+            required_for_critical: this.config.consensusRequiredForCritical ?? true,
+            min_agreement: this.config.consensusMinAgreement ?? 2
+          }
+        }
+      )) {
+        logger.debug(`Suggestion below confidence threshold for ${comment.path}:${comment.line} (confidence: ${confidence.toFixed(2)})`);
+        return { valid: false, reason: 'Below confidence threshold', hasConsensus };
+      }
+    }
+
+    return { valid: true, hasConsensus };
+  }
+
   async postInline(prNumber: number, comments: InlineComment[], files: FileChange[], headSha?: string): Promise<void> {
     if (comments.length === 0) return;
+
+    // Filter out deletion-only files (no suggestions possible)
+    const filesWithAdditions = files.filter(f => !isDeletionOnlyFile(f));
+    const filesWithAdditionsSet = new Set(filesWithAdditions.map(f => f.filename));
 
     // Build a map from file path to line->position mapping
     const positionMaps = new Map<string, Map<number, number>>();
@@ -127,11 +243,18 @@ export class CommentPoster {
       positionMaps.set(file.filename, mapLinesToPositions(file.patch));
     }
 
+    // Sort comments for optimal batch commit UX (top-to-bottom per file)
+    const sortedComments = [...comments].sort((a, b) => {
+      const pathCompare = a.path.localeCompare(b.path);
+      if (pathCompare !== 0) return pathCompare;
+      return a.line - b.line;
+    });
+
     // Fetch file contents and enhance comments with code snippets (if headSha provided)
     const fileContentCache = new Map<string, string | null>();
 
     const enhancedComments = await Promise.all(
-      comments.map(async (c) => {
+      sortedComments.map(async (c) => {
         let enhancedBody = c.body;
 
         // Try to add code snippet if we have the commit SHA
@@ -158,17 +281,78 @@ export class CommentPoster {
     );
 
     // Convert comments to GitHub API format, filtering out those without valid positions
-    const apiComments = enhancedComments
-      .map(c => {
+    const apiComments = (await Promise.all(enhancedComments
+      .map(async c => {
         const posMap = positionMaps.get(c.path);
         const position = posMap?.get(c.line);
         if (!position) {
           logger.warn(`Cannot find diff position for ${c.path}:${c.line}, skipping inline comment`);
           return null;
         }
-        return { path: c.path, position, body: c.body };
+
+        // Validate suggestions can be applied at this line/range
+        if (c.body.includes('```suggestion')) {
+          const file = files.find(f => f.filename === c.path);
+
+          // Skip suggestions for deletion-only files
+          if (!filesWithAdditionsSet.has(c.path)) {
+            logger.debug(`Skipping suggestion for deletion-only file: ${c.path}`);
+            c.body = c.body.replace(/```suggestion[\s\S]*?```/g, '_Suggestion not available (file has no additions)_');
+          } else if (file?.patch) {
+            // Check if this is a multi-line suggestion (has start_line)
+            const startLine = (c as any).start_line;
+            if (startLine !== undefined && startLine !== c.line) {
+              // Multi-line suggestion - validate range
+              const validation = validateSuggestionRange(startLine, c.line, file.patch);
+              if (!validation.isValid) {
+                logger.debug(`Multi-line suggestion invalid at ${c.path}:${startLine}-${c.line}: ${validation.reason}`);
+                c.body = c.body.replace(/```suggestion[\s\S]*?```/g, `_Suggestion not available: ${validation.reason}_`);
+              }
+            } else {
+              // Single-line suggestion - use existing validation
+              if (!isSuggestionLineValid(c.line, file.patch)) {
+                logger.debug(`Suggestion line ${c.path}:${c.line} not valid in diff, posting without suggestion block`);
+                c.body = c.body.replace(/```suggestion[\s\S]*?```/g, '_Suggestion not available for this line_');
+              }
+            }
+          }
+
+          // Quality gate validation (syntax, suppression, confidence)
+          // Extract suggestion content for validation
+          const suggestionMatch = c.body.match(/```suggestion\n([\s\S]*?)```/);
+          if (suggestionMatch && !c.body.includes('_Suggestion not available')) {
+            const suggestionContent = suggestionMatch[1];
+            const qualityValidation = await this.validateAndFilterSuggestion(
+              {
+                ...c,
+                suggestion: suggestionContent,
+                category: (c as any).category,
+                severity: (c as any).severity,
+                provider: (c as any).provider,
+                hasConsensus: (c as any).hasConsensus,
+                confidence: (c as any).confidence
+              },
+              prNumber
+            );
+            if (!qualityValidation.valid) {
+              c.body = c.body.replace(/```suggestion[\s\S]*?```/g, `_Suggestion not available: ${qualityValidation.reason}_`);
+            }
+          }
+        }
+
+        const apiComment: any = { path: c.path, position, body: c.body };
+        const startLine = (c as any).start_line;
+        if (startLine !== undefined && startLine !== c.line) {
+          // Multi-line: use line-based parameters instead of position
+          apiComment.start_line = startLine;
+          apiComment.line = c.line;
+          apiComment.start_side = 'RIGHT';
+          apiComment.side = 'RIGHT';
+          delete apiComment.position; // Can't use both position and line
+        }
+        return apiComment;
       })
-      .filter((c): c is { path: string; position: number; body: string } => c !== null);
+    )).filter((c): c is { path: string; position: number; body: string } => c !== null);
 
     if (apiComments.length === 0) {
       logger.info('No inline comments with valid diff positions to post');

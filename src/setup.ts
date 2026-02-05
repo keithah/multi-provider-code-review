@@ -33,6 +33,10 @@ import { ReliabilityTracker } from './providers/reliability-tracker';
 import { MetricsCollector } from './analytics/metrics-collector';
 import { PluginLoader } from './plugins';
 import { BatchOrchestrator } from './core/batch-orchestrator';
+import { SuppressionTracker } from './learning/suppression-tracker';
+import { ProviderWeightTracker } from './learning/provider-weights';
+import { PromptEnricher } from './learning/prompt-enrichment';
+import { AcceptanceDetector } from './learning/acceptance-detector';
 
 export interface SetupOptions {
   cliMode?: boolean;
@@ -83,7 +87,6 @@ async function createComponentsForCLI(config: ReviewConfig): Promise<ReviewCompo
     await pluginLoader.loadPlugins();
   }
 
-  const promptBuilder = new PromptBuilder(config);
   const llmExecutor = new LLMExecutor(config);
   const deduplicator = new Deduplicator();
   const consensus = new ConsensusEngine({
@@ -110,7 +113,12 @@ async function createComponentsForCLI(config: ReviewConfig): Promise<ReviewCompo
 
   // Learning and auto-fix components
   const cacheStorage = new CacheStorage();
+  const suppressionTracker = new SuppressionTracker(cacheStorage, 'cli-mode');
+  const providerWeightTracker = new ProviderWeightTracker(cacheStorage);
+  const acceptanceDetector = new AcceptanceDetector();
   const feedbackTracker = config.learningEnabled ? new FeedbackTracker(cacheStorage, config.learningMinFeedbackCount) : undefined;
+  const promptEnricher = new PromptEnricher(suppressionTracker, feedbackTracker);
+  const promptBuilder = new PromptBuilder(config, 'standard', promptEnricher, undefined);
   const quietModeFilter = config.quietModeEnabled
     ? new QuietModeFilter(
         {
@@ -141,7 +149,13 @@ async function createComponentsForCLI(config: ReviewConfig): Promise<ReviewCompo
   // Mock GitHub components for CLI mode
   const mockGitHubClient = {} as GitHubClient;
   const prLoader = new PullRequestLoader(mockGitHubClient);
-  const commentPoster = new CommentPoster(mockGitHubClient, true); // Always dry-run in CLI
+  const commentPoster = new CommentPoster(
+    mockGitHubClient,
+    true,
+    config,
+    suppressionTracker,
+    providerWeightTracker
+  ); // Always dry-run in CLI
   const formatter = new MarkdownFormatterV2();
   // Create a mock FeedbackFilter that always allows posts (no suppression in CLI mode)
   const feedbackFilter = {
@@ -181,6 +195,8 @@ async function createComponentsForCLI(config: ReviewConfig): Promise<ReviewCompo
     reliabilityTracker,
     metricsCollector,
     batchOrchestrator,
+    acceptanceDetector,
+    providerWeightTracker,
   };
 }
 
@@ -199,7 +215,6 @@ export async function createComponents(config: ReviewConfig, githubToken: string
     await pluginLoader.loadPlugins();
   }
 
-  const promptBuilder = new PromptBuilder(config);
   const llmExecutor = new LLMExecutor(config);
   const deduplicator = new Deduplicator();
   const consensus = new ConsensusEngine({
@@ -221,17 +236,29 @@ export async function createComponents(config: ReviewConfig, githubToken: string
   const rules = RuleLoader.load();
   const githubClient = new GitHubClient(githubToken);
   const prLoader = new PullRequestLoader(githubClient);
-  const commentPoster = new CommentPoster(githubClient, config.dryRun);
-  const formatter = new MarkdownFormatterV2();
   const contextRetriever = new ContextRetriever();
   const impactAnalyzer = new ImpactAnalyzer();
   const evidenceScorer = new EvidenceScorer();
   const mermaidGenerator = new MermaidGenerator();
-  const feedbackFilter = new FeedbackFilter(githubClient);
 
   // Learning and auto-fix components
   const cacheStorage = new CacheStorage();
+  const repoKey = `${githubClient.owner}/${githubClient.repo}`;
+  const suppressionTracker = new SuppressionTracker(cacheStorage, repoKey);
+  const providerWeightTracker = new ProviderWeightTracker(cacheStorage);
+  const feedbackFilter = new FeedbackFilter(githubClient, providerWeightTracker);
+  const acceptanceDetector = new AcceptanceDetector();
   const feedbackTracker = config.learningEnabled ? new FeedbackTracker(cacheStorage, config.learningMinFeedbackCount) : undefined;
+  const promptEnricher = new PromptEnricher(suppressionTracker, feedbackTracker);
+  const promptBuilder = new PromptBuilder(config, 'standard', promptEnricher, undefined);
+  const commentPoster = new CommentPoster(
+    githubClient,
+    config.dryRun,
+    config,
+    suppressionTracker,
+    providerWeightTracker
+  );
+  const formatter = new MarkdownFormatterV2();
   const quietModeFilter = config.quietModeEnabled
     ? new QuietModeFilter(
         {
@@ -290,5 +317,7 @@ export async function createComponents(config: ReviewConfig, githubToken: string
     metricsCollector,
     batchOrchestrator,
     githubClient,
+    acceptanceDetector,
+    providerWeightTracker,
   };
 }

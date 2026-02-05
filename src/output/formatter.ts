@@ -1,4 +1,5 @@
 import { Review } from '../types';
+import { formatSuggestionBlock } from '../utils/suggestion-formatter';
 
 export class MarkdownFormatter {
   format(review: Review): string {
@@ -97,7 +98,12 @@ export class MarkdownFormatter {
       lines.push(`- ${f.file}:${f.line} — ${f.title}`);
       lines.push(`  ${f.message}`);
       if (f.suggestion) {
-        lines.push(`  Suggestion: ${f.suggestion}`);
+        const suggestionBlock = formatSuggestionBlock(f.suggestion);
+        if (suggestionBlock) {
+          lines.push('');
+          lines.push('  **Suggested fix:**');
+          lines.push(suggestionBlock);
+        }
       }
       if (f.evidence) {
         lines.push(

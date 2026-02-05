@@ -1,9 +1,13 @@
 import { InlineComment } from '../types';
 import { GitHubClient } from './client';
 import { logger } from '../utils/logger';
+import { ProviderWeightTracker } from '../learning/provider-weights';
 
 export class FeedbackFilter {
-  constructor(private readonly client: GitHubClient) {}
+  constructor(
+    private readonly client: GitHubClient,
+    private readonly providerWeightTracker?: ProviderWeightTracker
+  ) {}
 
   async loadSuppressed(prNumber: number): Promise<Set<string>> {
     const { octokit, owner, repo } = this.client;
@@ -29,6 +33,15 @@ export class FeedbackFilter {
           if (hasThumbsDown) {
             const signature = this.signatureFromComment(comment.path, comment.line, comment.body || '');
             suppressed.add(signature);
+
+            // Record negative feedback if weight tracker available
+            if (this.providerWeightTracker) {
+              const providerMatch = comment.body?.match(/\*\*Provider:\*\* `([^`]+)`/);
+              const provider = providerMatch?.[1];
+              if (provider) {
+                await this.providerWeightTracker.recordFeedback(provider, '👎');
+              }
+            }
           }
         } catch (error) {
           logger.warn(`Failed to load reactions for comment ${comment.id}`, error as Error);
