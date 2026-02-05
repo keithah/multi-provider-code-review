@@ -33371,6 +33371,38 @@ function mapLinesToPositions(patch) {
   }
   return map2;
 }
+function isRangeWithinSingleHunk(startLine, endLine, patch) {
+  if (!patch) return false;
+  const lines = patch.split("\n");
+  const hunkRegex = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/;
+  const noNewlineMarker = "\\ No newline at end of file";
+  let currentNew = 0;
+  let foundStart = false;
+  let inActiveHunk = false;
+  for (const raw of lines) {
+    if (raw === noNewlineMarker) continue;
+    const hunkMatch = raw.match(hunkRegex);
+    if (hunkMatch) {
+      if (foundStart) {
+        return false;
+      }
+      currentNew = parseInt(hunkMatch[2], 10);
+      inActiveHunk = true;
+      continue;
+    }
+    if (!inActiveHunk) continue;
+    if (raw.startsWith("+") || !raw.startsWith("-") && raw.length > 0) {
+      if (currentNew === startLine) {
+        foundStart = true;
+      }
+      if (currentNew === endLine) {
+        return foundStart;
+      }
+      currentNew += 1;
+    }
+  }
+  return false;
+}
 function filterDiffByFiles(diff, files) {
   if (files.length === 0) return "";
   if (!diff || diff.trim().length === 0) return "";
@@ -35834,6 +35866,49 @@ function validateSuggestionLine(lineNumber, patch) {
 function isSuggestionLineValid(lineNumber, patch) {
   return validateSuggestionLine(lineNumber, patch) !== null;
 }
+function isDeletionOnlyFile(file) {
+  return file.status === "removed" || (file.additions ?? 0) === 0;
+}
+function validateSuggestionRange(startLine, endLine, patch) {
+  if (!patch || patch.trim().length === 0) {
+    return { isValid: false, reason: "No patch available" };
+  }
+  if (startLine > endLine) {
+    return { isValid: false, reason: "Invalid range: start > end" };
+  }
+  const rangeLength = endLine - startLine + 1;
+  if (rangeLength > 50) {
+    return { isValid: false, reason: `Range too long: ${rangeLength} lines (max 50)` };
+  }
+  const lineMap = mapLinesToPositions(patch);
+  for (let line = startLine; line <= endLine; line++) {
+    if (!lineMap.has(line)) {
+      return { isValid: false, reason: `Line ${line} not found in diff` };
+    }
+  }
+  const positions = [];
+  for (let line = startLine; line <= endLine; line++) {
+    const pos = lineMap.get(line);
+    if (pos !== void 0) {
+      positions.push(pos);
+    }
+  }
+  for (let i = 1; i < positions.length; i++) {
+    if (positions[i] !== positions[i - 1] + 1) {
+      return { isValid: false, reason: "Range contains gaps (non-consecutive lines)" };
+    }
+  }
+  if (!isRangeWithinSingleHunk(startLine, endLine, patch)) {
+    return { isValid: false, reason: "Range crosses hunk boundary" };
+  }
+  const startPosition = lineMap.get(startLine);
+  const endPosition = lineMap.get(endLine);
+  return {
+    isValid: true,
+    startPosition,
+    endPosition
+  };
+}
 
 // src/github/comment-poster.ts
 var CommentPoster = class _CommentPoster {
@@ -35937,13 +36012,20 @@ ${content.substring(0, 500)}...`);
   }
   async postInline(prNumber, comments, files, headSha) {
     if (comments.length === 0) return;
+    const filesWithAdditions = files.filter((f) => !isDeletionOnlyFile(f));
+    const filesWithAdditionsSet = new Set(filesWithAdditions.map((f) => f.filename));
     const positionMaps = /* @__PURE__ */ new Map();
     for (const file of files) {
       positionMaps.set(file.filename, mapLinesToPositions(file.patch));
     }
+    const sortedComments = [...comments].sort((a, b) => {
+      const pathCompare = a.path.localeCompare(b.path);
+      if (pathCompare !== 0) return pathCompare;
+      return a.line - b.line;
+    });
     const fileContentCache = /* @__PURE__ */ new Map();
     const enhancedComments = await Promise.all(
-      comments.map(async (c) => {
+      sortedComments.map(async (c) => {
         let enhancedBody = c.body;
         if (headSha) {
           let fileContent = fileContentCache.get(c.path);
@@ -35970,12 +36052,35 @@ ${content.substring(0, 500)}...`);
       }
       if (c.body.includes("```suggestion")) {
         const file = files.find((f) => f.filename === c.path);
-        if (!file || !isSuggestionLineValid(c.line, file.patch)) {
-          logger.warn(`Suggestion line ${c.path}:${c.line} not valid in diff, posting without suggestion block`);
-          c.body = c.body.replace(/```suggestion[\s\S]*?```/g, "_Suggestion not available for this line_");
+        if (!filesWithAdditionsSet.has(c.path)) {
+          logger.debug(`Skipping suggestion for deletion-only file: ${c.path}`);
+          c.body = c.body.replace(/```suggestion[\s\S]*?```/g, "_Suggestion not available (file has no additions)_");
+        } else if (file?.patch) {
+          const startLine2 = c.start_line;
+          if (startLine2 !== void 0 && startLine2 !== c.line) {
+            const validation = validateSuggestionRange(startLine2, c.line, file.patch);
+            if (!validation.isValid) {
+              logger.debug(`Multi-line suggestion invalid at ${c.path}:${startLine2}-${c.line}: ${validation.reason}`);
+              c.body = c.body.replace(/```suggestion[\s\S]*?```/g, `_Suggestion not available: ${validation.reason}_`);
+            }
+          } else {
+            if (!isSuggestionLineValid(c.line, file.patch)) {
+              logger.debug(`Suggestion line ${c.path}:${c.line} not valid in diff, posting without suggestion block`);
+              c.body = c.body.replace(/```suggestion[\s\S]*?```/g, "_Suggestion not available for this line_");
+            }
+          }
         }
       }
-      return { path: c.path, position, body: c.body };
+      const apiComment = { path: c.path, position, body: c.body };
+      const startLine = c.start_line;
+      if (startLine !== void 0 && startLine !== c.line) {
+        apiComment.start_line = startLine;
+        apiComment.line = c.line;
+        apiComment.start_side = "RIGHT";
+        apiComment.side = "RIGHT";
+        delete apiComment.position;
+      }
+      return apiComment;
     }).filter((c) => c !== null);
     if (apiComments.length === 0) {
       logger.info("No inline comments with valid diff positions to post");
