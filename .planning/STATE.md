@@ -6,23 +6,23 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** Reduce friction from issue detection to fix application - developers can resolve code review findings instantly by clicking "Commit suggestion" rather than context-switching to their editor.
 
-**Current focus:** Phase 4 - Validation and Quality
+**Current focus:** Phase 5 - Complete Learning Feedback Loop
 
 ## Current Position
 
-Phase: 4 of 4 (Validation and Quality)
-Plan: 9 of 9 in current phase
-Status: Phase complete, verified
-Last activity: 2026-02-05 — Completed 04-09-PLAN.md (Runtime wiring gap closure), verification passed (6/6 must-haves)
+Phase: 5 of 5 (Complete Learning Feedback Loop)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-05 — Completed 05-01-PLAN.md (Wire AcceptanceDetector into runtime setup)
 
-Progress: [███████████████████] 100% (19 of 19 total plans)
+Progress: [████████████████████] 95% (20 of 21 total plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 19
+- Total plans completed: 20
 - Average duration: 2.5 min
-- Total execution time: 0.8 hours
+- Total execution time: 0.85 hours
 
 **By Phase:**
 
@@ -32,10 +32,11 @@ Progress: [███████████████████] 100% (19 o
 | 2 - LLM Fix Generation Integration | 4/4 | 10 min | 2.5 min |
 | 3 - Multi-line and Advanced Formatting | 3/3 | 8 min | 2.7 min |
 | 4 - Validation and Quality | 9/9 | 30.5 min | 3.4 min |
+| 5 - Complete Learning Feedback Loop | 1/2 | 1.5 min | 1.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-05 (3min), 04-06 (9min), 04-07 (6min), 04-08 (4min), 04-09 (2.5min)
-- Trend: Phase 4 complete with gap closure, all 19 plans delivered
+- Last 5 plans: 04-06 (9min), 04-07 (6min), 04-08 (4min), 04-09 (2.5min), 05-01 (1.5min)
+- Trend: Phase 5 in progress, runtime wiring complete
 
 *Updated after each plan completion*
 
@@ -112,6 +113,9 @@ Recent decisions affecting current work:
 - Use '${owner}/${repo}' key for production tracker (proper repo scoping) (04-09)
 - Pass undefined for codeGraph at setup time (requires files unavailable until PR load) (04-09)
 - Wire trackers into both createComponents and createComponentsForCLI for consistency (04-09)
+- Follow Plan 04-09 pattern for AcceptanceDetector wiring (05-01)
+- Make acceptanceDetector optional field (CLI may lack full GitHub API access) (05-01)
+- Wire into both production and CLI modes for testing parity (05-01)
 
 ### Pending Todos
 
@@ -132,9 +136,9 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Completed 04-09-PLAN.md (Runtime wiring gap closure)
+Stopped at: Completed 05-01-PLAN.md (Wire AcceptanceDetector into runtime setup)
 Resume file: None
 
 ---
 
-*Phase 4 complete! All 19 plans delivered (including gap closure). Validation and learning features fully wired and ready for integration testing and deployment.*
+*Phase 5 in progress! 20 of 21 plans delivered. AcceptanceDetector wired and ready for orchestration integration.*
