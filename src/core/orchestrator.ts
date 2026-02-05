@@ -740,6 +740,105 @@ export class ReviewOrchestrator {
   }
 
   /**
+   * Detect and record suggestion acceptances from PR activity.
+   *
+   * Checks for:
+   * 1. Committed suggestions (via GitHub's "Commit suggestion" button)
+   * 2. Thumbs-up reactions on suggestion comments
+   *
+   * Records acceptances as positive feedback to improve provider weights.
+   */
+  private async detectAndRecordAcceptances(prNumber: number): Promise<void> {
+    const { githubClient, acceptanceDetector, providerWeightTracker } = this.components;
+    if (!githubClient || !acceptanceDetector || !providerWeightTracker) return;
+
+    const { octokit, owner, repo } = githubClient;
+
+    // 1. Fetch PR commits
+    const commitsResponse = await octokit.rest.pulls.listCommits({
+      owner,
+      repo,
+      pull_number: prNumber,
+      per_page: 100,
+    });
+
+    const commits = commitsResponse.data.map(commit => ({
+      sha: commit.sha,
+      message: commit.commit.message,
+      files: (commit.files || []).map(f => f.filename),
+      timestamp: new Date(commit.commit.author?.date || Date.now()).getTime(),
+    }));
+
+    // 2. Fetch review comments
+    const comments = await octokit.paginate(octokit.rest.pulls.listReviewComments, {
+      owner,
+      repo,
+      pull_number: prNumber,
+      per_page: 100,
+    });
+
+    // 3. Build file/line/provider map and fetch reactions
+    const commentedFiles = new Map<string, Array<{ line: number; provider?: string }>>();
+    const commentReactions: Array<{
+      commentId: number;
+      file: string;
+      line: number;
+      provider?: string;
+      reactions: Array<{ user: string; content: string }>;
+    }> = [];
+
+    for (const comment of comments) {
+      const file = comment.path;
+      const line = comment.line || comment.original_line || 0;
+
+      // Extract provider from comment body (embedded by CommentPoster)
+      const providerMatch = comment.body?.match(/\*\*Provider:\*\* `([^`]+)`/);
+      const provider = providerMatch?.[1];
+
+      // Build file map for commit detection
+      if (!commentedFiles.has(file)) {
+        commentedFiles.set(file, []);
+      }
+      commentedFiles.get(file)!.push({ line, provider });
+
+      // Fetch reactions for this comment
+      const reactions = await octokit.rest.reactions.listForPullRequestReviewComment({
+        owner,
+        repo,
+        comment_id: comment.id,
+      });
+
+      commentReactions.push({
+        commentId: comment.id,
+        file,
+        line,
+        provider,
+        reactions: reactions.data.map(r => ({
+          user: r.user?.login || 'unknown',
+          content: r.content,
+        })),
+      });
+    }
+
+    // 4. Detect acceptances from both sources
+    const commitAcceptances = acceptanceDetector.detectFromCommits(commits, commentedFiles);
+    const reactionAcceptances = acceptanceDetector.detectFromReactions(commentReactions);
+
+    // 5. Record all acceptances to weight tracker
+    const allAcceptances = [...commitAcceptances, ...reactionAcceptances];
+    await acceptanceDetector.recordAcceptances(allAcceptances, providerWeightTracker);
+
+    if (allAcceptances.length > 0) {
+      logger.info(
+        `Acceptance detection: ${commitAcceptances.length} from commits, ` +
+        `${reactionAcceptances.length} from reactions, ${allAcceptances.length} total`
+      );
+    } else {
+      logger.debug('No suggestion acceptances detected');
+    }
+  }
+
+  /**
    * Run all static analysis operations in parallel
    */
   private async runStaticAnalysis(
