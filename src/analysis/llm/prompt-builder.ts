@@ -32,6 +32,7 @@ export class PromptBuilder {
     }
 
     const diff = trimDiff(pr.diff, this.config.diffMaxBytes);
+    const skipSuggestions = this.shouldSkipSuggestions(diff);
 
     // Extract which files are actually in the trimmed diff to avoid false positives
     const filesInDiff = new Set<string>();
@@ -78,24 +79,35 @@ export class PromptBuilder {
       '   • Lose or corrupt data',
       '   • Have SQL injection, XSS, command injection, or RCE vulnerability',
       '',
-      'Return JSON: [{file, line, severity, title, message, suggestion}]',
-      '',
-      'SUGGESTION FIELD (optional):',
-      '  - Only include "suggestion" for FIXABLE issues (not all findings)',
-      '  - Fixable: null reference, type error, off-by-one, missing null check, resource leak',
-      '  - NOT fixable: architectural issues, design suggestions, unclear requirements',
-      '  - "suggestion" must be EXACT replacement code for the problematic line(s)',
-      '  - Include ONLY the fixed code, no explanations or comments',
-      '  - Example: {"file": "x.ts", "line": 10, "severity": "major",',
-      '             "title": "Null reference", "message": "...",',
-      '             "suggestion": "const user = users?.find(u => u.id === id) ?? null;"}',
-      '',
+    ];
+
+    // Conditionally include suggestion field based on context size
+    if (skipSuggestions) {
+      instructions.push('Return JSON: [{file, line, severity, title, message}]', '');
+    } else {
+      instructions.push(
+        'Return JSON: [{file, line, severity, title, message, suggestion}]',
+        '',
+        'SUGGESTION FIELD (optional):',
+        '  - Only include "suggestion" for FIXABLE issues (not all findings)',
+        '  - Fixable: null reference, type error, off-by-one, missing null check, resource leak',
+        '  - NOT fixable: architectural issues, design suggestions, unclear requirements',
+        '  - "suggestion" must be EXACT replacement code for the problematic line(s)',
+        '  - Include ONLY the fixed code, no explanations or comments',
+        '  - Example: {"file": "x.ts", "line": 10, "severity": "major",',
+        '             "title": "Null reference", "message": "...",',
+        '             "suggestion": "const user = users?.find(u => u.id === id) ?? null;"}',
+        ''
+      );
+    }
+
+    instructions.push(
       `PR #${pr.number}: ${pr.title}`,
       `Author: ${pr.author}`,
       'Files changed:',
       ...fileList,
       ''
-    ];
+    );
 
     // Auto-detect and inject defensive programming context
     // Skip for very large diffs to avoid performance impact (>50KB)
