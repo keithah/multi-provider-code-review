@@ -304,10 +304,10 @@ These items are explicitly excluded from current implementation:
 | FR-1.1 | PROJECT.md Active #4, SUMMARY.md Table Stakes | 1 | Complete |
 | FR-1.2 | SUMMARY.md Pitfall #3 | 1 | Complete |
 | FR-1.3 | SUMMARY.md Pitfall #1 | 1 | Complete |
-| FR-2.1 | PROJECT.md Active #1, SUMMARY.md Phase 2 | 2 | Pending |
-| FR-2.2 | PROJECT.md Active #2, SUMMARY.md Phase 2 | 2 | Pending |
-| FR-2.3 | PROJECT.md Active #6, Key Decisions | 2 | Pending |
-| FR-2.4 | SUMMARY.md Pitfall #2 | 2 | Pending |
+| FR-2.1 | PROJECT.md Active #1, SUMMARY.md Phase 2 | 2 | Complete |
+| FR-2.2 | PROJECT.md Active #2, SUMMARY.md Phase 2 | 2 | Complete |
+| FR-2.3 | PROJECT.md Active #6, Key Decisions | 2 | Complete |
+| FR-2.4 | SUMMARY.md Pitfall #2 | 2 | Complete |
 | FR-3.1 | PROJECT.md Active #5, SUMMARY.md Table Stakes | 3 | Pending |
 | FR-3.2 | SUMMARY.md Pitfall #5 | 3 | Pending |
 | FR-3.3 | SUMMARY.md Phase 3 | 3 | Pending |
