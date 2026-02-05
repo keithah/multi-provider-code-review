@@ -119,6 +119,18 @@ export interface ReviewConfig {
     light: 'detailed' | 'standard' | 'brief';
   };
 
+  // Quality configuration
+  minConfidence?: number;
+  confidenceThreshold?: {
+    critical?: number;
+    high?: number;
+    medium?: number;
+    low?: number;
+  };
+  consensusRequiredForCritical?: boolean;
+  consensusMinAgreement?: number;
+  suggestionSyntaxValidation?: boolean;
+
   dryRun: boolean;
 }
 
@@ -159,6 +171,7 @@ export interface Finding {
   category?: string;
   evidence?: EvidenceScore;
   evidenceDetail?: EvidenceDetail;
+  hasConsensus?: boolean;  // Set during aggregation when multiple providers agree
 }
 
 export interface PRContext {
