@@ -141,6 +141,67 @@ export function mapLinesToPositions(patch: string | undefined): Map<number, numb
 }
 
 /**
+ * Check if a line range is within a single contiguous hunk.
+ * Returns false if range crosses non-contiguous hunk boundaries.
+ *
+ * @param startLine - First line of range (inclusive)
+ * @param endLine - Last line of range (inclusive)
+ * @param patch - Unified diff patch string
+ * @returns true if range is within single hunk, false otherwise
+ */
+export function isRangeWithinSingleHunk(
+  startLine: number,
+  endLine: number,
+  patch: string | undefined
+): boolean {
+  if (!patch) return false;
+
+  const lines = patch.split('\n');
+  const hunkRegex = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/;
+  const noNewlineMarker = '\\ No newline at end of file';
+
+  let currentNew = 0;
+  let foundStart = false;
+  let inActiveHunk = false;
+
+  for (const raw of lines) {
+    if (raw === noNewlineMarker) continue;
+
+    const hunkMatch = raw.match(hunkRegex);
+
+    if (hunkMatch) {
+      // New hunk starting
+      if (foundStart) {
+        // We found start but hit a new hunk before finding end
+        // This means range crosses hunk boundary
+        return false;
+      }
+      currentNew = parseInt(hunkMatch[2], 10);
+      inActiveHunk = true;
+      continue;
+    }
+
+    if (!inActiveHunk) continue;
+
+    // Track RIGHT side lines (added or context, not deleted)
+    if (raw.startsWith('+') || (!raw.startsWith('-') && raw.length > 0)) {
+      if (currentNew === startLine) {
+        foundStart = true;
+      }
+      if (currentNew === endLine) {
+        // Found end - only valid if we found start in same hunk
+        return foundStart;
+      }
+      currentNew += 1;
+    }
+    // Deleted lines don't advance currentNew (LEFT side only)
+  }
+
+  // Never found complete range
+  return false;
+}
+
+/**
  * Filter a full diff to only include chunks for the given files.
  * Uses lightweight line scanning with a minimal regex for headers.
  */
