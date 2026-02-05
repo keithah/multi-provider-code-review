@@ -43,6 +43,10 @@ export class SuppressionTracker {
 
   /**
    * Record a dismissal and create a suppression pattern
+   *
+   * @param finding - The finding to suppress (category, file, line)
+   * @param scope - 'pr' for PR-only suppression, 'repo' for repo-wide
+   * @param prNumber - Required if scope is 'pr'
    */
   async recordDismissal(
     finding: { category: string; file: string; line: number },
@@ -76,6 +80,16 @@ export class SuppressionTracker {
 
   /**
    * Check if a finding should be suppressed based on recorded patterns
+   *
+   * Matches patterns if:
+   * - Same category and file
+   * - Line within 5 lines of pattern
+   * - Pattern not expired
+   * - Scope matches (PR scope requires same PR number)
+   *
+   * @param finding - The finding to check
+   * @param prNumber - Current PR number for scope matching
+   * @returns true if finding should be suppressed
    */
   async shouldSuppress(
     finding: { category: string; file: string; line: number },
@@ -128,7 +142,8 @@ export class SuppressionTracker {
 
   /**
    * Remove expired suppression patterns
-   * Returns the number of patterns cleared
+   *
+   * @returns Number of patterns cleared
    */
   async clearExpired(): Promise<number> {
     const data = await this.loadData();
@@ -148,11 +163,17 @@ export class SuppressionTracker {
   }
 
   /**
+   * Get cache key for this repository
+   */
+  private getCacheKey(): string {
+    return `suppression-${this.repoKey}`;
+  }
+
+  /**
    * Load suppression data from cache
    */
   private async loadData(): Promise<SuppressionData> {
-    const key = `suppression-${this.repoKey}`;
-    const raw = await this.storage.read(key);
+    const raw = await this.storage.read(this.getCacheKey());
 
     if (!raw) {
       return {
@@ -176,7 +197,6 @@ export class SuppressionTracker {
    * Save suppression data to cache
    */
   private async saveData(data: SuppressionData): Promise<void> {
-    const key = `suppression-${this.repoKey}`;
-    await this.storage.write(key, JSON.stringify(data));
+    await this.storage.write(this.getCacheKey(), JSON.stringify(data));
   }
 }

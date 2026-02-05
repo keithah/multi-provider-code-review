@@ -37,7 +37,10 @@ export class ProviderWeightTracker {
   constructor(private readonly storage = new CacheStorage()) {}
 
   /**
-   * Record feedback for a provider
+   * Record feedback for a provider and update its weight
+   *
+   * @param provider - Provider name (e.g., 'claude', 'gemini')
+   * @param reaction - User reaction: '👍' (good) or '👎' (bad)
    */
   async recordFeedback(
     provider: string,
@@ -86,7 +89,9 @@ export class ProviderWeightTracker {
 
   /**
    * Get the current weight for a provider
-   * Returns 1.0 for new providers or providers with insufficient feedback
+   *
+   * @param provider - Provider name
+   * @returns Weight value (0.3-1.0), or 1.0 for new providers
    */
   async getWeight(provider: string): Promise<number> {
     const data = await this.loadData();
@@ -101,6 +106,8 @@ export class ProviderWeightTracker {
 
   /**
    * Get all provider weights
+   *
+   * @returns Map of provider name to ProviderWeight record
    */
   async getAllWeights(): Promise<Record<string, ProviderWeight>> {
     const data = await this.loadData();
@@ -130,9 +137,15 @@ export class ProviderWeightTracker {
 
   /**
    * Calculate weight based on positive rate
-   * Formula: weight = MIN_WEIGHT + (VARIABLE_WEIGHT * positiveRate)
    *
-   * Returns 1.0 (default) if feedback count is below threshold
+   * Formula: weight = MIN_WEIGHT + (VARIABLE_WEIGHT * positiveRate)
+   * - MIN_WEIGHT = 0.3 (floor, never fully exclude provider)
+   * - VARIABLE_WEIGHT = 0.7
+   * - Result range: 0.3 (0% positive) to 1.0 (100% positive)
+   *
+   * @param positiveRate - Ratio of positive feedback (0.0-1.0)
+   * @param totalCount - Total feedback count
+   * @returns Weight value (0.3-1.0), or 1.0 if below threshold
    */
   private calculateWeight(positiveRate: number, totalCount: number): number {
     // Don't adjust weight until we have enough feedback
