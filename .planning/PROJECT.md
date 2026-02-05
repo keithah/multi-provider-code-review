@@ -36,9 +36,12 @@ These capabilities now exist in the codebase:
 
 ### Active
 
-Future enhancements for v1.1+:
+Next milestone (v1.0):
 
-(To be defined based on production feedback)
+- [ ] Wire path-based intensity into review behavior (provider counts, timeouts, prompt depth)
+- [ ] Configure intensity mappings per level (thorough/standard/light)
+- [ ] Validate intensity affects actual review execution
+- [ ] Test with different file path patterns
 
 ### Out of Scope
 
@@ -87,5 +90,14 @@ When a developer opens a PR, the action posts inline comments with both problem 
 | Bi-directional learning (acceptances + dismissals) | Both signals needed for accurate quality measurement | ✓ Good - Complete feedback loop |
 | Optional providerWeightTracker injection | Backward compatibility for CLI mode | ✓ Good - No breaking changes |
 
+## Current Milestone: v1.0 Path-Based Intensity
+
+**Goal:** Complete the path-based intensity feature by wiring file path patterns into review behavior controls (provider selection, timeouts, prompt depth).
+
+**Target capabilities:**
+- Adjust number of providers based on file importance (e.g., 8 for critical paths, 3 for docs)
+- Configure per-intensity timeouts and prompt detail levels
+- Validate intensity determines actual review execution, not just logging
+
 ---
-*Last updated: 2026-02-05 after v0.5 milestone completion*
+*Last updated: 2026-02-05 after v1.0 milestone started*

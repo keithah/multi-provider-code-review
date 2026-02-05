@@ -10,10 +10,10 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 
 ## Current Position
 
-Phase: v0.5 milestone complete
-Plan: Not started
-Status: Ready for next milestone planning
-Last activity: 2026-02-05 — v0.5 milestone complete, archived to milestones/
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements for v1.0 milestone
+Last activity: 2026-02-05 — Milestone v1.0 started (path-based intensity)
 
 Progress: [█████████████████████] 100% (22 of 22 total plans)
 
