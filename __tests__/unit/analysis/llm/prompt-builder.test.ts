@@ -27,33 +27,33 @@ describe('PromptBuilder', () => {
   };
 
   describe('build()', () => {
-    it('includes suggestion field in JSON schema', () => {
+    it('includes suggestion field in JSON schema', async () => {
       const builder = new PromptBuilder(DEFAULT_CONFIG);
-      const prompt = builder.build(mockPR);
+      const prompt = await builder.build(mockPR);
 
       expect(prompt).toContain('suggestion');
       expect(prompt).toContain('Return JSON: [{file, line, severity, title, message, suggestion}]');
     });
 
-    it('includes fixable issue type guidance', () => {
+    it('includes fixable issue type guidance', async () => {
       const builder = new PromptBuilder(DEFAULT_CONFIG);
-      const prompt = builder.build(mockPR);
+      const prompt = await builder.build(mockPR);
 
       expect(prompt).toContain('SUGGESTION FIELD');
       expect(prompt).toContain('Fixable:');
       expect(prompt).toContain('NOT fixable:');
     });
 
-    it('includes example JSON with suggestion field', () => {
+    it('includes example JSON with suggestion field', async () => {
       const builder = new PromptBuilder(DEFAULT_CONFIG);
-      const prompt = builder.build(mockPR);
+      const prompt = await builder.build(mockPR);
 
       expect(prompt).toContain('"suggestion":');
     });
 
-    it('specifies fixable issue types', () => {
+    it('specifies fixable issue types', async () => {
       const builder = new PromptBuilder(DEFAULT_CONFIG);
-      const prompt = builder.build(mockPR);
+      const prompt = await builder.build(mockPR);
 
       expect(prompt).toContain('null reference');
       expect(prompt).toContain('type error');
@@ -62,26 +62,26 @@ describe('PromptBuilder', () => {
       expect(prompt).toContain('resource leak');
     });
 
-    it('specifies non-fixable issue types', () => {
+    it('specifies non-fixable issue types', async () => {
       const builder = new PromptBuilder(DEFAULT_CONFIG);
-      const prompt = builder.build(mockPR);
+      const prompt = await builder.build(mockPR);
 
       expect(prompt).toContain('architectural issues');
       expect(prompt).toContain('design suggestions');
       expect(prompt).toContain('unclear requirements');
     });
 
-    it('includes instructions that suggestion must be exact replacement code', () => {
+    it('includes instructions that suggestion must be exact replacement code', async () => {
       const builder = new PromptBuilder(DEFAULT_CONFIG);
-      const prompt = builder.build(mockPR);
+      const prompt = await builder.build(mockPR);
 
       expect(prompt).toContain('EXACT replacement code');
       expect(prompt).toContain('Include ONLY the fixed code');
     });
 
-    it('marks suggestion field as optional', () => {
+    it('marks suggestion field as optional', async () => {
       const builder = new PromptBuilder(DEFAULT_CONFIG);
-      const prompt = builder.build(mockPR);
+      const prompt = await builder.build(mockPR);
 
       expect(prompt).toContain('SUGGESTION FIELD (optional)');
       expect(prompt).toContain('Only include "suggestion" for FIXABLE issues');
@@ -89,24 +89,24 @@ describe('PromptBuilder', () => {
   });
 
   describe('token-aware suggestion instructions', () => {
-    it('includes suggestion instructions for small diffs', () => {
+    it('includes suggestion instructions for small diffs', async () => {
       const builder = new PromptBuilder(DEFAULT_CONFIG);
       const smallDiff = 'diff --git a/test.ts b/test.ts\n+const x = 1;';
       const smallPR = { ...mockPR, diff: smallDiff };
 
-      const prompt = builder.build(smallPR);
+      const prompt = await builder.build(smallPR);
 
       expect(prompt).toContain('SUGGESTION FIELD');
       expect(prompt).toContain('suggestion}]');
     });
 
-    it('excludes suggestion instructions for large diffs', () => {
+    it('excludes suggestion instructions for large diffs', async () => {
       const builder = new PromptBuilder(DEFAULT_CONFIG);
       // Generate a diff that exceeds 50k tokens (~200k characters)
       const largeDiff = 'diff --git a/test.ts b/test.ts\n' + '+const x = 1;\n'.repeat(60000);
       const largePR = { ...mockPR, diff: largeDiff };
 
-      const prompt = builder.build(largePR);
+      const prompt = await builder.build(largePR);
 
       expect(prompt).not.toContain('SUGGESTION FIELD');
       // Should have original schema without suggestion

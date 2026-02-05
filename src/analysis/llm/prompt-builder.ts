@@ -1,15 +1,19 @@
-import { PRContext, ReviewConfig, ReviewIntensity } from '../../types';
+import { PRContext, ReviewConfig, ReviewIntensity, Definition } from '../../types';
 import { trimDiff } from '../../utils/diff';
 import { checkContextWindowFit, ContextFitCheck, estimateTokensConservative } from '../../utils/token-estimation';
 import { logger } from '../../utils/logger';
 import { ValidationDetector } from '../context/validation-detector';
+import { PromptEnricher } from '../../learning/prompt-enrichment';
+import { CodeGraph } from '../context/graph-builder';
 
 export class PromptBuilder {
   private readonly validationDetector: ValidationDetector;
 
   constructor(
     private readonly config: ReviewConfig,
-    private readonly intensity: ReviewIntensity = 'standard'
+    private readonly intensity: ReviewIntensity = 'standard',
+    private readonly promptEnricher?: PromptEnricher,
+    private readonly codeGraph?: CodeGraph
   ) {
     // Validate intensity parameter
     const validIntensities: ReviewIntensity[] = ['light', 'standard', 'thorough'];
@@ -19,7 +23,7 @@ export class PromptBuilder {
     this.validationDetector = new ValidationDetector();
   }
 
-  build(pr: PRContext): string {
+  async build(pr: PRContext, prNumber?: number): Promise<string> {
     // Validate PR context
     if (!pr || typeof pr !== 'object') {
       throw new Error('Invalid PR context: must be a valid PRContext object');
@@ -125,6 +129,18 @@ export class PromptBuilder {
       }
     }
 
+    // Get learned preferences if enricher available
+    if (this.promptEnricher && prNumber) {
+      try {
+        const learnedPreferences = await this.promptEnricher.getPromptText(prNumber);
+        if (learnedPreferences) {
+          instructions.push(learnedPreferences, '');
+        }
+      } catch (error) {
+        logger.debug('Failed to get prompt enrichment:', error as Error);
+      }
+    }
+
     instructions.push(
       'Diff:',
       diff
@@ -138,13 +154,15 @@ export class PromptBuilder {
    *
    * @param pr - Pull request context
    * @param modelId - Target model ID for context window sizing
+   * @param prNumber - Optional PR number for learned preferences
    * @returns Prompt string and fit check result
    */
-  buildWithValidation(
+  async buildWithValidation(
     pr: PRContext,
-    modelId: string
-  ): { prompt: string; fitCheck: ContextFitCheck } {
-    const prompt = this.build(pr);
+    modelId: string,
+    prNumber?: number
+  ): Promise<{ prompt: string; fitCheck: ContextFitCheck }> {
+    const prompt = await this.build(pr, prNumber);
     const fitCheck = checkContextWindowFit(prompt, modelId);
 
     if (!fitCheck.fits) {
@@ -163,10 +181,11 @@ export class PromptBuilder {
    *
    * @param pr - Pull request context
    * @param modelId - Target model ID
+   * @param prNumber - Optional PR number for learned preferences
    * @returns Optimized prompt that fits in context window
    */
-  buildOptimized(pr: PRContext, modelId: string): string {
-    let prompt = this.build(pr);
+  async buildOptimized(pr: PRContext, modelId: string, prNumber?: number): Promise<string> {
+    let prompt = await this.build(pr, prNumber);
     let fitCheck = checkContextWindowFit(prompt, modelId);
 
     if (fitCheck.fits) {
@@ -199,7 +218,7 @@ export class PromptBuilder {
     };
 
     // Build new prompt with trimmed diff
-    prompt = this.build(trimmedPR);
+    prompt = await this.build(trimmedPR, prNumber);
 
     // Verify it fits now
     fitCheck = checkContextWindowFit(prompt, modelId);
