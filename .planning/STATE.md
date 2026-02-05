@@ -11,18 +11,18 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 4 of 4 (Validation and Quality)
-Plan: 3 of 8 in current phase
+Plan: 4 of 8 in current phase
 Status: In progress
-Last activity: 2026-02-05 — Completed 04-03-PLAN.md
+Last activity: 2026-02-05 — Completed 04-04-PLAN.md
 
-Progress: [████████████████] 72% (13 of 18 total plans)
+Progress: [█████████████████] 78% (14 of 18 total plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13
+- Total plans completed: 14
 - Average duration: 2.2 min
-- Total execution time: 0.57 hours
+- Total execution time: 0.62 hours
 
 **By Phase:**
 
@@ -31,10 +31,10 @@ Progress: [████████████████] 72% (13 of 18 total
 | 1 - Core Suggestion Formatting | 3/3 | 9 min | 3 min |
 | 2 - LLM Fix Generation Integration | 4/4 | 10 min | 2.5 min |
 | 3 - Multi-line and Advanced Formatting | 3/3 | 8 min | 2.7 min |
-| 4 - Validation and Quality | 3/8 | 8 min | 2.7 min |
+| 4 - Validation and Quality | 4/8 | 11 min | 2.8 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-02 (1min), 03-03 (4min), 04-01 (2min), 04-02 (3min), 04-03 (3min)
+- Last 5 plans: 03-03 (4min), 04-01 (2min), 04-02 (3min), 04-03 (3min), 04-04 (3min)
 - Trend: Excellent velocity, Phase 4 progressing well
 
 *Updated after each plan completion*
@@ -83,6 +83,10 @@ Recent decisions affecting current work:
 - Cap all confidence scores at 1.0 to prevent over-confidence (04-03)
 - Default threshold 0.7 balances precision and recall (04-03)
 - Consensus requirement only enforced for critical severity (04-03)
+- Support both PR-scoped and repo-scoped suppression for flexibility (04-04)
+- Simple file+category+line-proximity matching (within 5 lines) for similarity (04-04)
+- Weight formula: 0.3 + (0.7 * positiveRate) with 5-feedback threshold (04-04)
+- TTL: 7 days (PR scope), 30 days (repo scope) for automatic expiry (04-04)
 
 ### Pending Todos
 
@@ -103,9 +107,9 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Completed 04-03-PLAN.md (Confidence calculator)
+Stopped at: Completed 04-04-PLAN.md (Suppression tracker and provider weights)
 Resume file: None
 
 ---
 
-*Next step: Phase 4 in progress (3 of 8 plans complete). Ready for 04-04-PLAN.md (Feedback tracker)*
+*Next step: Phase 4 in progress (4 of 8 plans complete). Ready for 04-05-PLAN.md*
