@@ -40069,6 +40069,104 @@ var PromptEnricher = class {
   }
 };
 
+// src/learning/acceptance-detector.ts
+var AcceptanceDetector = class {
+  /**
+   * Patterns matching GitHub's "Commit suggestion" feature.
+   *
+   * GitHub creates commits with these patterns when users click
+   * "Commit suggestion" on review comments.
+   */
+  SUGGESTION_COMMIT_PATTERNS = [
+    /Apply suggestions? from code review/i,
+    /Apply suggestions? from @[\w-]+/i,
+    /Apply \d+ suggestions?/i
+  ];
+  /**
+   * Detect acceptances from PR commits.
+   *
+   * GitHub's "Commit suggestion" feature creates commits with specific
+   * message patterns. This method matches those patterns against PR commits
+   * to detect when suggestions were accepted.
+   *
+   * @param commits - List of commits in the PR
+   * @param commentedFiles - Map of file paths to comment metadata
+   * @returns List of detected acceptances
+   */
+  detectFromCommits(commits, commentedFiles) {
+    const acceptances = [];
+    for (const commit of commits) {
+      if (!this.isSuggestionCommit(commit.message)) {
+        continue;
+      }
+      for (const file of commit.files) {
+        const comments = commentedFiles.get(file);
+        if (!comments) continue;
+        for (const comment of comments) {
+          acceptances.push({
+            file,
+            line: comment.line,
+            provider: comment.provider || "unknown",
+            commitSha: commit.sha,
+            timestamp: commit.timestamp
+          });
+        }
+      }
+    }
+    return acceptances;
+  }
+  /**
+   * Detect acceptances from thumbs-up reactions on suggestion comments.
+   *
+   * When users react with thumbs-up (👍) to a suggestion comment,
+   * it's considered an acceptance event.
+   *
+   * @param commentReactions - List of comments with their reactions
+   * @returns List of detected acceptances
+   */
+  detectFromReactions(commentReactions) {
+    const acceptances = [];
+    for (const comment of commentReactions) {
+      const hasThumbsUp = comment.reactions.some((r) => r.content === "+1");
+      if (!hasThumbsUp) continue;
+      acceptances.push({
+        file: comment.file,
+        line: comment.line,
+        provider: comment.provider || "unknown",
+        commentId: comment.commentId,
+        timestamp: Date.now()
+      });
+    }
+    return acceptances;
+  }
+  /**
+   * Record acceptances as positive feedback to weight tracker.
+   *
+   * Each acceptance triggers a positive feedback event (👍) for the
+   * associated provider, improving their weight in future confidence
+   * calculations.
+   *
+   * @param acceptances - List of detected acceptances
+   * @param weightTracker - Provider weight tracker instance
+   */
+  async recordAcceptances(acceptances, weightTracker) {
+    for (const acceptance of acceptances) {
+      if (acceptance.provider && acceptance.provider !== "unknown") {
+        await weightTracker.recordFeedback(acceptance.provider, "\u{1F44D}");
+      }
+    }
+  }
+  /**
+   * Check if a commit message matches GitHub's suggestion commit patterns.
+   *
+   * @param message - Commit message to check
+   * @returns True if message matches a suggestion pattern
+   */
+  isSuggestionCommit(message) {
+    return this.SUGGESTION_COMMIT_PATTERNS.some((pattern) => pattern.test(message));
+  }
+};
+
 // src/setup.ts
 async function createComponents(config, githubToken) {
   const pluginLoader = config.pluginsEnabled ? new PluginLoader({
@@ -40110,6 +40208,7 @@ async function createComponents(config, githubToken) {
   const repoKey = `${githubClient.owner}/${githubClient.repo}`;
   const suppressionTracker = new SuppressionTracker(cacheStorage, repoKey);
   const providerWeightTracker = new ProviderWeightTracker(cacheStorage);
+  const acceptanceDetector = new AcceptanceDetector();
   const feedbackTracker = config.learningEnabled ? new FeedbackTracker(cacheStorage, config.learningMinFeedbackCount) : void 0;
   const promptEnricher = new PromptEnricher(suppressionTracker, feedbackTracker);
   const promptBuilder = new PromptBuilder(config, "standard", promptEnricher, void 0);
@@ -40171,7 +40270,9 @@ async function createComponents(config, githubToken) {
     reliabilityTracker,
     metricsCollector,
     batchOrchestrator,
-    githubClient
+    githubClient,
+    acceptanceDetector,
+    providerWeightTracker
   };
 }
 
@@ -43609,7 +43710,7 @@ var ReviewOrchestrator = class {
               const batchDiff = filterDiffByFiles(reviewContext.diff, batch);
               const batchContext = { ...reviewContext, files: batch, diff: batchDiff };
               const promptBuilder = new PromptBuilder(config, reviewIntensity);
-              const prompt = promptBuilder.build(batchContext);
+              const prompt = await promptBuilder.build(batchContext);
               try {
                 const results = await this.components.llmExecutor.execute(healthy, prompt, intensityTimeout);
                 for (const result of results) {
@@ -43792,6 +43893,13 @@ var ReviewOrchestrator = class {
       }
       const markdown = this.components.formatter.format(review);
       const suppressed = await this.components.feedbackFilter.loadSuppressed(pr.number);
+      if (this.components.acceptanceDetector && this.components.providerWeightTracker && this.components.githubClient) {
+        try {
+          await this.detectAndRecordAcceptances(pr.number);
+        } catch (error2) {
+          logger.debug("Failed to detect acceptances", error2);
+        }
+      }
       const inlineFiltered = review.inlineComments.filter((c) => this.components.feedbackFilter.shouldPost(c, suppressed));
       if (progressTracker) {
         await progressTracker.replaceWith(markdown);
@@ -43823,6 +43931,76 @@ var ReviewOrchestrator = class {
   async dispose() {
     this.components.costTracker.reset();
     logger.debug("Orchestrator resources disposed");
+  }
+  /**
+   * Detect and record suggestion acceptances from PR activity.
+   *
+   * Checks for:
+   * 1. Committed suggestions (via GitHub's "Commit suggestion" button)
+   * 2. Thumbs-up reactions on suggestion comments
+   *
+   * Records acceptances as positive feedback to improve provider weights.
+   */
+  async detectAndRecordAcceptances(prNumber) {
+    const { githubClient, acceptanceDetector, providerWeightTracker } = this.components;
+    if (!githubClient || !acceptanceDetector || !providerWeightTracker) return;
+    const { octokit, owner, repo } = githubClient;
+    const commitsResponse = await octokit.rest.pulls.listCommits({
+      owner,
+      repo,
+      pull_number: prNumber,
+      per_page: 100
+    });
+    const commits = commitsResponse.data.map((commit) => ({
+      sha: commit.sha,
+      message: commit.commit.message,
+      files: (commit.files || []).map((f) => f.filename),
+      timestamp: new Date(commit.commit.author?.date || Date.now()).getTime()
+    }));
+    const comments = await octokit.paginate(octokit.rest.pulls.listReviewComments, {
+      owner,
+      repo,
+      pull_number: prNumber,
+      per_page: 100
+    });
+    const commentedFiles = /* @__PURE__ */ new Map();
+    const commentReactions = [];
+    for (const comment of comments) {
+      const file = comment.path;
+      const line = comment.line || comment.original_line || 0;
+      const providerMatch = comment.body?.match(/\*\*Provider:\*\* `([^`]+)`/);
+      const provider = providerMatch?.[1];
+      if (!commentedFiles.has(file)) {
+        commentedFiles.set(file, []);
+      }
+      commentedFiles.get(file).push({ line, provider });
+      const reactions = await octokit.rest.reactions.listForPullRequestReviewComment({
+        owner,
+        repo,
+        comment_id: comment.id
+      });
+      commentReactions.push({
+        commentId: comment.id,
+        file,
+        line,
+        provider,
+        reactions: reactions.data.map((r) => ({
+          user: r.user?.login || "unknown",
+          content: r.content
+        }))
+      });
+    }
+    const commitAcceptances = acceptanceDetector.detectFromCommits(commits, commentedFiles);
+    const reactionAcceptances = acceptanceDetector.detectFromReactions(commentReactions);
+    const allAcceptances = [...commitAcceptances, ...reactionAcceptances];
+    await acceptanceDetector.recordAcceptances(allAcceptances, providerWeightTracker);
+    if (allAcceptances.length > 0) {
+      logger.info(
+        `Acceptance detection: ${commitAcceptances.length} from commits, ${reactionAcceptances.length} from reactions, ${allAcceptances.length} total`
+      );
+    } else {
+      logger.debug("No suggestion acceptances detected");
+    }
   }
   /**
    * Run all static analysis operations in parallel
