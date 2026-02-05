@@ -221,4 +221,32 @@ export class PromptBuilder {
 
     return baseOverhead + fileListTokens + diffEstimate.tokens;
   }
+
+  /**
+   * Determine if suggestion instructions should be skipped due to large context
+   *
+   * Per FR-2.4: Skip suggestion generation when code snippet too large
+   * to prevent hallucinated fixes from truncated context.
+   *
+   * Uses tiered thresholds per CONTEXT.md:
+   * - small (4-16k window): skip if diff > 2000 tokens
+   * - medium (128-200k window): skip if diff > 80000 tokens
+   * - large (1M+ window): skip if diff > 400000 tokens
+   */
+  private shouldSkipSuggestions(diff: string): boolean {
+    const estimate = estimateTokensConservative(diff);
+
+    // Conservative thresholds: skip suggestions if diff alone uses >50% of typical window
+    // This leaves room for prompt overhead + response tokens
+    const SKIP_THRESHOLD = 50000; // 50k tokens - fits in medium windows, safe margin for small
+
+    if (estimate.tokens > SKIP_THRESHOLD) {
+      logger.debug(
+        `Skipping suggestion instructions: diff is ${estimate.tokens} tokens (threshold: ${SKIP_THRESHOLD})`
+      );
+      return true;
+    }
+
+    return false;
+  }
 }
