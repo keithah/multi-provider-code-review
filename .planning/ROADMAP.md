@@ -90,13 +90,15 @@ Plans:
 4. Multi-line suggestions containing backticks render correctly with proper escaping
 5. GitHub's batch commit feature works for multiple multi-line suggestions in one review
 
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 03-01: TBD during planning
+- [ ] 03-01-PLAN.md — TDD: Multi-line range validation (validateSuggestionRange)
+- [ ] 03-02-PLAN.md — TDD: Hunk boundary detection (isRangeWithinSingleHunk)
+- [ ] 03-03-PLAN.md — Integration: Wire validation into CommentPoster with multi-line API support
 
 **Complexity**: HIGH
-- **Research flag**: NEEDS DEEPER RESEARCH - Multi-line deletion edge cases need experimentation (community docs sparse)
+- **Research flag**: Research complete - patterns established from GitHub API docs and community discussion
 - **Primary risk**: Suggestions spanning deletions fail silently (Pitfall #5) - RIGHT-side-only validation critical
 - **Validation**: Test with complex diff hunks (deletions, multiple non-contiguous hunks, first/last lines of file)
 
@@ -146,7 +148,7 @@ Phases execute sequentially: 1 → 2 → 3 → 4
 |-------|--------------|----------------|--------|-----------|
 | 1. Core Formatting | FR-1.1, FR-1.2, FR-1.3 | 3/3 | ✓ Complete | 2026-02-05 |
 | 2. LLM Integration | FR-2.1, FR-2.2, FR-2.3, FR-2.4 | 4/4 | ✓ Complete | 2026-02-05 |
-| 3. Multi-Line Support | FR-3.1, FR-3.2, FR-3.3 | 0/TBD | Not started | - |
+| 3. Multi-Line Support | FR-3.1, FR-3.2, FR-3.3 | 0/3 | Planned | - |
 | 4. Validation & Quality | FR-4.1, FR-4.2, FR-4.3, FR-4.4 | 0/TBD | Not started | - |
 
 ## Coverage Validation
@@ -181,3 +183,4 @@ Phases execute sequentially: 1 → 2 → 3 → 4
 *Roadmap created: 2026-02-04*
 *Phase 1 planned: 2026-02-04*
 *Phase 2 planned: 2026-02-05*
+*Phase 3 planned: 2026-02-04*
