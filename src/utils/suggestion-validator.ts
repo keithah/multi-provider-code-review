@@ -6,7 +6,7 @@
  * errors and ensures suggestions appear at correct positions.
  */
 
-import { mapLinesToPositions } from './diff';
+import { mapLinesToPositions, isRangeWithinSingleHunk } from './diff';
 
 /**
  * Result of validating a suggestion range.
@@ -135,6 +135,11 @@ export function validateSuggestionRange(
     if (positions[i] !== positions[i - 1] + 1) {
       return { isValid: false, reason: 'Range contains gaps (non-consecutive lines)' };
     }
+  }
+
+  // Check 5: Range doesn't cross hunk boundaries
+  if (!isRangeWithinSingleHunk(startLine, endLine, patch)) {
+    return { isValid: false, reason: 'Range crosses hunk boundary' };
   }
 
   // All checks passed - return valid with positions

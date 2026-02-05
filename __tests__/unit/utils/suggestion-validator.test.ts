@@ -200,4 +200,32 @@ describe('validateSuggestionRange', () => {
       // This test ensures the +1 is included: endLine - startLine + 1 = 1
     });
   });
+
+  describe('hunk boundary validation', () => {
+    // Note: In practice, crossing hunk boundaries will be caught by the consecutive
+    // position check first (hunk headers create gaps). The hunk boundary check is
+    // a defensive layer that provides better error messages.
+    const adjacentHunksPatch = `@@ -1,3 +1,3 @@
+ line 1
+ line 2
+ line 3
+@@ -4,3 +4,3 @@
+ line 4
+ line 5
+ line 6`;
+
+    it('returns valid for range within single hunk', () => {
+      const result = validateSuggestionRange(1, 3, adjacentHunksPatch);
+      expect(result.isValid).toBe(true);
+    });
+
+    it('returns invalid for range crossing hunks (caught by consecutive check)', () => {
+      // Lines 3 and 4 are consecutive in line numbers but in different hunks
+      // The hunk header creates a gap in positions, so consecutive check catches it
+      const result = validateSuggestionRange(3, 4, adjacentHunksPatch);
+      expect(result.isValid).toBe(false);
+      // In practice, consecutive check runs first and detects the position gap
+      expect(result.reason).toMatch(/gap|boundary/i);
+    });
+  });
 });
