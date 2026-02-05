@@ -31163,6 +31163,16 @@ var ReviewConfigSchema = external_exports.object({
     standard: external_exports.enum(["detailed", "standard", "brief"]),
     light: external_exports.enum(["detailed", "standard", "brief"])
   }).optional(),
+  min_confidence: external_exports.number().min(0).max(1).optional(),
+  confidence_threshold: external_exports.object({
+    critical: external_exports.number().min(0).max(1).optional(),
+    high: external_exports.number().min(0).max(1).optional(),
+    medium: external_exports.number().min(0).max(1).optional(),
+    low: external_exports.number().min(0).max(1).optional()
+  }).optional(),
+  consensus_required_for_critical: external_exports.boolean().optional(),
+  consensus_min_agreement: external_exports.number().int().min(2).optional(),
+  suggestion_syntax_validation: external_exports.boolean().optional(),
   dry_run: external_exports.boolean().optional()
 });
 
@@ -33857,9 +33867,11 @@ var ValidationDetector = class {
 
 // src/analysis/llm/prompt-builder.ts
 var PromptBuilder = class {
-  constructor(config, intensity = "standard") {
+  constructor(config, intensity = "standard", promptEnricher, codeGraph) {
     this.config = config;
     this.intensity = intensity;
+    this.promptEnricher = promptEnricher;
+    this.codeGraph = codeGraph;
     const validIntensities = ["light", "standard", "thorough"];
     if (!validIntensities.includes(intensity)) {
       throw new Error(`Invalid intensity: ${intensity}. Must be one of: ${validIntensities.join(", ")}`);
@@ -33867,7 +33879,44 @@ var PromptBuilder = class {
     this.validationDetector = new ValidationDetector();
   }
   validationDetector;
-  build(pr) {
+  /**
+   * Get call context from code graph for better fix suggestions.
+   * Returns callers and callees for symbols near the target line.
+   */
+  getCallContext(file, line) {
+    if (!this.codeGraph) {
+      return null;
+    }
+    try {
+      const fileSymbols = this.codeGraph.getFileSymbols(file);
+      if (!fileSymbols || fileSymbols.length === 0) {
+        return null;
+      }
+      const nearbySymbol = fileSymbols.filter((def) => Math.abs(def.line - line) <= 20).sort((a, b) => Math.abs(a.line - line) - Math.abs(b.line - line))[0];
+      if (!nearbySymbol) {
+        return null;
+      }
+      const qualifiedName = `${file}:${nearbySymbol.name}`;
+      const callers = this.codeGraph.getCallers(qualifiedName) || [];
+      const callees = this.codeGraph.getCalls(qualifiedName) || [];
+      if (callers.length === 0 && callees.length === 0) {
+        return null;
+      }
+      const context2 = [];
+      context2.push(`CALL CONTEXT for ${nearbySymbol.name} (${nearbySymbol.type}):`);
+      if (callers.length > 0) {
+        context2.push(`  Called by: ${callers.slice(0, 5).join(", ")}${callers.length > 5 ? ` (+${callers.length - 5} more)` : ""}`);
+      }
+      if (callees.length > 0) {
+        context2.push(`  Calls: ${callees.slice(0, 5).join(", ")}${callees.length > 5 ? ` (+${callees.length - 5} more)` : ""}`);
+      }
+      return context2.join("\n");
+    } catch (error2) {
+      logger.debug("Failed to get call context:", error2);
+      return null;
+    }
+  }
+  async build(pr, prNumber) {
     if (!pr || typeof pr !== "object") {
       throw new Error("Invalid PR context: must be a valid PRContext object");
     }
@@ -33955,6 +34004,35 @@ var PromptBuilder = class {
         logger.debug("Failed to analyze defensive patterns:", error2);
       }
     }
+    if (this.promptEnricher && prNumber) {
+      try {
+        const learnedPreferences = await this.promptEnricher.getPromptText(prNumber);
+        if (learnedPreferences) {
+          instructions.push(learnedPreferences, "");
+        }
+      } catch (error2) {
+        logger.debug("Failed to get prompt enrichment:", error2);
+      }
+    }
+    if (this.codeGraph && pr.files.length > 0) {
+      const contextFiles = pr.files.slice(0, 3);
+      const callContexts = [];
+      for (const file of contextFiles) {
+        const midLine = Math.floor((file.additions + file.deletions) / 2) || 1;
+        const context2 = this.getCallContext(file.filename, midLine);
+        if (context2) {
+          callContexts.push(`${file.filename}:
+${context2}`);
+        }
+      }
+      if (callContexts.length > 0) {
+        instructions.push(
+          "CODE GRAPH CONTEXT (use this to understand call relationships):",
+          ...callContexts,
+          ""
+        );
+      }
+    }
     instructions.push(
       "Diff:",
       diff
@@ -33966,10 +34044,11 @@ var PromptBuilder = class {
    *
    * @param pr - Pull request context
    * @param modelId - Target model ID for context window sizing
+   * @param prNumber - Optional PR number for learned preferences
    * @returns Prompt string and fit check result
    */
-  buildWithValidation(pr, modelId) {
-    const prompt = this.build(pr);
+  async buildWithValidation(pr, modelId, prNumber) {
+    const prompt = await this.build(pr, prNumber);
     const fitCheck = checkContextWindowFit(prompt, modelId);
     if (!fitCheck.fits) {
       logger.warn(
@@ -33984,10 +34063,11 @@ var PromptBuilder = class {
    *
    * @param pr - Pull request context
    * @param modelId - Target model ID
+   * @param prNumber - Optional PR number for learned preferences
    * @returns Optimized prompt that fits in context window
    */
-  buildOptimized(pr, modelId) {
-    let prompt = this.build(pr);
+  async buildOptimized(pr, modelId, prNumber) {
+    let prompt = await this.build(pr, prNumber);
     let fitCheck = checkContextWindowFit(prompt, modelId);
     if (fitCheck.fits) {
       return prompt;
@@ -34006,7 +34086,7 @@ var PromptBuilder = class {
       ...pr,
       diff: trimDiff(pr.diff, targetDiffBytes)
     };
-    prompt = this.build(trimmedPR);
+    prompt = await this.build(trimmedPR, prNumber);
     fitCheck = checkContextWindowFit(prompt, modelId);
     if (!fitCheck.fits) {
       logger.warn(
@@ -34673,6 +34753,204 @@ var Deduplicator = class {
   }
 };
 
+// src/analysis/ast/parsers.ts
+function detectLanguage(filename) {
+  if (filename.endsWith(".ts") || filename.endsWith(".tsx")) return "typescript";
+  if (filename.endsWith(".js") || filename.endsWith(".jsx")) return "javascript";
+  if (filename.endsWith(".py")) return "python";
+  if (filename.endsWith(".go")) return "go";
+  if (filename.endsWith(".rs")) return "rust";
+  return "unknown";
+}
+function getParser(language) {
+  const Parser = loadModule("tree-sitter");
+  if (!Parser) return null;
+  const parser = new Parser();
+  try {
+    if (language === "typescript" || language === "javascript") {
+      const ts = loadModule("tree-sitter-typescript");
+      if (!ts?.typescript) return null;
+      parser.setLanguage(ts.typescript);
+      return parser;
+    }
+    if (language === "python") {
+      const py = loadModule("tree-sitter-python");
+      if (!py) return null;
+      parser.setLanguage(py);
+      return parser;
+    }
+    if (language === "go") {
+      const go = loadModule("tree-sitter-go");
+      if (!go) return null;
+      parser.setLanguage(go);
+      return parser;
+    }
+    if (language === "rust") {
+      const rust = loadModule("tree-sitter-rust");
+      if (!rust) return null;
+      parser.setLanguage(rust);
+      return parser;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+function loadModule(name) {
+  try {
+    return require(name);
+  } catch {
+    return null;
+  }
+}
+
+// src/validation/ast-comparator.ts
+var VALUE_ONLY_TYPES = /* @__PURE__ */ new Set([
+  // Identifiers
+  "identifier",
+  "property_identifier",
+  "type_identifier",
+  // Literals
+  "string",
+  "number",
+  "true",
+  "false",
+  "null",
+  "template_string",
+  "regex",
+  // Python-specific
+  "integer",
+  "float",
+  "string_content",
+  // JavaScript-specific
+  "number_literal",
+  "string_literal"
+]);
+var MAX_COMPARISON_DEPTH = 1e3;
+function isValueOnlyNode(node) {
+  return VALUE_ONLY_TYPES.has(node.type);
+}
+function hasParseErrors(tree) {
+  if (tree.rootNode.hasError) {
+    return true;
+  }
+  const cursor = tree.walk();
+  let reachedRoot = false;
+  while (!reachedRoot) {
+    const node = cursor.currentNode;
+    if (node.type === "ERROR") {
+      return true;
+    }
+    if (node.isMissing) {
+      return true;
+    }
+    if (cursor.gotoFirstChild()) {
+      continue;
+    }
+    if (cursor.gotoNextSibling()) {
+      continue;
+    }
+    let retracing = true;
+    while (retracing) {
+      if (!cursor.gotoParent()) {
+        reachedRoot = true;
+        retracing = false;
+      } else if (cursor.gotoNextSibling()) {
+        retracing = false;
+      }
+    }
+  }
+  return false;
+}
+function compareNodes(node1, node2, depth = 0) {
+  const maxDepth = Math.max(depth, 0);
+  if (depth > MAX_COMPARISON_DEPTH) {
+    return {
+      equivalent: false,
+      reason: `Maximum comparison depth exceeded (${MAX_COMPARISON_DEPTH})`,
+      maxDepth
+    };
+  }
+  if (node1.type !== node2.type) {
+    const node1IsValueOnly = isValueOnlyNode(node1);
+    const node2IsValueOnly = isValueOnlyNode(node2);
+    if (!node1IsValueOnly || !node2IsValueOnly) {
+      return {
+        equivalent: false,
+        reason: `Node type mismatch at depth ${depth}: ${node1.type} vs ${node2.type}`,
+        maxDepth
+      };
+    }
+  }
+  if (node1.childCount !== node2.childCount) {
+    return {
+      equivalent: false,
+      reason: `Child count mismatch at depth ${depth}: ${node1.childCount} vs ${node2.childCount} children (node type: ${node1.type})`,
+      maxDepth
+    };
+  }
+  if (isValueOnlyNode(node1) && isValueOnlyNode(node2)) {
+    return { equivalent: true, maxDepth: depth };
+  }
+  let deepestDepth = depth;
+  for (let i = 0; i < node1.childCount; i++) {
+    const child1 = node1.child(i);
+    const child2 = node2.child(i);
+    if (!child1 || !child2) {
+      return {
+        equivalent: false,
+        reason: `Missing child at index ${i}, depth ${depth}`,
+        maxDepth: deepestDepth
+      };
+    }
+    const childResult = compareNodes(child1, child2, depth + 1);
+    deepestDepth = Math.max(deepestDepth, childResult.maxDepth);
+    if (!childResult.equivalent) {
+      return {
+        equivalent: false,
+        reason: childResult.reason,
+        maxDepth: deepestDepth
+      };
+    }
+  }
+  return { equivalent: true, maxDepth: deepestDepth };
+}
+function areASTsEquivalent(code1, code2, language) {
+  if (language === "unknown") {
+    return {
+      equivalent: false,
+      reason: "Unsupported language: unknown"
+    };
+  }
+  const parser = getParser(language);
+  if (!parser) {
+    return {
+      equivalent: false,
+      reason: `Unsupported language: ${language}`
+    };
+  }
+  const tree1 = parser.parse(code1);
+  const tree2 = parser.parse(code2);
+  if (hasParseErrors(tree1)) {
+    return {
+      equivalent: false,
+      reason: "Parse error in code1"
+    };
+  }
+  if (hasParseErrors(tree2)) {
+    return {
+      equivalent: false,
+      reason: "Parse error in code2"
+    };
+  }
+  const result = compareNodes(tree1.rootNode, tree2.rootNode);
+  return {
+    equivalent: result.equivalent,
+    reason: result.reason,
+    comparisonDepth: result.maxDepth
+  };
+}
+
 // src/analysis/consensus.ts
 var SEVERITY_ORDER = {
   critical: 3,
@@ -34695,21 +34973,42 @@ var ConsensusEngine = class {
       if (finding.providers) finding.providers.forEach((p) => providers.add(p));
       if (finding.provider) providers.add(finding.provider);
       if (providers.size === 0) providers.add("static");
+      const currentSuggestions = [];
+      if (finding.suggestion && finding.provider) {
+        currentSuggestions.push({ provider: finding.provider, suggestion: finding.suggestion, file: finding.file });
+      }
       if (!existing) {
         grouped.set(key, {
           ...finding,
           providers: Array.from(providers),
-          confidence: (finding.confidence ?? 0) || 1
+          confidence: (finding.confidence ?? 0) || 1,
+          _suggestions: currentSuggestions
+          // Temporary for consensus checking
         });
         continue;
       }
+      const mergedSuggestions = [
+        ...existing._suggestions || [],
+        ...currentSuggestions
+      ];
       grouped.set(key, {
         ...existing,
         providers: Array.from(/* @__PURE__ */ new Set([...existing.providers || [], ...providers])),
-        confidence: Math.min(1, (existing.confidence ?? 0) + (finding.confidence ?? 0.5))
+        confidence: Math.min(1, (existing.confidence ?? 0) + (finding.confidence ?? 0.5)),
+        _suggestions: mergedSuggestions
       });
     }
-    const filtered = Array.from(grouped.values()).filter((f) => this.meetsAgreement(f.providers || []));
+    const filtered = Array.from(grouped.values()).filter((f) => this.meetsAgreement(f.providers || [])).map((f) => {
+      if (f._suggestions && f._suggestions.length >= 2) {
+        const consensus = this.checkSuggestionConsensus(f._suggestions, this.options.minAgreement);
+        f.hasConsensus = consensus.hasSuggestionConsensus;
+        if (consensus.hasSuggestionConsensus && consensus.suggestions.length > 0) {
+          f.suggestion = consensus.suggestions[0];
+        }
+      }
+      delete f._suggestions;
+      return f;
+    });
     filtered.sort((a, b) => SEVERITY_ORDER[b.severity] - SEVERITY_ORDER[a.severity]);
     return filtered;
   }
@@ -34721,6 +35020,55 @@ var ConsensusEngine = class {
     const count = providers.length;
     if (count >= this.options.minAgreement) return true;
     return count === 1;
+  }
+  /**
+   * Check if multiple providers' suggestions are AST-equivalent.
+   * Used for critical severity findings where consensus is required.
+   */
+  checkSuggestionConsensus(suggestions, minAgreement = 2) {
+    if (suggestions.length < minAgreement) {
+      return { hasSuggestionConsensus: false, agreementCount: 0, suggestions: [] };
+    }
+    const language = detectLanguage(suggestions[0].file);
+    if (language === "unknown") {
+      return this.checkStringConsensus(suggestions, minAgreement);
+    }
+    const groups = [];
+    for (const s of suggestions) {
+      let added = false;
+      for (const group of groups) {
+        const result = areASTsEquivalent(group[0], s.suggestion, language);
+        if (result.equivalent) {
+          group.push(s.suggestion);
+          added = true;
+          break;
+        }
+      }
+      if (!added) {
+        groups.push([s.suggestion]);
+      }
+    }
+    const largestGroup = groups.reduce((a, b) => a.length > b.length ? a : b, []);
+    return {
+      hasSuggestionConsensus: largestGroup.length >= minAgreement,
+      agreementCount: largestGroup.length,
+      suggestions: largestGroup
+    };
+  }
+  checkStringConsensus(suggestions, minAgreement) {
+    const normalized = suggestions.map((s) => ({ ...s, normalized: s.suggestion.trim().replace(/\s+/g, " ") }));
+    const counts = /* @__PURE__ */ new Map();
+    for (const s of normalized) {
+      const arr = counts.get(s.normalized) || [];
+      arr.push(s.suggestion);
+      counts.set(s.normalized, arr);
+    }
+    const largest = Array.from(counts.values()).reduce((a, b) => a.length > b.length ? a : b, []);
+    return {
+      hasSuggestionConsensus: largest.length >= minAgreement,
+      agreementCount: largest.length,
+      suggestions: largest
+    };
   }
 };
 
@@ -34936,57 +35284,6 @@ function detectPatternFindings(filename, addedLines) {
     }
   }
   return findings;
-}
-
-// src/analysis/ast/parsers.ts
-function detectLanguage(filename) {
-  if (filename.endsWith(".ts") || filename.endsWith(".tsx")) return "typescript";
-  if (filename.endsWith(".js") || filename.endsWith(".jsx")) return "javascript";
-  if (filename.endsWith(".py")) return "python";
-  if (filename.endsWith(".go")) return "go";
-  if (filename.endsWith(".rs")) return "rust";
-  return "unknown";
-}
-function getParser(language) {
-  const Parser = loadModule("tree-sitter");
-  if (!Parser) return null;
-  const parser = new Parser();
-  try {
-    if (language === "typescript" || language === "javascript") {
-      const ts = loadModule("tree-sitter-typescript");
-      if (!ts?.typescript) return null;
-      parser.setLanguage(ts.typescript);
-      return parser;
-    }
-    if (language === "python") {
-      const py = loadModule("tree-sitter-python");
-      if (!py) return null;
-      parser.setLanguage(py);
-      return parser;
-    }
-    if (language === "go") {
-      const go = loadModule("tree-sitter-go");
-      if (!go) return null;
-      parser.setLanguage(go);
-      return parser;
-    }
-    if (language === "rust") {
-      const rust = loadModule("tree-sitter-rust");
-      if (!rust) return null;
-      parser.setLanguage(rust);
-      return parser;
-    }
-  } catch {
-    return null;
-  }
-  return null;
-}
-function loadModule(name) {
-  try {
-    return require(name);
-  } catch {
-    return null;
-  }
 }
 
 // src/analysis/ast/analyzer.ts
@@ -35910,11 +36207,133 @@ function validateSuggestionRange(startLine, endLine, patch) {
   };
 }
 
+// src/validation/syntax-validator.ts
+function validateSyntax(code, language) {
+  if (language === "unknown" || language === "rust") {
+    return {
+      isValid: true,
+      skipped: true,
+      reason: "Unsupported language",
+      errors: []
+    };
+  }
+  const parser = getParser(language);
+  if (!parser) {
+    return {
+      isValid: true,
+      skipped: true,
+      reason: "Parser not available",
+      errors: []
+    };
+  }
+  const tree = parser.parse(code);
+  const errors = [];
+  const cursor = tree.walk();
+  const visitNode = (node) => {
+    if (node.type === "ERROR") {
+      errors.push({
+        type: "ERROR",
+        line: node.startPosition.row + 1,
+        // 1-indexed
+        column: node.startPosition.column + 1,
+        // 1-indexed
+        text: node.text || void 0
+      });
+    }
+    if (node.isMissing) {
+      errors.push({
+        type: "MISSING",
+        line: node.startPosition.row + 1,
+        column: node.startPosition.column + 1,
+        text: node.text || void 0
+      });
+    }
+    for (let i = 0; i < node.childCount; i++) {
+      const child = node.child(i);
+      if (child) {
+        visitNode(child);
+      }
+    }
+  };
+  visitNode(tree.rootNode);
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+}
+
+// src/validation/confidence-calculator.ts
+var CONFIDENCE_MULTIPLIERS = {
+  /** Boost factor when syntax is valid (10% increase) */
+  SYNTAX_BOOST: 1.1,
+  /** Penalty factor when syntax is invalid (10% decrease) */
+  SYNTAX_PENALTY: 0.9,
+  /** Boost factor when consensus achieved (20% increase) */
+  CONSENSUS_BOOST: 1.2
+};
+var FALLBACK_SCORING = {
+  /** Base confidence without any signals */
+  BASE: 0.5,
+  /** Bonus added for valid syntax */
+  SYNTAX_BONUS: 0.2,
+  /** Bonus added for consensus */
+  CONSENSUS_BONUS: 0.2
+};
+var DEFAULT_QUALITY_CONFIG = {
+  /** Default minimum confidence threshold (70%) */
+  MIN_CONFIDENCE: 0.7,
+  /** Default minimum providers for consensus */
+  MIN_AGREEMENT: 2
+};
+function calculateConfidence(signals) {
+  let confidence;
+  if (signals.llmConfidence !== void 0) {
+    confidence = signals.llmConfidence;
+    if (signals.syntaxValid) {
+      confidence *= CONFIDENCE_MULTIPLIERS.SYNTAX_BOOST;
+    } else {
+      confidence *= CONFIDENCE_MULTIPLIERS.SYNTAX_PENALTY;
+    }
+    if (signals.hasConsensus) {
+      confidence *= CONFIDENCE_MULTIPLIERS.CONSENSUS_BOOST;
+    }
+    confidence *= signals.providerReliability;
+  } else {
+    confidence = FALLBACK_SCORING.BASE;
+    if (signals.syntaxValid) {
+      confidence += FALLBACK_SCORING.SYNTAX_BONUS;
+    }
+    if (signals.hasConsensus) {
+      confidence += FALLBACK_SCORING.CONSENSUS_BONUS;
+    }
+    confidence *= signals.providerReliability;
+  }
+  return Math.min(1, confidence);
+}
+function shouldPostSuggestion(finding, confidence, config) {
+  const severityThreshold = config.confidence_threshold?.[finding.severity];
+  const threshold = severityThreshold ?? config.min_confidence ?? DEFAULT_QUALITY_CONFIG.MIN_CONFIDENCE;
+  if (confidence < threshold) {
+    return false;
+  }
+  if (finding.severity === "critical" && config.consensus?.required_for_critical) {
+    const providerCount = finding.providers?.length ?? 0;
+    const minAgreement = config.consensus.min_agreement ?? DEFAULT_QUALITY_CONFIG.MIN_AGREEMENT;
+    if (providerCount < minAgreement) {
+      return false;
+    }
+  }
+  return true;
+}
+
 // src/github/comment-poster.ts
 var CommentPoster = class _CommentPoster {
-  constructor(client, dryRun = false) {
+  constructor(client, dryRun = false, config, suppressionTracker, providerWeightTracker) {
     this.client = client;
     this.dryRun = dryRun;
+    this.config = config;
+    this.suppressionTracker = suppressionTracker;
+    this.providerWeightTracker = providerWeightTracker;
   }
   static MAX_COMMENT_SIZE = 6e4;
   static BOT_COMMENT_MARKER = "<!-- multi-provider-code-review-bot -->";
@@ -36010,6 +36429,81 @@ ${content.substring(0, 500)}...`);
       return [];
     }
   }
+  /**
+   * Validate and filter suggestions through quality pipeline.
+   * Reads pre-computed hasConsensus from Finding (set during aggregation).
+   */
+  async validateAndFilterSuggestion(comment, prNumber) {
+    if (!comment.suggestion) {
+      return { valid: true };
+    }
+    if (this.suppressionTracker) {
+      const suppressed = await this.suppressionTracker.shouldSuppress(
+        { category: comment.category || "unknown", file: comment.path, line: comment.line },
+        prNumber
+      );
+      if (suppressed) {
+        logger.debug(`Suggestion suppressed for ${comment.path}:${comment.line} (similar suggestion dismissed)`);
+        return { valid: false, reason: "Similar suggestion was dismissed" };
+      }
+    }
+    let syntaxValid = true;
+    if (this.config?.suggestionSyntaxValidation !== false) {
+      const language = detectLanguage(comment.path);
+      if (language !== "unknown") {
+        const syntaxResult = validateSyntax(comment.suggestion, language);
+        if (!syntaxResult.isValid && !syntaxResult.skipped) {
+          logger.debug(`Suggestion syntax invalid for ${comment.path}:${comment.line}: ${syntaxResult.errors.length} error(s)`);
+          syntaxValid = false;
+        }
+      }
+    }
+    const hasConsensus = comment.hasConsensus ?? false;
+    if (hasConsensus) {
+      logger.debug(`Consensus detected for ${comment.path}:${comment.line} (providers agreed during aggregation)`);
+    }
+    if (!syntaxValid && !hasConsensus) {
+      return { valid: false, reason: "Syntax validation failed", hasConsensus: false };
+    }
+    if (comment.severity && this.config) {
+      let providerReliability = 1;
+      if (this.providerWeightTracker && comment.provider) {
+        providerReliability = await this.providerWeightTracker.getWeight(comment.provider);
+      }
+      const signals = {
+        llmConfidence: comment.confidence,
+        syntaxValid,
+        hasConsensus,
+        providerReliability
+      };
+      const confidence = calculateConfidence(signals);
+      const minimalFinding = {
+        file: comment.path,
+        line: comment.line,
+        severity: comment.severity,
+        title: "",
+        message: "",
+        providers: comment.provider ? [comment.provider] : [],
+        hasConsensus
+      };
+      if (!shouldPostSuggestion(
+        minimalFinding,
+        confidence,
+        {
+          min_confidence: this.config.minConfidence,
+          confidence_threshold: this.config.confidenceThreshold,
+          consensus: {
+            required_for_critical: this.config.consensusRequiredForCritical ?? true,
+            min_agreement: this.config.consensusMinAgreement ?? 2
+          }
+        }
+      )) {
+        logger.debug(`Suggestion below confidence threshold for ${comment.path}:${comment.line} (confidence: ${confidence.toFixed(2)})`);
+        return { valid: false, reason: "Below confidence threshold", hasConsensus };
+      }
+    }
+    return { valid: true, hasConsensus };
+  }
   async postInline(prNumber, comments, files, headSha) {
     if (comments.length === 0) return;
     const filesWithAdditions = files.filter((f) => !isDeletionOnlyFile(f));
@@ -36043,45 +36537,66 @@ ${content.substring(0, 500)}...`);
         return { ...c, body: enhancedBody };
       })
     );
-    const apiComments = enhancedComments.map((c) => {
-      const posMap = positionMaps.get(c.path);
-      const position = posMap?.get(c.line);
-      if (!position) {
-        logger.warn(`Cannot find diff position for ${c.path}:${c.line}, skipping inline comment`);
-        return null;
-      }
-      if (c.body.includes("```suggestion")) {
-        const file = files.find((f) => f.filename === c.path);
-        if (!filesWithAdditionsSet.has(c.path)) {
-          logger.debug(`Skipping suggestion for deletion-only file: ${c.path}`);
-          c.body = c.body.replace(/```suggestion[\s\S]*?```/g, "_Suggestion not available (file has no additions)_");
-        } else if (file?.patch) {
-          const startLine2 = c.start_line;
-          if (startLine2 !== void 0 && startLine2 !== c.line) {
-            const validation = validateSuggestionRange(startLine2, c.line, file.patch);
-            if (!validation.isValid) {
-              logger.debug(`Multi-line suggestion invalid at ${c.path}:${startLine2}-${c.line}: ${validation.reason}`);
-              c.body = c.body.replace(/```suggestion[\s\S]*?```/g, `_Suggestion not available: ${validation.reason}_`);
+    const apiComments = (await Promise.all(
+      enhancedComments.map(async (c) => {
+        const posMap = positionMaps.get(c.path);
+        const position = posMap?.get(c.line);
+        if (!position) {
+          logger.warn(`Cannot find diff position for ${c.path}:${c.line}, skipping inline comment`);
+          return null;
+        }
+        if (c.body.includes("```suggestion")) {
+          const file = files.find((f) => f.filename === c.path);
+          if (!filesWithAdditionsSet.has(c.path)) {
+            logger.debug(`Skipping suggestion for deletion-only file: ${c.path}`);
+            c.body = c.body.replace(/```suggestion[\s\S]*?```/g, "_Suggestion not available (file has no additions)_");
+          } else if (file?.patch) {
+            const startLine2 = c.start_line;
+            if (startLine2 !== void 0 && startLine2 !== c.line) {
+              const validation = validateSuggestionRange(startLine2, c.line, file.patch);
+              if (!validation.isValid) {
+                logger.debug(`Multi-line suggestion invalid at ${c.path}:${startLine2}-${c.line}: ${validation.reason}`);
+                c.body = c.body.replace(/```suggestion[\s\S]*?```/g, `_Suggestion not available: ${validation.reason}_`);
+              }
+            } else {
+              if (!isSuggestionLineValid(c.line, file.patch)) {
+                logger.debug(`Suggestion line ${c.path}:${c.line} not valid in diff, posting without suggestion block`);
+                c.body = c.body.replace(/```suggestion[\s\S]*?```/g, "_Suggestion not available for this line_");
+              }
             }
-          } else {
-            if (!isSuggestionLineValid(c.line, file.patch)) {
-              logger.debug(`Suggestion line ${c.path}:${c.line} not valid in diff, posting without suggestion block`);
-              c.body = c.body.replace(/```suggestion[\s\S]*?```/g, "_Suggestion not available for this line_");
+          }
+          const suggestionMatch = c.body.match(/```suggestion\n([\s\S]*?)```/);
+          if (suggestionMatch && !c.body.includes("_Suggestion not available")) {
+            const suggestionContent = suggestionMatch[1];
+            const qualityValidation = await this.validateAndFilterSuggestion(
+              {
+                ...c,
+                suggestion: suggestionContent,
+                category: c.category,
+                severity: c.severity,
+                provider: c.provider,
+                hasConsensus: c.hasConsensus,
+                confidence: c.confidence
+              },
+              prNumber
+            );
+            if (!qualityValidation.valid) {
+              c.body = c.body.replace(/```suggestion[\s\S]*?```/g, `_Suggestion not available: ${qualityValidation.reason}_`);
             }
           }
         }
-      }
-      const apiComment = { path: c.path, position, body: c.body };
-      const startLine = c.start_line;
-      if (startLine !== void 0 && startLine !== c.line) {
-        apiComment.start_line = startLine;
-        apiComment.line = c.line;
-        apiComment.start_side = "RIGHT";
-        apiComment.side = "RIGHT";
-        delete apiComment.position;
-      }
-      return apiComment;
-    }).filter((c) => c !== null);
+        const apiComment = { path: c.path, position, body: c.body };
+        const startLine = c.start_line;
+        if (startLine !== void 0 && startLine !== c.line) {
+          apiComment.start_line = startLine;
+          apiComment.line = c.line;
+          apiComment.start_side = "RIGHT";
+          apiComment.side = "RIGHT";
+          delete apiComment.position;
+        }
+        return apiComment;
+      })
+    )).filter((c) => c !== null);
     if (apiComments.length === 0) {
       logger.info("No inline comments with valid diff positions to post");
       return;
@@ -37353,6 +37868,18 @@ var CodeGraph = class _CodeGraph {
     return void 0;
   }
   /**
+   * Get all symbols called by a given symbol
+   */
+  getCalls(symbol) {
+    return this.calls.get(symbol) || null;
+  }
+  /**
+   * Get all symbols that call a given symbol
+   */
+  getCallers(symbol) {
+    return this.callers.get(symbol) || null;
+  }
+  /**
    * Get all files that a file depends on (direct imports)
    */
   getDependencies(file) {
@@ -38612,6 +39139,53 @@ var MetricsCollector = class _MetricsCollector {
     logger.debug(`Recorded review metrics for PR #${prNumber}`);
   }
   /**
+   * Record suggestion quality metrics for analytics
+   */
+  async recordSuggestionQuality(metric) {
+    const data = await this.loadData();
+    data.suggestionQuality = data.suggestionQuality || [];
+    data.suggestionQuality.push({
+      ...metric,
+      timestamp: Date.now()
+    });
+    const maxSuggestions = (this.config?.analyticsMaxReviews || 1e3) * 10;
+    if (data.suggestionQuality.length > maxSuggestions) {
+      data.suggestionQuality = data.suggestionQuality.slice(-maxSuggestions);
+    }
+    await this.saveData(data);
+    logger.debug(`Recorded suggestion quality metric for ${metric.file}:${metric.line}`);
+  }
+  /**
+   * Get suggestion quality statistics
+   */
+  async getSuggestionQualityStats() {
+    const data = await this.loadData();
+    const suggestions = data.suggestionQuality || [];
+    if (suggestions.length === 0) {
+      return {
+        totalSuggestions: 0,
+        syntaxValidRate: 0,
+        suppressionRate: 0,
+        consensusRate: 0,
+        avgConfidence: 0,
+        postRate: 0
+      };
+    }
+    const syntaxValid = suggestions.filter((s) => s.syntaxValid).length;
+    const suppressed = suggestions.filter((s) => s.suppressed).length;
+    const hasConsensus = suggestions.filter((s) => s.hasConsensus).length;
+    const posted = suggestions.filter((s) => s.posted).length;
+    const totalConfidence = suggestions.reduce((sum, s) => sum + s.confidenceScore, 0);
+    return {
+      totalSuggestions: suggestions.length,
+      syntaxValidRate: syntaxValid / suggestions.length,
+      suppressionRate: suppressed / suggestions.length,
+      consensusRate: hasConsensus / suggestions.length,
+      avgConfidence: totalConfidence / suggestions.length,
+      postRate: posted / suggestions.length
+    };
+  }
+  /**
    * Get metrics for a specific time period
    */
   async getMetrics(fromTimestamp, toTimestamp) {
@@ -38730,6 +39304,7 @@ var MetricsCollector = class _MetricsCollector {
   async clear() {
     const emptyData = {
       reviews: [],
+      suggestionQuality: [],
       totalReviews: 0,
       totalCost: 0,
       totalFindings: 0,
@@ -38761,6 +39336,7 @@ var MetricsCollector = class _MetricsCollector {
     if (!raw) {
       return {
         reviews: [],
+        suggestionQuality: [],
         totalReviews: 0,
         totalCost: 0,
         totalFindings: 0,
@@ -38775,11 +39351,13 @@ var MetricsCollector = class _MetricsCollector {
         ...review,
         providers: review.providers || []
       }));
+      data.suggestionQuality = data.suggestionQuality || [];
       return data;
     } catch (error2) {
       logger.warn("Failed to parse metrics data, starting fresh", error2);
       return {
         reviews: [],
+        suggestionQuality: [],
         totalReviews: 0,
         totalCost: 0,
         totalFindings: 0,
@@ -39115,6 +39693,382 @@ var BatchOrchestrator = class {
   }
 };
 
+// src/learning/suppression-tracker.ts
+var import_crypto3 = require("crypto");
+var SuppressionTracker = class _SuppressionTracker {
+  constructor(storage, repoKey) {
+    this.storage = storage;
+    this.repoKey = repoKey;
+  }
+  static PR_TTL_MS = 7 * 24 * 60 * 60 * 1e3;
+  // 7 days
+  static REPO_TTL_MS = 30 * 24 * 60 * 60 * 1e3;
+  // 30 days
+  static LINE_PROXIMITY_THRESHOLD = 5;
+  /**
+   * Record a dismissal and create a suppression pattern
+   *
+   * @param finding - The finding to suppress (category, file, line)
+   * @param scope - 'pr' for PR-only suppression, 'repo' for repo-wide
+   * @param prNumber - Required if scope is 'pr'
+   */
+  async recordDismissal(finding, scope, prNumber) {
+    const data = await this.loadData();
+    const ttl = scope === "pr" ? _SuppressionTracker.PR_TTL_MS : _SuppressionTracker.REPO_TTL_MS;
+    const timestamp2 = Date.now();
+    const pattern = {
+      id: (0, import_crypto3.randomUUID)(),
+      category: finding.category,
+      file: finding.file,
+      line: finding.line,
+      scope,
+      prNumber: scope === "pr" ? prNumber : void 0,
+      timestamp: timestamp2,
+      expiresAt: timestamp2 + ttl
+    };
+    data.patterns.push(pattern);
+    await this.saveData(data);
+    logger.debug(
+      `Recorded ${scope}-scoped suppression: ${finding.category} at ${finding.file}:${finding.line}` + (scope === "pr" ? ` (PR #${prNumber})` : "")
+    );
+  }
+  /**
+   * Check if a finding should be suppressed based on recorded patterns
+   *
+   * Matches patterns if:
+   * - Same category and file
+   * - Line within 5 lines of pattern
+   * - Pattern not expired
+   * - Scope matches (PR scope requires same PR number)
+   *
+   * @param finding - The finding to check
+   * @param prNumber - Current PR number for scope matching
+   * @returns true if finding should be suppressed
+   */
+  async shouldSuppress(finding, prNumber) {
+    const data = await this.loadData();
+    const now = Date.now();
+    for (const pattern of data.patterns) {
+      if (pattern.expiresAt < now) {
+        continue;
+      }
+      if (pattern.category !== finding.category) {
+        continue;
+      }
+      if (pattern.file !== finding.file) {
+        continue;
+      }
+      const lineDiff = Math.abs(finding.line - pattern.line);
+      if (lineDiff > _SuppressionTracker.LINE_PROXIMITY_THRESHOLD) {
+        continue;
+      }
+      if (pattern.scope === "pr") {
+        if (pattern.prNumber !== prNumber) {
+          continue;
+        }
+      }
+      logger.debug(
+        `Suppressing finding: ${finding.category} at ${finding.file}:${finding.line} (matches pattern ${pattern.id})`
+      );
+      return true;
+    }
+    return false;
+  }
+  /**
+   * Get categories with active suppressions for a PR.
+   * Used by PromptEnricher to inform LLM about dismissed categories.
+   *
+   * @param prNumber - PR number to check (includes repo-wide suppressions)
+   * @returns Array of unique category names with active suppressions
+   */
+  async getActiveCategories(prNumber) {
+    const data = await this.loadData();
+    const now = Date.now();
+    const activePatterns = data.patterns.filter(
+      (p) => p.expiresAt > now && (p.scope === "repo" || p.scope === "pr" && p.prNumber === prNumber)
+    );
+    const categorySet = new Set(activePatterns.map((p) => p.category));
+    const categories = Array.from(categorySet);
+    return categories;
+  }
+  /**
+   * Remove expired suppression patterns
+   *
+   * @returns Number of patterns cleared
+   */
+  async clearExpired() {
+    const data = await this.loadData();
+    const now = Date.now();
+    const beforeCount = data.patterns.length;
+    data.patterns = data.patterns.filter((pattern) => pattern.expiresAt >= now);
+    const clearedCount = beforeCount - data.patterns.length;
+    if (clearedCount > 0) {
+      data.lastCleanup = now;
+      await this.saveData(data);
+      logger.info(`Cleared ${clearedCount} expired suppression patterns`);
+    }
+    return clearedCount;
+  }
+  /**
+   * Get cache key for this repository
+   */
+  getCacheKey() {
+    return `suppression-${this.repoKey}`;
+  }
+  /**
+   * Load suppression data from cache
+   */
+  async loadData() {
+    const raw = await this.storage.read(this.getCacheKey());
+    if (!raw) {
+      return {
+        patterns: [],
+        lastCleanup: Date.now()
+      };
+    }
+    try {
+      return JSON.parse(raw);
+    } catch (error2) {
+      logger.warn("Failed to parse suppression data, starting fresh", error2);
+      return {
+        patterns: [],
+        lastCleanup: Date.now()
+      };
+    }
+  }
+  /**
+   * Save suppression data to cache
+   */
+  async saveData(data) {
+    await this.storage.write(this.getCacheKey(), JSON.stringify(data));
+  }
+};
+
+// src/learning/provider-weights.ts
+var ProviderWeightTracker = class _ProviderWeightTracker {
+  constructor(storage = new CacheStorage()) {
+    this.storage = storage;
+  }
+  static CACHE_KEY = "provider-weights";
+  static MIN_WEIGHT = 0.3;
+  static VARIABLE_WEIGHT = 0.7;
+  static MIN_FEEDBACK_THRESHOLD = 5;
+  /**
+   * Record feedback for a provider and update its weight
+   *
+   * @param provider - Provider name (e.g., 'claude', 'gemini')
+   * @param reaction - User reaction: '👍' (good) or '👎' (bad)
+   */
+  async recordFeedback(provider, reaction) {
+    const data = await this.loadData();
+    let providerWeight = data.weights[provider];
+    if (!providerWeight) {
+      providerWeight = {
+        provider,
+        positiveCount: 0,
+        negativeCount: 0,
+        totalCount: 0,
+        positiveRate: 0,
+        weight: 1,
+        // Default weight
+        lastUpdated: Date.now()
+      };
+      data.weights[provider] = providerWeight;
+    }
+    if (reaction === "\u{1F44D}") {
+      providerWeight.positiveCount++;
+    } else {
+      providerWeight.negativeCount++;
+    }
+    providerWeight.totalCount = providerWeight.positiveCount + providerWeight.negativeCount;
+    providerWeight.positiveRate = providerWeight.positiveCount / providerWeight.totalCount;
+    providerWeight.lastUpdated = Date.now();
+    providerWeight.weight = this.calculateWeight(
+      providerWeight.positiveRate,
+      providerWeight.totalCount
+    );
+    await this.saveData(data);
+    logger.debug(
+      `Recorded ${reaction} feedback for ${provider} (${providerWeight.positiveCount}\u{1F44D} ${providerWeight.negativeCount}\u{1F44E}, weight: ${providerWeight.weight.toFixed(2)})`
+    );
+  }
+  /**
+   * Get the current weight for a provider
+   *
+   * @param provider - Provider name
+   * @returns Weight value (0.3-1.0), or 1.0 for new providers
+   */
+  async getWeight(provider) {
+    const data = await this.loadData();
+    const providerWeight = data.weights[provider];
+    if (!providerWeight) {
+      return 1;
+    }
+    return providerWeight.weight;
+  }
+  /**
+   * Get all provider weights
+   *
+   * @returns Map of provider name to ProviderWeight record
+   */
+  async getAllWeights() {
+    const data = await this.loadData();
+    return data.weights;
+  }
+  /**
+   * Recalculate weights for all providers
+   */
+  async recalculateWeights() {
+    const data = await this.loadData();
+    for (const provider in data.weights) {
+      const providerWeight = data.weights[provider];
+      providerWeight.weight = this.calculateWeight(
+        providerWeight.positiveRate,
+        providerWeight.totalCount
+      );
+      providerWeight.lastUpdated = Date.now();
+    }
+    data.lastAggregation = Date.now();
+    await this.saveData(data);
+    logger.info("Recalculated weights for all providers");
+  }
+  /**
+   * Calculate weight based on positive rate
+   *
+   * Formula: weight = MIN_WEIGHT + (VARIABLE_WEIGHT * positiveRate)
+   * - MIN_WEIGHT = 0.3 (floor, never fully exclude provider)
+   * - VARIABLE_WEIGHT = 0.7
+   * - Result range: 0.3 (0% positive) to 1.0 (100% positive)
+   *
+   * @param positiveRate - Ratio of positive feedback (0.0-1.0)
+   * @param totalCount - Total feedback count
+   * @returns Weight value (0.3-1.0), or 1.0 if below threshold
+   */
+  calculateWeight(positiveRate, totalCount) {
+    if (totalCount < _ProviderWeightTracker.MIN_FEEDBACK_THRESHOLD) {
+      return 1;
+    }
+    return _ProviderWeightTracker.MIN_WEIGHT + _ProviderWeightTracker.VARIABLE_WEIGHT * positiveRate;
+  }
+  /**
+   * Load provider weight data from cache
+   */
+  async loadData() {
+    const raw = await this.storage.read(_ProviderWeightTracker.CACHE_KEY);
+    if (!raw) {
+      return {
+        weights: {},
+        lastAggregation: Date.now()
+      };
+    }
+    try {
+      return JSON.parse(raw);
+    } catch (error2) {
+      logger.warn("Failed to parse provider weight data, starting fresh", error2);
+      return {
+        weights: {},
+        lastAggregation: Date.now()
+      };
+    }
+  }
+  /**
+   * Save provider weight data to cache
+   */
+  async saveData(data) {
+    await this.storage.write(_ProviderWeightTracker.CACHE_KEY, JSON.stringify(data));
+  }
+};
+
+// src/learning/prompt-enrichment.ts
+var DEFAULT_CONFIG2 = {
+  minFeedbackForLowQuality: 5,
+  lowQualityThreshold: 0.5,
+  maxSuppressionCategories: 5
+};
+var PromptEnricher = class {
+  constructor(suppressionTracker, feedbackTracker, config) {
+    this.suppressionTracker = suppressionTracker;
+    this.feedbackTracker = feedbackTracker;
+    this.config = { ...DEFAULT_CONFIG2, ...config };
+  }
+  config;
+  /**
+   * Get enrichment context for a specific PR.
+   * Aggregates suppression patterns and feedback stats.
+   */
+  async getEnrichmentContext(prNumber) {
+    const context2 = {
+      suppressedCategories: [],
+      lowQualityCategories: [],
+      repoPreferences: [],
+      promptAdditions: []
+    };
+    if (this.suppressionTracker) {
+      const suppressions = await this.getSuppressedCategories(prNumber);
+      context2.suppressedCategories = suppressions.slice(0, this.config.maxSuppressionCategories);
+    }
+    if (this.feedbackTracker) {
+      const categoryStats = await this.feedbackTracker.getCategoryStats();
+      context2.lowQualityCategories = this.identifyLowQualityCategories(categoryStats);
+    }
+    context2.repoPreferences = this.generatePreferences(context2);
+    context2.promptAdditions = this.generatePromptAdditions(context2);
+    return context2;
+  }
+  /**
+   * Get prompt text to inject into LLM prompt.
+   * Returns empty string if no enrichment available.
+   */
+  async getPromptText(prNumber) {
+    const context2 = await this.getEnrichmentContext(prNumber);
+    if (context2.promptAdditions.length === 0) {
+      return "";
+    }
+    return [
+      "LEARNED PREFERENCES (from user feedback in this repository):",
+      ...context2.promptAdditions,
+      ""
+    ].join("\n");
+  }
+  async getSuppressedCategories(prNumber) {
+    try {
+      const categories = await this.suppressionTracker.getActiveCategories?.(prNumber);
+      return categories || [];
+    } catch {
+      return [];
+    }
+  }
+  identifyLowQualityCategories(stats) {
+    return Object.values(stats).filter(
+      (s) => s.totalFeedback >= this.config.minFeedbackForLowQuality && s.positiveRate < this.config.lowQualityThreshold
+    ).map((s) => s.category).slice(0, this.config.maxSuppressionCategories);
+  }
+  generatePreferences(context2) {
+    const prefs = [];
+    if (context2.suppressedCategories.length > 0) {
+      prefs.push(`User has dismissed suggestions in these categories: ${context2.suppressedCategories.join(", ")}`);
+    }
+    if (context2.lowQualityCategories.length > 0) {
+      prefs.push(`These categories have high false-positive rates: ${context2.lowQualityCategories.join(", ")}`);
+    }
+    return prefs;
+  }
+  generatePromptAdditions(context2) {
+    const additions = [];
+    if (context2.suppressedCategories.length > 0) {
+      additions.push(
+        `- AVOID suggesting fixes in these categories (recently dismissed): ${context2.suppressedCategories.join(", ")}`
+      );
+    }
+    if (context2.lowQualityCategories.length > 0) {
+      additions.push(
+        `- BE EXTRA CAREFUL with these categories (high false-positive history): ${context2.lowQualityCategories.join(", ")}`
+      );
+    }
+    return additions;
+  }
+};
+
 // src/setup.ts
 async function createComponents(config, githubToken) {
   const pluginLoader = config.pluginsEnabled ? new PluginLoader({
@@ -39126,7 +40080,6 @@ async function createComponents(config, githubToken) {
   if (pluginLoader) {
     await pluginLoader.loadPlugins();
   }
-  const promptBuilder = new PromptBuilder(config);
   const llmExecutor = new LLMExecutor(config);
   const deduplicator = new Deduplicator();
   const consensus = new ConsensusEngine({
@@ -39148,15 +40101,26 @@ async function createComponents(config, githubToken) {
   const rules = RuleLoader.load();
   const githubClient = new GitHubClient(githubToken);
   const prLoader = new PullRequestLoader(githubClient);
-  const commentPoster = new CommentPoster(githubClient, config.dryRun);
-  const formatter = new MarkdownFormatterV2();
   const contextRetriever = new ContextRetriever();
   const impactAnalyzer = new ImpactAnalyzer();
   const evidenceScorer = new EvidenceScorer();
   const mermaidGenerator = new MermaidGenerator();
   const feedbackFilter = new FeedbackFilter(githubClient);
   const cacheStorage = new CacheStorage();
+  const repoKey = `${githubClient.owner}/${githubClient.repo}`;
+  const suppressionTracker = new SuppressionTracker(cacheStorage, repoKey);
+  const providerWeightTracker = new ProviderWeightTracker(cacheStorage);
   const feedbackTracker = config.learningEnabled ? new FeedbackTracker(cacheStorage, config.learningMinFeedbackCount) : void 0;
+  const promptEnricher = new PromptEnricher(suppressionTracker, feedbackTracker);
+  const promptBuilder = new PromptBuilder(config, "standard", promptEnricher, void 0);
+  const commentPoster = new CommentPoster(
+    githubClient,
+    config.dryRun,
+    config,
+    suppressionTracker,
+    providerWeightTracker
+  );
+  const formatter = new MarkdownFormatterV2();
   const quietModeFilter = config.quietModeEnabled ? new QuietModeFilter(
     {
       enabled: config.quietModeEnabled,
