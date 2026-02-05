@@ -4,7 +4,7 @@ import { logger } from '../utils/logger';
 import { mapLinesToPositions } from '../utils/diff';
 import { withRetry } from '../utils/retry';
 import { extractCodeSnippet, createEnhancedCommentBody } from '../utils/code-snippet';
-import { isSuggestionLineValid } from '../utils/suggestion-validator';
+import { isSuggestionLineValid, validateSuggestionRange, isDeletionOnlyFile } from '../utils/suggestion-validator';
 
 export class CommentPoster {
   private static readonly MAX_COMMENT_SIZE = 60_000;
@@ -122,6 +122,10 @@ export class CommentPoster {
   async postInline(prNumber: number, comments: InlineComment[], files: FileChange[], headSha?: string): Promise<void> {
     if (comments.length === 0) return;
 
+    // Filter out deletion-only files (no suggestions possible)
+    const filesWithAdditions = files.filter(f => !isDeletionOnlyFile(f));
+    const filesWithAdditionsSet = new Set(filesWithAdditions.map(f => f.filename));
+
     // Build a map from file path to line->position mapping
     const positionMaps = new Map<string, Map<number, number>>();
     for (const file of files) {
@@ -168,13 +172,31 @@ export class CommentPoster {
           return null;
         }
 
-        // Validate suggestions can be applied at this line
+        // Validate suggestions can be applied at this line/range
         if (c.body.includes('```suggestion')) {
           const file = files.find(f => f.filename === c.path);
-          if (!file || !isSuggestionLineValid(c.line, file.patch)) {
-            // Line isn't in diff - strip suggestion block but keep the finding
-            logger.warn(`Suggestion line ${c.path}:${c.line} not valid in diff, posting without suggestion block`);
-            c.body = c.body.replace(/```suggestion[\s\S]*?```/g, '_Suggestion not available for this line_');
+
+          // Skip suggestions for deletion-only files
+          if (!filesWithAdditionsSet.has(c.path)) {
+            logger.debug(`Skipping suggestion for deletion-only file: ${c.path}`);
+            c.body = c.body.replace(/```suggestion[\s\S]*?```/g, '_Suggestion not available (file has no additions)_');
+          } else if (file?.patch) {
+            // Check if this is a multi-line suggestion (has start_line)
+            const startLine = (c as any).start_line;
+            if (startLine !== undefined && startLine !== c.line) {
+              // Multi-line suggestion - validate range
+              const validation = validateSuggestionRange(startLine, c.line, file.patch);
+              if (!validation.isValid) {
+                logger.debug(`Multi-line suggestion invalid at ${c.path}:${startLine}-${c.line}: ${validation.reason}`);
+                c.body = c.body.replace(/```suggestion[\s\S]*?```/g, `_Suggestion not available: ${validation.reason}_`);
+              }
+            } else {
+              // Single-line suggestion - use existing validation
+              if (!isSuggestionLineValid(c.line, file.patch)) {
+                logger.debug(`Suggestion line ${c.path}:${c.line} not valid in diff, posting without suggestion block`);
+                c.body = c.body.replace(/```suggestion[\s\S]*?```/g, '_Suggestion not available for this line_');
+              }
+            }
           }
         }
 
