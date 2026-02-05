@@ -14,6 +14,19 @@ export interface ReviewMetric {
   providers: string[]; // List of provider names used
 }
 
+export interface SuggestionQualityMetric {
+  timestamp: number;
+  prNumber: number;
+  file: string;
+  line: number;
+  syntaxValid: boolean;
+  suppressed: boolean;
+  hasConsensus: boolean;
+  confidenceScore: number;
+  posted: boolean;
+  reason?: string;  // Why not posted (if !posted)
+}
+
 export interface CategoryMetric {
   category: string;
   count: number;
@@ -47,6 +60,7 @@ export interface ProviderMetric {
  */
 export interface MetricsData {
   reviews: ReviewMetric[];
+  suggestionQuality: SuggestionQualityMetric[];  // NEW: quality metrics for suggestions
   totalReviews: number;        // Count of reviews in sliding window
   totalCost: number;            // Sum of costs in sliding window
   totalFindings: number;        // Sum of findings in sliding window
@@ -106,6 +120,69 @@ export class MetricsCollector {
     await this.saveData(data);
 
     logger.debug(`Recorded review metrics for PR #${prNumber}`);
+  }
+
+  /**
+   * Record suggestion quality metrics for analytics
+   */
+  async recordSuggestionQuality(metric: Omit<SuggestionQualityMetric, 'timestamp'>): Promise<void> {
+    const data = await this.loadData();
+
+    data.suggestionQuality = data.suggestionQuality || [];
+    data.suggestionQuality.push({
+      ...metric,
+      timestamp: Date.now()
+    });
+
+    // Keep only last N suggestion metrics
+    const maxSuggestions = (this.config?.analyticsMaxReviews || 1000) * 10; // 10x reviews
+    if (data.suggestionQuality.length > maxSuggestions) {
+      data.suggestionQuality = data.suggestionQuality.slice(-maxSuggestions);
+    }
+
+    await this.saveData(data);
+    logger.debug(`Recorded suggestion quality metric for ${metric.file}:${metric.line}`);
+  }
+
+  /**
+   * Get suggestion quality statistics
+   */
+  async getSuggestionQualityStats(): Promise<{
+    totalSuggestions: number;
+    syntaxValidRate: number;
+    suppressionRate: number;
+    consensusRate: number;
+    avgConfidence: number;
+    postRate: number;
+  }> {
+    const data = await this.loadData();
+    const suggestions = data.suggestionQuality || [];
+
+    if (suggestions.length === 0) {
+      return {
+        totalSuggestions: 0,
+        syntaxValidRate: 0,
+        suppressionRate: 0,
+        consensusRate: 0,
+        avgConfidence: 0,
+        postRate: 0
+      };
+    }
+
+    const syntaxValid = suggestions.filter(s => s.syntaxValid).length;
+    const suppressed = suggestions.filter(s => s.suppressed).length;
+    const hasConsensus = suggestions.filter(s => s.hasConsensus).length;
+    const posted = suggestions.filter(s => s.posted).length;
+    const totalConfidence = suggestions.reduce((sum, s) => sum + s.confidenceScore, 0);
+
+    return {
+      totalSuggestions: suggestions.length,
+      syntaxValidRate: syntaxValid / suggestions.length,
+      suppressionRate: suppressed / suggestions.length,
+      consensusRate: hasConsensus / suggestions.length,
+      avgConfidence: totalConfidence / suggestions.length,
+      postRate: posted / suggestions.length
+    };
   }
 
   /**
@@ -283,6 +360,7 @@ export class MetricsCollector {
   async clear(): Promise<void> {
     const emptyData: MetricsData = {
       reviews: [],
+      suggestionQuality: [],
       totalReviews: 0,
       totalCost: 0,
       totalFindings: 0,
@@ -320,6 +398,7 @@ export class MetricsCollector {
     if (!raw) {
       return {
         reviews: [],
+        suggestionQuality: [],
         totalReviews: 0,
         totalCost: 0,
         totalFindings: 0,
@@ -338,11 +417,15 @@ export class MetricsCollector {
         providers: review.providers || [],
       }));
 
+      // Ensure backward compatibility: add empty suggestionQuality array if missing
+      data.suggestionQuality = data.suggestionQuality || [];
+
       return data;
     } catch (error) {
       logger.warn('Failed to parse metrics data, starting fresh', error as Error);
       return {
         reviews: [],
+        suggestionQuality: [],
         totalReviews: 0,
         totalCost: 0,
         totalFindings: 0,
