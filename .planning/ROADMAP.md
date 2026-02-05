@@ -13,7 +13,8 @@ This roadmap delivers one-click commit suggestion functionality for the multi-pr
 - [x] **Phase 1: Core Suggestion Formatting** - GitHub markdown suggestion blocks with line accuracy
 - [x] **Phase 2: LLM Fix Generation Integration** - Extend prompts and parsers for end-to-end suggestions
 - [x] **Phase 3: Multi-Line and Advanced Formatting** - Multi-line suggestions with deletion handling
-- [ ] **Phase 4: Validation and Quality** - Syntax validation, consensus fixes, learning integration
+- [x] **Phase 4: Validation and Quality** - Syntax validation, consensus fixes, learning integration
+- [ ] **Phase 5: Complete Learning Feedback Loop** - Wire AcceptanceDetector for positive feedback tracking
 
 ## Phase Details
 
@@ -140,6 +141,38 @@ Plans:
 
 ---
 
+### Phase 5: Complete Learning Feedback Loop
+
+**Goal**: Wire AcceptanceDetector into runtime to enable positive feedback learning and complete the bi-directional weight adjustment system
+
+**Depends on**: Phase 4 (AcceptanceDetector implementation exists, needs runtime integration)
+
+**Requirements**: FR-4.4 completion (Learning from feedback - acceptance tracking component)
+
+**Gap Closure**: Addresses tech debt from v1.0 audit (AcceptanceDetector orphaned, positive feedback loop incomplete)
+
+**Success Criteria** (what must be TRUE):
+1. AcceptanceDetector instantiated in setup.ts for both CLI and production modes
+2. FeedbackCollector or equivalent orchestration calls detectFromCommits() when PR updated
+3. FeedbackCollector calls detectFromReactions() when reactions added to comments
+4. Accepted suggestions feed ProviderWeightTracker to increase provider weights
+5. Provider weights increase on acceptances, decrease on dismissals (bi-directional learning)
+6. End-to-end acceptance tracking works: suggestion posted → user accepts → weight increases
+
+**Plans**: TBD (to be planned)
+
+Plans:
+- [ ] 05-01-PLAN.md — TBD: Runtime wiring for AcceptanceDetector
+- [ ] 05-02-PLAN.md — TBD: Orchestration layer for acceptance detection
+- [ ] 05-03-PLAN.md — TBD: Integration testing for complete feedback loop
+
+**Complexity**: MEDIUM
+- **Research flag**: Standard patterns (wiring follows existing setup.ts patterns from Phase 4)
+- **Primary risk**: GitHub webhook integration for commit/reaction events - may need polling fallback
+- **Validation**: Test acceptance detection with real PRs, verify provider weight increases
+
+---
+
 ## Non-Functional Requirements Coverage
 
 **Performance (NFR-1.1, NFR-1.2)**: Addressed in Phase 2 via token counting and single-pass generation pattern
@@ -151,7 +184,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute sequentially: 1 -> 2 -> 3 -> 4
+Phases execute sequentially: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Requirements | Plans Complete | Status | Completed |
 |-------|--------------|----------------|--------|-----------|
@@ -159,6 +192,7 @@ Phases execute sequentially: 1 -> 2 -> 3 -> 4
 | 2. LLM Integration | FR-2.1, FR-2.2, FR-2.3, FR-2.4 | 4/4 | Complete | 2026-02-05 |
 | 3. Multi-Line Support | FR-3.1, FR-3.2, FR-3.3 | 3/3 | Complete | 2026-02-05 |
 | 4. Validation & Quality | FR-4.1, FR-4.2, FR-4.3, FR-4.4 | 9/9 | Complete | 2026-02-05 |
+| 5. Complete Feedback Loop | FR-4.4 (acceptance tracking) | 0/3 | Not started | - |
 
 ## Coverage Validation
 
@@ -197,3 +231,4 @@ Phases execute sequentially: 1 -> 2 -> 3 -> 4
 *Phase 4 revised: 2026-02-04 (iteration 1 - added plans 07, updated 04, 06)*
 *Phase 4 revised: 2026-02-04 (iteration 2 - added plan 08, updated 05, 06 for hasConsensus wiring)*
 *Phase 4 gap closure: 2026-02-05 (plan 09 - wire learning/validation into setup.ts)*
+*Phase 5 added: 2026-02-05 (gap closure from v1.0 audit - complete AcceptanceDetector wiring)*
