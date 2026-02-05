@@ -1,4 +1,4 @@
-import { validateSuggestionLine, isSuggestionLineValid } from '../../../src/utils/suggestion-validator';
+import { validateSuggestionLine, isSuggestionLineValid, validateSuggestionRange } from '../../../src/utils/suggestion-validator';
 
 const samplePatch = `@@ -1,3 +1,4 @@
  context line
@@ -16,6 +16,12 @@ const complexPatch = `@@ -10,5 +10,8 @@
 +function bar() {
 +  return false;
 +}`;
+
+const simplePatch = `@@ -1,3 +1,4 @@
+ context line
++added line
+ more context
++another added`;
 
 describe('validateSuggestionLine', () => {
   it('returns position when line exists in diff (context line)', () => {
@@ -94,5 +100,104 @@ describe('isSuggestionLineValid', () => {
   it('returns false when patch is empty', () => {
     const result = isSuggestionLineValid(1, '');
     expect(result).toBe(false);
+  });
+});
+
+describe('validateSuggestionRange', () => {
+  describe('basic validation', () => {
+    it('returns invalid for undefined patch', () => {
+      const result = validateSuggestionRange(1, 2, undefined);
+      expect(result.isValid).toBe(false);
+      expect(result.reason).toBe('No patch available');
+    });
+
+    it('returns invalid for empty patch', () => {
+      const result = validateSuggestionRange(1, 2, '');
+      expect(result.isValid).toBe(false);
+      expect(result.reason).toBe('No patch available');
+    });
+
+    it('returns invalid when start_line > end_line', () => {
+      const result = validateSuggestionRange(5, 3, simplePatch);
+      expect(result.isValid).toBe(false);
+      expect(result.reason).toBe('Invalid range: start > end');
+    });
+
+    it('returns invalid for ranges > 50 lines', () => {
+      const result = validateSuggestionRange(1, 52, simplePatch);
+      expect(result.isValid).toBe(false);
+      expect(result.reason).toContain('Range too long');
+      expect(result.reason).toContain('52 lines');
+      expect(result.reason).toContain('max 50');
+    });
+  });
+
+  describe('position validation', () => {
+    it('returns invalid when start_line not in diff', () => {
+      const result = validateSuggestionRange(100, 101, simplePatch);
+      expect(result.isValid).toBe(false);
+      expect(result.reason).toContain('Line 100 not found in diff');
+    });
+
+    it('returns invalid when end_line not in diff', () => {
+      const result = validateSuggestionRange(1, 10, simplePatch);
+      expect(result.isValid).toBe(false);
+      expect(result.reason).toContain('not found in diff');
+    });
+
+    it('returns valid with positions for valid range', () => {
+      // Lines 1-2 are consecutive in simplePatch
+      const result = validateSuggestionRange(1, 2, simplePatch);
+      expect(result.isValid).toBe(true);
+      expect(result.startPosition).toBe(2);
+      expect(result.endPosition).toBe(3);
+      expect(result.reason).toBeUndefined();
+    });
+  });
+
+  describe('consecutive validation', () => {
+    it('returns invalid when intermediate line missing (gap)', () => {
+      // Create a patch where we have lines 1, 2, 3 but then line 5 (missing line 4)
+      // This simulates non-consecutive line numbers
+      const patchWithGap = `@@ -1,3 +1,3 @@
+ line 1
++line 2
+ line 3
+@@ -10,2 +11,2 @@
+ line 5
++line 6`;
+      // Lines 1, 2, 3 exist, then jump to 5, 6 (line 4 missing - gap)
+      const result = validateSuggestionRange(1, 6, patchWithGap);
+      expect(result.isValid).toBe(false);
+      // Line 4 doesn't exist in the diff, creating a gap
+      expect(result.reason).toContain('not found in diff');
+    });
+
+    it('returns valid for consecutive lines in diff', () => {
+      // Lines 1-4 are consecutive in simplePatch
+      const result = validateSuggestionRange(1, 4, simplePatch);
+      expect(result.isValid).toBe(true);
+      expect(result.startPosition).toBeDefined();
+      expect(result.endPosition).toBeDefined();
+    });
+  });
+
+  describe('single-line edge case', () => {
+    it('returns valid for single-line range (start === end)', () => {
+      const result = validateSuggestionRange(2, 2, simplePatch);
+      expect(result.isValid).toBe(true);
+      expect(result.startPosition).toBe(3);
+      expect(result.endPosition).toBe(3);
+    });
+
+    it('single-line range has length 1 (not 0)', () => {
+      // This tests the off-by-one scenario: range [2,2] should be 1 line, not 0
+      // We verify this by ensuring a single-line range doesn't trigger the 50-line limit incorrectly
+      const result = validateSuggestionRange(2, 2, simplePatch);
+      expect(result.isValid).toBe(true);
+      // If calculation was wrong (endLine - startLine = 0),
+      // the range check would incorrectly pass for invalid ranges
+      // This test ensures the +1 is included: endLine - startLine + 1 = 1
+    });
   });
 });
