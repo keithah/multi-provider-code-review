@@ -11,18 +11,18 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 4 of 4 (Validation and Quality)
-Plan: 1 of 8 in current phase
+Plan: 3 of 8 in current phase
 Status: In progress
-Last activity: 2026-02-05 — Completed 04-01-PLAN.md
+Last activity: 2026-02-05 — Completed 04-03-PLAN.md
 
-Progress: [███████████████] 61% (11 of 18 total plans)
+Progress: [████████████████] 72% (13 of 18 total plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
-- Average duration: 2 min
-- Total execution time: 0.48 hours
+- Total plans completed: 13
+- Average duration: 2.2 min
+- Total execution time: 0.57 hours
 
 **By Phase:**
 
@@ -31,11 +31,11 @@ Progress: [███████████████] 61% (11 of 18 total pl
 | 1 - Core Suggestion Formatting | 3/3 | 9 min | 3 min |
 | 2 - LLM Fix Generation Integration | 4/4 | 10 min | 2.5 min |
 | 3 - Multi-line and Advanced Formatting | 3/3 | 8 min | 2.7 min |
-| 4 - Validation and Quality | 1/8 | 2 min | 2 min |
+| 4 - Validation and Quality | 3/8 | 8 min | 2.7 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-01 (2min), 03-02 (1min), 03-03 (4min), 04-01 (2min)
-- Trend: Consistent velocity, Phase 4 started
+- Last 5 plans: 03-02 (1min), 03-03 (4min), 04-01 (2min), 04-02 (3min), 04-03 (3min)
+- Trend: Excellent velocity, Phase 4 progressing well
 
 *Updated after each plan completion*
 
@@ -78,6 +78,11 @@ Recent decisions affecting current work:
 - Return skip result for unsupported languages (not failure) (04-01)
 - Use 1-indexed line/column numbers for consistency with GitHub (04-01)
 - Reuse getParser from ast/parsers.ts instead of reimplementing (04-01)
+- Use multiplicative boosts for LLM path (1.1x syntax, 1.2x consensus) (04-03)
+- Use additive bonuses for fallback path (+0.2 syntax, +0.2 consensus) (04-03)
+- Cap all confidence scores at 1.0 to prevent over-confidence (04-03)
+- Default threshold 0.7 balances precision and recall (04-03)
+- Consensus requirement only enforced for critical severity (04-03)
 
 ### Pending Todos
 
@@ -98,9 +103,9 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Completed 04-01-PLAN.md (Syntax validator)
+Stopped at: Completed 04-03-PLAN.md (Confidence calculator)
 Resume file: None
 
 ---
 
-*Next step: Phase 4 in progress. Ready for 04-02-PLAN.md (AST comparator)*
+*Next step: Phase 4 in progress (3 of 8 plans complete). Ready for 04-04-PLAN.md (Feedback tracker)*
