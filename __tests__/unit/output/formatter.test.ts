@@ -115,7 +115,9 @@ describe('MarkdownFormatter', () => {
 
       const output = formatter.format(review);
 
-      expect(output).toContain('Suggestion: Use const instead of let');
+      expect(output).toContain('**Suggested fix:**');
+      expect(output).toContain('```suggestion');
+      expect(output).toContain('Use const instead of let');
     });
 
     it('includes evidence when present', () => {
