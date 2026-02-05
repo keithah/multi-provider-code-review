@@ -60,10 +60,13 @@ Plans:
 4. Context window truncation is prevented via token counting, respecting per-provider limits
 5. End-to-end pipeline works: prompt -> LLM analysis -> parse -> format -> post to GitHub
 
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 02-01: TBD during planning
+- [ ] 02-01-PLAN.md — Extend PromptBuilder with fix generation instructions
+- [ ] 02-02-PLAN.md — TDD: Suggestion sanity validation function
+- [ ] 02-03-PLAN.md — Integrate suggestion validation into parser
+- [ ] 02-04-PLAN.md — Token-aware context management for suggestion skip
 
 **Complexity**: HIGH
 - **Research flag**: Standard patterns (LLM prompt extension follows existing codebase patterns)
@@ -142,7 +145,7 @@ Phases execute sequentially: 1 → 2 → 3 → 4
 | Phase | Requirements | Plans Complete | Status | Completed |
 |-------|--------------|----------------|--------|-----------|
 | 1. Core Formatting | FR-1.1, FR-1.2, FR-1.3 | 3/3 | ✓ Complete | 2026-02-05 |
-| 2. LLM Integration | FR-2.1, FR-2.2, FR-2.3, FR-2.4 | 0/TBD | Not started | - |
+| 2. LLM Integration | FR-2.1, FR-2.2, FR-2.3, FR-2.4 | 0/4 | Planned | - |
 | 3. Multi-Line Support | FR-3.1, FR-3.2, FR-3.3 | 0/TBD | Not started | - |
 | 4. Validation & Quality | FR-4.1, FR-4.2, FR-4.3, FR-4.4 | 0/TBD | Not started | - |
 
@@ -155,10 +158,10 @@ Phases execute sequentially: 1 → 2 → 3 → 4
 | FR-1.1 (Single-line formatting) | 1 | ✓ Complete |
 | FR-1.2 (Escaping) | 1 | ✓ Complete |
 | FR-1.3 (Line accuracy) | 1 | ✓ Complete |
-| FR-2.1 (Fix generation prompts) | 2 | Pending |
-| FR-2.2 (Parse suggestion field) | 2 | Pending |
-| FR-2.3 (Graceful degradation) | 2 | Pending |
-| FR-2.4 (Token-aware context) | 2 | Pending |
+| FR-2.1 (Fix generation prompts) | 2 | Planned |
+| FR-2.2 (Parse suggestion field) | 2 | Planned |
+| FR-2.3 (Graceful degradation) | 2 | Planned |
+| FR-2.4 (Token-aware context) | 2 | Planned |
 | FR-3.1 (Multi-line suggestions) | 3 | Pending |
 | FR-3.2 (Deletion handling) | 3 | Pending |
 | FR-3.3 (Multi-line escaping) | 3 | Pending |
@@ -177,3 +180,4 @@ Phases execute sequentially: 1 → 2 → 3 → 4
 
 *Roadmap created: 2026-02-04*
 *Phase 1 planned: 2026-02-04*
+*Phase 2 planned: 2026-02-05*
