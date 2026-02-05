@@ -196,6 +196,7 @@ async function createComponentsForCLI(config: ReviewConfig): Promise<ReviewCompo
     metricsCollector,
     batchOrchestrator,
     acceptanceDetector,
+    providerWeightTracker,
   };
 }
 
@@ -317,5 +318,6 @@ export async function createComponents(config: ReviewConfig, githubToken: string
     batchOrchestrator,
     githubClient,
     acceptanceDetector,
+    providerWeightTracker,
   };
 }

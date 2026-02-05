@@ -2,6 +2,7 @@ import { Deduplicator } from '../analysis/deduplicator';
 import { ConsensusEngine } from '../analysis/consensus';
 import { LLMExecutor } from '../analysis/llm/executor';
 import { AcceptanceDetector } from '../learning/acceptance-detector';
+import { ProviderWeightTracker } from '../learning/provider-weights';
 import { extractFindings } from '../analysis/llm/parser';
 import { summarizeAIDetection } from '../analysis/ai-detector';
 import { PromptBuilder } from '../analysis/llm/prompt-builder';
@@ -83,6 +84,7 @@ export interface ReviewComponents {
   batchOrchestrator?: BatchOrchestrator;
   githubClient?: GitHubClient;
   acceptanceDetector?: AcceptanceDetector;
+  providerWeightTracker?: ProviderWeightTracker;
 }
 
 export class ReviewOrchestrator {
@@ -469,7 +471,7 @@ export class ReviewOrchestrator {
               const batchDiff = filterDiffByFiles(reviewContext.diff, batch);
               const batchContext: PRContext = { ...reviewContext, files: batch, diff: batchDiff };
               const promptBuilder = new PromptBuilder(config, reviewIntensity);
-              const prompt = promptBuilder.build(batchContext);
+              const prompt = await promptBuilder.build(batchContext);
 
               try {
                 const results = await this.components.llmExecutor.execute(healthy, prompt, intensityTimeout);
