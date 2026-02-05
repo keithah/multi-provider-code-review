@@ -115,6 +115,7 @@ async function createComponentsForCLI(config: ReviewConfig): Promise<ReviewCompo
   const cacheStorage = new CacheStorage();
   const suppressionTracker = new SuppressionTracker(cacheStorage, 'cli-mode');
   const providerWeightTracker = new ProviderWeightTracker(cacheStorage);
+  const acceptanceDetector = new AcceptanceDetector();
   const feedbackTracker = config.learningEnabled ? new FeedbackTracker(cacheStorage, config.learningMinFeedbackCount) : undefined;
   const promptEnricher = new PromptEnricher(suppressionTracker, feedbackTracker);
   const promptBuilder = new PromptBuilder(config, 'standard', promptEnricher, undefined);
@@ -194,6 +195,7 @@ async function createComponentsForCLI(config: ReviewConfig): Promise<ReviewCompo
     reliabilityTracker,
     metricsCollector,
     batchOrchestrator,
+    acceptanceDetector,
   };
 }
 
