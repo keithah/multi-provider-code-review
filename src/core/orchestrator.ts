@@ -1,6 +1,7 @@
 import { Deduplicator } from '../analysis/deduplicator';
 import { ConsensusEngine } from '../analysis/consensus';
 import { LLMExecutor } from '../analysis/llm/executor';
+import { AcceptanceDetector } from '../learning/acceptance-detector';
 import { extractFindings } from '../analysis/llm/parser';
 import { summarizeAIDetection } from '../analysis/ai-detector';
 import { PromptBuilder } from '../analysis/llm/prompt-builder';
@@ -81,6 +82,7 @@ export interface ReviewComponents {
   metricsCollector?: MetricsCollector;
   batchOrchestrator?: BatchOrchestrator;
   githubClient?: GitHubClient;
+  acceptanceDetector?: AcceptanceDetector;
 }
 
 export class ReviewOrchestrator {
