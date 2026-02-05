@@ -2,9 +2,9 @@ import { ReviewConfig } from '../types';
 
 export const DEFAULT_CONFIG: ReviewConfig = {
   // Empty array triggers dynamic model discovery
-  // Will auto-discover best free models from OpenRouter API and OpenCode CLI
+  // Will use OpenRouter's "free" meta-model and discover OpenCode CLI models
   providers: [],
-  synthesisModel: 'openrouter/google/gemini-2.0-flash-exp:free',
+  synthesisModel: 'openrouter/free',
   fallbackProviders: [],
   providerAllowlist: [],
   providerBlocklist: [],
@@ -116,6 +116,5 @@ export const DEFAULT_CONFIG: ReviewConfig = {
  * (e.g., network issues, API unavailable, CLI not installed)
  */
 export const FALLBACK_STATIC_PROVIDERS = [
-  'openrouter/mistralai/devstral-2512:free',
-  'openrouter/xiaomi/mimo-v2-flash:free',
+  'openrouter/free',
 ];

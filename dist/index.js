@@ -26867,9 +26867,9 @@ var safeDump = renamed("safeDump", "dump");
 // src/config/defaults.ts
 var DEFAULT_CONFIG = {
   // Empty array triggers dynamic model discovery
-  // Will auto-discover best free models from OpenRouter API and OpenCode CLI
+  // Will use OpenRouter's "free" meta-model and discover OpenCode CLI models
   providers: [],
-  synthesisModel: "openrouter/google/gemini-2.0-flash-exp:free",
+  synthesisModel: "openrouter/free",
   fallbackProviders: [],
   providerAllowlist: [],
   providerBlocklist: [],
@@ -26972,8 +26972,7 @@ var DEFAULT_CONFIG = {
   dryRun: false
 };
 var FALLBACK_STATIC_PROVIDERS = [
-  "openrouter/mistralai/devstral-2512:free",
-  "openrouter/xiaomi/mimo-v2-flash:free"
+  "openrouter/free"
 ];
 
 // node_modules/zod/v3/external.js
@@ -31869,6 +31868,7 @@ var OpenRouterProvider = class _OpenRouterProvider extends Provider {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     const started = Date.now();
+    const apiModelId = this.modelId.replace(/#\d+$/, "");
     try {
       const response = await withRetry(
         () => fetch(`${_OpenRouterProvider.BASE_URL}/chat/completions`, {
@@ -31880,7 +31880,7 @@ var OpenRouterProvider = class _OpenRouterProvider extends Provider {
             "X-Title": "Multi-Provider Code Review"
           },
           body: JSON.stringify({
-            model: this.modelId,
+            model: apiModelId,
             messages: [{ role: "user", content: prompt }],
             temperature: 0.1,
             max_tokens: 2e3
@@ -31933,8 +31933,12 @@ var OpenRouterProvider = class _OpenRouterProvider extends Provider {
       const durationSeconds = (Date.now() - started) / 1e3;
       const content = data.choices?.[0]?.message?.content || "";
       const usage = data.usage;
+      const actualModel = data.model;
       const findings = this.extractFindings(content);
       const aiAnalysis = this.extractAIAnalysis(content);
+      if (actualModel && actualModel !== apiModelId) {
+        logger.info(`OpenRouter routed ${this.name} -> ${actualModel}`);
+      }
       return {
         content,
         usage: usage ? {
@@ -31945,7 +31949,9 @@ var OpenRouterProvider = class _OpenRouterProvider extends Provider {
         durationSeconds,
         findings,
         aiLikelihood: aiAnalysis?.likelihood,
-        aiReasoning: aiAnalysis?.reasoning
+        aiReasoning: aiAnalysis?.reasoning,
+        actualModel
+        // Include actual model in result for analytics
       };
     } finally {
       clearTimeout(timeout);
@@ -32739,101 +32745,9 @@ var PricingService = class _PricingService {
 };
 
 // src/providers/openrouter-models.ts
-async function fetchOpenRouterModels(timeoutMs = 5e3, query = "max_price=0&order=top-weekly") {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const response = await fetch(`https://openrouter.ai/api/v1/models?${query}`, {
-      signal: controller.signal,
-      headers: {
-        "Content-Type": "application/json"
-      }
-    });
-    if (!response.ok) {
-      throw new Error(`OpenRouter API error: ${response.status} ${response.statusText}`);
-    }
-    const data = await response.json();
-    return data.data || [];
-  } catch (error2) {
-    if (error2 instanceof Error && error2.name === "AbortError") {
-      logger.warn("OpenRouter model fetch timed out");
-    } else {
-      logger.warn("Failed to fetch OpenRouter models", error2);
-    }
-    return [];
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-function isFreeModel(model) {
-  return model.pricing.prompt === "0" && model.pricing.completion === "0";
-}
-function rankModel(model) {
-  let score = 0;
-  const contextLength = model.context_length || model.top_provider?.context_length || 0;
-  score += Math.min(100, contextLength / 128e3 * 100);
-  if (model.architecture?.instruct_type) {
-    score += 20;
-  }
-  if (model.id.toLowerCase().includes("code") || model.name.toLowerCase().includes("code")) {
-    score += 30;
-  }
-  if (model.id.includes("2.5") || model.id.includes("3.") || model.id.includes("4.")) {
-    score += 10;
-  }
-  if (contextLength < 4e3) {
-    score -= 50;
-  }
-  return score;
-}
-async function getBestFreeModels(count = 4, timeoutMs = 5e3) {
-  logger.info("Fetching OpenRouter model list from API...");
-  const models = await fetchOpenRouterModels(timeoutMs);
-  if (models.length === 0) {
-    logger.warn("No models fetched from OpenRouter API, using fallback");
-    return getFallbackModels(count);
-  }
-  logger.info(`Fetched ${models.length} total models from OpenRouter`);
-  const freeModels = models.filter(isFreeModel);
-  if (freeModels.length === 0) {
-    logger.warn("No free models available from OpenRouter, using fallback");
-    return getFallbackModels(count);
-  }
-  logger.info(`Found ${freeModels.length} free OpenRouter models`);
-  const rankedModels = freeModels.map((model, idx) => {
-    const popularityBoost = freeModels.length - idx;
-    return {
-      modelId: `openrouter/${model.id}`,
-      score: rankModel(model) + popularityBoost,
-      contextLength: model.context_length || 0,
-      isFree: true
-    };
-  });
-  rankedModels.sort((a, b) => b.score - a.score);
-  const poolSize = Math.min(rankedModels.length, Math.max(count * 2, count + 2));
-  const pool = rankedModels.slice(0, poolSize).map((m) => m.modelId);
-  const selectedModels = shuffle(pool).slice(0, count);
-  logger.info(
-    `Selected ${selectedModels.length}/${count} best free OpenRouter models: ${selectedModels.join(", ")}`
-  );
-  return selectedModels;
-}
-function getFallbackModels(count = 4) {
-  const fallbacks = [
-    "openrouter/mistralai/devstral-2512:free",
-    "openrouter/xiaomi/mimo-v2-flash:free",
-    "openrouter/microsoft/phi-4:free",
-    "openrouter/google/gemini-2.0-flash-exp:free"
-  ];
-  return fallbacks.slice(0, count);
-}
-function shuffle(arr) {
-  const copy = [...arr];
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
+async function getBestFreeModels(count = 4, _timeoutMs = 5e3) {
+  logger.debug(`Creating ${count} OpenRouter free routing instances`);
+  return Array.from({ length: count }, (_, i) => `openrouter/free#${i + 1}`);
 }
 var modelCache = null;
 var CACHE_TTL_MS = 60 * 60 * 1e3;
@@ -33174,7 +33088,9 @@ var ProviderRegistry = class {
           logger.warn(`OPENROUTER_API_KEY not set; skipping OpenRouter provider ${name}`);
           continue;
         }
-        if (!config.openrouterAllowPaid && !model.endsWith(":free")) {
+        const baseModel = model.replace(/#\d+$/, "");
+        const isFree = baseModel === "free" || baseModel.endsWith(":free");
+        if (!config.openrouterAllowPaid && !isFree) {
           logger.warn(`Skipping paid OpenRouter model ${name} (set openrouterAllowPaid=true to enable)`);
           continue;
         }
@@ -33555,6 +33471,8 @@ function estimateTokensForDiff(diff) {
 function getContextWindowSize(modelId) {
   const CONTEXT_WINDOWS = {
     // OpenRouter models (common ones)
+    "openrouter/free": 128e3,
+    // Conservative default for auto-routing
     "openrouter/google/gemini-2.0-flash-exp:free": 1e6,
     // 1M tokens
     "openrouter/mistralai/devstral-2512:free": 256e3,

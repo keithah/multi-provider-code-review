@@ -83,6 +83,7 @@ export function getContextWindowSize(modelId: string): number {
   // Known context windows (update as models evolve)
   const CONTEXT_WINDOWS: Record<string, number> = {
     // OpenRouter models (common ones)
+    'openrouter/free': 128000,                               // Conservative default for auto-routing
     'openrouter/google/gemini-2.0-flash-exp:free': 1000000,  // 1M tokens
     'openrouter/mistralai/devstral-2512:free': 256000,       // 256k tokens
     'openrouter/xiaomi/mimo-v2-flash:free': 128000,          // 128k tokens

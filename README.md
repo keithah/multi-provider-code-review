@@ -52,7 +52,7 @@ jobs:
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          REVIEW_PROVIDERS: openrouter/google/gemini-2.0-flash-exp:free,openrouter/mistralai/devstral-2512:free
+          REVIEW_PROVIDERS: openrouter/free
           INCREMENTAL_ENABLED: 'true'  # 6x faster on updates
         env:
           # Required when using OpenRouter providers (even free ones)
@@ -107,7 +107,8 @@ See [Self-Hosted Deployment Guide](docs/self-hosted.md) for details.
 ### API-Based Providers
 
 - **OpenRouter** (`openrouter/<model>`): 200+ models via single API
-  - Examples: `openrouter/google/gemini-2.0-flash-exp:free`, `openrouter/mistralai/devstral-2512:free`
+  - Recommended: `openrouter/free` - Automatically routes to best available free model
+  - Alternative: Specific models like `openrouter/google/gemini-2.0-flash-exp:free`
   - Requires: `OPENROUTER_API_KEY` environment variable
   - Get free API key: [openrouter.ai](https://openrouter.ai)
 
