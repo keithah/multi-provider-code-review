@@ -86,6 +86,7 @@ describe('DashboardGenerator', () => {
       mockCollector.getMetrics.mockResolvedValue([sampleMetric]);
       mockCollector.getStats.mockResolvedValue({
         reviews: [sampleMetric],
+        suggestionQuality: [],
         totalReviews: 10,
         totalCost: 0.50,
         totalFindings: 100,
