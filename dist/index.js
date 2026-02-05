@@ -33846,6 +33846,7 @@ var PromptBuilder = class {
       throw new Error("Invalid PR context: files must be an array");
     }
     const diff = trimDiff(pr.diff, this.config.diffMaxBytes);
+    const skipSuggestions = this.shouldSkipSuggestions(diff);
     const filesInDiff = /* @__PURE__ */ new Set();
     const diffGitPattern = /^diff --git a\/(.+?) b\/(.+?)$/gm;
     let match2;
@@ -33883,25 +33884,33 @@ var PromptBuilder = class {
       "   \u2022 Crash at runtime",
       "   \u2022 Lose or corrupt data",
       "   \u2022 Have SQL injection, XSS, command injection, or RCE vulnerability",
-      "",
-      "Return JSON: [{file, line, severity, title, message, suggestion}]",
-      "",
-      "SUGGESTION FIELD (optional):",
-      '  - Only include "suggestion" for FIXABLE issues (not all findings)',
-      "  - Fixable: null reference, type error, off-by-one, missing null check, resource leak",
-      "  - NOT fixable: architectural issues, design suggestions, unclear requirements",
-      '  - "suggestion" must be EXACT replacement code for the problematic line(s)',
-      "  - Include ONLY the fixed code, no explanations or comments",
-      '  - Example: {"file": "x.ts", "line": 10, "severity": "major",',
-      '             "title": "Null reference", "message": "...",',
-      '             "suggestion": "const user = users?.find(u => u.id === id) ?? null;"}',
-      "",
+      ""
+    ];
+    if (skipSuggestions) {
+      instructions.push("Return JSON: [{file, line, severity, title, message}]", "");
+    } else {
+      instructions.push(
+        "Return JSON: [{file, line, severity, title, message, suggestion}]",
+        "",
+        "SUGGESTION FIELD (optional):",
+        '  - Only include "suggestion" for FIXABLE issues (not all findings)',
+        "  - Fixable: null reference, type error, off-by-one, missing null check, resource leak",
+        "  - NOT fixable: architectural issues, design suggestions, unclear requirements",
+        '  - "suggestion" must be EXACT replacement code for the problematic line(s)',
+        "  - Include ONLY the fixed code, no explanations or comments",
+        '  - Example: {"file": "x.ts", "line": 10, "severity": "major",',
+        '             "title": "Null reference", "message": "...",',
+        '             "suggestion": "const user = users?.find(u => u.id === id) ?? null;"}',
+        ""
+      );
+    }
+    instructions.push(
       `PR #${pr.number}: ${pr.title}`,
       `Author: ${pr.author}`,
       "Files changed:",
       ...fileList,
       ""
-    ];
+    );
     const MAX_DIFF_SIZE_FOR_ANALYSIS = 5e4;
     if (diff.length < MAX_DIFF_SIZE_FOR_ANALYSIS) {
       try {
@@ -33985,6 +33994,28 @@ var PromptBuilder = class {
     const fileListTokens = pr.files.length * 20;
     const diffEstimate = estimateTokensConservative(pr.diff);
     return baseOverhead + fileListTokens + diffEstimate.tokens;
+  }
+  /**
+   * Determine if suggestion instructions should be skipped due to large context
+   *
+   * Per FR-2.4: Skip suggestion generation when code snippet too large
+   * to prevent hallucinated fixes from truncated context.
+   *
+   * Uses tiered thresholds per CONTEXT.md:
+   * - small (4-16k window): skip if diff > 2000 tokens
+   * - medium (128-200k window): skip if diff > 80000 tokens
+   * - large (1M+ window): skip if diff > 400000 tokens
+   */
+  shouldSkipSuggestions(diff) {
+    const estimate = estimateTokensConservative(diff);
+    const SKIP_THRESHOLD = 5e4;
+    if (estimate.tokens > SKIP_THRESHOLD) {
+      logger.debug(
+        `Skipping suggestion instructions: diff is ${estimate.tokens} tokens (threshold: ${SKIP_THRESHOLD})`
+      );
+      return true;
+    }
+    return false;
   }
 };
 
