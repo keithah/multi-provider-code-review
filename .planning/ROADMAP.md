@@ -63,10 +63,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Extend PromptBuilder with fix generation instructions
-- [ ] 02-02-PLAN.md — TDD: Suggestion sanity validation function
-- [ ] 02-03-PLAN.md — Integrate suggestion validation into parser
-- [ ] 02-04-PLAN.md — Token-aware context management for suggestion skip
+- [x] 02-01-PLAN.md — Extend PromptBuilder with fix generation instructions
+- [x] 02-02-PLAN.md — TDD: Suggestion sanity validation function
+- [x] 02-03-PLAN.md — Integrate suggestion validation into parser
+- [x] 02-04-PLAN.md — Token-aware context management for suggestion skip
 
 **Complexity**: HIGH
 - **Research flag**: Standard patterns (LLM prompt extension follows existing codebase patterns)
@@ -93,9 +93,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — TDD: Multi-line range validation (validateSuggestionRange)
-- [ ] 03-02-PLAN.md — TDD: Hunk boundary detection (isRangeWithinSingleHunk)
-- [ ] 03-03-PLAN.md — Integration: Wire validation into CommentPoster with multi-line API support
+- [x] 03-01-PLAN.md — TDD: Multi-line range validation (validateSuggestionRange)
+- [x] 03-02-PLAN.md — TDD: Hunk boundary detection (isRangeWithinSingleHunk)
+- [x] 03-03-PLAN.md — Integration: Wire validation into CommentPoster with multi-line API support
 
 **Complexity**: HIGH
 - **Research flag**: Research complete - patterns established from GitHub API docs and community discussion
@@ -119,13 +119,18 @@ Plans:
 4. Dismissed suggestions (with thumbs-down reactions) are tracked via learning system
 5. Provider fix quality metrics are captured via existing analytics
 
-**Plans**: TBD
+**Plans**: 6 plans
 
 Plans:
-- [ ] 04-01: TBD during planning
+- [ ] 04-01-PLAN.md — TDD: Syntax validator (tree-sitter ERROR/MISSING node detection)
+- [ ] 04-02-PLAN.md — TDD: AST comparator (structural equivalence for consensus)
+- [ ] 04-03-PLAN.md — TDD: Confidence calculator (hybrid scoring with thresholds)
+- [ ] 04-04-PLAN.md — TDD: Suppression tracker (dismissal pattern learning)
+- [ ] 04-05-PLAN.md — Config schema + consensus integration (AST-based suggestion agreement)
+- [ ] 04-06-PLAN.md — Integration: Wire validation into CommentPoster with quality metrics
 
 **Complexity**: MEDIUM
-- **Research flag**: NEEDS DESIGN DECISIONS - Consensus algorithm for code fixes is novel (no standard patterns)
+- **Research flag**: Research complete - tree-sitter patterns, AST comparison, confidence scoring established
 - **Primary risk**: Hallucinated fixes from insufficient context (Pitfall #4) - mitigated by validation layers
 - **Validation**: Measure fix correctness rates, track CI failures post-suggestion, validate consensus logic
 
@@ -149,7 +154,7 @@ Phases execute sequentially: 1 → 2 → 3 → 4
 | 1. Core Formatting | FR-1.1, FR-1.2, FR-1.3 | 3/3 | ✓ Complete | 2026-02-05 |
 | 2. LLM Integration | FR-2.1, FR-2.2, FR-2.3, FR-2.4 | 4/4 | ✓ Complete | 2026-02-05 |
 | 3. Multi-Line Support | FR-3.1, FR-3.2, FR-3.3 | 3/3 | ✓ Complete | 2026-02-05 |
-| 4. Validation & Quality | FR-4.1, FR-4.2, FR-4.3, FR-4.4 | 0/TBD | Not started | - |
+| 4. Validation & Quality | FR-4.1, FR-4.2, FR-4.3, FR-4.4 | 0/6 | Planned | - |
 
 ## Coverage Validation
 
@@ -184,3 +189,4 @@ Phases execute sequentially: 1 → 2 → 3 → 4
 *Phase 1 planned: 2026-02-04*
 *Phase 2 planned: 2026-02-05*
 *Phase 3 planned: 2026-02-04*
+*Phase 4 planned: 2026-02-04*
