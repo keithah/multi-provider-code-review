@@ -132,7 +132,7 @@ Plans:
 - [x] 04-06-PLAN.md — Integration: Wire validation, consensus, code graph context into CommentPoster
 - [x] 04-07-PLAN.md — Prompt enrichment with learned patterns (feedback-informed LLM prompts)
 - [x] 04-08-PLAN.md — TDD: Acceptance detector (track committed suggestions for positive feedback)
-- [ ] 04-09-PLAN.md — Gap closure: Wire learning/validation trackers into setup.ts runtime
+- [x] 04-09-PLAN.md — Gap closure: Wire learning/validation trackers into setup.ts runtime
 
 **Complexity**: MEDIUM
 - **Research flag**: Research complete - tree-sitter patterns, AST comparison, confidence scoring established
@@ -153,23 +153,22 @@ Plans:
 
 **Success Criteria** (what must be TRUE):
 1. AcceptanceDetector instantiated in setup.ts for both CLI and production modes
-2. FeedbackCollector or equivalent orchestration calls detectFromCommits() when PR updated
-3. FeedbackCollector calls detectFromReactions() when reactions added to comments
+2. Orchestrator calls detectFromCommits() when PR updated
+3. Orchestrator calls detectFromReactions() for comment reactions
 4. Accepted suggestions feed ProviderWeightTracker to increase provider weights
 5. Provider weights increase on acceptances, decrease on dismissals (bi-directional learning)
-6. End-to-end acceptance tracking works: suggestion posted → user accepts → weight increases
+6. End-to-end acceptance tracking works: suggestion posted -> user accepts -> weight increases
 
-**Plans**: TBD (to be planned)
+**Plans**: 2 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — TBD: Runtime wiring for AcceptanceDetector
-- [ ] 05-02-PLAN.md — TBD: Orchestration layer for acceptance detection
-- [ ] 05-03-PLAN.md — TBD: Integration testing for complete feedback loop
+- [ ] 05-01-PLAN.md — Runtime wiring: Add AcceptanceDetector to setup.ts and ReviewComponents
+- [ ] 05-02-PLAN.md — Orchestration: Add acceptance detection to review execution flow
 
 **Complexity**: MEDIUM
 - **Research flag**: Standard patterns (wiring follows existing setup.ts patterns from Phase 4)
-- **Primary risk**: GitHub webhook integration for commit/reaction events - may need polling fallback
-- **Validation**: Test acceptance detection with real PRs, verify provider weight increases
+- **Primary risk**: GitHub API rate limits on reaction fetching - mitigated by efficient comment-based polling
+- **Validation**: Verify provider weights change on acceptance, test with mock PR data
 
 ---
 
@@ -192,7 +191,7 @@ Phases execute sequentially: 1 -> 2 -> 3 -> 4 -> 5
 | 2. LLM Integration | FR-2.1, FR-2.2, FR-2.3, FR-2.4 | 4/4 | Complete | 2026-02-05 |
 | 3. Multi-Line Support | FR-3.1, FR-3.2, FR-3.3 | 3/3 | Complete | 2026-02-05 |
 | 4. Validation & Quality | FR-4.1, FR-4.2, FR-4.3, FR-4.4 | 9/9 | Complete | 2026-02-05 |
-| 5. Complete Feedback Loop | FR-4.4 (acceptance tracking) | 0/3 | Not started | - |
+| 5. Complete Feedback Loop | FR-4.4 (acceptance tracking) | 0/2 | Planned | - |
 
 ## Coverage Validation
 
@@ -232,3 +231,4 @@ Phases execute sequentially: 1 -> 2 -> 3 -> 4 -> 5
 *Phase 4 revised: 2026-02-04 (iteration 2 - added plan 08, updated 05, 06 for hasConsensus wiring)*
 *Phase 4 gap closure: 2026-02-05 (plan 09 - wire learning/validation into setup.ts)*
 *Phase 5 added: 2026-02-05 (gap closure from v1.0 audit - complete AcceptanceDetector wiring)*
+*Phase 5 planned: 2026-02-05 (2 plans in 2 waves)*
