@@ -119,15 +119,16 @@ Plans:
 4. Dismissed suggestions (with thumbs-down reactions) are tracked via learning system
 5. Provider fix quality metrics are captured via existing analytics
 
-**Plans**: 6 plans
+**Plans**: 7 plans
 
 Plans:
 - [ ] 04-01-PLAN.md — TDD: Syntax validator (tree-sitter ERROR/MISSING node detection)
 - [ ] 04-02-PLAN.md — TDD: AST comparator (structural equivalence for consensus)
 - [ ] 04-03-PLAN.md — TDD: Confidence calculator (hybrid scoring with thresholds)
-- [ ] 04-04-PLAN.md — TDD: Suppression tracker (dismissal pattern learning)
+- [ ] 04-04-PLAN.md — TDD: Suppression tracker + provider weight adjustment (dismissal learning)
 - [ ] 04-05-PLAN.md — Config schema + consensus integration (AST-based suggestion agreement)
-- [ ] 04-06-PLAN.md — Integration: Wire validation into CommentPoster with quality metrics
+- [ ] 04-06-PLAN.md — Integration: Wire validation, consensus, code graph context into CommentPoster
+- [ ] 04-07-PLAN.md — Prompt enrichment with learned patterns (feedback-informed LLM prompts)
 
 **Complexity**: MEDIUM
 - **Research flag**: Research complete - tree-sitter patterns, AST comparison, confidence scoring established
@@ -154,7 +155,7 @@ Phases execute sequentially: 1 → 2 → 3 → 4
 | 1. Core Formatting | FR-1.1, FR-1.2, FR-1.3 | 3/3 | ✓ Complete | 2026-02-05 |
 | 2. LLM Integration | FR-2.1, FR-2.2, FR-2.3, FR-2.4 | 4/4 | ✓ Complete | 2026-02-05 |
 | 3. Multi-Line Support | FR-3.1, FR-3.2, FR-3.3 | 3/3 | ✓ Complete | 2026-02-05 |
-| 4. Validation & Quality | FR-4.1, FR-4.2, FR-4.3, FR-4.4 | 0/6 | Planned | - |
+| 4. Validation & Quality | FR-4.1, FR-4.2, FR-4.3, FR-4.4 | 0/7 | Planned | - |
 
 ## Coverage Validation
 
@@ -190,3 +191,4 @@ Phases execute sequentially: 1 → 2 → 3 → 4
 *Phase 2 planned: 2026-02-05*
 *Phase 3 planned: 2026-02-04*
 *Phase 4 planned: 2026-02-04*
+*Phase 4 revised: 2026-02-04 (checker feedback - added plans 07, updated 04, 06)*
