@@ -67,6 +67,18 @@ export function isSuggestionLineValid(
 }
 
 /**
+ * Check if file is deletion-only (no suggestions possible).
+ * GitHub suggestions require RIGHT side lines, which don't exist
+ * in deletion-only files.
+ *
+ * @param file - FileChange object with status and additions count
+ * @returns true if file has no added lines (suggestions impossible)
+ */
+export function isDeletionOnlyFile(file: { status?: string; additions?: number }): boolean {
+  return file.status === 'removed' || (file.additions ?? 0) === 0;
+}
+
+/**
  * Validates that a suggestion range is valid for multi-line GitHub suggestions.
  *
  * This function validates that:

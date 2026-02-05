@@ -1,4 +1,4 @@
-import { validateSuggestionLine, isSuggestionLineValid, validateSuggestionRange } from '../../../src/utils/suggestion-validator';
+import { validateSuggestionLine, isSuggestionLineValid, validateSuggestionRange, isDeletionOnlyFile } from '../../../src/utils/suggestion-validator';
 
 const samplePatch = `@@ -1,3 +1,4 @@
  context line
@@ -100,6 +100,28 @@ describe('isSuggestionLineValid', () => {
   it('returns false when patch is empty', () => {
     const result = isSuggestionLineValid(1, '');
     expect(result).toBe(false);
+  });
+});
+
+describe('isDeletionOnlyFile', () => {
+  it('returns true for removed files', () => {
+    expect(isDeletionOnlyFile({ status: 'removed', additions: 0 })).toBe(true);
+  });
+
+  it('returns true for files with zero additions', () => {
+    expect(isDeletionOnlyFile({ status: 'modified', additions: 0 })).toBe(true);
+  });
+
+  it('returns false for files with additions', () => {
+    expect(isDeletionOnlyFile({ status: 'modified', additions: 5 })).toBe(false);
+  });
+
+  it('returns true when additions is undefined (treated as 0)', () => {
+    expect(isDeletionOnlyFile({ status: 'modified' })).toBe(true);
+  });
+
+  it('returns false for added files with additions', () => {
+    expect(isDeletionOnlyFile({ status: 'added', additions: 10 })).toBe(false);
   });
 });
 
