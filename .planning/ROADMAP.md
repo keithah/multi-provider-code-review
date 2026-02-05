@@ -31,10 +31,12 @@ This roadmap delivers one-click commit suggestion functionality for the multi-pr
 3. Suggestion blocks appear at correct diff line positions (no misalignment errors)
 4. Invalid line numbers are rejected before posting (fail gracefully, not silently)
 
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: TBD during planning
+- [ ] 01-01-PLAN.md — TDD: Suggestion block formatter (formatSuggestionBlock, backtick escaping)
+- [ ] 01-02-PLAN.md — TDD: Suggestion line validator (validateSuggestionLine, diff integration)
+- [ ] 01-03-PLAN.md — Integration: Update formatters and comment poster to use suggestion utilities
 
 **Complexity**: MEDIUM
 - **Research flag**: Standard patterns (markdown formatting well-documented)
@@ -139,7 +141,7 @@ Phases execute sequentially: 1 → 2 → 3 → 4
 
 | Phase | Requirements | Plans Complete | Status | Completed |
 |-------|--------------|----------------|--------|-----------|
-| 1. Core Formatting | FR-1.1, FR-1.2, FR-1.3 | 0/TBD | Not started | - |
+| 1. Core Formatting | FR-1.1, FR-1.2, FR-1.3 | 0/3 | Planned | - |
 | 2. LLM Integration | FR-2.1, FR-2.2, FR-2.3, FR-2.4 | 0/TBD | Not started | - |
 | 3. Multi-Line Support | FR-3.1, FR-3.2, FR-3.3 | 0/TBD | Not started | - |
 | 4. Validation & Quality | FR-4.1, FR-4.2, FR-4.3, FR-4.4 | 0/TBD | Not started | - |
@@ -174,4 +176,4 @@ Phases execute sequentially: 1 → 2 → 3 → 4
 ---
 
 *Roadmap created: 2026-02-04*
-*Ready for phase planning: Phase 1*
+*Phase 1 planned: 2026-02-04*
