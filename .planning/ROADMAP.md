@@ -159,11 +159,12 @@ Plans:
 5. Provider weights increase on acceptances, decrease on dismissals (bi-directional learning)
 6. End-to-end acceptance tracking works: suggestion posted -> user accepts -> weight increases
 
-**Plans**: 2 plans
+**Plans**: 3 plans (2 core + 1 gap closure)
 
 Plans:
-- [ ] 05-01-PLAN.md — Runtime wiring: Add AcceptanceDetector to setup.ts and ReviewComponents
-- [ ] 05-02-PLAN.md — Orchestration: Add acceptance detection to review execution flow
+- [x] 05-01-PLAN.md — Runtime wiring: Add AcceptanceDetector to setup.ts and ReviewComponents
+- [x] 05-02-PLAN.md — Orchestration: Add acceptance detection to review execution flow
+- [ ] 05-03-PLAN.md — Gap closure: Wire FeedbackFilter to record negative feedback to ProviderWeightTracker
 
 **Complexity**: MEDIUM
 - **Research flag**: Standard patterns (wiring follows existing setup.ts patterns from Phase 4)
@@ -191,7 +192,7 @@ Phases execute sequentially: 1 -> 2 -> 3 -> 4 -> 5
 | 2. LLM Integration | FR-2.1, FR-2.2, FR-2.3, FR-2.4 | 4/4 | Complete | 2026-02-05 |
 | 3. Multi-Line Support | FR-3.1, FR-3.2, FR-3.3 | 3/3 | Complete | 2026-02-05 |
 | 4. Validation & Quality | FR-4.1, FR-4.2, FR-4.3, FR-4.4 | 9/9 | Complete | 2026-02-05 |
-| 5. Complete Feedback Loop | FR-4.4 (acceptance tracking) | 0/2 | Planned | - |
+| 5. Complete Feedback Loop | FR-4.4 (acceptance tracking) | 2/3 | Gap Closure | - |
 
 ## Coverage Validation
 
@@ -232,3 +233,4 @@ Phases execute sequentially: 1 -> 2 -> 3 -> 4 -> 5
 *Phase 4 gap closure: 2026-02-05 (plan 09 - wire learning/validation into setup.ts)*
 *Phase 5 added: 2026-02-05 (gap closure from v1.0 audit - complete AcceptanceDetector wiring)*
 *Phase 5 planned: 2026-02-05 (2 plans in 2 waves)*
+*Phase 5 gap closure: 2026-02-05 (plan 03 - wire FeedbackFilter to record negative feedback)*
