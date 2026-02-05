@@ -135,6 +135,7 @@ export interface ReviewResult {
   findings?: Finding[];
   aiLikelihood?: number;
   aiReasoning?: string;
+  actualModel?: string;  // Actual model used (for routed providers like openrouter/free)
 }
 
 export interface ProviderResult {

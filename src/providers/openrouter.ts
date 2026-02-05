@@ -127,12 +127,19 @@ export class OpenRouterProvider extends Provider {
       const data = (await response.json()) as {
         choices?: Array<{ message?: { content?: string } }>;
         usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+        model?: string;  // OpenRouter returns the actual model that handled the request
       };
       const durationSeconds = (Date.now() - started) / 1000;
       const content: string = data.choices?.[0]?.message?.content || '';
       const usage = data.usage;
+      const actualModel = data.model;  // Capture which model OpenRouter actually routed to
       const findings = this.extractFindings(content);
       const aiAnalysis = this.extractAIAnalysis(content);
+
+      // Log which model was actually used for dynamic routing transparency
+      if (actualModel && actualModel !== apiModelId) {
+        logger.info(`OpenRouter routed ${this.name} -> ${actualModel}`);
+      }
 
       return {
         content,
@@ -147,6 +154,7 @@ export class OpenRouterProvider extends Provider {
         findings,
         aiLikelihood: aiAnalysis?.likelihood,
         aiReasoning: aiAnalysis?.reasoning,
+        actualModel: actualModel,  // Include actual model in result for analytics
       };
     } finally {
       clearTimeout(timeout);

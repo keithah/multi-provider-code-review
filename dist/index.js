@@ -31933,8 +31933,12 @@ var OpenRouterProvider = class _OpenRouterProvider extends Provider {
       const durationSeconds = (Date.now() - started) / 1e3;
       const content = data.choices?.[0]?.message?.content || "";
       const usage = data.usage;
+      const actualModel = data.model;
       const findings = this.extractFindings(content);
       const aiAnalysis = this.extractAIAnalysis(content);
+      if (actualModel && actualModel !== apiModelId) {
+        logger.info(`OpenRouter routed ${this.name} -> ${actualModel}`);
+      }
       return {
         content,
         usage: usage ? {
@@ -31945,7 +31949,9 @@ var OpenRouterProvider = class _OpenRouterProvider extends Provider {
         durationSeconds,
         findings,
         aiLikelihood: aiAnalysis?.likelihood,
-        aiReasoning: aiAnalysis?.reasoning
+        aiReasoning: aiAnalysis?.reasoning,
+        actualModel
+        // Include actual model in result for analytics
       };
     } finally {
       clearTimeout(timeout);
