@@ -24,7 +24,7 @@ export class ConsensusEngine {
   constructor(private readonly options: ConsensusOptions) {}
 
   filter(findings: Finding[]): Finding[] {
-    const grouped = new Map<string, Finding>();
+    const grouped = new Map<string, Finding & { _suggestions?: Array<{ provider: string; suggestion: string; file: string }> }>();
 
     for (const finding of findings) {
       if (!this.meetsSeverity(finding.severity)) {
@@ -39,23 +39,54 @@ export class ConsensusEngine {
       if (finding.provider) providers.add(finding.provider);
       if (providers.size === 0) providers.add('static');
 
+      // Track per-provider suggestions for consensus checking
+      const currentSuggestions: Array<{ provider: string; suggestion: string; file: string }> = [];
+      if (finding.suggestion && finding.provider) {
+        currentSuggestions.push({ provider: finding.provider, suggestion: finding.suggestion, file: finding.file });
+      }
+
       if (!existing) {
         grouped.set(key, {
           ...finding,
           providers: Array.from(providers),
           confidence: (finding.confidence ?? 0) || 1,
+          _suggestions: currentSuggestions,  // Temporary for consensus checking
         });
         continue;
       }
+
+      // Merge existing with new finding
+      const mergedSuggestions = [
+        ...(existing._suggestions || []),
+        ...currentSuggestions
+      ];
 
       grouped.set(key, {
         ...existing,
         providers: Array.from(new Set([...(existing.providers || []), ...providers])),
         confidence: Math.min(1, (existing.confidence ?? 0) + (finding.confidence ?? 0.5)),
+        _suggestions: mergedSuggestions,
       });
     }
 
-    const filtered = Array.from(grouped.values()).filter(f => this.meetsAgreement(f.providers || []));
+    // Check suggestion consensus and set hasConsensus on merged findings
+    const filtered = Array.from(grouped.values())
+      .filter(f => this.meetsAgreement(f.providers || []))
+      .map(f => {
+        // Check if we have multiple provider suggestions to compare
+        if (f._suggestions && f._suggestions.length >= 2) {
+          const consensus = this.checkSuggestionConsensus(f._suggestions, this.options.minAgreement);
+          f.hasConsensus = consensus.hasSuggestionConsensus;
+          // If consensus, use the agreed-upon suggestion
+          if (consensus.hasSuggestionConsensus && consensus.suggestions.length > 0) {
+            f.suggestion = consensus.suggestions[0];
+          }
+        }
+        // Clean up temporary field
+        delete (f as any)._suggestions;
+        return f;
+      });
+
     filtered.sort((a, b) => SEVERITY_ORDER[b.severity] - SEVERITY_ORDER[a.severity]);
     return filtered;
   }
