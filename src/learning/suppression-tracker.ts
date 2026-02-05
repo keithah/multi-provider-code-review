@@ -141,6 +141,30 @@ export class SuppressionTracker {
   }
 
   /**
+   * Get categories with active suppressions for a PR.
+   * Used by PromptEnricher to inform LLM about dismissed categories.
+   *
+   * @param prNumber - PR number to check (includes repo-wide suppressions)
+   * @returns Array of unique category names with active suppressions
+   */
+  async getActiveCategories(prNumber: number): Promise<string[]> {
+    const data = await this.loadData();
+    const now = Date.now();
+
+    // Filter to non-expired patterns matching this PR or repo-wide
+    const activePatterns = data.patterns.filter(p =>
+      p.expiresAt > now &&
+      (p.scope === 'repo' || (p.scope === 'pr' && p.prNumber === prNumber))
+    );
+
+    // Get unique categories
+    const categorySet = new Set(activePatterns.map(p => p.category));
+    const categories = Array.from(categorySet);
+
+    return categories;
+  }
+
+  /**
    * Remove expired suppression patterns
    *
    * @returns Number of patterns cleared
