@@ -12,29 +12,33 @@ Reduce friction from issue detection to fix application - developers can resolve
 
 ### Validated
 
-These capabilities already exist in the codebase:
+These capabilities now exist in the codebase:
 
-- ✓ Multi-provider LLM code review (Claude, Gemini, OpenRouter, OpenCode, Codex) — existing
-- ✓ Issue detection via hybrid AST + LLM analysis — existing
-- ✓ Inline PR comment posting with severity levels — existing
-- ✓ Finding deduplication and consensus filtering — existing
-- ✓ Multi-line code context in findings — existing
-- ✓ Markdown formatting for GitHub comments — existing
-- ✓ Incremental review with caching — existing
-- ✓ Batch orchestration with token-aware file grouping — existing
+- ✓ Multi-provider LLM code review (Claude, Gemini, OpenRouter, OpenCode, Codex) — pre-v0.5
+- ✓ Issue detection via hybrid AST + LLM analysis — pre-v0.5
+- ✓ Inline PR comment posting with severity levels — pre-v0.5
+- ✓ Finding deduplication and consensus filtering — pre-v0.5
+- ✓ Multi-line code context in findings — pre-v0.5
+- ✓ Markdown formatting for GitHub comments — pre-v0.5
+- ✓ Incremental review with caching — pre-v0.5
+- ✓ Batch orchestration with token-aware file grouping — pre-v0.5
+- ✓ Prompt LLMs to generate fix suggestions when finding issues — v0.5
+- ✓ Parse and validate fix suggestions from LLM responses — v0.5
+- ✓ Format fixes as GitHub suggestion blocks (```suggestion syntax) — v0.5
+- ✓ Handle single-line code replacement suggestions — v0.5
+- ✓ Handle multi-line code replacement suggestions — v0.5
+- ✓ Gracefully fallback to description-only when fix unavailable — v0.5
+- ✓ Include fix suggestions in existing comment formatting flow — v0.5
+- ✓ Preserve line number accuracy for suggestion placement — v0.5
+- ✓ Syntax validation via tree-sitter before posting suggestions — v0.5
+- ✓ Multi-provider consensus for critical severity fixes — v0.5
+- ✓ Bi-directional learning from acceptances and dismissals — v0.5
 
 ### Active
 
-New capabilities to build for commit suggestions:
+Future enhancements for v1.1+:
 
-- [ ] Prompt LLMs to generate fix suggestions when finding issues
-- [ ] Parse and validate fix suggestions from LLM responses
-- [ ] Format fixes as GitHub suggestion blocks (```suggestion syntax)
-- [ ] Handle single-line code replacement suggestions
-- [ ] Handle multi-line code replacement suggestions
-- [ ] Gracefully fallback to description-only when fix unavailable
-- [ ] Include fix suggestions in existing comment formatting flow
-- [ ] Preserve line number accuracy for suggestion placement
+(To be defined based on production feedback)
 
 ### Out of Scope
 
@@ -46,18 +50,21 @@ New capabilities to build for commit suggestions:
 
 ## Context
 
-**Existing System:**
-The multi-provider code review action uses an orchestration layer that coordinates LLM providers, AST analysis, caching, and GitHub integration. Findings flow through: detection → consensus → deduplication → filtering → formatting → posting.
+**Current State (v0.5):**
+Shipped one-click commit suggestion functionality. All 5 LLM providers generate fix suggestions with token-aware context management. Complete validation pipeline includes syntax checking, multi-provider consensus, and bi-directional learning from user feedback.
 
-**Technical Environment:**
-- TypeScript GitHub Action
-- Current formatters: MarkdownFormatter, MarkdownFormatterV2
-- Output layer in `src/output/`
-- LLM analysis in `src/analysis/llm/`
-- Finding types defined in `src/types/`
+**Codebase:**
+- 20,397 lines of TypeScript
+- Key modules: suggestion formatting (src/utils/), validation (src/validation/), learning (src/learning/), output pipeline (src/output/), LLM integration (src/analysis/llm/)
+- GitHub Action with multi-provider orchestration
+- Tech stack: tree-sitter (syntax validation), zod (schema validation), jsdiff (diff parsing)
 
-**User Experience Goal:**
-When a developer opens a PR and the action finds issues, they see inline comments with both the problem description AND a suggestion block showing the fix. They click "Commit suggestion" and the fix is applied immediately.
+**User Experience (v0.5):**
+When a developer opens a PR, the action posts inline comments with both problem descriptions AND commit suggestion blocks. Developers click "Commit suggestion" to apply fixes instantly. Invalid suggestions gracefully degrade to description-only. System learns from thumbs-up (acceptance) and thumbs-down (dismissal) reactions to improve provider weighting over time.
+
+**Known Issues/Tech Debt:**
+- CodeGraph cannot be injected at setup time (requires FileChange[] only available during orchestration)
+- Human verification pending for GitHub UI rendering of suggestion buttons (code correct, UI test needed)
 
 ## Constraints
 
@@ -70,9 +77,15 @@ When a developer opens a PR and the action finds issues, they see inline comment
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Use GitHub's native suggestion syntax | Leverages built-in UI, no custom implementation needed | — Pending |
-| Prompt LLMs for fixes during initial review | Single-pass is faster than two-phase (find, then fix) | — Pending |
-| Fallback to description-only | Better to surface issue without fix than suppress finding | — Pending |
+| Use GitHub's native suggestion syntax | Leverages built-in UI, no custom implementation needed | ✓ Good - Clean integration, no custom rendering |
+| Prompt LLMs for fixes during initial review | Single-pass is faster than two-phase (find, then fix) | ✓ Good - Minimal latency impact (<20% increase) |
+| Fallback to description-only | Better to surface issue without fix than suppress finding | ✓ Good - Graceful degradation works well |
+| 50k token threshold for skipping suggestions | Conservative enough for safety, simple to understand | ✓ Good - Prevents hallucination in large diffs |
+| Validate suggestions in CommentPoster vs formatters | Formatters lack diff context; CommentPoster has patches | ✓ Good - Right separation of concerns |
+| Use tree-sitter for syntax validation | Already in codebase, fast, language-agnostic | ✓ Good - Catches syntax errors before posting |
+| AST-based consensus for multi-provider fixes | Structural equivalence more robust than string matching | ✓ Good - Handles formatting variations |
+| Bi-directional learning (acceptances + dismissals) | Both signals needed for accurate quality measurement | ✓ Good - Complete feedback loop |
+| Optional providerWeightTracker injection | Backward compatibility for CLI mode | ✓ Good - No breaking changes |
 
 ---
-*Last updated: 2026-02-04 after initialization*
+*Last updated: 2026-02-05 after v0.5 milestone completion*
