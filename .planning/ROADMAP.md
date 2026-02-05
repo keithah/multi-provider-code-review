@@ -10,7 +10,7 @@ This roadmap delivers one-click commit suggestion functionality for the multi-pr
 - Integer phases (1, 2, 3, 4): Planned milestone work
 - Decimal phases (e.g., 2.1, 2.2): Urgent insertions if needed
 
-- [ ] **Phase 1: Core Suggestion Formatting** - GitHub markdown suggestion blocks with line accuracy
+- [x] **Phase 1: Core Suggestion Formatting** - GitHub markdown suggestion blocks with line accuracy
 - [ ] **Phase 2: LLM Fix Generation Integration** - Extend prompts and parsers for end-to-end suggestions
 - [ ] **Phase 3: Multi-Line and Advanced Formatting** - Multi-line suggestions with deletion handling
 - [ ] **Phase 4: Validation and Quality** - Syntax validation, consensus fixes, learning integration
@@ -34,9 +34,9 @@ This roadmap delivers one-click commit suggestion functionality for the multi-pr
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — TDD: Suggestion block formatter (formatSuggestionBlock, backtick escaping)
-- [ ] 01-02-PLAN.md — TDD: Suggestion line validator (validateSuggestionLine, diff integration)
-- [ ] 01-03-PLAN.md — Integration: Update formatters and comment poster to use suggestion utilities
+- [x] 01-01-PLAN.md — TDD: Suggestion block formatter (formatSuggestionBlock, backtick escaping)
+- [x] 01-02-PLAN.md — TDD: Suggestion line validator (validateSuggestionLine, diff integration)
+- [x] 01-03-PLAN.md — Integration: Update formatters and comment poster to use suggestion utilities
 
 **Complexity**: MEDIUM
 - **Research flag**: Standard patterns (markdown formatting well-documented)
@@ -141,7 +141,7 @@ Phases execute sequentially: 1 → 2 → 3 → 4
 
 | Phase | Requirements | Plans Complete | Status | Completed |
 |-------|--------------|----------------|--------|-----------|
-| 1. Core Formatting | FR-1.1, FR-1.2, FR-1.3 | 0/3 | Planned | - |
+| 1. Core Formatting | FR-1.1, FR-1.2, FR-1.3 | 3/3 | ✓ Complete | 2026-02-05 |
 | 2. LLM Integration | FR-2.1, FR-2.2, FR-2.3, FR-2.4 | 0/TBD | Not started | - |
 | 3. Multi-Line Support | FR-3.1, FR-3.2, FR-3.3 | 0/TBD | Not started | - |
 | 4. Validation & Quality | FR-4.1, FR-4.2, FR-4.3, FR-4.4 | 0/TBD | Not started | - |
@@ -152,9 +152,9 @@ Phases execute sequentially: 1 → 2 → 3 → 4
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FR-1.1 (Single-line formatting) | 1 | Pending |
-| FR-1.2 (Escaping) | 1 | Pending |
-| FR-1.3 (Line accuracy) | 1 | Pending |
+| FR-1.1 (Single-line formatting) | 1 | ✓ Complete |
+| FR-1.2 (Escaping) | 1 | ✓ Complete |
+| FR-1.3 (Line accuracy) | 1 | ✓ Complete |
 | FR-2.1 (Fix generation prompts) | 2 | Pending |
 | FR-2.2 (Parse suggestion field) | 2 | Pending |
 | FR-2.3 (Graceful degradation) | 2 | Pending |
