@@ -33884,7 +33884,17 @@ var PromptBuilder = class {
       "   \u2022 Lose or corrupt data",
       "   \u2022 Have SQL injection, XSS, command injection, or RCE vulnerability",
       "",
-      "Return JSON: [{file, line, severity, title, message}]",
+      "Return JSON: [{file, line, severity, title, message, suggestion}]",
+      "",
+      "SUGGESTION FIELD (optional):",
+      '  - Only include "suggestion" for FIXABLE issues (not all findings)',
+      "  - Fixable: null reference, type error, off-by-one, missing null check, resource leak",
+      "  - NOT fixable: architectural issues, design suggestions, unclear requirements",
+      '  - "suggestion" must be EXACT replacement code for the problematic line(s)',
+      "  - Include ONLY the fixed code, no explanations or comments",
+      '  - Example: {"file": "x.ts", "line": 10, "severity": "major",',
+      '             "title": "Null reference", "message": "...",',
+      '             "suggestion": "const user = users?.find(u => u.id === id) ?? null;"}',
       "",
       `PR #${pr.number}: ${pr.title}`,
       `Author: ${pr.author}`,
@@ -35785,6 +35795,15 @@ function createEnhancedCommentBody(originalBody, snippet2, filePath) {
 ${formattedSnippet}`;
 }
 
+// src/utils/suggestion-validator.ts
+function validateSuggestionLine(lineNumber, patch) {
+  const lineMap = mapLinesToPositions(patch);
+  return lineMap.get(lineNumber) ?? null;
+}
+function isSuggestionLineValid(lineNumber, patch) {
+  return validateSuggestionLine(lineNumber, patch) !== null;
+}
+
 // src/github/comment-poster.ts
 var CommentPoster = class _CommentPoster {
   constructor(client, dryRun = false) {
@@ -35917,6 +35936,13 @@ ${content.substring(0, 500)}...`);
       if (!position) {
         logger.warn(`Cannot find diff position for ${c.path}:${c.line}, skipping inline comment`);
         return null;
+      }
+      if (c.body.includes("```suggestion")) {
+        const file = files.find((f) => f.filename === c.path);
+        if (!file || !isSuggestionLineValid(c.line, file.patch)) {
+          logger.warn(`Suggestion line ${c.path}:${c.line} not valid in diff, posting without suggestion block`);
+          c.body = c.body.replace(/```suggestion[\s\S]*?```/g, "_Suggestion not available for this line_");
+        }
       }
       return { path: c.path, position, body: c.body };
     }).filter((c) => c !== null);
@@ -36186,6 +36212,26 @@ var GitHubClient = class {
   }
 };
 
+// src/utils/suggestion-formatter.ts
+function countMaxConsecutiveBackticks(str2) {
+  const backtickSequences = str2.match(/`+/g);
+  if (!backtickSequences) {
+    return 0;
+  }
+  return Math.max(...backtickSequences.map((seq2) => seq2.length));
+}
+function formatSuggestionBlock(content) {
+  if (!content || content.trim() === "") {
+    return "";
+  }
+  const maxBackticks = countMaxConsecutiveBackticks(content);
+  const fenceCount = Math.max(3, maxBackticks + 1);
+  const fence = "`".repeat(fenceCount);
+  return `${fence}suggestion
+${content}
+${fence}`;
+}
+
 // src/output/formatter-v2.ts
 var MarkdownFormatterV2 = class {
   format(review) {
@@ -36334,16 +36380,13 @@ var MarkdownFormatterV2 = class {
     lines.push(finding.message);
     lines.push("");
     if (finding.suggestion) {
-      lines.push("**Suggested Fix:**");
-      const trimmedSuggestion = finding.suggestion.trim();
-      if (trimmedSuggestion.startsWith("```")) {
-        lines.push(trimmedSuggestion);
-      } else {
-        lines.push("```");
-        lines.push(trimmedSuggestion);
-        lines.push("```");
+      const suggestionBlock = formatSuggestionBlock(finding.suggestion);
+      if (suggestionBlock) {
+        lines.push("**Suggested Fix:**");
+        lines.push("");
+        lines.push(suggestionBlock);
+        lines.push("");
       }
-      lines.push("");
     }
     if (finding.evidence) {
       const confidence = Math.round(finding.evidence.confidence * 100);
@@ -39032,14 +39075,62 @@ async function createComponents(config, githubToken) {
   };
 }
 
+// src/utils/suggestion-sanity.ts
+function validateSuggestionSanity(suggestion) {
+  if (suggestion === void 0 || suggestion === null) {
+    return {
+      isValid: false,
+      reason: "No suggestion provided"
+    };
+  }
+  const trimmed = suggestion.trim();
+  if (trimmed === "") {
+    return {
+      isValid: false,
+      reason: "Empty suggestion"
+    };
+  }
+  const lineCount = trimmed.split("\n").length;
+  if (lineCount > 50) {
+    return {
+      isValid: false,
+      reason: "Suggestion too long (>50 lines)"
+    };
+  }
+  const hasCodeSyntax = /[{}()\[\];=<>:]/.test(trimmed);
+  if (!hasCodeSyntax) {
+    return {
+      isValid: false,
+      reason: "Suggestion lacks code syntax"
+    };
+  }
+  return {
+    isValid: true,
+    suggestion: trimmed
+  };
+}
+
 // src/analysis/llm/parser.ts
 function extractFindings(results) {
   const findings = [];
   for (const result of results) {
     if (result.status !== "success" || !result.result?.findings) continue;
     for (const finding of result.result.findings) {
+      let suggestion = void 0;
+      if (finding.suggestion !== void 0 && finding.suggestion !== null) {
+        const validation = validateSuggestionSanity(finding.suggestion);
+        if (validation.isValid) {
+          suggestion = validation.suggestion;
+        } else {
+          logger.debug(
+            `Skipping invalid suggestion for ${finding.file}:${finding.line}: ${validation.reason}`
+          );
+        }
+      }
       findings.push({
         ...finding,
+        suggestion,
+        // Use validated suggestion (or undefined)
         provider: result.name,
         providers: finding.providers || [result.name]
       });
