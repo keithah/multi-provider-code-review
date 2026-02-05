@@ -308,9 +308,9 @@ These items are explicitly excluded from current implementation:
 | FR-2.2 | PROJECT.md Active #2, SUMMARY.md Phase 2 | 2 | Complete |
 | FR-2.3 | PROJECT.md Active #6, Key Decisions | 2 | Complete |
 | FR-2.4 | SUMMARY.md Pitfall #2 | 2 | Complete |
-| FR-3.1 | PROJECT.md Active #5, SUMMARY.md Table Stakes | 3 | Pending |
-| FR-3.2 | SUMMARY.md Pitfall #5 | 3 | Pending |
-| FR-3.3 | SUMMARY.md Phase 3 | 3 | Pending |
+| FR-3.1 | PROJECT.md Active #5, SUMMARY.md Table Stakes | 3 | Complete |
+| FR-3.2 | SUMMARY.md Pitfall #5 | 3 | Complete |
+| FR-3.3 | SUMMARY.md Phase 3 | 3 | Complete |
 | FR-4.1 | SUMMARY.md Phase 4 | 4 | Pending |
 | FR-4.2 | SUMMARY.md Differentiators | 4 | Pending |
 | FR-4.3 | SUMMARY.md Differentiators | 4 | Pending |

@@ -12,7 +12,7 @@ This roadmap delivers one-click commit suggestion functionality for the multi-pr
 
 - [x] **Phase 1: Core Suggestion Formatting** - GitHub markdown suggestion blocks with line accuracy
 - [x] **Phase 2: LLM Fix Generation Integration** - Extend prompts and parsers for end-to-end suggestions
-- [ ] **Phase 3: Multi-Line and Advanced Formatting** - Multi-line suggestions with deletion handling
+- [x] **Phase 3: Multi-Line and Advanced Formatting** - Multi-line suggestions with deletion handling
 - [ ] **Phase 4: Validation and Quality** - Syntax validation, consensus fixes, learning integration
 
 ## Phase Details
@@ -148,7 +148,7 @@ Phases execute sequentially: 1 → 2 → 3 → 4
 |-------|--------------|----------------|--------|-----------|
 | 1. Core Formatting | FR-1.1, FR-1.2, FR-1.3 | 3/3 | ✓ Complete | 2026-02-05 |
 | 2. LLM Integration | FR-2.1, FR-2.2, FR-2.3, FR-2.4 | 4/4 | ✓ Complete | 2026-02-05 |
-| 3. Multi-Line Support | FR-3.1, FR-3.2, FR-3.3 | 0/3 | Planned | - |
+| 3. Multi-Line Support | FR-3.1, FR-3.2, FR-3.3 | 3/3 | ✓ Complete | 2026-02-05 |
 | 4. Validation & Quality | FR-4.1, FR-4.2, FR-4.3, FR-4.4 | 0/TBD | Not started | - |
 
 ## Coverage Validation
@@ -164,9 +164,9 @@ Phases execute sequentially: 1 → 2 → 3 → 4
 | FR-2.2 (Parse suggestion field) | 2 | ✓ Complete |
 | FR-2.3 (Graceful degradation) | 2 | ✓ Complete |
 | FR-2.4 (Token-aware context) | 2 | ✓ Complete |
-| FR-3.1 (Multi-line suggestions) | 3 | Pending |
-| FR-3.2 (Deletion handling) | 3 | Pending |
-| FR-3.3 (Multi-line escaping) | 3 | Pending |
+| FR-3.1 (Multi-line suggestions) | 3 | ✓ Complete |
+| FR-3.2 (Deletion handling) | 3 | ✓ Complete |
+| FR-3.3 (Multi-line escaping) | 3 | ✓ Complete |
 | FR-4.1 (Syntax validation) | 4 | Pending |
 | FR-4.2 (Multi-provider consensus) | 4 | Pending |
 | FR-4.3 (Context-aware fixes) | 4 | Pending |
