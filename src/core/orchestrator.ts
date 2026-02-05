@@ -696,6 +696,19 @@ export class ReviewOrchestrator {
 
       const markdown = this.components.formatter.format(review);
       const suppressed = await this.components.feedbackFilter.loadSuppressed(pr.number);
+
+      // Detect and record suggestion acceptances (positive feedback)
+      if (this.components.acceptanceDetector &&
+          this.components.providerWeightTracker &&
+          this.components.githubClient) {
+        try {
+          await this.detectAndRecordAcceptances(pr.number);
+        } catch (error) {
+          // Don't fail review if acceptance detection fails - it's supplementary
+          logger.debug('Failed to detect acceptances', error as Error);
+        }
+      }
+
       const inlineFiltered = review.inlineComments.filter(c => this.components.feedbackFilter.shouldPost(c, suppressed));
 
     // If a progress tracker exists, reuse the same comment for the final review body
