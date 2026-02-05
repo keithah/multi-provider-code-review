@@ -34,7 +34,7 @@ Progress: [██████████████████] 100% (18 of 1
 | 4 - Validation and Quality | 8/8 | 28 min | 3.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-04 (3min), 04-05 (3min), 04-06 (1min), 04-07 (6min), 04-08 (4min)
+- Last 5 plans: 04-04 (3min), 04-05 (3min), 04-06 (9min), 04-07 (6min), 04-08 (4min)
 - Trend: Phase 4 complete, all 18 plans delivered
 
 *Updated after each plan completion*
@@ -95,6 +95,11 @@ Recent decisions affecting current work:
 - Fall back to normalized string comparison for unknown languages (04-05)
 - Set hasConsensus during filter aggregation when providers agree (04-05)
 - Track per-provider suggestions using temporary _suggestions field (04-05)
+- Read hasConsensus from Finding (set during aggregation) instead of computing at comment-post time (04-06)
+- Apply validation as async quality gate before posting suggestions (04-06)
+- Limit code graph context to 3 files to avoid prompt bloat (04-06)
+- Use 10x review limit for suggestion quality metrics (more granular than reviews) (04-06)
+- Add getCalls/getCallers public accessors to CodeGraph for prompt builder (04-06)
 - Inject learned patterns after defensive context (priority order in prompt) (04-07)
 - Make build() async to support learned preference fetching (enables data aggregation) (04-07)
 - Use debug-level logging for enrichment failures (graceful degradation, not error) (04-07)
