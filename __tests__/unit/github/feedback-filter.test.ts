@@ -1,6 +1,7 @@
 import { FeedbackFilter } from '../../../src/github/feedback';
 import { GitHubClient } from '../../../src/github/client';
 import { InlineComment } from '../../../src/types';
+import { ProviderWeightTracker } from '../../../src/learning/provider-weights';
 
 // Mock GitHubClient
 jest.mock('../../../src/github/client');
@@ -263,6 +264,139 @@ describe('FeedbackFilter', () => {
 
       expect(feedbackFilter.shouldPost(comment1, suppressed)).toBe(false);
       expect(feedbackFilter.shouldPost(comment2, suppressed)).toBe(true);
+    });
+  });
+
+  describe('negative feedback recording', () => {
+    it('records negative feedback when comment has thumbs-down and provider', async () => {
+      const mockWeightTracker = {
+        recordFeedback: jest.fn().mockResolvedValue(undefined),
+      } as unknown as ProviderWeightTracker;
+
+      const filter = new FeedbackFilter(mockClient, mockWeightTracker);
+
+      // Mock comment with provider attribution and thumbs-down
+      mockOctokit.paginate.mockResolvedValue([
+        {
+          id: 1,
+          path: 'test.ts',
+          line: 10,
+          body: '**Issue Title**\n\n**Provider:** `claude`',
+        },
+      ]);
+      mockOctokit.rest.reactions.listForPullRequestReviewComment.mockResolvedValue({
+        data: [{ content: '-1' }],
+      });
+
+      await filter.loadSuppressed(123);
+
+      expect(mockWeightTracker.recordFeedback).toHaveBeenCalledWith('claude', '👎');
+    });
+
+    it('does not record feedback when no provider in comment', async () => {
+      const mockWeightTracker = {
+        recordFeedback: jest.fn().mockResolvedValue(undefined),
+      } as unknown as ProviderWeightTracker;
+
+      const filter = new FeedbackFilter(mockClient, mockWeightTracker);
+
+      // Mock comment without provider attribution
+      mockOctokit.paginate.mockResolvedValue([
+        {
+          id: 1,
+          path: 'test.ts',
+          line: 10,
+          body: '**Issue Title**\n\nSome description without provider',
+        },
+      ]);
+      mockOctokit.rest.reactions.listForPullRequestReviewComment.mockResolvedValue({
+        data: [{ content: '-1' }],
+      });
+
+      await filter.loadSuppressed(123);
+
+      expect(mockWeightTracker.recordFeedback).not.toHaveBeenCalled();
+    });
+
+    it('works without weight tracker (backward compatible)', async () => {
+      const filter = new FeedbackFilter(mockClient);
+
+      mockOctokit.paginate.mockResolvedValue([
+        {
+          id: 1,
+          path: 'test.ts',
+          line: 10,
+          body: '**Issue Title**\n\n**Provider:** `claude`',
+        },
+      ]);
+      mockOctokit.rest.reactions.listForPullRequestReviewComment.mockResolvedValue({
+        data: [{ content: '-1' }],
+      });
+
+      // Should not throw, suppression still works
+      const suppressed = await filter.loadSuppressed(123);
+      expect(suppressed.size).toBe(1);
+    });
+
+    it('extracts provider and records feedback for multiple dismissals', async () => {
+      const mockWeightTracker = {
+        recordFeedback: jest.fn().mockResolvedValue(undefined),
+      } as unknown as ProviderWeightTracker;
+
+      const filter = new FeedbackFilter(mockClient, mockWeightTracker);
+
+      // Mock multiple comments with different providers
+      mockOctokit.paginate.mockResolvedValue([
+        {
+          id: 1,
+          path: 'test.ts',
+          line: 10,
+          body: '**Issue 1**\n\n**Provider:** `openai`',
+        },
+        {
+          id: 2,
+          path: 'test.ts',
+          line: 20,
+          body: '**Issue 2**\n\n**Provider:** `anthropic`',
+        },
+      ]);
+      mockOctokit.rest.reactions.listForPullRequestReviewComment
+        .mockResolvedValueOnce({
+          data: [{ content: '-1' }],
+        })
+        .mockResolvedValueOnce({
+          data: [{ content: '-1' }],
+        });
+
+      await filter.loadSuppressed(123);
+
+      expect(mockWeightTracker.recordFeedback).toHaveBeenCalledWith('openai', '👎');
+      expect(mockWeightTracker.recordFeedback).toHaveBeenCalledWith('anthropic', '👎');
+      expect(mockWeightTracker.recordFeedback).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not record feedback when no thumbs-down reaction', async () => {
+      const mockWeightTracker = {
+        recordFeedback: jest.fn().mockResolvedValue(undefined),
+      } as unknown as ProviderWeightTracker;
+
+      const filter = new FeedbackFilter(mockClient, mockWeightTracker);
+
+      mockOctokit.paginate.mockResolvedValue([
+        {
+          id: 1,
+          path: 'test.ts',
+          line: 10,
+          body: '**Issue Title**\n\n**Provider:** `claude`',
+        },
+      ]);
+      mockOctokit.rest.reactions.listForPullRequestReviewComment.mockResolvedValue({
+        data: [{ content: '+1' }], // Thumbs up, not down
+      });
+
+      await filter.loadSuppressed(123);
+
+      expect(mockWeightTracker.recordFeedback).not.toHaveBeenCalled();
     });
   });
 });
