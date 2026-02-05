@@ -117,18 +117,20 @@ Plans:
 2. Critical severity findings require multi-provider consensus before suggesting fixes (configurable threshold)
 3. LLM prompts include project-specific context from existing code graph
 4. Dismissed suggestions (with thumbs-down reactions) are tracked via learning system
-5. Provider fix quality metrics are captured via existing analytics
+5. Accepted suggestions (committed via "Commit suggestion" button or thumbs-up) are tracked for provider weight learning
+6. Provider fix quality metrics are captured via existing analytics
 
-**Plans**: 7 plans
+**Plans**: 8 plans
 
 Plans:
 - [ ] 04-01-PLAN.md — TDD: Syntax validator (tree-sitter ERROR/MISSING node detection)
 - [ ] 04-02-PLAN.md — TDD: AST comparator (structural equivalence for consensus)
 - [ ] 04-03-PLAN.md — TDD: Confidence calculator (hybrid scoring with thresholds)
 - [ ] 04-04-PLAN.md — TDD: Suppression tracker + provider weight adjustment (dismissal learning)
-- [ ] 04-05-PLAN.md — Config schema + consensus integration (AST-based suggestion agreement)
+- [ ] 04-05-PLAN.md — Config schema + consensus integration (AST-based suggestion agreement, hasConsensus wiring)
 - [ ] 04-06-PLAN.md — Integration: Wire validation, consensus, code graph context into CommentPoster
 - [ ] 04-07-PLAN.md — Prompt enrichment with learned patterns (feedback-informed LLM prompts)
+- [ ] 04-08-PLAN.md — TDD: Acceptance detector (track committed suggestions for positive feedback)
 
 **Complexity**: MEDIUM
 - **Research flag**: Research complete - tree-sitter patterns, AST comparison, confidence scoring established
@@ -155,7 +157,7 @@ Phases execute sequentially: 1 → 2 → 3 → 4
 | 1. Core Formatting | FR-1.1, FR-1.2, FR-1.3 | 3/3 | ✓ Complete | 2026-02-05 |
 | 2. LLM Integration | FR-2.1, FR-2.2, FR-2.3, FR-2.4 | 4/4 | ✓ Complete | 2026-02-05 |
 | 3. Multi-Line Support | FR-3.1, FR-3.2, FR-3.3 | 3/3 | ✓ Complete | 2026-02-05 |
-| 4. Validation & Quality | FR-4.1, FR-4.2, FR-4.3, FR-4.4 | 0/7 | Planned | - |
+| 4. Validation & Quality | FR-4.1, FR-4.2, FR-4.3, FR-4.4 | 0/8 | Planned | - |
 
 ## Coverage Validation
 
@@ -191,4 +193,5 @@ Phases execute sequentially: 1 → 2 → 3 → 4
 *Phase 2 planned: 2026-02-05*
 *Phase 3 planned: 2026-02-04*
 *Phase 4 planned: 2026-02-04*
-*Phase 4 revised: 2026-02-04 (checker feedback - added plans 07, updated 04, 06)*
+*Phase 4 revised: 2026-02-04 (iteration 1 - added plans 07, updated 04, 06)*
+*Phase 4 revised: 2026-02-04 (iteration 2 - added plan 08, updated 05, 06 for hasConsensus wiring)*
