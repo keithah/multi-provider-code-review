@@ -132,11 +132,18 @@ export class CommentPoster {
       positionMaps.set(file.filename, mapLinesToPositions(file.patch));
     }
 
+    // Sort comments for optimal batch commit UX (top-to-bottom per file)
+    const sortedComments = [...comments].sort((a, b) => {
+      const pathCompare = a.path.localeCompare(b.path);
+      if (pathCompare !== 0) return pathCompare;
+      return a.line - b.line;
+    });
+
     // Fetch file contents and enhance comments with code snippets (if headSha provided)
     const fileContentCache = new Map<string, string | null>();
 
     const enhancedComments = await Promise.all(
-      comments.map(async (c) => {
+      sortedComments.map(async (c) => {
         let enhancedBody = c.body;
 
         // Try to add code snippet if we have the commit SHA
@@ -200,7 +207,17 @@ export class CommentPoster {
           }
         }
 
-        return { path: c.path, position, body: c.body };
+        const apiComment: any = { path: c.path, position, body: c.body };
+        const startLine = (c as any).start_line;
+        if (startLine !== undefined && startLine !== c.line) {
+          // Multi-line: use line-based parameters instead of position
+          apiComment.start_line = startLine;
+          apiComment.line = c.line;
+          apiComment.start_side = 'RIGHT';
+          apiComment.side = 'RIGHT';
+          delete apiComment.position; // Can't use both position and line
+        }
+        return apiComment;
       })
       .filter((c): c is { path: string; position: number; body: string } => c !== null);
 
