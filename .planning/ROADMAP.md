@@ -120,17 +120,18 @@ Plans:
 5. Accepted suggestions (committed via "Commit suggestion" button or thumbs-up) are tracked for provider weight learning
 6. Provider fix quality metrics are captured via existing analytics
 
-**Plans**: 8 plans
+**Plans**: 9 plans (8 core + 1 gap closure)
 
 Plans:
-- [ ] 04-01-PLAN.md — TDD: Syntax validator (tree-sitter ERROR/MISSING node detection)
-- [ ] 04-02-PLAN.md — TDD: AST comparator (structural equivalence for consensus)
-- [ ] 04-03-PLAN.md — TDD: Confidence calculator (hybrid scoring with thresholds)
-- [ ] 04-04-PLAN.md — TDD: Suppression tracker + provider weight adjustment (dismissal learning)
-- [ ] 04-05-PLAN.md — Config schema + consensus integration (AST-based suggestion agreement, hasConsensus wiring)
-- [ ] 04-06-PLAN.md — Integration: Wire validation, consensus, code graph context into CommentPoster
-- [ ] 04-07-PLAN.md — Prompt enrichment with learned patterns (feedback-informed LLM prompts)
-- [ ] 04-08-PLAN.md — TDD: Acceptance detector (track committed suggestions for positive feedback)
+- [x] 04-01-PLAN.md — TDD: Syntax validator (tree-sitter ERROR/MISSING node detection)
+- [x] 04-02-PLAN.md — TDD: AST comparator (structural equivalence for consensus)
+- [x] 04-03-PLAN.md — TDD: Confidence calculator (hybrid scoring with thresholds)
+- [x] 04-04-PLAN.md — TDD: Suppression tracker + provider weight adjustment (dismissal learning)
+- [x] 04-05-PLAN.md — Config schema + consensus integration (AST-based suggestion agreement, hasConsensus wiring)
+- [x] 04-06-PLAN.md — Integration: Wire validation, consensus, code graph context into CommentPoster
+- [x] 04-07-PLAN.md — Prompt enrichment with learned patterns (feedback-informed LLM prompts)
+- [x] 04-08-PLAN.md — TDD: Acceptance detector (track committed suggestions for positive feedback)
+- [ ] 04-09-PLAN.md — Gap closure: Wire learning/validation trackers into setup.ts runtime
 
 **Complexity**: MEDIUM
 - **Research flag**: Research complete - tree-sitter patterns, AST comparison, confidence scoring established
@@ -150,35 +151,35 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute sequentially: 1 → 2 → 3 → 4
+Phases execute sequentially: 1 -> 2 -> 3 -> 4
 
 | Phase | Requirements | Plans Complete | Status | Completed |
 |-------|--------------|----------------|--------|-----------|
-| 1. Core Formatting | FR-1.1, FR-1.2, FR-1.3 | 3/3 | ✓ Complete | 2026-02-05 |
-| 2. LLM Integration | FR-2.1, FR-2.2, FR-2.3, FR-2.4 | 4/4 | ✓ Complete | 2026-02-05 |
-| 3. Multi-Line Support | FR-3.1, FR-3.2, FR-3.3 | 3/3 | ✓ Complete | 2026-02-05 |
-| 4. Validation & Quality | FR-4.1, FR-4.2, FR-4.3, FR-4.4 | 0/8 | Planned | - |
+| 1. Core Formatting | FR-1.1, FR-1.2, FR-1.3 | 3/3 | Complete | 2026-02-05 |
+| 2. LLM Integration | FR-2.1, FR-2.2, FR-2.3, FR-2.4 | 4/4 | Complete | 2026-02-05 |
+| 3. Multi-Line Support | FR-3.1, FR-3.2, FR-3.3 | 3/3 | Complete | 2026-02-05 |
+| 4. Validation & Quality | FR-4.1, FR-4.2, FR-4.3, FR-4.4 | 8/9 | Gap closure | - |
 
 ## Coverage Validation
 
-**Functional Requirements Mapped:** 14/14 ✓
+**Functional Requirements Mapped:** 14/14
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FR-1.1 (Single-line formatting) | 1 | ✓ Complete |
-| FR-1.2 (Escaping) | 1 | ✓ Complete |
-| FR-1.3 (Line accuracy) | 1 | ✓ Complete |
-| FR-2.1 (Fix generation prompts) | 2 | ✓ Complete |
-| FR-2.2 (Parse suggestion field) | 2 | ✓ Complete |
-| FR-2.3 (Graceful degradation) | 2 | ✓ Complete |
-| FR-2.4 (Token-aware context) | 2 | ✓ Complete |
-| FR-3.1 (Multi-line suggestions) | 3 | ✓ Complete |
-| FR-3.2 (Deletion handling) | 3 | ✓ Complete |
-| FR-3.3 (Multi-line escaping) | 3 | ✓ Complete |
-| FR-4.1 (Syntax validation) | 4 | Pending |
-| FR-4.2 (Multi-provider consensus) | 4 | Pending |
-| FR-4.3 (Context-aware fixes) | 4 | Pending |
-| FR-4.4 (Learning from feedback) | 4 | Pending |
+| FR-1.1 (Single-line formatting) | 1 | Complete |
+| FR-1.2 (Escaping) | 1 | Complete |
+| FR-1.3 (Line accuracy) | 1 | Complete |
+| FR-2.1 (Fix generation prompts) | 2 | Complete |
+| FR-2.2 (Parse suggestion field) | 2 | Complete |
+| FR-2.3 (Graceful degradation) | 2 | Complete |
+| FR-2.4 (Token-aware context) | 2 | Complete |
+| FR-3.1 (Multi-line suggestions) | 3 | Complete |
+| FR-3.2 (Deletion handling) | 3 | Complete |
+| FR-3.3 (Multi-line escaping) | 3 | Complete |
+| FR-4.1 (Syntax validation) | 4 | Implemented (wiring pending) |
+| FR-4.2 (Multi-provider consensus) | 4 | Complete |
+| FR-4.3 (Context-aware fixes) | 4 | Implemented (wiring pending) |
+| FR-4.4 (Learning from feedback) | 4 | Implemented (wiring pending) |
 
 **Non-Functional Requirements:** Addressed across phases (see NFR Coverage section above)
 
@@ -195,3 +196,4 @@ Phases execute sequentially: 1 → 2 → 3 → 4
 *Phase 4 planned: 2026-02-04*
 *Phase 4 revised: 2026-02-04 (iteration 1 - added plans 07, updated 04, 06)*
 *Phase 4 revised: 2026-02-04 (iteration 2 - added plan 08, updated 05, 06 for hasConsensus wiring)*
+*Phase 4 gap closure: 2026-02-05 (plan 09 - wire learning/validation into setup.ts)*
