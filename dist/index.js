@@ -32755,7 +32755,7 @@ async function getBestFreeModelsCached(count = 4, timeoutMs = 5e3) {
   const now = Date.now();
   if (modelCache && now - modelCache.timestamp < CACHE_TTL_MS) {
     logger.debug("Using cached OpenRouter model list");
-    return modelCache.models;
+    return modelCache.models.slice(0, count);
   }
   const models = await getBestFreeModels(count, timeoutMs);
   modelCache = {
