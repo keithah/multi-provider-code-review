@@ -1,184 +1,218 @@
-# Project Research Summary
+# Research Summary: Path-Based Intensity Wiring
 
-**Project:** GitHub Commit Suggestions for Multi-Provider Code Review
-**Domain:** Code review automation with AI-generated inline fixes
-**Researched:** 2026-02-04
+**Project:** multi-provider-code-review v1.0 milestone
+**Domain:** Configuration-to-behavior wiring for existing code analysis system
+**Researched:** 2026-02-05
 **Confidence:** HIGH
 
 ## Executive Summary
 
-This project extends an existing multi-provider code review GitHub Action to generate one-click commit suggestions for detected issues. Experts build this by embedding fix generation into the LLM review pass (not as a separate phase), formatting fixes as GitHub's native ````suggestion` markdown blocks, and validating through three layers: schema validation (Zod), syntax validation (tree-sitter), and diff validation (jsdiff). The recommended approach leverages existing infrastructure—the `Finding.suggestion` field already exists in the codebase, AST analysis and code graph capabilities are present, and the orchestration pipeline just needs formatting extensions.
+This milestone wires path-based intensity configuration (already detecting intensity from file paths via PathMatcher) into execution behavior (provider count, timeouts, prompt depth). The system is 95% complete — PathMatcher detects intensity, orchestrator uses it for provider selection and timeouts, and per-batch PromptBuilder instances are created with intensity parameters. The remaining work is removing a legacy hardcoded PromptBuilder in setup.ts and implementing prompt depth variation based on intensity.
 
-The primary risk is line number misalignment between findings and GitHub's diff position API, which causes suggestions to fail silently or apply to wrong lines. This is mitigated by using GitHub's modern `line`/`start_line` parameters (not deprecated `position`), validating all lines exist on the RIGHT side of diffs (especially critical for multi-line suggestions spanning deletions), and testing with edge cases. Secondary risks include context window truncation causing hallucinated fixes (prevented by token counting and graceful degradation) and markdown syntax conflicts when code contains backticks (prevented by increased delimiter escaping). The codebase already has most foundational pieces—the key work is extending prompt templates, parsers, and formatters to generate and display suggestion blocks.
+The recommended approach uses direct lookup tables (Record<ReviewIntensity, T>) already present throughout the codebase. This is a wiring milestone, not an architecture milestone. No new libraries or design patterns needed. The orchestrator already implements runtime parameter passing for intensity-based decisions (lines 289-290, 477), which is the correct pattern for per-request behavior variation.
+
+**Key risks:** The primary risks are configuration-based (overlapping pattern precedence, silent fallback on errors, performance degradation from complex patterns). All major risks are addressed by existing PathMatcher validation (complexity scoring, path traversal checks, character allowlists). The verification focus should be on ensuring setup.ts's hardcoded PromptBuilder is actually unused (hypothesis: orchestrator creates fresh instances per-batch), then implementing prompt depth variation for the three intensity levels.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The stack is largely already present in the codebase. Core additions are focused on formatting and validation utilities, not new frameworks.
+**No new dependencies required.** System already has everything needed via TypeScript 5.x + Zod 3.x + native Record<K, V> lookups.
 
 **Core technologies:**
-- **GitHub REST API (v3+)**: Creating PR review comments with suggestion blocks — already integrated via @octokit/rest, just needs markdown formatting extensions
-- **Tree-sitter (0.21.x)**: Syntax validation of LLM-generated fixes before posting — already in codebase for AST analysis, extend for fix validation
-- **Zod (3.23.x)**: Runtime validation of LLM outputs — already in use, extend schema to parse `suggestion` field from responses
-- **jsdiff (8.0.x)**: Diff generation and line number validation — NEW dependency for validating suggestions apply cleanly to target lines
+- **TypeScript 5.x:** Type-safe config-to-behavior mapping with compile-time exhaustiveness checking for ReviewIntensity string literal types
+- **Zod 3.x:** Runtime schema validation for intensity configs (intensityProviderCounts, intensityTimeouts, intensityPromptDepth) — already validates at config load time
+- **Native Record<K, V>:** Zero-overhead O(1) lookups for intensity mappings — no library needed, TypeScript standard library
 
-**Critical constraint:** GitHub suggestion blocks use triple backticks as delimiters. When suggested code contains backticks, use 4+ backtick delimiters to prevent premature block termination. The specification is MEDIUM confidence (documented through community discussions and changelog, not formal spec).
+**Why no Strategy Pattern:** Research examined Strategy Pattern classes but concluded they're over-engineering for this use case. Current config lookup pattern (intensity → mapped values → execution) is 3 lines per behavior vs 100+ lines for class-based strategies. No polymorphic behavior selection needed — just passing different numbers to existing functions.
+
+**What NOT to use:**
+- Configuration management libraries (node-config, convict) — 107KB+ bundle size for functionality already built
+- Dependency injection frameworks — adds complexity for static read-only config
+- Conditional chains (if/else) — verbose, no exhaustiveness checking, hard to maintain
 
 ### Expected Features
 
-Based on competitive analysis (CodeRabbit, Qodo, ReviewDog) and GitHub's native capabilities, the feature landscape is clear.
-
 **Must have (table stakes):**
-- Single-line and multi-line code replacement suggestions — GitHub native feature since 2018/2020, users expect this
-- One-click commit via GitHub UI — core value proposition, GitHub handles UI automatically
-- Graceful fallback to description-only — when fix can't be generated, still show the finding
-- Line number accuracy preservation — suggestions must map to exact diff line positions
-- Basic suggestion validation — prevent malformed syntax from breaking GitHub rendering
+- **Provider count mapping per intensity** — Core resource allocation: thorough=8, standard=5, light=3
+- **Timeout mapping per intensity** — Time budget control: thorough=180s, standard=90s, light=30s
+- **Prompt depth mapping per intensity** — Quality vs speed tradeoff: thorough=detailed, standard=balanced, light=quick
+- **Validate intensity affects behavior** — Prove configuration actually changes execution (not just logging)
+- **Integration test with patterns** — Real-world validation: src/core/** → thorough, docs/** → light
 
-**Should have (competitive differentiators):**
-- Multi-provider consensus fixes — unique among AI reviewers, combine outputs for higher confidence
-- Context-aware fixes using existing AST/code graph — leverage current infrastructure for smarter suggestions
-- Learning from dismissed suggestions — track 👎 reactions to improve fix quality over time
-- Provider fix quality tracking — measure which LLMs generate best fixes via existing analytics
-- Incremental fix suggestions — only new fixes on PR updates, reuse incremental review cache
+**Should have (defer to post-v1.0):**
+- Consensus threshold by intensity — Lower agreement bar for non-critical code
+- Path-based severity filtering — Adjust min severity by path importance
+- Batch size by intensity — More files per batch for light reviews
+- Incremental cache TTL by path — Longer cache for stable/documented code
+- AST depth by intensity — Full graph for thorough, syntax-only for light
+- Learning-informed tuning — Use feedback to optimize mappings
+- Cost-aware provider allocation — Balance intensity with budget constraints
 
 **Defer (v2+):**
-- Security-focused auto-fixes — requires high trust and extensive validation framework
-- Test-coverage-aware suggestions — add when test integration is mature
-- Batch optimization suggestions — complex semantic analysis, low ROI initially
-- ANTI-FEATURE: Auto-commit without review — breaks trust, violates security best practices (all research agrees)
+- Dynamic intensity adjustment — Escalate on finding high-severity issues (breaks caching)
+- Multi-provider intensity optimization — Machine learning for optimal allocation
+- Path-based analytics — Track cost/quality by directory
+- Intensity override via PR labels — Manual escalation for high-risk changes
 
 ### Architecture Approach
 
-The architecture follows a **single-pass fix generation** pattern embedded in the existing review pipeline. Fix generation happens during the initial LLM analysis (not a separate phase), suggestions are formatted during markdown generation (format-time assembly), and the system gracefully degrades when fixes can't be generated.
+The system uses **constructor injection + runtime parameter passing** - configuration flows from setup.ts → components → orchestrator → runtime decisions, with intensity determined per-request and passed as parameter to behavior points. This is already the established pattern in orchestrator.ts lines 224-295.
 
 **Major components:**
-1. **PromptBuilder (EXTEND)** — Add fix generation instructions to LLM prompt templates, ensuring all providers request fixes uniformly
-2. **LLM Parser (EXTEND)** — Parse `suggestion` field from LLM responses, handle missing/malformed suggestions gracefully
-3. **SuggestionFormatter (NEW)** — Convert `Finding.suggestion` text to GitHub ````suggestion` markdown blocks with proper escaping and line context
-4. **SynthesisEngine (EXTEND)** — Call SuggestionFormatter when `Finding.suggestion` exists, embed formatted blocks in comment bodies
-5. **MarkdownFormatter (EXTEND)** — Include suggestion blocks in final markdown output passed to CommentPoster
 
-The data flow: PR Diff → PromptBuilder (adds fix instructions) → LLM Providers (analyze + generate fixes) → Parser (extracts findings with suggestions) → SynthesisEngine (formats suggestion blocks) → MarkdownFormatter (embeds in markdown) → CommentPoster (posts to GitHub) → GitHub UI (renders commit button).
+1. **PathMatcher (src/analysis/path-matcher.ts)** — Detects intensity from file paths using minimatch patterns. Status: ✅ Complete with 30 comprehensive tests. Implements security validation (complexity scoring, path traversal prevention, character allowlists).
 
-**Key architectural decision:** Format-time suggestion assembly allows access to full file content for extracting original code context, which is essential for multi-line suggestions. The `Finding.suggestion` field already exists in the type system—no schema changes needed.
+2. **ReviewOrchestrator (src/core/orchestrator.ts)** — Coordinates review execution. Calls PathMatcher.determineIntensity(), applies intensity mappings from config (intensityProviderLimit, intensityTimeout), creates per-batch PromptBuilder with intensity parameter. Status: ✅ 90% complete — provider/timeout wiring done, PromptBuilder creation correct (line 473).
+
+3. **PromptBuilder (src/analysis/llm/prompt-builder.ts)** — Generates prompts for LLM providers. Constructor accepts intensity parameter (line 14). Status: ⚠️ Accepts intensity but doesn't vary prompt structure based on it. Needs depth-based instruction variation.
+
+4. **LLMExecutor** — Executes provider calls with timeout. Status: ✅ Complete — respects intensityTimeout parameter (orchestrator line 477).
+
+5. **Config Schema (src/config/schema.ts, src/types/index.ts)** — Defines intensity mappings. Status: ✅ Complete — intensityProviderCounts, intensityTimeouts, intensityPromptDepth all validated by Zod at load time.
+
+**Data flow:** Config load → PathMatcher validates patterns → Orchestrator determines intensity per-request → Lookup config mappings → Pass parameters to execution points. No shared mutable state, no race conditions.
 
 ### Critical Pitfalls
 
-The research identified six critical pitfalls with clear prevention strategies:
+1. **Overlapping pattern precedence ambiguity** — Multiple patterns match same file (e.g., `**/*.test.ts` light + `src/auth/**` thorough both match `src/auth/login.test.ts`). **Prevention:** Document explicit precedence rules (highest intensity wins or last-match-wins), add validation warning on overlap, test overlap scenarios. **Phase:** Config validation (already has complexity scoring, add overlap detection).
 
-1. **Line Number Misalignment from Diff Position Mapping** — GitHub suggestions require exact line numbers matching diff positions. Prevention: Use modern `line`/`start_line` API parameters (not deprecated `position`), parse diff hunk headers bidirectionally, validate all lines exist in diff. This is the #1 failure mode—without correct mapping, no suggestions work reliably.
+2. **Silent fallback hides configuration errors** — Invalid pattern silently ignored, system uses default behavior, security risks undetected. **Prevention:** Fail fast at config load time (PathMatcher already throws on validation errors), ensure orchestrator doesn't catch and suppress. **Phase:** Verify error handling in orchestrator.
 
-2. **Context Window Truncation Causing Incorrect Fixes** — LLMs generate semantically wrong fixes when context is truncated mid-file. Prevention: Implement token counting before prompts, prioritize essential context (changed lines + function signature + imports), degrade gracefully on truncation errors. Set per-provider limits (Claude: 200k, GPT-4: 128k, Gemini: 1M).
+3. **Performance degradation from complex patterns** — Nested quantifiers cause exponential matching time (e.g., `src/{a,b,c}/**/{x,y,z}/**/*.{ts,tsx,js,jsx}`). **Prevention:** PathMatcher already implements complexity scoring (MAX_COMPLEXITY_SCORE=50), rejects patterns above threshold. **Phase:** Already implemented, needs testing at scale.
 
-3. **Markdown Syntax Conflicts in Suggestion Blocks** — Code containing backticks breaks suggestion block delimiters, rendering as plain text instead of actionable buttons. Prevention: Post-process fixes to escape characters, use increased backtick delimiters (4+) when content has triple backticks, validate block syntax before posting.
+4. **Shared mutable PromptBuilder anti-pattern** — Creating one PromptBuilder in setup.ts and mutating intensity per-batch causes race conditions. **Prevention:** Orchestrator already creates fresh PromptBuilder per-batch (line 473). **Action:** Remove unused shared instance from setup.ts.
 
-4. **Hallucinated Fixes from Insufficient Context** — Research shows 68.50% correctness rate (GPT-4o) and 54.26% (Gemini 2.0 Flash) due to "context misalignment." Prevention: Include project-specific context (guidelines, dependencies), leverage existing code graph for call context, add syntax validation with tree-sitter, require multi-provider consensus for critical issues.
-
-5. **Multi-Line Suggestions with Deleted Lines** — GitHub suggestions only work on RIGHT side (new code), fail when spanning deletions. Prevention: Separate deleted vs added lines during diff parsing, only use RIGHT side line numbers for suggestions, validate all lines in range exist on RIGHT side.
-
-6. **Untested Fixes Applied by Users** — One-click convenience bypasses review discipline; CodeRabbit 2025 report shows AI code creates 1.7x more issues with 40% containing security flaws. Prevention: Add clear warnings ("⚠️ Review before applying"), include test scenarios in fix comments, never auto-suggest for critical severity without validation, track fix-induced CI failures via learning system.
+5. **Test file pattern over-exclusion** — Overly broad patterns (e.g., `**/*test*`) inadvertently exclude critical test infrastructure. **Prevention:** Use specific patterns (`**/*.test.{ts,js}`), provide dry-run testing tool, document which files match. **Phase:** Testing and documentation (post-v1.0).
 
 ## Implications for Roadmap
 
-Based on research, the natural phase structure follows component dependencies and complexity progression. All phases build on existing infrastructure—this is an extension, not a rewrite.
+Based on research, the work is minimal because infrastructure already exists. Suggested phase structure:
 
-### Phase 1: Core Suggestion Formatting
-**Rationale:** Foundation must work before adding LLM integration. Can test formatting in isolation with mock data.
-**Delivers:** SuggestionFormatter that converts Finding.suggestion text to valid GitHub markdown blocks
-**Addresses:** Single-line suggestions (table stakes), basic validation, line accuracy preservation
-**Avoids:** Markdown syntax conflicts (via escaping logic), line misalignment (via proper parsing)
+### Phase 1: Verify Setup.ts PromptBuilder Usage
+**Rationale:** Need to confirm hypothesis that setup.ts PromptBuilder (lines 121, 253) is unused before removing it. Orchestrator creates per-batch instances at runtime (line 473), suggesting shared instance is legacy code from before per-batch pattern.
 
-### Phase 2: LLM Fix Generation Integration
-**Rationale:** Now that formatting works, extend LLM pipeline to generate fixes during analysis pass.
-**Delivers:** Prompts that request fixes, parsers that extract suggestion fields, end-to-end pipeline
-**Uses:** Zod for schema validation, existing LLM executor infrastructure
-**Addresses:** Single-pass generation pattern, graceful degradation when fixes fail
-**Avoids:** Context truncation (via token counting), two-phase generation anti-pattern
+**Delivers:** Confirmation that removing hardcoded 'standard' intensity from setup.ts won't break functionality.
 
-### Phase 3: Multi-Line and Advanced Formatting
-**Rationale:** After single-line works reliably, add complexity of multi-line suggestions.
-**Delivers:** Multi-line suggestion support with proper line range validation
-**Implements:** RIGHT-side-only validation, deletion handling, multi-line escaping
-**Addresses:** Multi-line suggestions (table stakes), batch apply support (GitHub native)
-**Avoids:** Suggestions spanning deletions (critical failure mode), boundary validation gaps
+**Addresses:** Pitfall #4 (shared mutable PromptBuilder) — verify not actually shared.
 
-### Phase 4: Validation and Quality
-**Rationale:** With core functionality complete, add layers that improve fix quality and reliability.
-**Delivers:** Tree-sitter syntax validation, multi-provider consensus for critical issues, learning feedback integration
-**Uses:** Existing AST analysis, code graph, learning system
-**Addresses:** Context-aware fixes (differentiator), provider quality tracking (differentiator), learning from feedback
-**Avoids:** Hallucinated fixes (via validation), untested fixes applied (via warnings and tracking)
+**Action:** Code inspection + test suite run to verify PromptBuilder in ReviewComponents is unused.
+
+### Phase 2: Implement Prompt Depth Variation
+**Rationale:** PromptBuilder constructor accepts intensity but doesn't vary prompt structure. This is the only missing behavior wiring.
+
+**Delivers:** Different prompt instructions based on intensity level:
+- **'detailed' (thorough):** All context, examples, call graphs, defensive patterns
+- **'standard':** Current behavior (conditional context based on graph/diff size)
+- **'brief' (light):** Minimal instructions, skip optional context
+
+**Implements:** Feature requirement "Prompt depth mapping per intensity" from FEATURES.md MVP section.
+
+**Uses:** Existing prompt building methods (getCallContext, getDefensivePatterns) — just vary which ones are included.
+
+**Estimated effort:** ~30 lines in prompt-builder.ts (extract buildInstructions method, add switch on depth).
+
+### Phase 3: Remove Setup.ts Hardcoded PromptBuilder
+**Rationale:** Once confirmed unused (Phase 1), remove legacy shared instance to prevent future confusion.
+
+**Delivers:** Clean component composition — orchestrator creates PromptBuilder per-batch with runtime intensity, no misleading hardcoded instance.
+
+**Changes:**
+- Remove lines 121, 253 from setup.ts (2 lines)
+- Remove promptBuilder from ReviewComponents interface (1 line)
+- Update any tests that reference shared instance
+
+**Risk:** Low — orchestrator already creates fresh instances.
+
+### Phase 4: Integration Testing & Validation
+**Rationale:** Prove intensity affects behavior (provider count, timeout, prompt depth) end-to-end.
+
+**Delivers:**
+- Integration test: thorough path → 8 providers, 180s timeout, detailed prompt
+- Integration test: light path → 3 providers, 60s timeout, brief prompt
+- Integration test: standard default → 5 providers, 120s timeout, standard prompt
+
+**Validates:** Features from FEATURES.md MVP section — provider count mapping, timeout mapping, prompt depth mapping.
+
+**Test scenarios:**
+1. Match `src/core/**` with thorough patterns → verify 8 providers selected
+2. Match `docs/**` with light patterns → verify brief prompt generated
+3. Match unmatched file → verify fallback to pathDefaultIntensity
 
 ### Phase Ordering Rationale
 
-- **Phase 1 before 2:** Formatting must work correctly before generating real fixes from LLMs—allows isolated testing with mock data
-- **Phase 2 before 3:** Get single-line end-to-end pipeline working before adding multi-line complexity—validates architecture
-- **Phase 3 before 4:** Multi-line is table stakes for launch; quality improvements are iterative enhancements
-- **Phase 4 leverages existing:** Quality phase reuses AST analysis, code graph, and learning system already in codebase—minimal new infrastructure
+- **Phase 1 before Phase 3:** Must verify shared PromptBuilder is unused before removing it
+- **Phase 2 independent:** Prompt depth variation can be implemented in parallel with Phase 1
+- **Phase 4 last:** Integration tests verify all phases working together
 
-This ordering minimizes risk by validating each layer works before building on it, matches architecture's natural component dependencies (formatter → parser → synthesis), and front-loads table stakes features while deferring differentiators.
+**Why this order avoids pitfalls:**
+- Confirms no shared mutable state (Pitfall #4) before making changes
+- Validates behavior changes prove configuration works (Pitfall #2 prevention)
+- Tests at scale catch performance issues (Pitfall #3)
 
 ### Research Flags
 
-**Needs deeper research during planning:**
-- **Phase 3 (Multi-line):** GitHub's multi-line suggestion API has edge cases around deletion handling that need experimentation. Community docs are sparse—may need trial-and-error validation.
-- **Phase 4 (Consensus):** Consensus algorithm for code fixes (vs issues) is novel—no standard patterns found in research. Will require design decisions during planning.
+**No phases need deeper research.** This is wiring existing infrastructure, not building new architecture.
 
 **Standard patterns (skip research-phase):**
-- **Phase 1:** Markdown formatting is well-documented, GitHub suggestion syntax is clear from community sources
-- **Phase 2:** LLM prompt extension follows established patterns already in codebase (prompt-builder, parser, executor)
+- **All phases:** Configuration-to-behavior mapping is well-understood pattern. TypeScript Record<K, V> lookups are standard library. No niche domain knowledge required.
+
+**Why high confidence:**
+- Direct code inspection shows orchestrator already implements 90% of wiring
+- PathMatcher already has comprehensive tests (30 scenarios)
+- Config schema already validated by Zod
+- No new libraries or patterns needed
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Core technologies already in codebase; only jsdiff is new dependency with 14M+ weekly downloads |
-| Features | HIGH | Table stakes verified via GitHub official docs; competitive analysis clear from CodeRabbit/Qodo/ReviewDog |
-| Architecture | HIGH | Builds on existing codebase patterns; Finding.suggestion already exists; components identified through code inspection |
-| Pitfalls | HIGH | Line misalignment and context truncation validated through official GitHub API docs and academic papers (HalluJudge, LLM evaluation studies) |
+| Stack | HIGH | No new dependencies. TypeScript + Zod already in use. Direct code inspection confirms patterns. |
+| Features | HIGH | MVP features (provider count, timeout, prompt depth) are table stakes from industry research (ESLint, CircleCI patterns). Defer list is explicitly v2+. |
+| Architecture | HIGH | Orchestrator pattern already implemented (lines 224-295). Runtime parameter passing is correct approach. No shared mutable state. |
+| Pitfalls | HIGH | PathMatcher already implements major validations (complexity scoring, path traversal checks). Overlap detection is enhancement, not blocker. |
 
 **Overall confidence:** HIGH
 
-Research is backed by official GitHub documentation, existing codebase analysis, academic studies on LLM correctness rates, and competitive product analysis. The project has clear implementation patterns and well-understood failure modes.
+This is a wiring milestone with minimal changes (~80 lines total). Infrastructure exists, patterns established, risks mitigated.
 
 ### Gaps to Address
 
-While confidence is high, several areas need validation during implementation:
+**Hypothesis to validate (Phase 1):**
+- Is setup.ts PromptBuilder ever used for actual reviews? Orchestrator creates per-batch instances (line 473), suggesting shared instance is unused legacy code.
+- **Validation method:** Run test suite with shared PromptBuilder commented out. If tests pass, confirms unused.
 
-- **Multi-line deletion edge cases:** GitHub's behavior when suggestions span complex diff hunks needs experimentation—docs are incomplete
-- **Provider-specific fix formats:** Each LLM may format suggestions differently—parser needs to handle variations discovered during testing
-- **Line number mapping corner cases:** First/last line of file, hunks with only deletions, multiple non-contiguous hunks—test coverage must be comprehensive
-- **Performance at scale:** File content caching strategy for >50 findings per PR needs design decisions based on actual performance data
-- **Consensus algorithm:** No standard pattern for multi-provider code consensus—design choices needed during planning
+**Open questions:**
+- Should overlapping patterns use "highest intensity wins" or "last match wins" precedence? ESLint uses last-match-wins, but highest-intensity might be more intuitive for security-critical paths.
+- **Resolution:** Document chosen behavior explicitly, add config validation warning for overlaps, let users decide by pattern order.
 
-These gaps are implementation details, not architectural unknowns. Address through incremental testing and validation during each phase.
+**Future considerations (post-v1.0):**
+- How to handle provider count > discovery limit? (e.g., thorough=8 but only 6 providers discovered)
+- **Answer:** Discovery limit is upper bound. Need validation warning in config load.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [GitHub REST API - Pull Request Comments](https://docs.github.com/en/rest/pulls/comments) — Official API specification for creating suggestions
-- [GitHub Changelog - Multi-line Code Suggestions](https://github.blog/changelog/2020-04-15-multi-line-code-suggestions-general-availability/) — Feature announcement and constraints
-- [Zod Documentation](https://zod.dev/) — Official schema validation library
-- [jsdiff npm package](https://www.npmjs.com/package/diff) — Diff generation and validation
-- [Tree-sitter TypeScript grammar](https://github.com/tree-sitter/tree-sitter-typescript) — AST parsing for syntax validation
-- [HalluJudge: Hallucination Detection for Code Review](https://arxiv.org/html/2601.19072) — Context misalignment research
-- [Evaluating Large Language Models for Code Review](https://arxiv.org/html/2505.20206v1) — LLM correctness rates (68.50% GPT-4o, 63.89% Gemini)
-- Existing codebase inspection — Finding.suggestion field, orchestrator flow, formatter patterns
+- **Codebase analysis** — Direct inspection of src/core/orchestrator.ts (lines 224-295, 469-495), src/analysis/llm/prompt-builder.ts, src/analysis/path-matcher.ts, src/setup.ts, src/types/index.ts
+- **PathMatcher implementation** — Validates complexity scoring (MAX_COMPLEXITY_SCORE=50), path traversal prevention, character allowlists, security options (nonegate: true, nocomment: true in minimatch)
+- **Config schema** — types/index.ts lines 106-120 define intensity mappings, config/schema.ts lines 88-102 validate with Zod
 
 ### Secondary (MEDIUM confidence)
-- [Addy Osmani - LLM Coding Workflow 2026](https://addyosmani.com/blog/ai-coding-workflow/) — Prompting best practices
-- [CodeRabbit State of AI vs Human Code Report 2025](https://www.coderabbit.ai/blog/state-of-ai-vs-human-code-generation-report) — AI code quality (1.7x more issues)
-- [GitHub Community Discussion #76840](https://github.com/orgs/community/discussions/76840) — Nested backtick handling
-- [GitHub Community Discussion #114597](https://github.com/orgs/community/discussions/114597) — Multi-line deletion limitations
-- [Reviewdog](https://github.com/reviewdog/reviewdog) — Reference implementation patterns
-- [CodeRabbit](https://www.coderabbit.ai/), [Qodo](https://www.qodo.ai/blog/best-automated-code-review-tools-2026/) — Competitive feature analysis
+- [ESLint Configuration Files](https://eslint.org/docs/latest/use/configure/configuration-files-deprecated) — Override patterns and precedence (last-match-wins standard)
+- [CircleCI Path Filtering](https://circleci.com/developer/orbs/orb/circleci/path-filtering) — Resource allocation by path (small/medium/large/xlarge classes)
+- [GitHub Actions dorny/paths-filter](https://github.com/dorny/paths-filter) — Path-based job execution patterns
+- [Google SRE Configuration Design](https://sre.google/workbook/configuration-design/) — "Reduce mandatory questions by providing default answers that apply safely"
 
-### Tertiary (LOW confidence)
-- [Graphite Guides](https://graphite.com/guides/suggest-changes-github-pr) — Community tutorial on suggestion syntax
-- Web search results for GitHub suggestion specification — Lacks formal spec beyond UI documentation
+### Tertiary (LOW confidence - general context)
+- [Strategy Pattern - Refactoring Guru](https://refactoring.guru/design-patterns/strategy/typescript/example) — Examined but concluded over-engineered for this use case
+- [Martin Fowler - Dependency Injection](https://martinfowler.com/articles/injection.html) — Constructor injection patterns
 
 ---
-*Research completed: 2026-02-04*
-*Ready for roadmap: yes*
+
+**Research completed:** 2026-02-05
+
+**Ready for roadmap:** Yes
+
+**Key recommendation:** Start with Phase 1 (verify setup.ts usage), then implement Phase 2 (prompt depth variation) — these are the only changes needed. Phases 3-4 are cleanup and validation. Total estimated effort: ~80 lines of code changes.
+
+**Critical insight:** This milestone is 95% complete. The architecture exists, patterns established, validations implemented. The work is finishing the wiring, not building new infrastructure.

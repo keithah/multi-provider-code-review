@@ -1,411 +1,520 @@
-# Architecture Research
+# Architecture Research: Wiring Intensity into Orchestrator
 
-**Domain:** GitHub Commit Suggestions for Code Review Findings
-**Researched:** 2026-02-04
+**Domain:** Configuration-driven orchestrator behavior
+**Researched:** 2026-02-05
 **Confidence:** HIGH
 
-## Standard Architecture
+## Executive Summary
+
+This research addresses how to wire path-based intensity configuration into the existing ReviewOrchestrator to control provider selection, timeouts, and prompt variations. The analysis is based on:
+
+1. **Current codebase patterns** (orchestrator.ts lines 224-295, prompt-builder.ts constructor, setup.ts composition)
+2. **Industry patterns** for configuration-driven orchestrators
+3. **Minimal-change wiring strategies** that preserve existing architecture
+
+The recommended approach uses **constructor injection + runtime parameter passing** - configuration flows from setup.ts → components → orchestrator → runtime decisions, with intensity determined per-request and passed as a parameter to behavior points.
+
+## Current Architecture Analysis
 
 ### System Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    ORCHESTRATION LAYER                              │
-│  ReviewOrchestrator.executeReview(pr) → Review                      │
-├─────────────────────────────────────────────────────────────────────┤
-│                    ANALYSIS PIPELINE                                │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐             │
-│  │ LLM Analysis │  │ AST Analysis │  │   Security   │             │
-│  │  (Batched)   │  │   (Static)   │  │   Scanner    │             │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘             │
-│         │                  │                  │                      │
-│         └──────────────────┴──────────────────┘                      │
-│                            ↓                                         │
-│  ┌──────────────────────────────────────────────────────┐           │
-│  │         Finding Detection & Deduplication             │           │
-│  │     (Deduplicator → Consensus → Filter)               │           │
-│  └──────────────────────┬───────────────────────────────┘           │
-├────────────────────────┼─────────────────────────────────────────────┤
-│                        ↓    NEW: FIX GENERATION LAYER               │
-│  ┌──────────────────────────────────────────────────────┐           │
-│  │  Fix Generation (via LLM prompts in analysis phase)   │           │
-│  │  - Already embedded in Finding.suggestion field       │           │
-│  │  - Extracted during LLM parsing                       │           │
-│  └──────────────────────┬───────────────────────────────┘           │
-├────────────────────────┼─────────────────────────────────────────────┤
-│                        ↓    SYNTHESIS & ENRICHMENT                  │
-│  ┌──────────────────────────────────────────────────────┐           │
-│  │  SynthesisEngine.synthesize() → Review               │           │
-│  │  - Enriches findings with evidence, metrics          │           │
-│  │  - Builds inline comments from findings              │           │
-│  └──────────────────────┬───────────────────────────────┘           │
-├────────────────────────┼─────────────────────────────────────────────┤
-│                        ↓    NEW: SUGGESTION FORMATTING LAYER        │
-│  ┌──────────────────────────────────────────────────────┐           │
-│  │  SuggestionFormatter (NEW COMPONENT)                  │           │
-│  │  - Takes Finding.suggestion (text)                    │           │
-│  │  - Extracts original code from file context          │           │
-│  │  - Formats as GitHub ```suggestion block             │           │
-│  │  - Returns formatted markdown string                 │           │
-│  └──────────────────────┬───────────────────────────────┘           │
-├────────────────────────┼─────────────────────────────────────────────┤
-│                        ↓    MARKDOWN FORMATTING                     │
-│  ┌──────────────────────────────────────────────────────┐           │
-│  │  MarkdownFormatter.format() → string                  │           │
-│  │  - EXTENDED: Calls SuggestionFormatter when needed   │           │
-│  │  - Embeds suggestion blocks in comment bodies        │           │
-│  └──────────────────────┬───────────────────────────────┘           │
-├────────────────────────┼─────────────────────────────────────────────┤
-│                        ↓    GITHUB POSTING                          │
-│  ┌──────────────────────────────────────────────────────┐           │
-│  │  CommentPoster.postInline() → void                    │           │
-│  │  - Posts markdown with embedded suggestion blocks    │           │
-│  │  - GitHub renders commit suggestion buttons          │           │
-│  └──────────────────────────────────────────────────────┘           │
-└─────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    main.ts / CLI Entry                       │
+│                  (loads config from env)                     │
+└────────────────────────┬─────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────────┐
+│                      setup.ts                                │
+│        (dependency composition / component factory)          │
+│   Creates: PathMatcher, PromptBuilder, Orchestrator, etc.   │
+└────────────────────────┬─────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────────┐
+│                  ReviewOrchestrator                          │
+│              (coordinates review execution)                  │
+├─────────────────────────────────────────────────────────────┤
+│  executeReview(pr: PRContext) {                             │
+│    1. PathMatcher.determineIntensity(files) → intensity     │
+│    2. Apply intensity to provider selection (CURRENT)       │
+│    3. Apply intensity to timeouts (CURRENT)                 │
+│    4. Create PromptBuilder per-batch with intensity         │
+│    5. Execute LLM providers with config                     │
+│  }                                                           │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### Component Responsibilities
+### Current Intensity Wiring (Lines 224-295 in orchestrator.ts)
 
-| Component | Responsibility | Typical Implementation |
-|-----------|----------------|------------------------|
-| **PromptBuilder** | Generate LLM prompts with fix instructions | Extend existing prompt template to request fixes alongside findings |
-| **LLMExecutor** | Execute prompts across providers | No change needed - already handles responses |
-| **LLM Parser** | Extract findings + suggestions from responses | Extend to parse `suggestion` field from JSON/markdown responses |
-| **SuggestionFormatter** (NEW) | Convert Finding.suggestion to GitHub syntax | New utility class: `formatSuggestionBlock(finding, fileContent)` |
-| **MarkdownFormatter** | Format review output as markdown | Extend `commentBody()` to include suggestion blocks |
-| **SynthesisEngine** | Build inline comments from findings | Extend `commentBody()` to call SuggestionFormatter when Finding.suggestion exists |
-| **CommentPoster** | Post formatted markdown to GitHub | No change needed - already posts markdown strings |
+**Pattern:** Runtime parameter computation → local variable passing
 
-## Recommended Project Structure
-
-```
-src/
-├── analysis/
-│   ├── llm/
-│   │   ├── prompt-builder.ts    # EXTEND: Add fix generation instructions
-│   │   ├── parser.ts            # EXTEND: Parse suggestion field from responses
-│   │   └── executor.ts          # No change needed
-│   └── synthesis.ts             # EXTEND: Call SuggestionFormatter in commentBody()
-├── output/
-│   ├── formatter.ts             # EXTEND: Format suggestion blocks in findings
-│   ├── suggestion-formatter.ts  # NEW: GitHub suggestion block formatting logic
-│   └── formatter-v2.ts          # EXTEND: Same changes as formatter.ts
-├── github/
-│   └── comment-poster.ts        # No change needed - already posts markdown
-├── types/
-│   └── index.ts                 # VERIFY: Finding.suggestion already exists
-└── utils/
-    └── code-snippet.ts          # EXTEND: Extract original code for suggestion context
-```
-
-### Structure Rationale
-
-- **analysis/llm/prompt-builder.ts:** Central place for LLM prompt templates. Extending here ensures all providers get fix generation instructions uniformly.
-- **analysis/llm/parser.ts:** Already extracts findings from LLM responses. Natural place to parse suggestion fields.
-- **output/suggestion-formatter.ts:** New isolated component handles GitHub syntax complexity (escaping, multi-line, context extraction). Keeps formatting logic separate from markdown generation.
-- **output/formatter.ts:** Already formats findings into markdown. Extends to include suggestion blocks when available.
-- **analysis/synthesis.ts:** Orchestrates finding → inline comment transformation. Logical place to inject suggestion formatting.
-
-## Architectural Patterns
-
-### Pattern 1: Single-Pass Fix Generation
-
-**What:** Generate fix suggestions during the initial LLM review pass, not as a separate phase.
-
-**When to use:** When fix quality doesn't require additional context beyond what the LLM already sees during review.
-
-**Trade-offs:**
-- ✓ Faster: Single LLM round-trip
-- ✓ Simpler: No state management between phases
-- ✗ Less flexible: Can't use different models for finding vs fixing
-
-**Example:**
 ```typescript
-// In PromptBuilder.build()
-const instructions = [
-  'Return JSON: [{file, line, severity, title, message, suggestion}]',
-  '',
-  'For each finding, include a "suggestion" field with the corrected code.',
-  'Only include suggestion if you can provide a specific fix.',
-  ''
-];
+// Step 1: Determine intensity from files
+const intensityResult = pathMatcher.determineIntensity(reviewContext.files);
+reviewIntensity = intensityResult.intensity; // 'light' | 'standard' | 'thorough'
+
+// Step 2: Apply intensity mappings from config
+const intensityProviderLimit = config.intensityProviderCounts?.[reviewIntensity]
+  ?? config.providerLimit;
+const intensityTimeout = config.intensityTimeouts?.[reviewIntensity]
+  ?? (config.runTimeoutSeconds * 1000);
+
+// Step 3: Use mapped values in downstream operations
+const executionLimit = intensityProviderLimit || config.providerLimit;
+const results = await this.components.llmExecutor.execute(healthy, prompt, intensityTimeout);
 ```
 
-### Pattern 2: Format-Time Suggestion Assembly
+**Strengths:**
+- Centralized intensity determination
+- Clear data flow: intensity → mapped values → execution
+- Already implemented for provider count and timeout
+- No shared mutable state
 
-**What:** Assemble suggestion blocks during markdown formatting, not during finding creation.
+**Gap:**
+- PromptBuilder created in setup.ts with hardcoded 'standard' intensity (line 121, 253)
+- Per-batch PromptBuilder creation (line 473) doesn't pass intensity yet
 
-**When to use:** When you need file context (original code) that's not available during analysis.
+## Integration Patterns for Config-Driven Behavior
 
-**Trade-offs:**
-- ✓ Access to full file content for multi-line suggestions
-- ✓ Can validate suggestion against actual code
-- ✗ Formatting becomes more complex
-- ✗ Need to handle file content retrieval
+### Pattern 1: Constructor Injection (Currently Used)
 
-**Example:**
+**What:** Dependencies and configuration injected at construction time.
+
+**Example from codebase:**
 ```typescript
-// In SuggestionFormatter
-formatSuggestionBlock(finding: Finding, fileContent: string): string {
-  if (!finding.suggestion) return '';
+// setup.ts line 121
+const promptBuilder = new PromptBuilder(config, 'standard', promptEnricher, undefined);
+//                                      ^config  ^intensity
 
-  const originalCode = extractCodeSnippet(fileContent, finding.line, 1);
-
-  return [
-    '',
-    '```suggestion',
-    finding.suggestion,
-    '```',
-    ''
-  ].join('\n');
+// orchestrator.ts constructor
+constructor(private readonly components: ReviewComponents) {
+  // Components contain config and dependencies
 }
 ```
 
-### Pattern 3: Graceful Degradation
-
-**What:** Display finding even when suggestion generation fails or isn't available.
-
-**When to use:** Always - suggestions are enhancement, not requirement.
+**When to use:**
+- Configuration stable for component lifetime
+- Dependencies need to be shared across requests
+- Good for: config, client connections, trackers
 
 **Trade-offs:**
-- ✓ Never lose findings due to fix generation failures
-- ✓ Works with LLMs that don't generate fixes well
-- ✓ Maintains backward compatibility
+- ✅ Explicit dependencies
+- ✅ Easy to test (inject mocks)
+- ❌ Cannot change per-request (like intensity)
 
-**Example:**
+### Pattern 2: Runtime Parameter Passing (Partially Used)
+
+**What:** Behavior configuration passed as method parameters at invocation time.
+
+**Example from codebase:**
 ```typescript
-// In SynthesisEngine.commentBody()
-private commentBody(finding: Finding): string {
-  const parts = [`**${finding.title}**`, finding.message];
+// orchestrator.ts line 473 (per-batch prompt building)
+const promptBuilder = new PromptBuilder(config, reviewIntensity);
+const prompt = await promptBuilder.build(batchContext);
+//                                       ^runtime context
 
-  // Try to add suggestion block if available
-  if (finding.suggestion) {
-    const suggestionBlock = this.formatSuggestion(finding);
-    if (suggestionBlock) {
-      parts.push('', suggestionBlock);
-    }
+// orchestrator.ts line 477 (timeout parameter)
+const results = await this.components.llmExecutor.execute(
+  healthy, prompt, intensityTimeout
+);                      ^runtime param
+```
+
+**When to use:**
+- Behavior varies per request/batch
+- Configuration computed at runtime
+- Good for: intensity, batch size, timeout
+
+**Trade-offs:**
+- ✅ Flexible per-request behavior
+- ✅ No shared state
+- ❌ More parameters to pass
+- ❌ Potential for parameter drift
+
+### Pattern 3: Strategy Pattern (Not Currently Used)
+
+**What:** Encapsulate algorithm families in separate classes, selected at runtime.
+
+**Example (hypothetical):**
+```typescript
+interface ReviewStrategy {
+  selectProviders(available: Provider[]): Provider[];
+  getTimeout(): number;
+  buildPrompt(context: PRContext): string;
+}
+
+class ThoroughReviewStrategy implements ReviewStrategy { ... }
+class LightReviewStrategy implements ReviewStrategy { ... }
+
+// Usage:
+const strategy = strategyFactory.create(intensity);
+const providers = strategy.selectProviders(available);
+```
+
+**When to use:**
+- Complex behavior variations
+- Multiple related decisions clustered together
+- Worth abstraction overhead
+
+**Trade-offs:**
+- ✅ Encapsulates related behavior variations
+- ✅ Open/closed principle
+- ❌ Overkill for simple mappings
+- ❌ More classes to maintain
+
+**Recommendation:** NOT needed for intensity wiring. Current config mapping pattern (Pattern 2) is simpler and sufficient.
+
+## Recommended Architecture for Intensity Wiring
+
+### Integration Points
+
+| Component | Integration Type | Current State | Change Needed |
+|-----------|-----------------|---------------|---------------|
+| **PathMatcher** | Constructor injection | ✅ Complete (lines 272-276) | None |
+| **Orchestrator** | Runtime computation | ✅ Complete (lines 278-295) | None |
+| **PromptBuilder** | Constructor parameter + per-batch creation | ⚠️ Hardcoded 'standard' | Create per-batch with intensity |
+| **LLMExecutor** | Runtime parameter | ✅ Complete (line 477) | None |
+| **Config types** | Schema definition | ✅ Complete (types.ts) | None |
+
+### Data Flow (Recommended)
+
+```
+[1. Config Loading]
+   ConfigLoader.load() → ReviewConfig
+      ↓
+      • intensityProviderCounts: { thorough: 8, standard: 6, light: 4 }
+      • intensityTimeouts: { thorough: 300000, standard: 240000, light: 180000 }
+      • intensityPromptDepth: { thorough: 'detailed', standard: 'standard', light: 'brief' }
+      • pathBasedIntensity: true
+      • pathIntensityPatterns: JSON string of patterns
+
+[2. Component Setup]
+   setup.ts: createComponents(config)
+      ↓
+      • PathMatcher(config.pathIntensityPatterns) — validates patterns once
+      • Other components with config injection
+      • Note: Do NOT create shared PromptBuilder (intensity varies per-batch)
+
+[3. Runtime Execution]
+   orchestrator.executeReview(pr: PRContext)
+      ↓
+   [3a. Determine Intensity]
+      PathMatcher.determineIntensity(pr.files) → IntensityResult
+         ↓ intensity: 'thorough' | 'standard' | 'light'
+
+   [3b. Apply Provider Mapping]
+      intensityProviderLimit = config.intensityProviderCounts[intensity]
+                            ?? config.providerLimit (fallback)
+         ↓ Use for health checks and execution
+
+   [3c. Apply Timeout Mapping]
+      intensityTimeout = config.intensityTimeouts[intensity]
+                      ?? (config.runTimeoutSeconds * 1000)
+         ↓ Pass to llmExecutor.execute()
+
+   [3d. Create Per-Batch PromptBuilder]
+      For each batch:
+         promptBuilder = new PromptBuilder(config, intensity, enricher, graph)
+         prompt = await promptBuilder.build(batchContext)
+         ↓ Uses intensity for prompt depth/detail
+```
+
+### Prompt Depth Variation (Currently Missing)
+
+**Location:** prompt-builder.ts constructor line 14, build() method
+
+**Current behavior:** Accepts intensity parameter but doesn't vary prompt structure based on it.
+
+**Recommended implementation:**
+
+```typescript
+// prompt-builder.ts
+constructor(
+  private readonly config: ReviewConfig,
+  private readonly intensity: ReviewIntensity = 'standard',
+  // ...
+) {
+  // Validate intensity (already done line 19-22)
+}
+
+async build(pr: PRContext): Promise<string> {
+  const diff = trimDiff(pr.diff, this.config.diffMaxBytes);
+
+  // Get depth configuration for this intensity
+  const depth = this.config.intensityPromptDepth?.[this.intensity] ?? 'standard';
+
+  // Vary instructions based on depth
+  const instructions = this.buildInstructions(pr, diff, depth);
+  // ...
+}
+
+private buildInstructions(pr: PRContext, diff: string, depth: 'detailed' | 'standard' | 'brief'): string[] {
+  const baseInstructions = [
+    'You are a code reviewer. ONLY report actual bugs...',
+    // Core rules (lines 115-137)
+  ];
+
+  switch (depth) {
+    case 'detailed':
+      // Thorough: Include all context, examples, call graphs
+      return [
+        ...baseInstructions,
+        this.getDetailedGuidance(),
+        this.getCallContext(), // Already exists (lines 195-217)
+        this.getDefensivePatterns(), // Already exists (lines 171-180)
+      ];
+
+    case 'brief':
+      // Light: Minimal instructions, skip optional context
+      return [
+        ...baseInstructions,
+        // Skip: call context, defensive patterns, learned preferences
+      ];
+
+    case 'standard':
+    default:
+      // Standard: Current behavior
+      return [
+        ...baseInstructions,
+        this.getCallContext(), // Conditional on graph
+        this.getDefensivePatterns(), // For diffs < 50KB
+      ];
   }
-
-  // Always include base finding info
-  if (finding.providers && finding.providers.length > 1) {
-    parts.push('', `Providers: ${finding.providers.join(', ')}`);
-  }
-
-  return parts.join('\n');
 }
 ```
 
-## Data Flow
+## Build Order (Dependency-Aware)
 
-### Request Flow (Finding Detection → Suggestion Generation → GitHub Posting)
+### Phase 1: Type Extensions (No Runtime Changes)
 
+**Goal:** Extend config schema to support intensity mappings.
+
+**Changes:**
+1. `src/types/index.ts` - Already has `intensityPromptDepth` (lines 115-119)
+2. `src/config/schema.ts` - Already has validation (lines 97-99)
+
+**Status:** ✅ Already complete
+
+**Validation:** Run existing schema tests
+
+---
+
+### Phase 2: PromptBuilder Depth Variation
+
+**Goal:** Make PromptBuilder vary prompt structure based on intensity.
+
+**Changes:**
+1. `src/analysis/llm/prompt-builder.ts`:
+   - Extract `buildInstructions()` method
+   - Add depth-based instruction variation
+   - Keep existing validation (lines 19-22)
+
+**Dependencies:**
+- Config types (Phase 1) ✅ Complete
+- PromptBuilder constructor already accepts intensity (line 14)
+
+**Risk:** Low - constructor already wired, just need to use the intensity parameter
+
+**Validation:**
+- Unit test: verify different prompts for 'detailed' vs 'brief'
+- Integration test: end-to-end with different intensity configs
+
+---
+
+### Phase 3: Per-Batch PromptBuilder Creation
+
+**Goal:** Create PromptBuilder instances per-batch with runtime intensity.
+
+**Changes:**
+1. `src/core/orchestrator.ts` line 473:
+   ```typescript
+   // BEFORE (current):
+   const promptBuilder = new PromptBuilder(config, reviewIntensity);
+
+   // AFTER (no change needed - already correct!):
+   const promptBuilder = new PromptBuilder(config, reviewIntensity, promptEnricher, codeGraph);
+   ```
+
+2. Remove shared PromptBuilder from `setup.ts`:
+   ```typescript
+   // REMOVE lines 121, 253 (shared promptBuilder)
+   // No longer needed - created per-batch in orchestrator
+   ```
+
+3. Update `ReviewComponents` interface:
+   ```typescript
+   // REMOVE promptBuilder from interface (orchestrator.ts line 58)
+   // Components no longer include shared PromptBuilder
+   ```
+
+**Dependencies:**
+- Phase 2 (PromptBuilder depth variation) completed
+- Orchestrator already computes reviewIntensity (line 278)
+
+**Risk:** Medium - changes component composition, but orchestrator already creates per-batch builders
+
+**Validation:**
+- Verify orchestrator tests still pass
+- Check setup.ts component creation
+- Integration test with different file batches
+
+---
+
+### Phase 4: Integration Testing & Documentation
+
+**Goal:** Validate end-to-end intensity behavior.
+
+**Test scenarios:**
+1. **Thorough intensity:**
+   - Files: `src/auth/login.ts`
+   - Expected: 8 providers, 300s timeout, detailed prompt
+
+2. **Light intensity:**
+   - Files: `src/__tests__/login.test.ts`
+   - Expected: 4 providers, 180s timeout, brief prompt
+
+3. **Standard intensity (default):**
+   - Files: `src/utils/helpers.ts`
+   - Expected: 6 providers, 240s timeout, standard prompt
+
+**Documentation updates:**
+1. Add to API_CHANGELOG.md
+2. Update configuration docs with intensity mappings
+3. Add example configurations
+
+**Dependencies:** All previous phases complete
+
+**Validation:**
+- End-to-end test with real PR
+- Cost tracking shows different usage patterns
+- Logs show intensity decisions
+
+## Anti-Patterns to Avoid
+
+### Anti-Pattern 1: Shared Mutable PromptBuilder
+
+**What people do:** Create one PromptBuilder in setup.ts and mutate its intensity property per-batch.
+
+**Why it's wrong:**
+- Shared mutable state causes race conditions in parallel batch processing
+- Hard to test and reason about
+- Violates orchestrator's immutability guarantee (line 115-117)
+
+**Do this instead:** Create new PromptBuilder per-batch with correct intensity (already done line 473).
+
+---
+
+### Anti-Pattern 2: Intensity-Specific Orchestrators
+
+**What people might consider:** Create `ThoroughOrchestrator`, `StandardOrchestrator`, `LightOrchestrator` classes.
+
+**Why it's wrong:**
+- Duplicates orchestration logic across classes
+- Makes changes harder (must update 3 places)
+- Overkill for simple config mapping
+
+**Do this instead:** Single orchestrator with config-driven behavior (current pattern).
+
+---
+
+### Anti-Pattern 3: Deep Config Drilling
+
+**What to avoid:** Passing entire config object through every method call.
+
+```typescript
+// BAD:
+private async runBatch(batch, config) {
+  const intensity = this.getIntensity(batch, config);
+  const timeout = this.getTimeout(intensity, config);
+  const prompt = await this.buildPrompt(batch, intensity, config);
+  await this.execute(prompt, timeout, config);
+}
 ```
-[PR Diff]
-    ↓
-[PromptBuilder] → Build prompt with fix instructions
-    ↓
-[LLM Providers] → Analyze code and generate findings + suggestions
-    ↓
-[LLM Parser] → Extract findings with suggestion field
-    ↓
-[Deduplicator/Consensus] → Filter to high-confidence findings
-    ↓
-[SynthesisEngine] → Build InlineComment[] from Finding[]
-    ↓                  (calls formatSuggestion() if Finding.suggestion exists)
-[MarkdownFormatter] → Format comments as markdown strings
-    ↓                   (embeds GitHub suggestion blocks)
-[CommentPoster] → Post to GitHub PR
-    ↓
-[GitHub UI] → Renders "Commit suggestion" button
+
+**Why it's wrong:**
+- Unclear which config fields are used where
+- Hard to test (need full config object)
+- Temptation to access unrelated config
+
+**Do this instead:** Extract only needed values at orchestrator level, pass as parameters.
+
+```typescript
+// GOOD (current pattern):
+const intensityTimeout = config.intensityTimeouts?.[reviewIntensity] ?? defaultTimeout;
+const results = await this.components.llmExecutor.execute(healthy, prompt, intensityTimeout);
 ```
 
-### Suggestion Block Assembly Flow
+---
 
-```
-[Finding with suggestion text]
-    ↓
-[SuggestionFormatter.formatSuggestionBlock()]
-    ↓
-├─ Extract original code from file content (finding.line)
-├─ Validate suggestion is different from original
-├─ Determine single-line vs multi-line format
-├─ Escape code if contains triple backticks (use ~~~)
-└─ Build GitHub suggestion markdown
-    ↓
-[Return formatted suggestion block string]
-    ↓
-[Embed in InlineComment.body markdown]
-```
+### Anti-Pattern 4: Premature Abstraction (Strategy Pattern)
 
-### Key Data Flows
+**What to avoid:** Creating strategy classes before proving the need.
 
-1. **Prompt → LLM → Finding:** PromptBuilder includes fix instructions → LLM returns `{suggestion: "fixed code"}` → Parser extracts into Finding.suggestion field
-2. **Finding → Suggestion Block:** SynthesisEngine calls SuggestionFormatter → Formatter extracts original code → Builds GitHub markdown → Returns string
-3. **Comment Assembly:** SynthesisEngine.commentBody() → Combines title + message + suggestion block → Returns complete markdown → CommentPoster sends to GitHub
+**Why it's wrong:**
+- Current config mapping is 3 lines per behavior (lines 289-290)
+- Strategy pattern adds ~50 lines per behavior
+- No evidence of complex logic requiring abstraction
+
+**Do this instead:** Keep simple config lookups until complexity justifies abstraction.
+
+## Minimal Change Strategy
+
+### What Already Works
+
+✅ **PathMatcher** - Determines intensity from file paths (lines 272-286)
+✅ **Provider selection** - Uses `intensityProviderCounts` mapping (line 289)
+✅ **Timeout mapping** - Uses `intensityTimeouts` mapping (line 290)
+✅ **Per-batch PromptBuilder** - Created with intensity parameter (line 473)
+✅ **Config schema** - Types and validation complete
+
+### What Needs Changing
+
+⚠️ **PromptBuilder depth variation** - Constructor accepts intensity but doesn't vary prompt structure
+⚠️ **Shared PromptBuilder removal** - setup.ts creates unused shared instance (lines 121, 253)
+
+### Estimated Change Size
+
+| Component | Lines Changed | Risk |
+|-----------|--------------|------|
+| prompt-builder.ts | ~30 lines (extract buildInstructions method) | Low |
+| setup.ts | -2 lines (remove shared promptBuilder) | Low |
+| orchestrator.ts | -1 line (remove promptBuilder from interface) | Low |
+| Tests | +50 lines (validate prompt depth variation) | Low |
+| **Total** | **~77 lines net** | **Low** |
 
 ## Scaling Considerations
 
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| 0-100 PRs/day | Current architecture sufficient - suggestion formatting adds negligible overhead |
-| 100-1000 PRs/day | Cache file content retrieval in SuggestionFormatter to avoid redundant GitHub API calls |
-| 1000+ PRs/day | Consider pre-fetching file contents during PR loading phase to parallelize with analysis |
+| Scale | Architecture Impact |
+|-------|---------------------|
+| **Current (single-tenant Action)** | No changes needed - config loaded once per run |
+| **Future (multi-tenant server)** | Consider caching PathMatcher instances per config hash to avoid repeated pattern validation |
+| **High throughput** | Current pattern already stateless and parallelizable - no bottlenecks introduced |
 
-### Scaling Priorities
-
-1. **First bottleneck:** File content retrieval for multi-line suggestions - cache at orchestrator level, pass to formatter
-2. **Second bottleneck:** LLM response parsing if suggestion field is complex - validate schema upfront, fail fast on invalid formats
-
-## Anti-Patterns
-
-### Anti-Pattern 1: Two-Phase Fix Generation
-
-**What people do:** Run initial review to detect findings, then make separate LLM calls to generate fixes for each finding.
-
-**Why it's wrong:**
-- Doubles LLM costs and latency
-- Requires state management between phases
-- LLM sees less context in second phase (isolated finding vs full diff)
-
-**Do this instead:** Include fix generation instructions in the initial review prompt. Parse both findings and suggestions in one pass.
-
-### Anti-Pattern 2: Suggestion-Only on Success
-
-**What people do:** Only post finding to GitHub if suggestion was successfully generated.
-
-**Why it's wrong:**
-- Loses valuable findings when LLM can't generate fix
-- Creates inconsistent review output (some findings disappear)
-- Makes debugging harder (can't see what LLM detected)
-
-**Do this instead:** Always post the finding. Add suggestion block only when available. Use clear markdown to show when suggestion is missing ("No automatic fix available").
-
-### Anti-Pattern 3: Direct Code Modification
-
-**What people do:** Implement custom logic to apply fixes automatically or create new commits.
-
-**Why it's wrong:**
-- Bypasses review process (dangerous for AI-generated code)
-- Requires complex git operations and permissions
-- GitHub already provides this via suggestion blocks
-
-**Do this instead:** Use GitHub's native `\`\`\`suggestion` syntax. GitHub handles commit creation, permissions, and UI. Just format the markdown correctly.
-
-### Anti-Pattern 4: Complex Suggestion Validation
-
-**What people do:** Implement AST parsing, syntax checking, or compilation of suggested fixes before posting.
-
-**Why it's wrong:**
-- Adds significant complexity and dependencies
-- Slows down review posting
-- False negatives hide valid suggestions
-- Developers review suggestions anyway before committing
-
-**Do this instead:** Basic sanity checks only (non-empty, different from original). Let developers validate via GitHub's review UI. Trust GitHub's suggestion workflow.
-
-## Integration Points
-
-### External Services
-
-| Service | Integration Pattern | Notes |
-|---------|---------------------|-------|
-| GitHub API | REST via @octokit/rest | Already integrated - CommentPoster.postInline() posts markdown |
-| LLM Providers | Provider interface abstraction | Already abstracted - PromptBuilder changes apply to all providers |
-| File Storage | GitHub blob API | Needed for multi-line context - use GitHubClient.getFileContent() |
-
-### Internal Boundaries
-
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| Analysis ↔ Output | Finding objects with suggestion field | Clean boundary - output layer reads Finding.suggestion, doesn't call back to analysis |
-| Output ↔ GitHub | Markdown strings | Clean boundary - formatter produces strings, poster sends them without parsing |
-| LLM ↔ Parser | String responses → Finding[] | Extend parser schema to include optional suggestion field in JSON |
-| Formatter ↔ SuggestionFormatter | Finding + file content → suggestion block string | New boundary - keeps suggestion logic isolated from general markdown formatting |
-
-## Build Order (Implementation Sequence)
-
-Based on component dependencies, build in this order:
-
-### Phase 1: Foundation (No dependencies)
-**Output:** Suggestion formatting infrastructure without LLM integration
-
-1. **Create SuggestionFormatter class** (`src/output/suggestion-formatter.ts`)
-   - `formatSuggestionBlock(finding: Finding, fileContent: string): string`
-   - Handles single-line suggestions (simple case)
-   - Returns GitHub markdown `\`\`\`suggestion` blocks
-   - Unit tests with mock findings
-
-2. **Verify Finding.suggestion field** (`src/types/index.ts`)
-   - Confirm `Finding` interface has `suggestion?: string`
-   - Already exists in codebase - no changes needed
-
-### Phase 2: LLM Integration (Depends on Phase 1)
-**Output:** LLMs generate suggestions, stored in Finding objects
-
-3. **Extend PromptBuilder** (`src/analysis/llm/prompt-builder.ts`)
-   - Add fix generation instructions to prompt template
-   - Update `build()` to include suggestion field in output schema
-   - Test prompts with sample diffs
-
-4. **Extend LLM Parser** (`src/analysis/llm/parser.ts`)
-   - Parse `suggestion` field from LLM JSON/markdown responses
-   - Handle missing/malformed suggestions gracefully
-   - Unit tests with sample LLM responses
-
-### Phase 3: Formatting Integration (Depends on Phases 1-2)
-**Output:** Findings with suggestions render as suggestion blocks
-
-5. **Extend SynthesisEngine** (`src/analysis/synthesis.ts`)
-   - Modify `commentBody()` to call SuggestionFormatter when `finding.suggestion` exists
-   - Pass file content to formatter (from PRContext)
-   - Fallback to description-only when suggestion unavailable
-
-6. **Extend MarkdownFormatter** (`src/output/formatter.ts`)
-   - Update `printSeveritySection()` to include suggestion blocks
-   - Ensure suggestion blocks render in summary comments
-   - Test formatting output manually with sample findings
-
-### Phase 4: Multi-line Support (Depends on Phases 1-3)
-**Output:** Multi-line code replacements formatted correctly
-
-7. **Extend SuggestionFormatter for multi-line**
-   - Detect multi-line suggestions (newlines in Finding.suggestion)
-   - Extract multi-line original code context
-   - Handle edge cases (code fence escaping with `~~~`)
-
-8. **Add file content caching** (if needed for performance)
-   - Cache file contents in orchestrator or synthesis phase
-   - Pass cached content to formatters to avoid redundant API calls
-
-### Dependency Rationale
-
-- **Phase 1 before Phase 2:** Can test suggestion formatting in isolation before LLMs generate real suggestions
-- **Phase 2 before Phase 3:** Need LLMs producing suggestions before formatting can display them
-- **Phase 3 before Phase 4:** Get single-line working end-to-end before adding multi-line complexity
-- **Phase 4 last:** Multi-line is enhancement - system works with single-line only
-
-### Validation Gates Between Phases
-
-- **After Phase 1:** Unit tests pass for SuggestionFormatter with mock data
-- **After Phase 2:** LLM responses include suggestion field in 70%+ of findings
-- **After Phase 3:** Manual test shows suggestion blocks in GitHub PR comments with commit button
-- **After Phase 4:** Multi-line suggestions render correctly with proper escaping
+**Performance notes:**
+- PathMatcher pattern validation happens once at construction (line 83)
+- Intensity determination is O(files × patterns) but cached internally (line 366-370)
+- Per-batch PromptBuilder creation has negligible overhead (~1ms per batch)
 
 ## Sources
 
-- **GitHub Suggestion Block Documentation:**
-  - [Reviewing proposed changes in a pull request - GitHub Docs](https://docs.github.com/articles/reviewing-proposed-changes-in-a-pull-request)
-  - [How to suggest changes in a GitHub pull request - Graphite](https://graphite.com/guides/suggest-changes-github-pr)
-  - [Multi-line code suggestions beta - GitHub Changelog](https://github.blog/changelog/2020-02-26-multi-line-code-suggestions-beta/)
+**Codebase Analysis (HIGH confidence):**
+- /Users/keith/src/multi-provider-code-review/src/core/orchestrator.ts (lines 224-295, 469-495)
+- /Users/keith/src/multi-provider-code-review/src/analysis/llm/prompt-builder.ts (constructor, build method)
+- /Users/keith/src/multi-provider-code-review/src/analysis/path-matcher.ts (complete implementation)
+- /Users/keith/src/multi-provider-code-review/src/setup.ts (component composition)
+- /Users/keith/src/multi-provider-code-review/src/types/index.ts (config types)
 
-- **Existing Codebase Analysis:**
-  - `/Users/keith/src/multi-provider-code-review/src/core/orchestrator.ts` - Review pipeline flow
-  - `/Users/keith/src/multi-provider-code-review/src/output/formatter.ts` - Markdown formatting
-  - `/Users/keith/src/multi-provider-code-review/src/analysis/synthesis.ts` - Finding → comment transformation
-  - `/Users/keith/src/multi-provider-code-review/src/types/index.ts` - Finding interface (suggestion field already exists)
-  - `/Users/keith/src/multi-provider-code-review/src/autofix/prompt-generator.ts` - Related fix prompt generation (different use case - AI IDE prompts, not GitHub suggestions)
+**Architectural Patterns (MEDIUM confidence):**
+- [Dependency injection - .NET | Microsoft Learn](https://learn.microsoft.com/en-us/dotnet/core/extensions/dependency-injection)
+- [Inversion of Control Containers and the Dependency Injection pattern](https://martinfowler.com/articles/injection.html)
+- [Strategy pattern - Wikipedia](https://en.wikipedia.org/wiki/Strategy_pattern)
+- [Strategy Design Pattern - Refactoring.Guru](https://refactoring.guru/design-patterns/strategy)
+- [Improve Conditional Logic in C# (strategy pattern) II. Passing Parameters. | Medium](https://medium.com/@untxen/improve-conditional-logic-in-c-strategy-pattern-ii-passing-parameters-39c9ccbd9bad)
+
+**Orchestrator Patterns (LOW confidence - general context):**
+- [Durable orchestrator code constraints - Azure Functions | Microsoft Learn](https://learn.microsoft.com/en-us/azure/azure-functions/durable/durable-functions-code-constraints)
+- [Configuration Management for TypeScript Node.js Apps | Medium](https://medium.com/@andrei-trukhin/configuration-management-for-typescript-node-js-apps-60b6c99d6331)
 
 ---
-*Architecture research for: GitHub Commit Suggestions Integration*
-*Researched: 2026-02-04*
+*Architecture research for: multi-provider-code-review intensity wiring*
+*Researched: 2026-02-05*
+*Next: Roadmap creation will use this to structure build phases*
