@@ -240,13 +240,13 @@ export async function createComponents(config: ReviewConfig, githubToken: string
   const impactAnalyzer = new ImpactAnalyzer();
   const evidenceScorer = new EvidenceScorer();
   const mermaidGenerator = new MermaidGenerator();
-  const feedbackFilter = new FeedbackFilter(githubClient);
 
   // Learning and auto-fix components
   const cacheStorage = new CacheStorage();
   const repoKey = `${githubClient.owner}/${githubClient.repo}`;
   const suppressionTracker = new SuppressionTracker(cacheStorage, repoKey);
   const providerWeightTracker = new ProviderWeightTracker(cacheStorage);
+  const feedbackFilter = new FeedbackFilter(githubClient, providerWeightTracker);
   const acceptanceDetector = new AcceptanceDetector();
   const feedbackTracker = config.learningEnabled ? new FeedbackTracker(cacheStorage, config.learningMinFeedbackCount) : undefined;
   const promptEnricher = new PromptEnricher(suppressionTracker, feedbackTracker);
