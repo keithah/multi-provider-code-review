@@ -87,4 +87,30 @@ describe('PromptBuilder', () => {
       expect(prompt).toContain('Only include "suggestion" for FIXABLE issues');
     });
   });
+
+  describe('token-aware suggestion instructions', () => {
+    it('includes suggestion instructions for small diffs', () => {
+      const builder = new PromptBuilder(DEFAULT_CONFIG);
+      const smallDiff = 'diff --git a/test.ts b/test.ts\n+const x = 1;';
+      const smallPR = { ...mockPR, diff: smallDiff };
+
+      const prompt = builder.build(smallPR);
+
+      expect(prompt).toContain('SUGGESTION FIELD');
+      expect(prompt).toContain('suggestion}]');
+    });
+
+    it('excludes suggestion instructions for large diffs', () => {
+      const builder = new PromptBuilder(DEFAULT_CONFIG);
+      // Generate a diff that exceeds 50k tokens (~200k characters)
+      const largeDiff = 'diff --git a/test.ts b/test.ts\n' + '+const x = 1;\n'.repeat(60000);
+      const largePR = { ...mockPR, diff: largeDiff };
+
+      const prompt = builder.build(largePR);
+
+      expect(prompt).not.toContain('SUGGESTION FIELD');
+      // Should have original schema without suggestion
+      expect(prompt).toContain('Return JSON: [{file, line, severity, title, message}]');
+    });
+  });
 });
