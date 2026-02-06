@@ -108,6 +108,20 @@ export const DEFAULT_CONFIG: ReviewConfig = {
     light: 'brief',
   },
 
+  // Intensity consensus thresholds (percentage of providers that must agree)
+  intensityConsensusThresholds: {
+    thorough: 80,  // 80% agreement for thorough review
+    standard: 60,  // 60% agreement for standard review
+    light: 40,     // 40% agreement for light review
+  },
+
+  // Intensity severity filters (minimum severity to show inline)
+  intensitySeverityFilters: {
+    thorough: 'minor',   // Show all issues
+    standard: 'minor',   // Show minor and above
+    light: 'major',      // Only show major and critical
+  },
+
   dryRun: false,
 };
 
