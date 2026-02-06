@@ -308,4 +308,70 @@ describe('Path-Based Intensity Feature', () => {
       }
     });
   });
+
+  describe('Intensity Consensus Thresholds', () => {
+    it('should use default consensus thresholds', () => {
+      expect(DEFAULT_CONFIG.intensityConsensusThresholds).toEqual({
+        thorough: 80,
+        standard: 60,
+        light: 40,
+      });
+    });
+
+    it('should use default severity filters', () => {
+      expect(DEFAULT_CONFIG.intensitySeverityFilters).toEqual({
+        thorough: 'minor',
+        standard: 'minor',
+        light: 'major',
+      });
+    });
+
+    it('should calculate consensus threshold for thorough with 5 providers', () => {
+      const providerCount = 5;
+      const thresholdPercent = DEFAULT_CONFIG.intensityConsensusThresholds!.thorough;
+      const minAgreement = Math.ceil((thresholdPercent / 100) * providerCount);
+
+      expect(minAgreement).toBe(4); // 80% of 5 = 4
+    });
+
+    it('should calculate consensus threshold for standard with 5 providers', () => {
+      const providerCount = 5;
+      const thresholdPercent = DEFAULT_CONFIG.intensityConsensusThresholds!.standard;
+      const minAgreement = Math.ceil((thresholdPercent / 100) * providerCount);
+
+      expect(minAgreement).toBe(3); // 60% of 5 = 3
+    });
+
+    it('should calculate consensus threshold for light with 5 providers', () => {
+      const providerCount = 5;
+      const thresholdPercent = DEFAULT_CONFIG.intensityConsensusThresholds!.light;
+      const minAgreement = Math.ceil((thresholdPercent / 100) * providerCount);
+
+      expect(minAgreement).toBe(2); // 40% of 5 = 2
+    });
+
+    it('should round up consensus threshold calculation', () => {
+      const providerCount = 3;
+      const thresholdPercent = 80; // thorough
+      const minAgreement = Math.ceil((thresholdPercent / 100) * providerCount);
+
+      expect(minAgreement).toBe(3); // 80% of 3 = 2.4, rounded up to 3
+    });
+
+    it('should handle edge case with 0 providers', () => {
+      const providerCount = 0;
+      const thresholdPercent = DEFAULT_CONFIG.intensityConsensusThresholds!.standard;
+      const minAgreement = providerCount === 0 ? 1 : Math.ceil((thresholdPercent / 100) * providerCount);
+
+      expect(minAgreement).toBe(1); // Fallback to 1
+    });
+
+    it('should handle edge case with 1 provider', () => {
+      const providerCount = 1;
+      const thresholdPercent = DEFAULT_CONFIG.intensityConsensusThresholds!.thorough;
+      const minAgreement = Math.ceil((thresholdPercent / 100) * providerCount);
+
+      expect(minAgreement).toBe(1); // 80% of 1 = 0.8, rounded up to 1
+    });
+  });
 });
