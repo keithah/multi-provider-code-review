@@ -45,11 +45,12 @@ Plans:
   2. PromptBuilder generates balanced instructions for standard intensity (current behavior)
   3. PromptBuilder generates brief instructions for light intensity (quick scan, obvious issues only)
   4. Consensus filtering requires different agreement levels per intensity (thorough: 80%, standard: 60%, light: 40%)
-  5. Severity filtering adjusts minimum inline threshold per intensity (thorough: info+, standard: minor+, light: major+)
-**Plans**: TBD
+  5. Severity filtering adjusts minimum inline threshold per intensity (thorough: minor+, standard: minor+, light: major+)
+**Plans**: 2 plans
 
 Plans:
-- [ ] 07-01: TBD
+- [ ] 07-01-PLAN.md — TDD prompt variations (thorough/standard/light instructions)
+- [ ] 07-02-PLAN.md — TDD consensus thresholds and severity filtering in orchestrator
 
 #### Phase 8: Code Cleanup
 
