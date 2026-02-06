@@ -100,6 +100,16 @@ export const ReviewConfigSchema = z.object({
     standard: z.enum(['detailed', 'standard', 'brief']),
     light: z.enum(['detailed', 'standard', 'brief']),
   }).optional(),
+  intensity_consensus_thresholds: z.object({
+    thorough: z.number().min(0).max(100),
+    standard: z.number().min(0).max(100),
+    light: z.number().min(0).max(100),
+  }).optional(),
+  intensity_severity_filters: z.object({
+    thorough: z.enum(['critical', 'major', 'minor']),
+    standard: z.enum(['critical', 'major', 'minor']),
+    light: z.enum(['critical', 'major', 'minor']),
+  }).optional(),
 
   min_confidence: z.number().min(0).max(1).optional(),
   confidence_threshold: z.object({
