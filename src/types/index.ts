@@ -119,6 +119,26 @@ export interface ReviewConfig {
     light: 'detailed' | 'standard' | 'brief';
   };
 
+  /** Per-intensity consensus threshold percentages (0-100). Higher = more agreement required. */
+  intensityConsensusThresholds?: {
+    /** Thorough review: require 80% provider agreement (default: 80) */
+    thorough: number;
+    /** Standard review: require 60% provider agreement (default: 60) */
+    standard: number;
+    /** Light review: require 40% provider agreement (default: 40) */
+    light: number;
+  };
+
+  /** Per-intensity minimum severity for inline comments. Lower = more issues shown. */
+  intensitySeverityFilters?: {
+    /** Thorough review: show all severities including minor (default: 'minor') */
+    thorough: Severity;
+    /** Standard review: show minor and above (default: 'minor') */
+    standard: Severity;
+    /** Light review: show only major and critical (default: 'major') */
+    light: Severity;
+  };
+
   // Quality configuration
   minConfidence?: number;
   confidenceThreshold?: {
