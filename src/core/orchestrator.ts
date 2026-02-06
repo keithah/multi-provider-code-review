@@ -572,8 +572,31 @@ export class ReviewOrchestrator {
       ];
 
       const deduped = this.components.deduplicator.dedupe(combinedFindings);
-      const consensus = this.components.consensus.filter(deduped);
+
+      // Calculate intensity-specific consensus thresholds
+      const consensusThresholdPercent = config.intensityConsensusThresholds?.[reviewIntensity] ?? 60;
+      const severityFilter = config.intensitySeverityFilters?.[reviewIntensity] ?? config.inlineMinSeverity;
       const providerCount = providers.length || 1;
+
+      // Convert percentage to provider count (round up, minimum 1)
+      const minAgreement = providerCount === 0
+        ? 1
+        : Math.ceil((consensusThresholdPercent / 100) * providerCount);
+
+      logger.debug(
+        `Consensus settings for ${reviewIntensity} intensity: ` +
+        `minAgreement=${minAgreement} (${consensusThresholdPercent}% of ${providerCount} providers), ` +
+        `minSeverity=${severityFilter}`
+      );
+
+      // Create intensity-aware consensus engine for this review
+      const consensusEngine = new ConsensusEngine({
+        minAgreement,
+        minSeverity: severityFilter,
+        maxComments: config.inlineMaxComments,
+      });
+
+      const consensus = consensusEngine.filter(deduped);
       const enriched = consensus.map(f =>
         this.enrichFinding(f, pr.files, staticAnalysis.context, providerCount, codeGraph)
       );
