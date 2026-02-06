@@ -1,0 +1,65 @@
+# Example: Path-Based Intensity Configuration
+#
+# This file demonstrates how to configure different review intensities
+# based on file path patterns. Use this as a starting point for your
+# .github/multi-review.yml configuration.
+
+# Enable path-based intensity (required)
+path_based_intensity: true
+
+# Default intensity for files not matching any pattern
+path_default_intensity: standard
+
+# Path patterns mapped to intensity levels
+# Format: JSON string with array of {pattern, intensity} objects
+# Patterns use glob syntax (*, **, ?)
+#
+# PRECEDENCE RULE: When multiple patterns match, highest intensity wins.
+# Order: thorough > standard > light
+#
+# Examples:
+# - src/core/** matches thorough, docs/** matches light
+# - If a file matches both, thorough wins
+path_intensity_patterns: |
+  [
+    {"pattern": "src/core/**", "intensity": "thorough"},
+    {"pattern": "src/auth/**", "intensity": "thorough"},
+    {"pattern": "src/api/**", "intensity": "thorough"},
+    {"pattern": "src/**/*.ts", "intensity": "standard"},
+    {"pattern": "tests/**", "intensity": "standard"},
+    {"pattern": "docs/**", "intensity": "light"},
+    {"pattern": "*.md", "intensity": "light"},
+    {"pattern": "examples/**", "intensity": "light"}
+  ]
+
+# Provider counts per intensity (how many providers to use)
+intensity_provider_counts:
+  thorough: 8   # Maximum coverage for critical code
+  standard: 5   # Balanced coverage
+  light: 3      # Quick scan
+
+# Timeout per intensity (milliseconds)
+intensity_timeouts:
+  thorough: 180000  # 3 minutes
+  standard: 120000  # 2 minutes
+  light: 60000      # 1 minute
+
+# Prompt depth per intensity (how detailed the instructions)
+intensity_prompt_depth:
+  thorough: detailed  # Full context, comprehensive analysis
+  standard: standard  # Balanced approach
+  light: brief        # Quick scan, obvious issues only
+
+# Consensus thresholds per intensity (percentage of providers that must agree)
+# Higher = more strict, requires more agreement
+intensity_consensus_thresholds:
+  thorough: 80  # 80% agreement for thorough review
+  standard: 60  # 60% agreement for standard review
+  light: 40     # 40% agreement for light review
+
+# Severity filters per intensity (minimum severity to show inline)
+# Valid values: critical, major, minor
+intensity_severity_filters:
+  thorough: minor    # Show all issues including minor
+  standard: minor    # Show minor and above
+  light: major       # Only show major and critical
