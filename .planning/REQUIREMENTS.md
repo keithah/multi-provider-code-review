@@ -42,12 +42,12 @@ Complete the path-based intensity feature by wiring detected intensity levels in
 
 ### Configuration & Validation
 
-- [ ] **CONFIG-01**: Intensity behavior mappings are configurable via ReviewConfig
-- [ ] **CONFIG-02**: Invalid intensity mappings fail fast at startup (not silently)
-- [ ] **CONFIG-03**: Path pattern precedence rules are documented clearly
-- [ ] **CONFIG-04**: Common intensity patterns provided as examples (critical paths, tests, docs)
-- [ ] **CONFIG-05**: Validation ensures consensus thresholds are percentages (0-100)
-- [ ] **CONFIG-06**: Validation ensures severity values are valid enum values
+- [x] **CONFIG-01**: Intensity behavior mappings are configurable via ReviewConfig
+- [x] **CONFIG-02**: Invalid intensity mappings fail fast at startup (not silently)
+- [x] **CONFIG-03**: Path pattern precedence rules are documented clearly
+- [x] **CONFIG-04**: Common intensity patterns provided as examples (critical paths, tests, docs)
+- [x] **CONFIG-05**: Validation ensures consensus thresholds are percentages (0-100)
+- [x] **CONFIG-06**: Validation ensures severity values are valid enum values
 
 ### Integration Testing
 

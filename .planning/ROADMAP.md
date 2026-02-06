@@ -31,9 +31,9 @@ Delivered one-click commit suggestion functionality for multi-provider AI code r
 **Plans**: 3 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — Extend schema, types, defaults with consensus/severity intensity mappings
-- [ ] 06-02-PLAN.md — TDD validation helpers (clamp percentages, typo suggestions)
-- [ ] 06-03-PLAN.md — Integrate validators into ConfigLoader, create examples and docs
+- [x] 06-01-PLAN.md — Extend schema, types, defaults with consensus/severity intensity mappings
+- [x] 06-02-PLAN.md — TDD validation helpers (clamp percentages, typo suggestions)
+- [x] 06-03-PLAN.md — Integrate validators into ConfigLoader, create examples and docs
 
 #### Phase 7: Behavior Wiring
 
@@ -91,7 +91,7 @@ Phases execute in numeric order: 6 → 7 → 8 → 9
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 6. Configuration & Validation | v1.0 | 0/3 | Planned | - |
+| 6. Configuration & Validation | v1.0 | 3/3 | ✓ Complete | 2026-02-05 |
 | 7. Behavior Wiring | v1.0 | 0/? | Not started | - |
 | 8. Code Cleanup | v1.0 | 0/? | Not started | - |
 | 9. Integration Testing | v1.0 | 0/? | Not started | - |
