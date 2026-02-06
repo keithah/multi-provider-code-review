@@ -6,6 +6,7 @@ import { DEFAULT_CONFIG } from './defaults';
 import { ReviewConfigSchema, ReviewConfigFile } from './schema';
 import { validateConfig, ValidationError } from '../utils/validation';
 import { logger } from '../utils/logger';
+import { clampPercentage, validateSeverityWithSuggestion } from './validators';
 
 export class ConfigLoader {
   private static readonly CONFIG_PATHS = [
@@ -34,6 +35,9 @@ export class ConfigLoader {
       }
       throw error;
     }
+
+    // Validate intensity behavior fields
+    this.validateIntensityBehaviors(merged);
 
     return merged;
   }
@@ -197,8 +201,43 @@ export class ConfigLoader {
       intensityProviderCounts: config.intensity_provider_counts,
       intensityTimeouts: config.intensity_timeouts,
       intensityPromptDepth: config.intensity_prompt_depth,
+      intensityConsensusThresholds: config.intensity_consensus_thresholds,
+      intensitySeverityFilters: config.intensity_severity_filters,
       dryRun: config.dry_run,
     };
+  }
+
+  /**
+   * Validate intensity behavior configuration.
+   * - Consensus thresholds: clamp to 0-100 with warning
+   * - Severity filters: fail with typo suggestions
+   */
+  private static validateIntensityBehaviors(config: ReviewConfig): void {
+    // Validate consensus thresholds (clamp with warning)
+    if (config.intensityConsensusThresholds) {
+      const thresholds = config.intensityConsensusThresholds;
+      for (const level of ['thorough', 'standard', 'light'] as const) {
+        if (thresholds[level] !== undefined) {
+          thresholds[level] = clampPercentage(
+            thresholds[level],
+            `intensityConsensusThresholds.${level}`
+          );
+        }
+      }
+    }
+
+    // Validate severity filters (strict with suggestions)
+    if (config.intensitySeverityFilters) {
+      const filters = config.intensitySeverityFilters;
+      for (const level of ['thorough', 'standard', 'light'] as const) {
+        if (filters[level] !== undefined) {
+          filters[level] = validateSeverityWithSuggestion(
+            filters[level],
+            `intensitySeverityFilters.${level}`
+          );
+        }
+      }
+    }
   }
 
   private static merge(

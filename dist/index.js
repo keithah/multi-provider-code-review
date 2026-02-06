@@ -26969,6 +26969,24 @@ var DEFAULT_CONFIG = {
     standard: "standard",
     light: "brief"
   },
+  // Intensity consensus thresholds (percentage of providers that must agree)
+  intensityConsensusThresholds: {
+    thorough: 80,
+    // 80% agreement for thorough review
+    standard: 60,
+    // 60% agreement for standard review
+    light: 40
+    // 40% agreement for light review
+  },
+  // Intensity severity filters (minimum severity to show inline)
+  intensitySeverityFilters: {
+    thorough: "minor",
+    // Show all issues
+    standard: "minor",
+    // Show minor and above
+    light: "major"
+    // Only show major and critical
+  },
   dryRun: false
 };
 var FALLBACK_STATIC_PROVIDERS = [
@@ -31163,6 +31181,16 @@ var ReviewConfigSchema = external_exports.object({
     standard: external_exports.enum(["detailed", "standard", "brief"]),
     light: external_exports.enum(["detailed", "standard", "brief"])
   }).optional(),
+  intensity_consensus_thresholds: external_exports.object({
+    thorough: external_exports.number().min(0).max(100),
+    standard: external_exports.number().min(0).max(100),
+    light: external_exports.number().min(0).max(100)
+  }).optional(),
+  intensity_severity_filters: external_exports.object({
+    thorough: external_exports.enum(["critical", "major", "minor"]),
+    standard: external_exports.enum(["critical", "major", "minor"]),
+    light: external_exports.enum(["critical", "major", "minor"])
+  }).optional(),
   min_confidence: external_exports.number().min(0).max(1).optional(),
   confidence_threshold: external_exports.object({
     critical: external_exports.number().min(0).max(1).optional(),
@@ -31416,6 +31444,87 @@ function validateConfig(config) {
   }
 }
 
+// src/config/validators.ts
+var SEVERITY_VALUES = ["critical", "major", "minor"];
+function levenshteinDistance(a, b) {
+  const matrix = [];
+  for (let i = 0; i <= a.length; i++) {
+    matrix[i] = [i];
+  }
+  for (let j = 0; j <= b.length; j++) {
+    matrix[0][j] = j;
+  }
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        // deletion
+        matrix[i][j - 1] + 1,
+        // insertion
+        matrix[i - 1][j - 1] + cost
+        // substitution
+      );
+    }
+  }
+  return matrix[a.length][b.length];
+}
+function findClosestMatch(input, candidates) {
+  const normalized = input.toLowerCase();
+  let closest = null;
+  let minDistance = Infinity;
+  for (const candidate of candidates) {
+    const distance = levenshteinDistance(normalized, candidate);
+    if (distance < minDistance && distance <= 2) {
+      minDistance = distance;
+      closest = candidate;
+    }
+  }
+  return closest;
+}
+function clampPercentage(value, fieldName) {
+  if (Number.isNaN(value)) {
+    logger.warn(`${fieldName}: invalid value ${value}, using 50`);
+    return 50;
+  }
+  if (value === Infinity) {
+    logger.warn(`${fieldName}: ${value} clamped to 100 (valid range: 0-100)`);
+    return 100;
+  }
+  if (value === -Infinity) {
+    logger.warn(`${fieldName}: ${value} clamped to 0 (valid range: 0-100)`);
+    return 0;
+  }
+  if (value < 0) {
+    logger.warn(`${fieldName}: ${value} clamped to 0 (valid range: 0-100)`);
+    return 0;
+  }
+  if (value > 100) {
+    logger.warn(`${fieldName}: ${value} clamped to 100 (valid range: 0-100)`);
+    return 100;
+  }
+  return value;
+}
+function validateSeverityWithSuggestion(value, field) {
+  if (typeof value !== "string") {
+    throw new ValidationError(
+      `${field} must be a string`,
+      field,
+      `Received type: ${typeof value}`
+    );
+  }
+  const normalized = value.toLowerCase();
+  if (SEVERITY_VALUES.includes(normalized)) {
+    return normalized;
+  }
+  const suggestion = findClosestMatch(normalized, SEVERITY_VALUES);
+  throw new ValidationError(
+    `${field} has invalid value: "${value}"`,
+    field,
+    suggestion ? `Did you mean '${suggestion}'?` : `Valid values: ${SEVERITY_VALUES.join(", ")}`
+  );
+}
+
 // src/config/loader.ts
 var ConfigLoader = class {
   static CONFIG_PATHS = [
@@ -31440,6 +31549,7 @@ var ConfigLoader = class {
       }
       throw error2;
     }
+    this.validateIntensityBehaviors(merged);
     return merged;
   }
   static loadFromFile() {
@@ -31586,8 +31696,39 @@ var ConfigLoader = class {
       intensityProviderCounts: config.intensity_provider_counts,
       intensityTimeouts: config.intensity_timeouts,
       intensityPromptDepth: config.intensity_prompt_depth,
+      intensityConsensusThresholds: config.intensity_consensus_thresholds,
+      intensitySeverityFilters: config.intensity_severity_filters,
       dryRun: config.dry_run
     };
+  }
+  /**
+   * Validate intensity behavior configuration.
+   * - Consensus thresholds: clamp to 0-100 with warning
+   * - Severity filters: fail with typo suggestions
+   */
+  static validateIntensityBehaviors(config) {
+    if (config.intensityConsensusThresholds) {
+      const thresholds = config.intensityConsensusThresholds;
+      for (const level of ["thorough", "standard", "light"]) {
+        if (thresholds[level] !== void 0) {
+          thresholds[level] = clampPercentage(
+            thresholds[level],
+            `intensityConsensusThresholds.${level}`
+          );
+        }
+      }
+    }
+    if (config.intensitySeverityFilters) {
+      const filters = config.intensitySeverityFilters;
+      for (const level of ["thorough", "standard", "light"]) {
+        if (filters[level] !== void 0) {
+          filters[level] = validateSeverityWithSuggestion(
+            filters[level],
+            `intensitySeverityFilters.${level}`
+          );
+        }
+      }
+    }
   }
   static merge(defaults2, ...overrides) {
     return overrides.reduce((acc, curr) => {
@@ -37341,8 +37482,9 @@ var MermaidGenerator = class {
 
 // src/github/feedback.ts
 var FeedbackFilter = class {
-  constructor(client) {
+  constructor(client, providerWeightTracker) {
     this.client = client;
+    this.providerWeightTracker = providerWeightTracker;
   }
   async loadSuppressed(prNumber) {
     const { octokit, owner, repo } = this.client;
@@ -37366,6 +37508,13 @@ var FeedbackFilter = class {
           if (hasThumbsDown) {
             const signature = this.signatureFromComment(comment.path, comment.line, comment.body || "");
             suppressed.add(signature);
+            if (this.providerWeightTracker) {
+              const providerMatch = comment.body?.match(/\*\*Provider:\*\* `([^`]+)`/);
+              const provider = providerMatch?.[1];
+              if (provider) {
+                await this.providerWeightTracker.recordFeedback(provider, "\u{1F44E}");
+              }
+            }
           }
         } catch (error2) {
           logger.warn(`Failed to load reactions for comment ${comment.id}`, error2);
@@ -40203,11 +40352,11 @@ async function createComponents(config, githubToken) {
   const impactAnalyzer = new ImpactAnalyzer();
   const evidenceScorer = new EvidenceScorer();
   const mermaidGenerator = new MermaidGenerator();
-  const feedbackFilter = new FeedbackFilter(githubClient);
   const cacheStorage = new CacheStorage();
   const repoKey = `${githubClient.owner}/${githubClient.repo}`;
   const suppressionTracker = new SuppressionTracker(cacheStorage, repoKey);
   const providerWeightTracker = new ProviderWeightTracker(cacheStorage);
+  const feedbackFilter = new FeedbackFilter(githubClient, providerWeightTracker);
   const acceptanceDetector = new AcceptanceDetector();
   const feedbackTracker = config.learningEnabled ? new FeedbackTracker(cacheStorage, config.learningMinFeedbackCount) : void 0;
   const promptEnricher = new PromptEnricher(suppressionTracker, feedbackTracker);
