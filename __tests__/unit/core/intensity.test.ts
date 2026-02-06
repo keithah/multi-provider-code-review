@@ -53,47 +53,54 @@ describe('Path-Based Intensity Feature', () => {
       headSha: 'def456',
     };
 
-    it('should generate detailed prompts for thorough intensity', () => {
+    it('should generate detailed prompts for thorough intensity', async () => {
       const builder = new PromptBuilder(DEFAULT_CONFIG, 'thorough');
-      const prompt = builder.build(mockPR);
+      const prompt = await builder.build(mockPR);
 
-      // Simplified prompt is now the same for all intensities
-      expect(prompt).toContain('ONLY report actual bugs');
-      expect(prompt).toContain('CRITICAL RULES');
+      // Thorough should include comprehensive analysis instructions
+      expect(prompt).toContain('COMPREHENSIVE');
+      expect(prompt).toContain('edge case');
+      expect(prompt).toContain('boundary condition');
     });
 
-    it('should generate standard prompts for standard intensity', () => {
+    it('should generate standard prompts for standard intensity', async () => {
       const builder = new PromptBuilder(DEFAULT_CONFIG, 'standard');
-      const prompt = builder.build(mockPR);
+      const prompt = await builder.build(mockPR);
 
-      // Simplified prompt is now the same for all intensities
+      // Standard should maintain baseline behavior
       expect(prompt).toContain('ONLY report actual bugs');
       expect(prompt).toContain('CRITICAL RULES');
+      // Should not contain intensity-specific variations
+      expect(prompt).not.toContain('COMPREHENSIVE');
+      expect(prompt).not.toContain('QUICK scan');
     });
 
-    it('should generate brief prompts for light intensity', () => {
+    it('should generate brief prompts for light intensity', async () => {
       const builder = new PromptBuilder(DEFAULT_CONFIG, 'light');
-      const prompt = builder.build(mockPR);
+      const prompt = await builder.build(mockPR);
 
-      // Simplified prompt is now the same for all intensities
-      expect(prompt).toContain('ONLY report actual bugs');
-      expect(prompt).toContain('CRITICAL RULES');
+      // Light should include quick scan instructions
+      expect(prompt).toContain('QUICK scan');
+      expect(prompt).toContain('ONLY report CRITICAL issues');
+      expect(prompt).toContain('Brief findings only');
     });
 
-    it('should default to standard intensity when not specified', () => {
+    it('should default to standard intensity when not specified', async () => {
       const builder = new PromptBuilder(DEFAULT_CONFIG);
-      const prompt = builder.build(mockPR);
+      const prompt = await builder.build(mockPR);
 
-      // Simplified prompt is now the same for all intensities
+      // Should use standard behavior
       expect(prompt).toContain('ONLY report actual bugs');
+      expect(prompt).not.toContain('COMPREHENSIVE');
+      expect(prompt).not.toContain('QUICK scan');
     });
 
-    it('should include file list and diff in all intensity levels', () => {
+    it('should include file list and diff in all intensity levels', async () => {
       const intensities: ReviewIntensity[] = ['thorough', 'standard', 'light'];
 
       for (const intensity of intensities) {
         const builder = new PromptBuilder(DEFAULT_CONFIG, intensity);
-        const prompt = builder.build(mockPR);
+        const prompt = await builder.build(mockPR);
 
         expect(prompt).toContain('Files changed:');
         expect(prompt).toContain('src/test.ts (modified, +10/-5)');

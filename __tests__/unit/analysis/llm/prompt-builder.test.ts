@@ -113,4 +113,72 @@ describe('PromptBuilder', () => {
       expect(prompt).toContain('Return JSON: [{file, line, severity, title, message}]');
     });
   });
+
+  describe('intensity-aware prompt generation', () => {
+    it('generates COMPREHENSIVE analysis instructions for thorough intensity', async () => {
+      const builder = new PromptBuilder(DEFAULT_CONFIG, 'thorough');
+      const prompt = await builder.build(mockPR);
+
+      expect(prompt).toContain('COMPREHENSIVE');
+      expect(prompt).toContain('edge case');
+      expect(prompt).toContain('boundary condition');
+    });
+
+    it('maintains current production behavior for standard intensity', async () => {
+      const builder = new PromptBuilder(DEFAULT_CONFIG, 'standard');
+      const prompt = await builder.build(mockPR);
+
+      // Standard should match baseline behavior
+      expect(prompt).toContain('ONLY report actual bugs');
+      expect(prompt).toContain('CRITICAL RULES');
+      // Should NOT contain thorough-specific text
+      expect(prompt).not.toContain('COMPREHENSIVE');
+      // Should NOT contain light-specific text
+      expect(prompt).not.toContain('QUICK scan');
+    });
+
+    it('generates QUICK scan instructions for light intensity', async () => {
+      const builder = new PromptBuilder(DEFAULT_CONFIG, 'light');
+      const prompt = await builder.build(mockPR);
+
+      expect(prompt).toContain('QUICK scan');
+      expect(prompt).toContain('ONLY report CRITICAL issues');
+      expect(prompt).toContain('crashes, data loss, security');
+      expect(prompt).toContain('Brief findings only');
+    });
+
+    it('includes file list and diff in all intensity levels', async () => {
+      const intensities: Array<'thorough' | 'standard' | 'light'> = ['thorough', 'standard', 'light'];
+
+      for (const intensity of intensities) {
+        const builder = new PromptBuilder(DEFAULT_CONFIG, intensity);
+        const prompt = await builder.build(mockPR);
+
+        expect(prompt).toContain('Files changed:');
+        expect(prompt).toContain('src/test.ts (modified, +10/-5)');
+        expect(prompt).toContain('Diff:');
+        expect(prompt).toContain('diff --git a/src/test.ts b/src/test.ts');
+      }
+    });
+
+    it('generates longer prompts for thorough than standard', async () => {
+      const thoroughBuilder = new PromptBuilder(DEFAULT_CONFIG, 'thorough');
+      const standardBuilder = new PromptBuilder(DEFAULT_CONFIG, 'standard');
+
+      const thoroughPrompt = await thoroughBuilder.build(mockPR);
+      const standardPrompt = await standardBuilder.build(mockPR);
+
+      expect(thoroughPrompt.length).toBeGreaterThan(standardPrompt.length);
+    });
+
+    it('generates shorter prompts for light than standard', async () => {
+      const lightBuilder = new PromptBuilder(DEFAULT_CONFIG, 'light');
+      const standardBuilder = new PromptBuilder(DEFAULT_CONFIG, 'standard');
+
+      const lightPrompt = await lightBuilder.build(mockPR);
+      const standardPrompt = await standardBuilder.build(mockPR);
+
+      expect(lightPrompt.length).toBeLessThan(standardPrompt.length);
+    });
+  });
 });
