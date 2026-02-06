@@ -163,8 +163,8 @@ describe('PromptBuilder Context Window Validation', () => {
 
         expect(optimizedPrompt).toBeTruthy();
         expect(optimizedPrompt.length).toBeGreaterThan(0);
-        // Simplified prompt is the same for all intensities
-        expect(optimizedPrompt).toContain('ONLY report actual bugs');
+        // All intensities should have CRITICAL RULES
+        expect(optimizedPrompt).toContain('CRITICAL RULES');
       }
     });
 
@@ -296,8 +296,8 @@ describe('PromptBuilder Context Window Validation', () => {
         const builder = new PromptBuilder(DEFAULT_CONFIG, intensity);
         const { prompt, fitCheck } = await builder.buildWithValidation(mockPR, 'gpt-4-turbo');
 
-        // Simplified prompt no longer varies by intensity
-        expect(prompt).toContain('ONLY report actual bugs');
+        // All intensities should have CRITICAL RULES
+        expect(prompt).toContain('CRITICAL RULES');
         expect(fitCheck.fits).toBe(true);
       }
     });
@@ -315,8 +315,8 @@ describe('PromptBuilder Context Window Validation', () => {
       const thoroughPrompt = await thoroughBuilder.build(smallPR);
       const lightPrompt = await lightBuilder.build(smallPR);
 
-      // Simplified prompt is now the same length for all intensities
-      expect(thoroughPrompt.length).toBe(lightPrompt.length);
+      // Thorough should be longer than light (more detailed instructions)
+      expect(thoroughPrompt.length).toBeGreaterThan(lightPrompt.length);
 
       const thoroughEstimate = thoroughBuilder.estimateTokens(smallPR);
       const lightEstimate = lightBuilder.estimateTokens(smallPR);

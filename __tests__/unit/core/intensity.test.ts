@@ -111,7 +111,7 @@ describe('Path-Based Intensity Feature', () => {
   });
 
   describe('Intensity Prompt Depth Customization', () => {
-    it('should use custom prompt depth when configured', () => {
+    it('should use custom prompt depth when configured', async () => {
       const customConfig: ReviewConfig = {
         ...DEFAULT_CONFIG,
         intensityPromptDepth: {
@@ -129,7 +129,7 @@ describe('Path-Based Intensity Feature', () => {
         draft: false,
         labels: [],
         files: [{ filename: 'test.ts', status: 'modified' as const, additions: 1, deletions: 1, changes: 2 }],
-        diff: 'diff',
+        diff: 'diff --git a/test.ts b/test.ts\n+test',
         additions: 1,
         deletions: 1,
         baseSha: 'abc',
@@ -137,22 +137,22 @@ describe('Path-Based Intensity Feature', () => {
       };
 
       const thoroughBuilder = new PromptBuilder(customConfig, 'thorough');
-      const thoroughPrompt = thoroughBuilder.build(mockPR);
-      // Simplified prompt is now the same for all intensities and depths
-      expect(thoroughPrompt).toContain('ONLY report actual bugs');
+      const thoroughPrompt = await thoroughBuilder.build(mockPR);
+      // Thorough now has COMPREHENSIVE instructions
+      expect(thoroughPrompt).toContain('COMPREHENSIVE');
 
       const standardBuilder = new PromptBuilder(customConfig, 'standard');
-      const standardPrompt = standardBuilder.build(mockPR);
-      // Simplified prompt is now the same for all intensities and depths
+      const standardPrompt = await standardBuilder.build(mockPR);
+      // Standard maintains baseline
       expect(standardPrompt).toContain('ONLY report actual bugs');
 
       const lightBuilder = new PromptBuilder(customConfig, 'light');
-      const lightPrompt = lightBuilder.build(mockPR);
-      // Simplified prompt is now the same for all intensities and depths
-      expect(lightPrompt).toContain('ONLY report actual bugs');
+      const lightPrompt = await lightBuilder.build(mockPR);
+      // Light has QUICK scan instructions
+      expect(lightPrompt).toContain('QUICK scan');
     });
 
-    it('should fallback to standard depth if intensity not configured', () => {
+    it('should fallback to standard depth if intensity not configured', async () => {
       const partialConfig: ReviewConfig = {
         ...DEFAULT_CONFIG,
         intensityPromptDepth: {
@@ -178,8 +178,8 @@ describe('Path-Based Intensity Feature', () => {
         headSha: 'def',
       };
 
-      const prompt = builder.build(mockPR);
-      // Simplified prompt is now the same for all intensities
+      const prompt = await builder.build(mockPR);
+      // Standard maintains baseline
       expect(prompt).toContain('ONLY report actual bugs');
     });
   });
@@ -253,7 +253,7 @@ describe('Path-Based Intensity Feature', () => {
   });
 
   describe('Edge Cases', () => {
-    it('should handle missing intensity configuration gracefully', () => {
+    it('should handle missing intensity configuration gracefully', async () => {
       const minimalConfig: ReviewConfig = {
         ...DEFAULT_CONFIG,
         intensityProviderCounts: undefined,
@@ -277,13 +277,13 @@ describe('Path-Based Intensity Feature', () => {
         headSha: 'def',
       };
 
-      const prompt = builder.build(mockPR);
-      // Simplified prompt is now the same for all intensities
+      const prompt = await builder.build(mockPR);
+      // Standard maintains baseline behavior
       expect(prompt).toContain('ONLY report actual bugs');
       expect(prompt).toContain('CRITICAL RULES');
     });
 
-    it('should handle all valid ReviewIntensity values', () => {
+    it('should handle all valid ReviewIntensity values', async () => {
       const intensities: ReviewIntensity[] = ['thorough', 'standard', 'light'];
       const mockPR = {
         number: 1,
@@ -302,9 +302,9 @@ describe('Path-Based Intensity Feature', () => {
 
       for (const intensity of intensities) {
         const builder = new PromptBuilder(DEFAULT_CONFIG, intensity);
-        const prompt = builder.build(mockPR);
-        // Simplified prompt is now the same for all intensities
-        expect(prompt).toContain('ONLY report actual bugs');
+        const prompt = await builder.build(mockPR);
+        // Each intensity should have base rules but different instructions
+        expect(prompt).toContain('CRITICAL RULES');
       }
     });
   });

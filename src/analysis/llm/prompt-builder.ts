@@ -24,6 +24,102 @@ export class PromptBuilder {
   }
 
   /**
+   * Get review instructions based on intensity level.
+   * Returns different instruction sets for thorough/standard/light.
+   */
+  private getInstructionsByIntensity(): string[] {
+    switch (this.intensity) {
+      case 'thorough': {
+        return [
+          `You are a code reviewer. Perform COMPREHENSIVE analysis - check for actual bugs, edge cases, and boundary conditions.`,
+          '',
+          'CRITICAL RULES (READ CAREFULLY):',
+          '',
+          '1. SKIP these file types entirely - DO NOT review them:',
+          '   • Test files: *.test.ts, *.spec.ts, __tests__/*, *test*, *spec*',
+          '   • Workflow/CI: .github/workflows/*, .github/actions/*, *.yml in .github/',
+          '   • Config: *.json, *.yaml, *.yml (except for syntax errors)',
+          '   • Docs: *.md, README*, CHANGELOG*',
+          '',
+          '2. REPORT these issues:',
+          '   • Code that WILL crash at runtime',
+          '   • Data loss or corruption',
+          '   • SQL injection, XSS, command injection, or RCE vulnerabilities',
+          '   • Edge cases that may fail (null/undefined, empty arrays, boundary values)',
+          '   • Off-by-one errors in loops or array access',
+          '   • Race conditions or concurrency issues',
+          '   • Resource leaks (unclosed files, connections, timers)',
+          '',
+          '3. ANALYZE for:',
+          '   • Boundary condition handling (min/max values, empty/null inputs)',
+          '   • Error propagation and handling completeness',
+          '   • Type safety issues that TypeScript might miss',
+          '   • State consistency across async operations',
+          '',
+        ];
+      }
+
+      case 'light': {
+        return [
+          `You are a code reviewer. QUICK scan - ONLY report CRITICAL issues (crashes, data loss, security).`,
+          '',
+          'CRITICAL RULES (READ CAREFULLY):',
+          '',
+          '1. SKIP these file types entirely:',
+          '   • Test files, workflow/CI, config, docs',
+          '',
+          '2. ONLY report CRITICAL issues:',
+          '   • Code that WILL crash',
+          '   • Data loss or corruption',
+          '   • Security vulnerabilities (SQL injection, XSS, RCE)',
+          '',
+          '3. SKIP lower-severity issues:',
+          '   • Code style, performance opinions, architecture suggestions',
+          '   • Edge cases (unless they cause crashes)',
+          '   • Missing validation (unless it causes crashes)',
+          '',
+          '4. Brief findings only - no detailed explanations needed.',
+          '',
+        ];
+      }
+
+      case 'standard': {
+        // Baseline behavior - unchanged from current production
+        return [
+          `You are a code reviewer. ONLY report actual bugs - code that will crash, lose data, or have security vulnerabilities.`,
+          '',
+          'CRITICAL RULES (READ CAREFULLY):',
+          '',
+          '1. SKIP these file types entirely - DO NOT review them:',
+          '   • Test files: *.test.ts, *.spec.ts, __tests__/*, *test*, *spec*',
+          '   • Workflow/CI: .github/workflows/*, .github/actions/*, *.yml in .github/',
+          '   • Config: *.json, *.yaml, *.yml (except for syntax errors)',
+          '   • Docs: *.md, README*, CHANGELOG*',
+          '',
+          '2. NEVER report these (they are NOT bugs):',
+          '   • Suggestions ("Consider", "Add", "Should", "Could", "Ensure that", "Validate")',
+          '   • Code style ("complex", "magic strings", "readability")',
+          '   • Missing validation (TypeScript types handle this)',
+          '   • Incomplete/potential issues (unless code WILL crash)',
+          '   • Performance opinions (unless exponential complexity)',
+          '',
+          '3. ONLY report if code WILL:',
+          '   • Crash at runtime',
+          '   • Lose or corrupt data',
+          '   • Have SQL injection, XSS, command injection, or RCE vulnerability',
+          '',
+        ];
+      }
+
+      default: {
+        // Exhaustiveness check - TypeScript will error if new intensity added
+        const _exhaustive: never = this.intensity;
+        throw new Error(`Unhandled intensity: ${_exhaustive}`);
+      }
+    }
+  }
+
+  /**
    * Get call context from code graph for better fix suggestions.
    * Returns callers and callees for symbols near the target line.
    */
@@ -111,30 +207,7 @@ export class PromptBuilder {
 
     const _depth = this.config.intensityPromptDepth?.[this.intensity] ?? 'standard';
 
-    const instructions = [
-      `You are a code reviewer. ONLY report actual bugs - code that will crash, lose data, or have security vulnerabilities.`,
-      '',
-      'CRITICAL RULES (READ CAREFULLY):',
-      '',
-      '1. SKIP these file types entirely - DO NOT review them:',
-      '   • Test files: *.test.ts, *.spec.ts, __tests__/*, *test*, *spec*',
-      '   • Workflow/CI: .github/workflows/*, .github/actions/*, *.yml in .github/',
-      '   • Config: *.json, *.yaml, *.yml (except for syntax errors)',
-      '   • Docs: *.md, README*, CHANGELOG*',
-      '',
-      '2. NEVER report these (they are NOT bugs):',
-      '   • Suggestions ("Consider", "Add", "Should", "Could", "Ensure that", "Validate")',
-      '   • Code style ("complex", "magic strings", "readability")',
-      '   • Missing validation (TypeScript types handle this)',
-      '   • Incomplete/potential issues (unless code WILL crash)',
-      '   • Performance opinions (unless exponential complexity)',
-      '',
-      '3. ONLY report if code WILL:',
-      '   • Crash at runtime',
-      '   • Lose or corrupt data',
-      '   • Have SQL injection, XSS, command injection, or RCE vulnerability',
-      '',
-    ];
+    const instructions = this.getInstructionsByIntensity();
 
     // Conditionally include suggestion field based on context size
     if (skipSuggestions) {
