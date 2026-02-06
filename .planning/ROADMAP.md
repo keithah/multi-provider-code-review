@@ -49,8 +49,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 07-01-PLAN.md — TDD prompt variations (thorough/standard/light instructions)
-- [ ] 07-02-PLAN.md — TDD consensus thresholds and severity filtering in orchestrator
+- [x] 07-01-PLAN.md — TDD prompt variations (thorough/standard/light instructions)
+- [x] 07-02-PLAN.md — TDD consensus thresholds and severity filtering in orchestrator
 
 #### Phase 8: Code Cleanup
 
@@ -93,6 +93,6 @@ Phases execute in numeric order: 6 → 7 → 8 → 9
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 6. Configuration & Validation | v1.0 | 3/3 | ✓ Complete | 2026-02-05 |
-| 7. Behavior Wiring | v1.0 | 0/? | Not started | - |
+| 7. Behavior Wiring | v1.0 | 2/2 | ✓ Complete | 2026-02-06 |
 | 8. Code Cleanup | v1.0 | 0/? | Not started | - |
 | 9. Integration Testing | v1.0 | 0/? | Not started | - |

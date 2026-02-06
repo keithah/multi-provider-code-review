@@ -11,27 +11,27 @@ Complete the path-based intensity feature by wiring detected intensity levels in
 
 ### Prompt Depth Control
 
-- [ ] **PROMPT-01**: PromptBuilder generates different instruction detail levels based on intensity
-- [ ] **PROMPT-02**: Thorough intensity uses detailed instructions (full context, comprehensive analysis)
-- [ ] **PROMPT-03**: Standard intensity uses current instruction set (balanced approach)
-- [ ] **PROMPT-04**: Light intensity uses brief instructions (quick scan, obvious issues only)
-- [ ] **PROMPT-05**: Prompt depth variation affects all providers uniformly
+- [x] **PROMPT-01**: PromptBuilder generates different instruction detail levels based on intensity
+- [x] **PROMPT-02**: Thorough intensity uses detailed instructions (full context, comprehensive analysis)
+- [x] **PROMPT-03**: Standard intensity uses current instruction set (balanced approach)
+- [x] **PROMPT-04**: Light intensity uses brief instructions (quick scan, obvious issues only)
+- [x] **PROMPT-05**: Prompt depth variation affects all providers uniformly
 
 ### Consensus Control
 
-- [ ] **CONSENSUS-01**: Consensus threshold varies by intensity level
-- [ ] **CONSENSUS-02**: Thorough intensity requires high agreement (e.g., 80% of providers)
-- [ ] **CONSENSUS-03**: Standard intensity requires moderate agreement (e.g., 60% of providers)
-- [ ] **CONSENSUS-04**: Light intensity requires low agreement (e.g., 40% of providers)
-- [ ] **CONSENSUS-05**: Threshold configuration is validated at startup
+- [x] **CONSENSUS-01**: Consensus threshold varies by intensity level
+- [x] **CONSENSUS-02**: Thorough intensity requires high agreement (e.g., 80% of providers)
+- [x] **CONSENSUS-03**: Standard intensity requires moderate agreement (e.g., 60% of providers)
+- [x] **CONSENSUS-04**: Light intensity requires low agreement (e.g., 40% of providers)
+- [x] **CONSENSUS-05**: Threshold configuration is validated at startup
 
 ### Severity Filtering
 
-- [ ] **SEVERITY-01**: Minimum inline severity threshold varies by intensity
-- [ ] **SEVERITY-02**: Thorough intensity shows all severities (info and above)
-- [ ] **SEVERITY-03**: Standard intensity filters low-priority issues (minor and above)
-- [ ] **SEVERITY-04**: Light intensity shows only important issues (major and above)
-- [ ] **SEVERITY-05**: Severity filtering applies before comment posting
+- [x] **SEVERITY-01**: Minimum inline severity threshold varies by intensity
+- [x] **SEVERITY-02**: Thorough intensity shows all severities (info and above)
+- [x] **SEVERITY-03**: Standard intensity filters low-priority issues (minor and above)
+- [x] **SEVERITY-04**: Light intensity shows only important issues (major and above)
+- [x] **SEVERITY-05**: Severity filtering applies before comment posting
 
 ### Code Cleanup
 
@@ -95,21 +95,21 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROMPT-01 | Phase 7 | Pending |
-| PROMPT-02 | Phase 7 | Pending |
-| PROMPT-03 | Phase 7 | Pending |
-| PROMPT-04 | Phase 7 | Pending |
-| PROMPT-05 | Phase 7 | Pending |
-| CONSENSUS-01 | Phase 7 | Pending |
-| CONSENSUS-02 | Phase 7 | Pending |
-| CONSENSUS-03 | Phase 7 | Pending |
-| CONSENSUS-04 | Phase 7 | Pending |
-| CONSENSUS-05 | Phase 7 | Pending |
-| SEVERITY-01 | Phase 7 | Pending |
-| SEVERITY-02 | Phase 7 | Pending |
-| SEVERITY-03 | Phase 7 | Pending |
-| SEVERITY-04 | Phase 7 | Pending |
-| SEVERITY-05 | Phase 7 | Pending |
+| PROMPT-01 | Phase 7 | Complete |
+| PROMPT-02 | Phase 7 | Complete |
+| PROMPT-03 | Phase 7 | Complete |
+| PROMPT-04 | Phase 7 | Complete |
+| PROMPT-05 | Phase 7 | Complete |
+| CONSENSUS-01 | Phase 7 | Complete |
+| CONSENSUS-02 | Phase 7 | Complete |
+| CONSENSUS-03 | Phase 7 | Complete |
+| CONSENSUS-04 | Phase 7 | Complete |
+| CONSENSUS-05 | Phase 7 | Complete |
+| SEVERITY-01 | Phase 7 | Complete |
+| SEVERITY-02 | Phase 7 | Complete |
+| SEVERITY-03 | Phase 7 | Complete |
+| SEVERITY-04 | Phase 7 | Complete |
+| SEVERITY-05 | Phase 7 | Complete |
 | CLEANUP-01 | Phase 8 | Pending |
 | CLEANUP-02 | Phase 8 | Pending |
 | CLEANUP-03 | Phase 8 | Pending |
