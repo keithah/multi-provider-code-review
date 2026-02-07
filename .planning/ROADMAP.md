@@ -62,10 +62,10 @@ Plans:
   2. PromptBuilder removed from ReviewComponents interface if unused
   3. All tests pass without shared PromptBuilder instance
   4. Orchestrator continues creating per-batch PromptBuilder with runtime intensity
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 08-01: TBD
+- [ ] 08-01-PLAN.md — Remove PromptBuilder from setup.ts and ReviewComponents interface
 
 #### Phase 9: Integration Testing
 
