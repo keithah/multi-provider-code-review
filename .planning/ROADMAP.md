@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v0.5 MVP** - Phases 1-5 (shipped 2026-02-05)
-- 🚧 **v1.0 Path-Based Intensity** - Phases 6-9 (in progress)
+- ✅ **v1.0 Path-Based Intensity** - Phases 6-9 (shipped 2026-02-07)
 
 ## Phases
 
@@ -14,7 +14,7 @@ Delivered one-click commit suggestion functionality for multi-provider AI code r
 
 </details>
 
-### 🚧 v1.0 Path-Based Intensity (In Progress)
+### ✅ v1.0 Path-Based Intensity (Complete)
 
 **Milestone Goal:** Complete path-based intensity feature by wiring file path patterns into review behavior controls (provider selection, timeouts, prompt depth, consensus thresholds, severity filtering).
 
@@ -96,4 +96,4 @@ Phases execute in numeric order: 6 → 7 → 8 → 9
 | 6. Configuration & Validation | v1.0 | 3/3 | ✓ Complete | 2026-02-05 |
 | 7. Behavior Wiring | v1.0 | 2/2 | ✓ Complete | 2026-02-06 |
 | 8. Code Cleanup | v1.0 | 1/1 | ✓ Complete | 2026-02-07 |
-| 9. Integration Testing | v1.0 | 2/2 | Complete | 2026-02-07 |
+| 9. Integration Testing | v1.0 | 2/2 | ✓ Complete | 2026-02-07 |

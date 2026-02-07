@@ -51,13 +51,13 @@ Complete the path-based intensity feature by wiring detected intensity levels in
 
 ### Integration Testing
 
-- [ ] **TEST-01**: End-to-end test proves thorough intensity uses 8 providers, long timeout, detailed prompts
-- [ ] **TEST-02**: End-to-end test proves light intensity uses 3 providers, short timeout, brief prompts
-- [ ] **TEST-03**: Test proves intensity affects consensus threshold
-- [ ] **TEST-04**: Test proves intensity affects severity filtering
-- [ ] **TEST-05**: Test with overlapping path patterns validates precedence
-- [ ] **TEST-06**: Test with no matching patterns validates default fallback
-- [ ] **TEST-07**: Performance test with 1000+ files validates PathMatcher caching
+- [x] **TEST-01**: End-to-end test proves thorough intensity uses 8 providers, long timeout, detailed prompts
+- [x] **TEST-02**: End-to-end test proves light intensity uses 3 providers, short timeout, brief prompts
+- [x] **TEST-03**: Test proves intensity affects consensus threshold
+- [x] **TEST-04**: Test proves intensity affects severity filtering
+- [x] **TEST-05**: Test with overlapping path patterns validates precedence
+- [x] **TEST-06**: Test with no matching patterns validates default fallback
+- [x] **TEST-07**: Performance test with 1000+ files validates PathMatcher caching
 
 ## v2 Requirements
 
@@ -120,13 +120,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CONFIG-04 | Phase 6 | Pending |
 | CONFIG-05 | Phase 6 | Pending |
 | CONFIG-06 | Phase 6 | Pending |
-| TEST-01 | Phase 9 | Pending |
-| TEST-02 | Phase 9 | Pending |
-| TEST-03 | Phase 9 | Pending |
-| TEST-04 | Phase 9 | Pending |
-| TEST-05 | Phase 9 | Pending |
-| TEST-06 | Phase 9 | Pending |
-| TEST-07 | Phase 9 | Pending |
+| TEST-01 | Phase 9 | Complete |
+| TEST-02 | Phase 9 | Complete |
+| TEST-03 | Phase 9 | Complete |
+| TEST-04 | Phase 9 | Complete |
+| TEST-05 | Phase 9 | Complete |
+| TEST-06 | Phase 9 | Complete |
+| TEST-07 | Phase 9 | Complete |
 
 **Coverage:**
 - v1 requirements: 32 total
