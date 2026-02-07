@@ -65,7 +65,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 08-01-PLAN.md — Remove PromptBuilder from setup.ts and ReviewComponents interface
+- [x] 08-01-PLAN.md — Remove PromptBuilder from setup.ts and ReviewComponents interface
 
 #### Phase 9: Integration Testing
 
@@ -94,5 +94,5 @@ Phases execute in numeric order: 6 → 7 → 8 → 9
 |-------|-----------|----------------|--------|-----------|
 | 6. Configuration & Validation | v1.0 | 3/3 | ✓ Complete | 2026-02-05 |
 | 7. Behavior Wiring | v1.0 | 2/2 | ✓ Complete | 2026-02-06 |
-| 8. Code Cleanup | v1.0 | 0/? | Not started | - |
+| 8. Code Cleanup | v1.0 | 1/1 | ✓ Complete | 2026-02-07 |
 | 9. Integration Testing | v1.0 | 0/? | Not started | - |
