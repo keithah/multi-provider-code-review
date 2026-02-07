@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ReviewOrchestrator, ReviewComponents } from '../../src/core/orchestrator';
 import { ReviewConfig, ProviderResult } from '../../src/types';
-import { PromptBuilder } from '../../src/analysis/llm/prompt-builder';
 import { LLMExecutor } from '../../src/analysis/llm/executor';
 import { Deduplicator } from '../../src/analysis/deduplicator';
 import { ConsensusEngine } from '../../src/analysis/consensus';
@@ -141,7 +140,6 @@ describe('GitHub integration mock (no network)', () => {
     const components: ReviewComponents = {
       config,
       providerRegistry: { createProviders: async () => [new FakeProvider()] } as any,
-      promptBuilder: new PromptBuilder(config),
       llmExecutor: new StubLLMExecutor() as any,
       deduplicator: new Deduplicator(),
       consensus: new ConsensusEngine({ minAgreement: 1, minSeverity: 'minor', maxComments: 10 }),

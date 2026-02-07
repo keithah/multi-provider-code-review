@@ -56,7 +56,6 @@ function makeOrchestrator(overrides: Partial<ReviewComponents & { config: Review
       createProviders: jest.fn().mockResolvedValue(providers),
       discoverAdditionalFreeProviders: jest.fn().mockResolvedValue([]),
     } as any,
-    promptBuilder: { build: jest.fn().mockReturnValue('prompt') } as any,
     llmExecutor: {
       filterHealthyProviders: jest.fn(),
       execute: jest.fn(() => { throw new Error('execute should not be called when no healthy providers'); }),

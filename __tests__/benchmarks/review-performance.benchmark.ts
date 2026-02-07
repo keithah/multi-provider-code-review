@@ -22,7 +22,6 @@ import { CostTracker } from '../../src/cost/tracker';
 import { PricingService } from '../../src/cost/pricing';
 import { SecurityScanner } from '../../src/security/scanner';
 import { RulesEngine } from '../../src/rules/engine';
-import { PromptBuilder } from '../../src/analysis/llm/prompt-builder';
 import { MarkdownFormatter } from '../../src/output/formatter';
 import { Provider } from '../../src/providers/base';
 import { ContextRetriever } from '../../src/analysis/context';
@@ -263,7 +262,6 @@ async function runBenchmark(
   const components: ReviewComponents = {
     config,
     providerRegistry: new BenchmarkProviderRegistry(providers) as unknown as ReviewComponents['providerRegistry'],
-    promptBuilder: new PromptBuilder(config),
     llmExecutor: new BenchmarkLLMExecutor(providers) as unknown as ReviewComponents['llmExecutor'],
     deduplicator: new Deduplicator(),
     consensus: new ConsensusEngine({ minAgreement: 1, minSeverity: 'minor', maxComments: 100 }),

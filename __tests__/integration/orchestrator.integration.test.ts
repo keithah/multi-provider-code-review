@@ -9,7 +9,6 @@ import { CacheManager } from '../../src/cache/manager';
 import { CostTracker } from '../../src/cost/tracker';
 import { SecurityScanner } from '../../src/security/scanner';
 import { RulesEngine } from '../../src/rules/engine';
-import { PromptBuilder } from '../../src/analysis/llm/prompt-builder';
 import { MarkdownFormatter } from '../../src/output/formatter';
 import { CommentPoster } from '../../src/github/comment-poster';
 import { PullRequestLoader } from '../../src/github/pr-loader';
@@ -157,7 +156,6 @@ describe('ReviewOrchestrator integration (offline)', () => {
     const components: ReviewComponents = {
       config,
       providerRegistry: new StubProviderRegistry() as any,
-      promptBuilder: new PromptBuilder(config),
       llmExecutor: new StubLLMExecutor() as any,
       deduplicator: new Deduplicator(),
       consensus: new ConsensusEngine({ minAgreement: 1, minSeverity: 'minor', maxComments: 100 }),
@@ -217,7 +215,6 @@ describe('ReviewOrchestrator integration (offline)', () => {
     const components: ReviewComponents = {
       config,
       providerRegistry: new StubProviderRegistry() as any,
-      promptBuilder: new PromptBuilder(config),
       llmExecutor: new FailingLLMExecutor() as any,
       deduplicator: new Deduplicator(),
       consensus: new ConsensusEngine({ minAgreement: 1, minSeverity: 'minor', maxComments: 100 }),
@@ -278,7 +275,6 @@ describe('ReviewOrchestrator integration (offline)', () => {
     const components: ReviewComponents = {
       config: { ...config, enableCaching: true },
       providerRegistry: new StubProviderRegistry() as any,
-      promptBuilder: new PromptBuilder(config),
       llmExecutor: new StubLLMExecutor() as any,
       deduplicator: new Deduplicator(),
       consensus: new ConsensusEngine({ minAgreement: 1, minSeverity: 'minor', maxComments: 100 }),
@@ -342,7 +338,6 @@ describe('ReviewOrchestrator integration (offline)', () => {
     const components: ReviewComponents = {
       config: draftConfig,
       providerRegistry: new StubProviderRegistry() as any,
-      promptBuilder: new PromptBuilder(draftConfig),
       llmExecutor: new StubLLMExecutor() as any,
       deduplicator: new Deduplicator(),
       consensus: new ConsensusEngine({ minAgreement: 1, minSeverity: 'minor', maxComments: 100 }),
@@ -420,7 +415,6 @@ describe('ReviewOrchestrator integration (offline)', () => {
     const components: ReviewComponents = {
       config: consensusConfig,
       providerRegistry: new StubProviderRegistry() as any,
-      promptBuilder: new PromptBuilder(consensusConfig),
       llmExecutor: new MultiProviderLLMExecutor() as any,
       deduplicator: new Deduplicator(),
       consensus: new ConsensusEngine({ minAgreement: 2, minSeverity: 'minor', maxComments: 100 }),
@@ -463,7 +457,6 @@ describe('ReviewOrchestrator integration (offline)', () => {
     const components: ReviewComponents = {
       config,
       providerRegistry: new StubProviderRegistry() as any,
-      promptBuilder: new PromptBuilder(config),
       llmExecutor: new StubLLMExecutor() as any,
       deduplicator: new Deduplicator(),
       consensus: new ConsensusEngine({ minAgreement: 1, minSeverity: 'minor', maxComments: 100 }),
