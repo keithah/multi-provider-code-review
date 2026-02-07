@@ -52,10 +52,11 @@ import path from 'path';
 // Configuration constants
 const HEALTH_CHECK_TIMEOUT_MS = 30_000; // 30 seconds
 
+// Note: PromptBuilder is created per-batch by the orchestrator with runtime intensity.
+// This enables intensity-based prompt variations (thorough/standard/light).
 export interface ReviewComponents {
   config: ReviewConfig;
   providerRegistry: ProviderRegistry;
-  promptBuilder: PromptBuilder;
   llmExecutor: LLMExecutor;
   deduplicator: Deduplicator;
   consensus: ConsensusEngine;

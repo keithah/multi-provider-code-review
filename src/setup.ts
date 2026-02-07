@@ -1,6 +1,5 @@
 import { ReviewConfig } from './types';
 import { ProviderRegistry } from './providers/registry';
-import { PromptBuilder } from './analysis/llm/prompt-builder';
 import { LLMExecutor } from './analysis/llm/executor';
 import { Deduplicator } from './analysis/deduplicator';
 import { ConsensusEngine } from './analysis/consensus';
@@ -118,7 +117,6 @@ async function createComponentsForCLI(config: ReviewConfig): Promise<ReviewCompo
   const acceptanceDetector = new AcceptanceDetector();
   const feedbackTracker = config.learningEnabled ? new FeedbackTracker(cacheStorage, config.learningMinFeedbackCount) : undefined;
   const promptEnricher = new PromptEnricher(suppressionTracker, feedbackTracker);
-  const promptBuilder = new PromptBuilder(config, 'standard', promptEnricher, undefined);
   const quietModeFilter = config.quietModeEnabled
     ? new QuietModeFilter(
         {
@@ -168,7 +166,6 @@ async function createComponentsForCLI(config: ReviewConfig): Promise<ReviewCompo
   return {
     config,
     providerRegistry,
-    promptBuilder,
     llmExecutor,
     deduplicator,
     consensus,
@@ -250,7 +247,6 @@ export async function createComponents(config: ReviewConfig, githubToken: string
   const acceptanceDetector = new AcceptanceDetector();
   const feedbackTracker = config.learningEnabled ? new FeedbackTracker(cacheStorage, config.learningMinFeedbackCount) : undefined;
   const promptEnricher = new PromptEnricher(suppressionTracker, feedbackTracker);
-  const promptBuilder = new PromptBuilder(config, 'standard', promptEnricher, undefined);
   const commentPoster = new CommentPoster(
     githubClient,
     config.dryRun,
@@ -289,7 +285,6 @@ export async function createComponents(config: ReviewConfig, githubToken: string
   return {
     config,
     providerRegistry,
-    promptBuilder,
     llmExecutor,
     deduplicator,
     consensus,
