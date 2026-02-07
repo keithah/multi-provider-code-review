@@ -80,10 +80,11 @@ Plans:
   5. Overlapping path patterns are tested with documented precedence
   6. Files with no matching patterns use default fallback intensity
   7. Performance test with large file sets validates PathMatcher caching efficiency
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 09-01: TBD
+- [ ] 09-01-PLAN.md — End-to-end intensity integration tests (provider count, timeout, prompt, consensus, severity, precedence, fallback)
+- [ ] 09-02-PLAN.md — PathMatcher caching performance benchmarks (1000+ files, efficiency validation)
 
 ## Progress
 
