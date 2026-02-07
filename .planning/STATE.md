@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 ## Current Position
 
 Phase: 8 of 9 (Code Cleanup)
-Plan: 0 of ? in current phase
-Status: Ready to plan
-Last activity: 2026-02-06 — Phase 7 verified and complete
+Plan: 1 of 1 in current phase
+Status: Phase complete
+Last activity: 2026-02-07 — Completed 08-01-PLAN.md
 
-Progress: [██████░░░░] 67% (Phase 7 complete, Phase 8 ready)
+Progress: [███████░░░] 78% (Phase 8 complete, Phase 9 ready)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 27 (v0.5: 22, v1.0: 5)
+- Total plans completed: 28 (v0.5: 22, v1.0: 6)
 - Average duration: 2.5 min
-- Total execution time: 1.1 hours
+- Total execution time: 1.2 hours
 
 **By Phase:**
 
@@ -34,13 +34,14 @@ Progress: [██████░░░░] 67% (Phase 7 complete, Phase 8 ready)
 | 5 - Complete Learning Feedback Loop | 3/3 | 7.6 min | 2.5 min |
 | 6 - Configuration & Validation | 3/3 | 6.9 min | 2.3 min |
 | 7 - Behavior Wiring | 2/2 | 9 min | 4.5 min |
+| 8 - Code Cleanup | 1/1 | 6 min | 6 min |
 
 **Recent Trend:**
 - v0.5 shipped in <1 day (2026-02-04 → 2026-02-05)
-- v1.0 Phase 7 complete (2026-02-06)
+- v1.0 Phase 8 complete (2026-02-07)
 - Trend: Fast execution with GSD workflow
 
-*Updated: 2026-02-06*
+*Updated: 2026-02-07*
 
 ## Accumulated Context
 
@@ -64,6 +65,7 @@ Recent decisions affecting v1.0 work:
 - Create ConsensusEngine per-review (07-02) — Enables dynamic threshold adjustment based on runtime intensity
 - Round up fractional provider counts (07-02) — Math.ceil() ensures stricter thresholds (80% of 3 = 3, not 2)
 - Fallback to inlineMinAgreement when missing (07-02) — Backward compatibility for configs without intensity settings
+- Remove shared PromptBuilder immediately (08-01) — Clean break better than deprecation for internal interface
 
 ### Pending Todos
 
@@ -72,16 +74,15 @@ None yet.
 ### Blockers/Concerns
 
 **From Research:**
-- Hypothesis: setup.ts PromptBuilder (lines 121, 253) is unused - orchestrator creates per-batch instances
-- Validation method: Run test suite with shared PromptBuilder commented out
-- Resolution: Phase 8 will verify and remove if unused
+- ✓ RESOLVED (08-01): setup.ts PromptBuilder removed - was unused as orchestrator creates per-batch instances
 
 **Configuration:**
-- Path pattern overlap precedence needs explicit documentation (highest intensity wins vs last-match-wins)
 - ✓ RESOLVED (06-03): Documented in docs/configuration.md and examples/config/intensity-patterns.yml - highest intensity wins
+
+None currently.
 
 ## Session Continuity
 
-Last session: 2026-02-06 16:43
-Stopped at: Completed Phase 7 (Behavior Wiring) - all plans executed and verified
+Last session: 2026-02-07 17:02
+Stopped at: Completed 08-01-PLAN.md (Code Cleanup phase complete)
 Resume file: None
