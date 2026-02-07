@@ -83,8 +83,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 09-01-PLAN.md — End-to-end intensity integration tests (provider count, timeout, prompt, consensus, severity, precedence, fallback)
-- [ ] 09-02-PLAN.md — PathMatcher caching performance benchmarks (1000+ files, efficiency validation)
+- [x] 09-01-PLAN.md — End-to-end intensity integration tests (provider count, timeout, prompt, consensus, severity, precedence, fallback)
+- [x] 09-02-PLAN.md — PathMatcher caching performance benchmarks (1000+ files, efficiency validation)
 
 ## Progress
 
@@ -96,4 +96,4 @@ Phases execute in numeric order: 6 → 7 → 8 → 9
 | 6. Configuration & Validation | v1.0 | 3/3 | ✓ Complete | 2026-02-05 |
 | 7. Behavior Wiring | v1.0 | 2/2 | ✓ Complete | 2026-02-06 |
 | 8. Code Cleanup | v1.0 | 1/1 | ✓ Complete | 2026-02-07 |
-| 9. Integration Testing | v1.0 | 0/? | Not started | - |
+| 9. Integration Testing | v1.0 | 2/2 | Complete | 2026-02-07 |
